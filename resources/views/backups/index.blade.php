@@ -773,7 +773,6 @@
   @method('DELETE')
 </form>
 @endsection
-
 @push('scripts')
   {{-- libs --}}
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -785,6 +784,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/markdown/markdown.min.js"></script>
 
+  {{-- Required for DOCX Preview --}}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/docx-preview@0.1.15/dist/docx-preview.min.js"></script>
 
 <script>
@@ -1074,7 +1075,7 @@
         return;
       }
 
-      // DOCX preview
+     // DOCX preview
       if(isDocx){
         editMode = false;
         modePill.textContent = 'View';
@@ -1082,11 +1083,27 @@
         editToggleBtn.disabled = true;
         saveBtn.disabled = true;
 
-        innerHost.innerHTML = `<div class="vmsg">DOCX is preview-only here. True editing needs OnlyOffice/Collabora.</div><div id="docxHost" style="padding:12px; overflow:auto; height: calc(100% - 48px);"></div>`;
-        var res = await fetch(streamUrl, { credentials:'same-origin' });
-        if(!res.ok) throw new Error('HTTP ' + res.status);
-        var buf = await res.arrayBuffer();
-        await window.docx.renderAsync(buf, document.getElementById('docxHost'));
+        // Container takes up 100% of the space
+        innerHost.innerHTML = `<div id="docxHost" style="width: 100%; height: 100%; overflow: auto; background: #e2e8f0;"></div>`;
+        
+        try {
+          var res = await fetch(streamUrl, { credentials:'same-origin' });
+          if(!res.ok) throw new Error('HTTP ' + res.status);
+          
+          var buf = await res.arrayBuffer();
+          
+          // Render the document into the container with explicit options
+          await window.docx.renderAsync(buf, document.getElementById('docxHost'), null, {
+            className: "docx", 
+            inWrapper: true, 
+            ignoreWidth: false, 
+            ignoreHeight: false, 
+            debug: true // This will print helpful logs to the browser console
+          });
+        } catch (e) {
+          console.error("Error loading DOCX:", e);
+          document.getElementById('docxHost').innerHTML = `<div class="vmsg" style="color:#b91c1c;">Failed to render document. Please check the browser console for details.</div>`;
+        }
         return;
       }
 

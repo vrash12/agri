@@ -101,53 +101,50 @@ class FarmerController extends Controller
         ));
     }
 
-    public function index(Request $request)
-    {
-        $q = $request->query('q');
+public function index(Request $request)
+{
+    $q = $request->query('q');
 
-        // totals (count + sum kgs) based on current filters
-        $totals = $this->baseQuery($request, false)
-            ->selectRaw('COUNT(farmers.id) as total_farmers, SUM(COALESCE(a.total_kgs,0)) as total_kgs')
-            ->first();
+    $perPage = (int) $request->query('per_page', 25);
+    $perPage = max(10, min($perPage, 100));
 
-        $totalFarmers = (int) ($totals->total_farmers ?? 0);
-        $totalKgs     = (float) ($totals->total_kgs ?? 0);
+    $totals = $this->baseQuery($request, false)
+        ->selectRaw('COUNT(farmers.id) as total_farmers, SUM(COALESCE(a.total_kgs,0)) as total_kgs')
+        ->first();
 
-        // ==========================================
-        // GLOBAL GRAPH DATA AGGREGATION
-        // ==========================================
-        // Graph 1: Gender Distribution (Pie Chart)
-        $genderStats = $this->baseQuery($request, false)
-            ->selectRaw('COALESCE(gender, "Unspecified") as gender_group, COUNT(farmers.id) as count')
-            ->groupBy('gender_group')
-            ->pluck('count', 'gender_group');
+    $totalFarmers = (int) ($totals->total_farmers ?? 0);
+    $totalKgs     = (float) ($totals->total_kgs ?? 0);
 
-        // Graph 2: Top 10 Locations by Farmer Count (Bar Chart)
-        $locationStats = $this->baseQuery($request, false)
-            ->selectRaw('farm_location, COUNT(farmers.id) as count')
-            ->whereNotNull('farm_location')
-            ->where('farm_location', '!=', 'UNKNOWN')
-            ->groupBy('farm_location')
-            ->orderByDesc('count')
-            ->limit(10)
-            ->pluck('count', 'farm_location');
+    $genderStats = $this->baseQuery($request, false)
+        ->selectRaw('COALESCE(gender, "Unspecified") as gender_group, COUNT(farmers.id) as count')
+        ->groupBy('gender_group')
+        ->pluck('count', 'gender_group');
 
-        // IMPORTANT: get ALL rows so DataTables can search/paginate client-side
-        $farmers = $this->baseQuery($request, true)
-            ->orderBy('farmers.last_name')
-            ->orderBy('farmers.first_name')
-            ->get();
+    $locationStats = $this->baseQuery($request, false)
+        ->selectRaw('farm_location, COUNT(farmers.id) as count')
+        ->whereNotNull('farm_location')
+        ->where('farm_location', '!=', 'UNKNOWN')
+        ->groupBy('farm_location')
+        ->orderByDesc('count')
+        ->limit(10)
+        ->pluck('count', 'farm_location');
 
-        return view('farmers.index', compact(
-            'farmers', 
-            'q', 
-            'totalFarmers', 
-            'totalKgs',
-            'genderStats',
-            'locationStats'
-        ));
-    }
+    $farmers = $this->baseQuery($request, true)
+        ->orderBy('farmers.last_name')
+        ->orderBy('farmers.first_name')
+        ->paginate($perPage)
+        ->withQueryString();
 
+    return view('farmers.index', compact(
+        'farmers',
+        'q',
+        'perPage',
+        'totalFarmers',
+        'totalKgs',
+        'genderStats',
+        'locationStats'
+    ));
+}
     public function showImport()
     {
         return view('farmers.import');

@@ -4,25 +4,23 @@
 @section('title', 'Farmers')
 
 @section('content')
-  @php
-    // Build a lightweight dataset for the map (current page/list only)
-    $farmersMapData = collect($farmers)->map(function ($f) {
-      return [
-        'id' => $f->id,
-        'last_name' => $f->last_name,
-        'first_name' => $f->first_name,
-        'middle_name' => $f->middle_name,
-        'ffrs' => $f->ffrs,
-        'date_of_birth' => $f->date_of_birth,
-        'gender' => $f->gender,
-        // IMPORTANT: maps.blade.php expects "location"
-        'location' => $f->farm_location,
-        'records_count' => (int) ($f->records_count ?? 0),
-        'total_kgs' => (float) ($f->total_kgs ?? 0),
-        'last_received' => $f->last_received,
-      ];
-    })->values();
-  @endphp
+@php
+  $farmersMapData = collect($farmers->items())->map(function ($f) {
+    return [
+      'id' => $f->id,
+      'last_name' => $f->last_name,
+      'first_name' => $f->first_name,
+      'middle_name' => $f->middle_name,
+      'ffrs' => $f->ffrs,
+      'date_of_birth' => $f->date_of_birth,
+      'gender' => $f->gender,
+      'location' => $f->farm_location,
+      'records_count' => (int) ($f->records_count ?? 0),
+      'total_kgs' => (float) ($f->total_kgs ?? 0),
+      'last_received' => $f->last_received,
+    ];
+  })->values();
+@endphp
 
   <div class="card farmers-card">
     <div class="card-header farmers-header">
@@ -74,10 +72,14 @@
         </div>
       </div>
 
-      {{-- ===== Google Maps 3D Map Module ===== --}}
-      @include('farmers.maps', [
+      {{--
+      
+            @include('farmers.maps', [
         'farmersMapData' => $farmersMapData,
       ])
+
+      
+      --}}
 
       <div class="table-shell">
         <table id="farmersTable" class="display farmers-table" style="width:100%;">
@@ -151,6 +153,9 @@
           @endforelse
           </tbody>
         </table>
+        <div style="padding: 12px 16px;">
+  {{ $farmers->links() }}
+</div>
       </div>
     </div>
   </div>
@@ -342,28 +347,22 @@
     // --------------------------------------------------------------
     // 2) DataTable
     // --------------------------------------------------------------
-    var already = $.fn.DataTable.isDataTable('#farmersTable');
-    var table = already
-      ? $('#farmersTable').DataTable()
-      : $('#farmersTable').DataTable({
-          pageLength: 10,
-          lengthMenu: [10, 25, 50, 100],
-          order: [[1, 'asc']],
-          autoWidth: false,
-          deferRender: true,
-          columnDefs: [
-            { orderable: false, targets: [0, 11] },
-            { searchable: false, targets: [0, 11] }
-          ],
-          dom: '<"dt-top"lf>rt<"dt-bottom"ip><"clear">',
-          language: {
-            search: "Search:",
-            lengthMenu: "Show _MENU_ entries",
-            info: "Showing _START_ to _END_ of _TOTAL_ farmers",
-            infoEmpty: "Showing 0 to 0 of 0 farmers",
-            zeroRecords: "No matching farmers found"
-          }
-        });
+var already = $.fn.DataTable.isDataTable('#farmersTable');
+var table = already
+  ? $('#farmersTable').DataTable()
+  : $('#farmersTable').DataTable({
+      paging: false,
+      searching: false,
+      info: false,
+      lengthChange: false,
+      order: [[1, 'asc']],
+      autoWidth: false,
+      columnDefs: [
+        { orderable: false, targets: [0, 11] },
+        { searchable: false, targets: [0, 11] }
+      ],
+      dom: 'rt<"clear">'
+    });
 
     // Row numbering
     table.on('order.dt search.dt draw.dt', function () {

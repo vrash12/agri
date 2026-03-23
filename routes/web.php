@@ -12,6 +12,12 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\BackupController;
 
+use App\Http\Controllers\DashboardController;
+
+Route::middleware('auth')->get('/dashboard', [DashboardController::class, 'index'])
+    ->name('dashboard');
+
+
 Route::get('/', function () {
     return auth()->check()
         ? redirect()->route('dashboard')
@@ -97,11 +103,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/farmers/{farmer}/plots', [FarmPlotController::class, 'index'])->name('farmers.plots.index');
     Route::post('/farmers/{farmer}/plots', [FarmPlotController::class, 'store'])->name('farmers.plots.store');
     Route::delete('/farm-plots/{plot}', [FarmPlotController::class, 'destroy'])->name('farm-plots.destroy');
-
-    // Dashboard
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
 
     /*
     |--------------------------------------------------------------------------

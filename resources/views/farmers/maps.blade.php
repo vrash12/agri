@@ -1,85 +1,75 @@
 {{-- resources/views/farmers/maps.blade.php --}}
 
 @php
-  $googleMapsApiKey = $googleMapsApiKey
-    ?? config('services.google_maps.key')
-    ?? env('GOOGLE_MAPS_API_KEY')
-    ?? '';
-
-  $googleMapsMapId  = $googleMapsMapId
-    ?? config('services.google_maps.map_id')
-    ?? env('GOOGLE_MAPS_MAP_ID')
-    ?? '';
-
-  $farmersMapData = $farmersMapData ?? [];
+  $googleMapsApiKey = $googleMapsApiKey ?? config('services.google_maps.key') ?? env('GOOGLE_MAPS_API_KEY') ?? '';
+  $googleMapsMapId  = $googleMapsMapId ?? config('services.google_maps.map_id') ?? env('GOOGLE_MAPS_MAP_ID') ?? '';
+  $farmersMapData   = $farmersMapData ?? [];
 @endphp
 
 <div class="farmers-map-wrap" id="farmersMapModule">
+  
+  {{-- TOP HEADER BAR --}}
   <div class="farmers-map-head">
     <div class="farmers-map-head-left">
       <div class="map-title-row">
-        <div class="h2" style="margin:0;">Farm Map</div>
-        <span class="map-badge map-badge-solid">3D</span>
-        <span class="map-badge map-badge-blue" id="plotModeBadge" style="display:none;">Plot mode</span>
+        <h2 style="margin:0; font-weight: 800; color: #0f172a;">Farm Map</h2>
+        <span class="map-badge map-badge-solid">3D Beta</span>
+        <span class="map-badge map-badge-blue" id="plotModeBadge" style="display:none;">Plotting Mode Active</span>
       </div>
 
-      <div class="p map-subtitle" style="margin:6px 0 0;">
-        Markers come from <strong>Location of Farm</strong> (geocoded). Click a row or marker to select a farmer and manage plots.
+      <div class="p map-subtitle" style="margin:6px 0 0; color: #64748b;">
+        Click a marker or table row to view farmer details and manage their land plots.
       </div>
 
-      <div class="map-status-row">
+      <div class="map-status-row" style="margin-top: 12px; display: flex; align-items: center; gap: 8px;">
         <span class="pill pill-gray" id="mapStatus">Loading map…</span>
-
-        <div class="map-progress" aria-hidden="true" title="Geocoding progress">
-          <div class="map-progress-bar" id="mapProgressBar" style="width:0%;"></div>
+        <div class="map-progress" aria-hidden="true" style="width: 100px; height: 6px; background: #e2e8f0; border-radius: 99px; overflow: hidden;">
+          <div class="map-progress-bar" id="mapProgressBar" style="width:0%; height: 100%; background: #3b82f6; transition: width 0.3s ease;"></div>
         </div>
-
-        <span class="map-status-small" id="mapStatusSmall">Starting…</span>
-        <span class="pill pill-gray" id="mapGeocodedPill">0 geocoded</span>
-        <span class="pill pill-gray" id="mapSelectedPill">No selection</span>
+        <span class="map-status-small" id="mapStatusSmall" style="font-size: 12px; color: #64748b;">Starting…</span>
+        <span class="pill pill-blue" id="mapGeocodedPill">0 Geocoded</span>
       </div>
     </div>
 
     <div class="farmers-map-head-right">
       <div class="map-controls">
+        {{-- View Controls --}}
         <div class="map-control-group">
-          <div class="map-control-label">View</div>
-
-          <button type="button" class="btn btn-soft btn-sm" id="recenterMapBtn" title="Fit map to visible (filtered) rows">
-            Fit to results
+          <div class="map-control-label">View & Filters</div>
+          <button type="button" class="btn btn-soft btn-sm" id="recenterMapBtn" title="Fit map to visible farmers">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+            Fit to Results
           </button>
-
-          <button type="button" class="btn btn-soft btn-sm" id="resetMapBtn" title="Reset camera and close popover">
+          <button type="button" class="btn btn-soft btn-sm" id="resetMapBtn" title="Reset camera">
             Reset
           </button>
-
-          <label class="map-toggle" title="Show/hide markers">
+          <label class="map-toggle">
             <input type="checkbox" id="toggleMarkers" checked>
             <span>Markers</span>
           </label>
-
-          <label class="map-toggle" title="Show/hide saved plots">
+          <label class="map-toggle">
             <input type="checkbox" id="togglePlots" checked>
             <span>Plots</span>
           </label>
         </div>
 
-        <div class="map-control-group">
-          <div class="map-control-label">Land plot</div>
-
-          <button type="button" class="btn btn-soft btn-sm" id="plotModeBtn" title="Select a farmer, then start plotting">
+        {{-- Plotting Controls --}}
+        <div class="map-control-group" style="border-left: 1px solid #e2e8f0; padding-left: 16px;">
+          <div class="map-control-label">Plot Management</div>
+          
+          {{-- Notice I added a hypothetical 'btn-primary' for the main action --}}
+          <button type="button" class="btn btn-primary btn-sm" id="plotModeBtn" title="Select a farmer, then start plotting">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
             Plot Land
           </button>
 
           <button type="button" class="btn btn-soft btn-sm" id="plotClearBtn" style="display:none;" title="Clear draft rectangle">
-            Clear
+            Clear Draft
           </button>
-
-          <button type="button" class="btn btn-sm" id="plotSaveBtn" style="display:none;" title="Save plot (Enter)">
-            Save
+          <button type="button" class="btn btn-primary btn-sm" id="plotSaveBtn" style="display:none;" title="Save plot (Enter)">
+            Save Plot
           </button>
-
-          <button type="button" class="btn btn-soft btn-sm" id="plotCancelBtn" style="display:none;" title="Cancel plotting (Esc)">
+          <button type="button" class="btn btn-danger btn-sm" id="plotCancelBtn" style="display:none;" title="Cancel plotting (Esc)">
             Cancel
           </button>
         </div>
@@ -87,38 +77,26 @@
     </div>
   </div>
 
+  {{-- MAIN MAP STAGE --}}
   <div class="farmers-map-main">
     <div class="farmers-map-stage">
       <div id="farmersMap" class="farmers-map"></div>
-
       <div id="plotCursor" class="plot-cursor" aria-hidden="true"></div>
-
-      <div class="map-crosshair" aria-hidden="true">
-        <div class="map-crosshair-dot"></div>
-      </div>
-
+      
       <div class="map-hint" id="mapHint">
-        <div class="map-hint-title">Select a farmer</div>
-        <div class="map-hint-text">
-          Click a farmer row in the table or a marker on the map to view details and plots.
-        </div>
+        <div class="map-hint-title">Select a farmer to begin</div>
+        <div class="map-hint-text">Click a marker on the map to view their farm records and manage land plots.</div>
       </div>
 
-      <div class="map-selection-chip" id="mapSelectionChip" style="display:none;">
-        <span class="map-selection-dot"></span>
-        <span id="mapSelectionChipText">Selected farmer</span>
-      </div>
-
-      <div class="map-workflow-card" id="plotWorkflowCard">
+      {{-- Floating Workflow Card (Visible during plotting) --}}
+      <div class="map-workflow-card shadow-lg" id="plotWorkflowCard">
         <div class="map-workflow-head">
-          <div class="map-workflow-title">Plot workflow</div>
-          <span class="pill pill-gray" id="plotWorkflowStep">Step 1</span>
+          <div class="map-workflow-title">Plot Draft</div>
+          <span class="pill pill-blue" id="plotWorkflowStep">Step 1</span>
         </div>
-
         <div class="map-workflow-text" id="plotWorkflowText">
           Select a farmer first, then click <b>Plot Land</b>.
         </div>
-
         <div class="map-workflow-grid">
           <div class="map-workflow-metric">
             <div class="map-workflow-label">Farmer</div>
@@ -129,157 +107,125 @@
             <div class="map-workflow-value" id="workflowCorners">0</div>
           </div>
           <div class="map-workflow-metric">
-            <div class="map-workflow-label">Draft Area</div>
-            <div class="map-workflow-value" id="workflowArea">0.00 ha</div>
+            <div class="map-workflow-label">Est. Area</div>
+            <div class="map-workflow-value text-blue-600" id="workflowArea">0.00 ha</div>
           </div>
         </div>
-
         <div class="map-workflow-actions">
-          <button type="button" class="btn btn-soft btn-sm" id="plotNewRectBtn" title="Create a fresh rectangle around the selected farmer">
-            New rectangle
-          </button>
-          <button type="button" class="btn btn-soft btn-sm" id="plotCenterDraftBtn" title="Center the map on the current draft">
-            Center draft
-          </button>
+          <button type="button" class="btn btn-soft btn-sm" id="plotNewRectBtn">New Starter Box</button>
+          <button type="button" class="btn btn-soft btn-sm" id="plotCenterDraftBtn">Center View</button>
         </div>
       </div>
 
-      <div class="map-legend-card">
-        <div class="map-legend-row">
-          <span class="map-legend-swatch is-draft"></span>
-          <span>Draft plot</span>
-        </div>
-        <div class="map-legend-row">
-          <span class="map-legend-swatch is-saved"></span>
-          <span>Saved plot</span>
-        </div>
-      </div>
-
-      <div class="map-toast" id="mapToast" role="status" aria-live="polite" aria-atomic="true"></div>
+      <div class="map-toast" id="mapToast" role="status" aria-live="polite"></div>
     </div>
 
+    {{-- SIDE PANEL --}}
     <aside class="map-panel" id="mapPanel" aria-label="Selected farmer details">
-      <div class="map-panel-card">
-        <div class="map-panel-head">
-          <div class="map-panel-title">Selected Farmer</div>
-          <button type="button" class="btn btn-soft btn-sm" id="clearSelectionBtn" title="Clear selection">
-            Clear
-          </button>
-        </div>
+      
+      {{-- Empty State (Optional: Handle via JS if you want to hide the panel entirely when null) --}}
+      <div class="map-panel-head" style="justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 16px;">
+        <div class="map-panel-title" style="font-size: 18px; font-weight: 800;">Farmer Details</div>
+        <button type="button" class="btn btn-soft btn-sm" id="clearSelectionBtn" title="Deselect farmer">
+          Close
+        </button>
+      </div>
 
-        <div class="map-panel-body">
-          <div class="map-kv">
-            <div class="map-k">Name</div>
-            <div class="map-v" id="selName">—</div>
+      <div class="map-panel-body">
+        
+        {{-- Section 1: Identity Card --}}
+        <div class="panel-card bg-gray-50 rounded-lg p-3 mb-4 border border-gray-200">
+          <h3 class="font-bold text-lg text-slate-800" id="selName">—</h3>
+          <div class="text-sm text-slate-500 mt-1 flex items-center gap-2">
+            <span class="font-mono bg-white px-2 py-0.5 rounded border border-gray-200" id="selFfrs">FFRS: —</span>
           </div>
-          <div class="map-kv">
-            <div class="map-k">FFRS</div>
-            <div class="map-v td-mono" id="selFfrs">—</div>
-          </div>
-          <div class="map-kv">
-            <div class="map-k">Location</div>
-            <div class="map-v" id="selLocation">—</div>
-          </div>
-
-          <div class="map-metrics">
-            <div class="map-metric">
-              <div class="map-metric-label">Records</div>
-              <div class="map-metric-value" id="selRecords">0</div>
-            </div>
-            <div class="map-metric">
-              <div class="map-metric-label">Total Kgs</div>
-              <div class="map-metric-value" id="selKgs">0.00</div>
-            </div>
-            <div class="map-metric">
-              <div class="map-metric-label">Last Received</div>
-              <div class="map-metric-value" id="selLast">—</div>
-            </div>
+          <div class="text-sm text-slate-600 mt-2 flex items-start gap-2">
+            <svg class="mt-0.5 text-slate-400" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.243-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            <span id="selLocation">—</span>
           </div>
 
-          <div class="map-panel-actions">
-            <a href="#" class="btn btn-soft btn-sm" id="viewRecordsBtn" style="text-decoration:none;">
-              View Records
+          <div class="flex gap-2 mt-4">
+            <a href="#" class="btn btn-white btn-sm flex-1 text-center" id="viewRecordsBtn" style="justify-content: center;">
+              View Profile
             </a>
-
-            <button type="button" class="btn btn-soft btn-sm" id="focusSelectedBtn" title="Fly to the selected marker">
-              Focus
-            </button>
-
-            <button type="button" class="btn btn-soft btn-sm" id="downloadSelectedPlotBtn" title="Download printable plot image">
-              Download Image
-            </button>
-
-            <button type="button" class="btn btn-soft btn-sm" id="printSelectedPlotBtn" title="Print selected plot sheet">
-              Print Sheet
+            <button type="button" class="btn btn-white btn-sm" id="focusSelectedBtn" title="Center on map">
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
             </button>
           </div>
-
-          <div class="map-divider"></div>
-
-          <div class="map-panel-title" style="margin:0 0 10px;">Land Plots / Lots</div>
-
-          <div class="map-plot-meta" id="plotMeta">
-            <span class="pill pill-gray" id="plotCountPill">0 plots</span>
-            <span class="pill pill-gray" id="plotAreaTotalPill">0.00 ha total</span>
-
-            <span class="map-plot-draft" id="plotDraftInfo" style="display:none;">
-              Draft Area: ~<b id="plotDraftArea">0.00</b> ha
-              <br>
-              <span id="plotAdjustHint" style="font-size:11px; font-weight:normal; color:var(--muted);">
-                Click a corner dot, then click the map to move it. Use arrow keys for fine nudging.
-              </span>
-            </span>
-          </div>
-
-          <div class="map-input-row">
-            <label class="map-input-label" for="plotNameInput">Plot name</label>
-            <input id="plotNameInput" class="map-input" type="text" placeholder="e.g., North Field">
-          </div>
-
-          <div class="map-input-row">
-            <label class="map-input-label" for="plotColorInput">Plot color</label>
-            <div class="map-color-row">
-              <input id="plotColorInput" class="map-color" type="color" value="#3b82f6">
-              <input id="plotColorHex" class="map-color-hex" type="text" value="#3b82f6" maxlength="16" spellcheck="false">
-              <button type="button" class="btn btn-soft btn-sm" id="plotColorRandomBtn" title="Random color">Random</button>
-            </div>
-
-            <div class="map-color-presets" id="plotColorPresets">
-              <button type="button" class="map-color-chip is-active" data-color="#3b82f6" style="--chip:#3b82f6;" title="#3b82f6"></button>
-              <button type="button" class="map-color-chip" data-color="#22c55e" style="--chip:#22c55e;" title="#22c55e"></button>
-              <button type="button" class="map-color-chip" data-color="#f97316" style="--chip:#f97316;" title="#f97316"></button>
-              <button type="button" class="map-color-chip" data-color="#e11d48" style="--chip:#e11d48;" title="#e11d48"></button>
-              <button type="button" class="map-color-chip" data-color="#8b5cf6" style="--chip:#8b5cf6;" title="#8b5cf6"></button>
-              <button type="button" class="map-color-chip" data-color="#14b8a6" style="--chip:#14b8a6;" title="#14b8a6"></button>
-            </div>
-          </div>
-
-          <div class="map-plot-list" id="plotList">
-            <div class="map-empty">No plots yet. Select a farmer, then click <b>Plot Land</b>.</div>
-          </div>
-
-          <details class="map-help">
-            <summary>Plotting help</summary>
-            <div class="map-help-body">
-              <ul class="map-help-list">
-                <li>Select a farmer first, then click <b>Plot Land</b>.</li>
-                <li>A starter rectangle appears automatically around the selected marker.</li>
-                <li>Click a corner dot, then click the map to move it.</li>
-                <li>Use <b>Arrow keys</b> for fine nudging and <b>Shift + Arrow</b> for larger steps.</li>
-                <li><b>Enter</b> saves and <b>Esc</b> cancels.</li>
-              </ul>
-            </div>
-          </details>
         </div>
+
+        {{-- Section 2: Farm Stats --}}
+        <div class="map-metrics mb-6">
+          <div class="map-metric bg-white border border-gray-200 rounded p-2">
+            <div class="map-metric-label text-xs text-slate-500 uppercase tracking-wide">Records</div>
+            <div class="map-metric-value text-lg font-bold text-slate-800" id="selRecords">0</div>
+          </div>
+          <div class="map-metric bg-white border border-gray-200 rounded p-2">
+            <div class="map-metric-label text-xs text-slate-500 uppercase tracking-wide">Total Yield</div>
+            <div class="map-metric-value text-lg font-bold text-slate-800"><span id="selKgs">0.00</span><span class="text-sm font-normal text-slate-500 ml-1">kg</span></div>
+          </div>
+        </div>
+
+        <div class="map-divider" style="height: 1px; background: #e2e8f0; margin: 20px 0;"></div>
+
+        {{-- Section 3: Plot Management --}}
+        <div class="flex items-center justify-between mb-3">
+          <div class="map-panel-title" style="margin:0; font-size: 16px; font-weight: 700;">Land Plots</div>
+          <div id="plotMeta" class="flex gap-1">
+            <span class="pill pill-blue text-xs font-bold" id="plotCountPill">0 plots</span>
+          </div>
+        </div>
+
+        <div class="text-sm text-slate-600 mb-4 bg-blue-50 text-blue-800 p-2 rounded border border-blue-100 flex justify-between items-center">
+          <span>Total Farm Area</span>
+          <strong id="plotAreaTotalPill">0.00 ha</strong>
+        </div>
+
+        {{-- Draft info dynamically shown during plot mode --}}
+        <div class="map-plot-draft bg-amber-50 border border-amber-200 p-3 rounded-lg mb-4" id="plotDraftInfo" style="display:none;">
+          <div class="font-bold text-amber-900 mb-1">Drafting Plot</div>
+          <div class="text-sm text-amber-800">
+            Est. Area: <strong id="plotDraftArea">0.00</strong> ha<br>
+            Points: <strong id="plotDraftPoints">0</strong>
+          </div>
+          <div class="text-xs text-amber-700 mt-2">
+            Click a corner to select it, then click the map to move it. Press Enter to save.
+          </div>
+        </div>
+
+        {{-- Plot Setup Inputs --}}
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
+          <div class="map-input-row mb-3">
+            <label class="map-input-label text-xs font-bold text-slate-600 uppercase mb-1 block" for="plotNameInput">Plot Name</label>
+            <input id="plotNameInput" class="map-input w-full p-2 border border-gray-300 rounded" type="text" placeholder="e.g., North Field">
+          </div>
+
+          <div class="map-input-row">
+            <label class="map-input-label text-xs font-bold text-slate-600 uppercase mb-1 block" for="plotColorInput">Plot Color</label>
+            <div class="map-color-row flex gap-2 mb-2">
+              <input id="plotColorInput" class="map-color w-10 h-10 p-0 border-0 rounded cursor-pointer" type="color" value="#3b82f6">
+              <input id="plotColorHex" class="map-color-hex flex-1 p-2 border border-gray-300 rounded font-mono text-sm" type="text" value="#3b82f6" maxlength="16" spellcheck="false">
+            </div>
+            <div class="map-color-presets flex gap-1 mt-2" id="plotColorPresets">
+              {{-- Presets --}}
+              <button type="button" class="w-6 h-6 rounded-full border-2 border-transparent hover:scale-110 transition-transform cursor-pointer" data-color="#3b82f6" style="background:#3b82f6;" title="Blue"></button>
+              <button type="button" class="w-6 h-6 rounded-full border-2 border-transparent hover:scale-110 transition-transform cursor-pointer" data-color="#22c55e" style="background:#22c55e;" title="Green"></button>
+              <button type="button" class="w-6 h-6 rounded-full border-2 border-transparent hover:scale-110 transition-transform cursor-pointer" data-color="#f97316" style="background:#f97316;" title="Orange"></button>
+              <button type="button" class="w-6 h-6 rounded-full border-2 border-transparent hover:scale-110 transition-transform cursor-pointer" data-color="#e11d48" style="background:#e11d48;" title="Red"></button>
+              <button type="button" class="btn btn-soft btn-sm text-xs px-2 py-0 ml-auto" id="plotColorRandomBtn">Random</button>
+            </div>
+          </div>
+        </div>
+
+        {{-- List of saved plots --}}
+        <div class="map-plot-list flex flex-col gap-2" id="plotList">
+          <div class="map-empty text-center p-6 bg-gray-50 border border-dashed border-gray-300 rounded text-slate-500 text-sm">
+            No plots yet.<br>Click <b>Plot Land</b> above to start.
+          </div>
+        </div>
+
       </div>
     </aside>
-  </div>
-
-  <div class="farmers-map-foot">
-    <span class="badge badge-gray">Tip:</span>
-    <span class="p" style="margin:0;">
-      Click a row to fly to its marker. Click a marker to highlight the row. Use the right panel to manage plots.
-    </span>
   </div>
 </div>
 

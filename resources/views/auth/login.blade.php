@@ -279,7 +279,7 @@
 
         <div class="row">
           <label class="remember">
-            <input type="checkbox" name="remember" value="1"> dd
+            <input type="checkbox" name="remember" value="1">
             Remember me
           </label>
         </div>
