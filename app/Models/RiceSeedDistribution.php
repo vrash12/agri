@@ -13,6 +13,8 @@ class RiceSeedDistribution extends Model
     protected $table = 'rice_seed_distributions';
 
     protected $fillable = [
+        'municipality_id',
+
         // FK (connected to farmers.id in your SQL)
         'farmer_id',
 
@@ -63,6 +65,7 @@ class RiceSeedDistribution extends Model
     ];
 
     protected $casts = [
+        'municipality_id' => 'integer',
         'farmer_id' => 'integer',
 
         // Dates (SQL: date)
@@ -72,17 +75,17 @@ class RiceSeedDistribution extends Model
         // Booleans (SQL: tinyint(1))
         'is_arb' => 'boolean',
         'is_4ps' => 'boolean',
-        'is_ip'  => 'boolean',
+        'is_ip' => 'boolean',
         'is_pwd' => 'boolean',
-        'is_sc'  => 'boolean',
+        'is_sc' => 'boolean',
         'is_ofw' => 'boolean',
 
         // Decimals (SQL: decimal)
-        'claimed_area_ha'        => 'decimal:2', // decimal(8,2)
-        'claimed_seeds_kg'       => 'decimal:2', // decimal(8,2)
-        'avg_area_harvested_ha'  => 'decimal:2', // decimal(8,2)
-        'kgs_received'           => 'decimal:2', // decimal(8,2)
-        'farm_area_ha'           => 'decimal:2', // decimal(10,2)
+        'claimed_area_ha' => 'decimal:2', // decimal(8,2)
+        'claimed_seeds_kg' => 'decimal:2', // decimal(8,2)
+        'avg_area_harvested_ha' => 'decimal:2', // decimal(8,2)
+        'kgs_received' => 'decimal:2', // decimal(8,2)
+        'farm_area_ha' => 'decimal:2', // decimal(10,2)
     ];
 
     /**
@@ -91,5 +94,10 @@ class RiceSeedDistribution extends Model
     public function farmer(): BelongsTo
     {
         return $this->belongsTo(Farmer::class, 'farmer_id');
+    }
+
+    public function municipality(): BelongsTo
+    {
+        return $this->belongsTo(Municipality::class);
     }
 }

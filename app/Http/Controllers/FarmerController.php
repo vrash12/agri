@@ -1,28 +1,53 @@
 <?php
-// app/Http/Controllers/FarmerController.php
 
 namespace App\Http\Controllers;
 
 use App\Models\Farmer;
+use App\Models\Municipality;
+use App\Models\RiceSeedDistribution;
+use App\Models\User;
+use Endroid\QrCode\ErrorCorrectionLevel\ErrorCorrectionLevelMedium;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\SvgWriter;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
-use App\Models\RiceSeedDistribution;
 
 class FarmerController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth')->except(['publicLand']);
+    }
+
+    /**
+     * Display the rice-seed distribution history of one farmer.
+     */
     public function records(Request $request, Farmer $farmer)
     {
+        $this->authorize('view', $farmer);
+        $user = $this->authenticatedUser($request);
+        $this->ensureFarmerIsAccessible($farmer, $user);
+
         $perPage = (int) $request->query('per_page', 25);
         $perPage = max(5, min($perPage, 100));
 
-        // Only records linked to this farmer
         $query = RiceSeedDistribution::query()
             ->where('farmer_id', $farmer->id);
 
-        // Optional simple search within this farmer's records
+        $this->applyMunicipalityScope(
+            $query,
+            $user,
+            'rice_seed_distributions.municipality_id'
+        );
+
         $q = trim((string) $request->query('q', ''));
+
         if ($q !== '') {
             $query->where(function ($sub) use ($q) {
                 $sub->where('seed_variety_claimed', 'like', "%{$q}%")
@@ -32,38 +57,46 @@ class FarmerController extends Controller
             });
         }
 
-        // Optional date range filter
         if ($request->filled('received_from')) {
-            $query->whereDate('date_received', '>=', $request->query('received_from'));
+            $query->whereDate(
+                'date_received',
+                '>=',
+                $request->query('received_from')
+            );
         }
+
         if ($request->filled('received_to')) {
-            $query->whereDate('date_received', '<=', $request->query('received_to'));
+            $query->whereDate(
+                'date_received',
+                '<=',
+                $request->query('received_to')
+            );
         }
 
-        // ==========================================
-        // STATS GENERATION
-        // ==========================================
         $totalRecords = (clone $query)->count();
-        $totalKgs     = (float) (clone $query)->sum('kgs_received');
+        $totalKgs = (float) (clone $query)->sum('kgs_received');
 
-        // 1. Most Claimed Seed Variety
         $topVarietyRow = (clone $query)
-            ->select('seed_variety_claimed', DB::raw('count(*) as count'))
+            ->select(
+                'seed_variety_claimed',
+                DB::raw('COUNT(*) as count')
+            )
             ->groupBy('seed_variety_claimed')
             ->orderByDesc('count')
             ->first();
-        $favoriteVariety = $topVarietyRow ? $topVarietyRow->seed_variety_claimed : 'N/A';
 
-        // 2. First and Last Received Dates
+        $favoriteVariety = $topVarietyRow
+            ? $topVarietyRow->seed_variety_claimed
+            : 'N/A';
+
         $firstReceived = (clone $query)->min('date_received');
-        $lastReceived  = (clone $query)->max('date_received');
+        $lastReceived = (clone $query)->max('date_received');
 
-        // ==========================================
-        // GRAPH DATA AGGREGATION
-        // ==========================================
-        // Graph 1: Kgs Received Over Time (Line/Bar Chart Data)
         $kgsOverTime = (clone $query)
-            ->selectRaw('DATE(date_received) as date, SUM(kgs_received) as total_kgs')
+            ->selectRaw(
+                'DATE(date_received) as date,
+                 SUM(kgs_received) as total_kgs'
+            )
             ->groupBy('date')
             ->orderBy('date')
             ->get()
@@ -71,9 +104,11 @@ class FarmerController extends Controller
                 return [$item->date => (float) $item->total_kgs];
             });
 
-        // Graph 2: Variety Claimed Distribution (Pie/Doughnut Chart Data)
         $varietyChartData = (clone $query)
-            ->selectRaw('COALESCE(seed_variety_claimed, "Unknown") as variety, SUM(kgs_received) as total_kgs')
+            ->selectRaw(
+                'COALESCE(seed_variety_claimed, "Unknown") as variety,
+                 SUM(kgs_received) as total_kgs'
+            )
             ->groupBy('variety')
             ->orderByDesc('total_kgs')
             ->get()
@@ -87,11 +122,11 @@ class FarmerController extends Controller
             ->withQueryString();
 
         return view('farmers.records', compact(
-            'farmer', 
-            'records', 
-            'perPage', 
-            'totalRecords', 
-            'totalKgs', 
+            'farmer',
+            'records',
+            'perPage',
+            'totalRecords',
+            'totalKgs',
             'q',
             'favoriteVariety',
             'firstReceived',
@@ -101,166 +136,718 @@ class FarmerController extends Controller
         ));
     }
 
-public function index(Request $request)
-{
-    $q = $request->query('q');
-
-    $perPage = (int) $request->query('per_page', 25);
-    $perPage = max(10, min($perPage, 100));
-
-    $totals = $this->baseQuery($request, false)
-        ->selectRaw('COUNT(farmers.id) as total_farmers, SUM(COALESCE(a.total_kgs,0)) as total_kgs')
-        ->first();
-
-    $totalFarmers = (int) ($totals->total_farmers ?? 0);
-    $totalKgs     = (float) ($totals->total_kgs ?? 0);
-
-    $genderStats = $this->baseQuery($request, false)
-        ->selectRaw('COALESCE(gender, "Unspecified") as gender_group, COUNT(farmers.id) as count')
-        ->groupBy('gender_group')
-        ->pluck('count', 'gender_group');
-
-    $locationStats = $this->baseQuery($request, false)
-        ->selectRaw('farm_location, COUNT(farmers.id) as count')
-        ->whereNotNull('farm_location')
-        ->where('farm_location', '!=', 'UNKNOWN')
-        ->groupBy('farm_location')
-        ->orderByDesc('count')
-        ->limit(10)
-        ->pluck('count', 'farm_location');
-
-    $farmers = $this->baseQuery($request, true)
-        ->orderBy('farmers.last_name')
-        ->orderBy('farmers.first_name')
-        ->paginate($perPage)
-        ->withQueryString();
-
-    return view('farmers.index', compact(
-        'farmers',
-        'q',
-        'perPage',
-        'totalFarmers',
-        'totalKgs',
-        'genderStats',
-        'locationStats'
-    ));
-}
-    public function showImport()
+    /**
+     * Display the farmer directory.
+     */
+    public function index(Request $request)
     {
-        return view('farmers.import');
+        $this->authorize('viewAny', Farmer::class);
+        $q = $request->query('q');
+        $user = $this->authenticatedUser($request);
+
+        $perPage = (int) $request->query('per_page', 25);
+        $perPage = max(10, min($perPage, 100));
+
+        $totals = $this->baseQuery($request, false)
+            ->selectRaw(
+                'COUNT(farmers.id) as total_farmers,
+                 SUM(COALESCE(a.total_kgs, 0)) as total_kgs,
+                 SUM(CASE WHEN p.farmer_id IS NOT NULL THEN 1 ELSE 0 END) as mapped_farmers,
+                 SUM(COALESCE(p.plot_count, 0)) as total_plots,
+                 SUM(COALESCE(p.mapped_area_ha, 0)) as mapped_area_ha,
+                 SUM(CASE WHEN farmers.ffrs IS NULL OR farmers.ffrs = "" THEN 1 ELSE 0 END) as missing_ffrs,
+                 COUNT(DISTINCT CASE
+                    WHEN farmers.farm_location IS NOT NULL
+                     AND farmers.farm_location != ""
+                     AND UPPER(farmers.farm_location) != "UNKNOWN"
+                    THEN farmers.farm_location
+                 END) as location_count'
+            )
+            ->first();
+
+        $totalFarmers = (int) ($totals->total_farmers ?? 0);
+        $totalKgs = (float) ($totals->total_kgs ?? 0);
+        $mappedFarmers = (int) ($totals->mapped_farmers ?? 0);
+        $totalPlots = (int) ($totals->total_plots ?? 0);
+        $mappedAreaHa = (float) ($totals->mapped_area_ha ?? 0);
+        $missingFfrs = (int) ($totals->missing_ffrs ?? 0);
+        $locationCount = (int) ($totals->location_count ?? 0);
+        $mappingCoverage = $totalFarmers > 0
+            ? round(($mappedFarmers / $totalFarmers) * 100, 1)
+            : 0.0;
+
+        $genderStats = $this->baseQuery($request, false)
+            ->selectRaw(
+                'COALESCE(farmers.gender, "Unspecified") as gender_group,
+                 COUNT(farmers.id) as count'
+            )
+            ->groupBy('gender_group')
+            ->pluck('count', 'gender_group');
+
+        $locationStats = $this->baseQuery($request, false)
+            ->selectRaw(
+                'farmers.farm_location,
+                 COUNT(farmers.id) as count'
+            )
+            ->whereNotNull('farmers.farm_location')
+            ->where('farmers.farm_location', '!=', 'UNKNOWN')
+            ->groupBy('farmers.farm_location')
+            ->orderByDesc('count')
+            ->limit(10)
+            ->pluck('count', 'farmers.farm_location');
+
+        $farmers = $this->baseQuery($request, true)
+            ->orderBy('farmers.last_name')
+            ->orderBy('farmers.first_name')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        $municipalities = $this->municipalityOptionsFor($user);
+        $canChooseMunicipality = $user->isProvincialUser();
+
+        return view('farmers.index', compact(
+            'farmers',
+            'q',
+            'perPage',
+            'totalFarmers',
+            'totalKgs',
+            'mappedFarmers',
+            'totalPlots',
+            'mappedAreaHa',
+            'missingFfrs',
+            'locationCount',
+            'mappingCoverage',
+            'genderStats',
+            'locationStats',
+            'municipalities',
+            'canChooseMunicipality'
+        ));
     }
 
-    public function import(Request $request)
+    /**
+     * Display one farmer's printable local registry card.
+     */
+    public function idCard(Request $request, Farmer $farmer)
     {
-        $request->validate([
-            'file' => ['required', 'file', 'mimes:xlsx,xls'],
+        $this->authorize('view', $farmer);
+        $user = $this->authenticatedUser($request);
+        $this->ensureFarmerIsAccessible($farmer, $user);
+
+        $farmer->loadMissing([
+            'municipality:id,name,province',
+            'farmPlots:id,farmer_id,name,area_ha',
         ]);
 
-        $path = $request->file('file')->getRealPath();
-        $spreadsheet = IOFactory::load($path);
+        $scanUrl = route(
+            'farmers.public-land',
+            ['token' => $farmer->public_map_token]
+        );
+        $qrCode = QrCode::create($scanUrl)
+            ->setErrorCorrectionLevel(new ErrorCorrectionLevelMedium())
+            ->setSize(280)
+            ->setMargin(12);
+        $qrDataUri = (new SvgWriter())->write($qrCode)->getDataUri();
 
-        $sheetsToRead = ['PARCEL LISTING', 'OUTSIDE LGU'];
+        return view('farmers.id-card', compact(
+            'farmer',
+            'scanUrl',
+            'qrDataUri'
+        ));
+    }
+
+    /**
+     * Display the read-only interactive parcel map linked from a farmer ID.
+     */
+    public function publicLand(Request $request, string $token)
+    {
+        $farmer = Farmer::query()
+            ->where('public_map_token', $token)
+            ->with([
+                'municipality:id,name,province',
+                'farmPlots' => function ($query) {
+                    $query->orderBy('name')->select([
+                        'id',
+                        'farmer_id',
+                        'name',
+                        'polygon_json',
+                        'area_ha',
+                        'centroid_lat',
+                        'centroid_lng',
+                        'color',
+                    ]);
+                },
+            ])
+            ->firstOrFail();
+
+        $plots = $farmer->farmPlots
+            ->map(function ($plot) {
+                return [
+                    'id' => $plot->id,
+                    'name' => $plot->name ?: 'Unnamed parcel',
+                    'polygon' => $plot->polygon_json ?: [],
+                    'area_ha' => $plot->area_ha !== null
+                        ? (float) $plot->area_ha
+                        : null,
+                    'centroid_lat' => $plot->centroid_lat !== null
+                        ? (float) $plot->centroid_lat
+                        : null,
+                    'centroid_lng' => $plot->centroid_lng !== null
+                        ? (float) $plot->centroid_lng
+                        : null,
+                    'color' => $plot->color ?: '#16834b',
+                ];
+            })
+            ->values();
+
+        return response()
+            ->view('farmers.public-land', compact('farmer', 'plots'))
+            ->header('Cache-Control', 'private, no-store, max-age=0')
+            ->header('Referrer-Policy', 'no-referrer')
+            ->header('X-Robots-Tag', 'noindex, nofollow, noarchive')
+            ->header('X-Content-Type-Options', 'nosniff');
+    }
+
+    /**
+     * Stream a protected farmer profile photo to an authorized user.
+     */
+    public function photo(Request $request, Farmer $farmer)
+    {
+        $this->authorize('view', $farmer);
+        $user = $this->authenticatedUser($request);
+        $this->ensureFarmerIsAccessible($farmer, $user);
+
+        $path = $farmer->profile_photo_path;
+        if (! $path || ! Storage::disk('local')->exists($path)) {
+            abort(404);
+        }
+
+        $mime = Storage::disk('local')->mimeType($path) ?: 'image/jpeg';
+
+        return Storage::disk('local')->response(
+            $path,
+            basename($path),
+            [
+                'Content-Type' => $mime,
+                'Cache-Control' => 'private, max-age=3600',
+                'X-Content-Type-Options' => 'nosniff',
+            ]
+        );
+    }
+
+    /**
+     * Show the create-farmer page.
+     */
+    public function create(Request $request)
+    {
+        $this->authorize('create', Farmer::class);
+        $user = $this->authenticatedUser($request);
+
+        return view('farmers.create', [
+            'record' => new Farmer(),
+            'municipalities' => $this->municipalityOptionsFor($user),
+            'canChooseMunicipality' => $user->isProvincialUser(),
+        ]);
+    }
+
+    /**
+     * Store a new farmer in the correct municipality.
+     */
+    public function store(Request $request)
+    {
+        $this->authorize('create', Farmer::class);
+        $data = $this->validatedFarmerData($request);
+
+        $farmer = Farmer::create($data);
+        $this->syncProfilePhoto($request, $farmer);
+
+        return redirect()
+            ->route('farmers.index')
+            ->with('success', 'Farmer created successfully.');
+    }
+
+    /**
+     * Show the edit-farmer page.
+     */
+    public function edit(Request $request, Farmer $farmer)
+    {
+        $this->authorize('update', $farmer);
+        $user = $this->authenticatedUser($request);
+        $this->ensureFarmerIsAccessible($farmer, $user);
+
+        return view('farmers.edit', [
+            'record' => $farmer,
+            'municipalities' => $this->municipalityOptionsFor($user),
+            'canChooseMunicipality' => $user->isProvincialUser(),
+        ]);
+    }
+
+    /**
+     * Update an accessible farmer.
+     */
+    public function update(Request $request, Farmer $farmer)
+    {
+        $this->authorize('update', $farmer);
+        $user = $this->authenticatedUser($request);
+        $this->ensureFarmerIsAccessible($farmer, $user);
+
+        $data = $this->validatedFarmerData($request, $farmer);
+
+        $farmer->update($data);
+        $this->syncProfilePhoto($request, $farmer);
+
+        return redirect()
+            ->route('farmers.index')
+            ->with('success', 'Farmer updated successfully.');
+    }
+
+    /**
+     * Delete an accessible farmer when no dependent records exist.
+     */
+    public function destroy(Request $request, Farmer $farmer)
+    {
+        $this->authorize('delete', $farmer);
+        $user = $this->authenticatedUser($request);
+        $this->ensureFarmerIsAccessible($farmer, $user);
+
+        if ($farmer->riceSeedDistributions()->exists()) {
+            return back()->with(
+                'error',
+                'Cannot delete this farmer because distribution records are linked to them.'
+            );
+        }
+
+        if (
+            DB::table('farm_plots')
+                ->where('farmer_id', $farmer->id)
+                ->exists()
+        ) {
+            return back()->with(
+                'error',
+                'Cannot delete this farmer because farm plots are linked to them.'
+            );
+        }
+
+        $farmer->cooperatives()->detach();
+
+        if ($farmer->profile_photo_path) {
+            Storage::disk('local')->delete($farmer->profile_photo_path);
+        }
+
+        $farmer->delete();
+
+        return redirect()
+            ->route('farmers.index')
+            ->with('success', 'Farmer deleted successfully.');
+    }
+
+    /**
+     * Validate and normalize farmer input.
+     */
+    private function validatedFarmerData(
+        Request $request,
+        ?Farmer $farmer = null
+    ): array {
+        $user = $this->authenticatedUser($request);
+        $farmerId = $farmer?->id;
+
+        $rules = [
+            'rsbsa_no' => [
+                'nullable',
+                'string',
+                'max:255',
+                Rule::unique('farmers', 'rsbsa_no')->ignore($farmerId),
+            ],
+            'ffrs' => [
+                'nullable',
+                'string',
+                'max:255',
+                Rule::unique('farmers', 'ffrs')->ignore($farmerId),
+            ],
+
+            'last_name' => ['required', 'string', 'max:255'],
+            'first_name' => ['required', 'string', 'max:255'],
+            'middle_name' => ['nullable', 'string', 'max:255'],
+            'ext_name' => ['nullable', 'string', 'max:50'],
+            'owner_name' => ['nullable', 'string', 'max:255'],
+
+            'date_of_birth' => ['nullable', 'date'],
+            'contact_number' => ['nullable', 'string', 'max:50'],
+            'profile_photo' => [
+                'nullable',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:3072',
+                'dimensions:min_width=200,min_height=200,max_width=5000,max_height=5000',
+            ],
+            'remove_profile_photo' => ['nullable', 'boolean'],
+            'gender' => [
+                'nullable',
+                Rule::in(['Male', 'Female', 'Other', 'Unspecified']),
+            ],
+
+            'farm_location' => ['nullable', 'string', 'max:255'],
+            'farm_province' => ['nullable', 'string', 'max:255'],
+            'farm_municipality' => ['nullable', 'string', 'max:255'],
+            'ecosystem' => ['nullable', 'string', 'max:255'],
+            'ecosystem_source' => ['nullable', 'string', 'max:255'],
+
+            'farm_area_ha' => ['nullable', 'numeric', 'min:0'],
+
+            'is_arb' => ['nullable', 'boolean'],
+            'is_4ps' => ['nullable', 'boolean'],
+            'is_ip' => ['nullable', 'boolean'],
+            'is_pwd' => ['nullable', 'boolean'],
+            'is_sc' => ['nullable', 'boolean'],
+            'is_ofw' => ['nullable', 'boolean'],
+        ];
+
+        if ($user->isProvincialUser()) {
+            $rules['municipality_id'] = [
+                'required',
+                'integer',
+                Rule::exists('municipalities', 'id')
+                    ->where(fn ($query) => $query->where('is_active', true)),
+            ];
+        }
+
+        $data = $request->validate($rules);
+
+        unset($data['profile_photo'], $data['remove_profile_photo']);
+
+        $municipality = $this->resolveMunicipalityForWrite(
+            $request,
+            $user
+        );
+
+        $data['municipality_id'] = $municipality->id;
+        $data['farm_municipality'] = $municipality->name;
+        $data['farm_province'] = $municipality->province ?: 'Tarlac';
+
+        foreach (
+            ['is_arb', 'is_4ps', 'is_ip', 'is_pwd', 'is_sc', 'is_ofw']
+            as $field
+        ) {
+            $data[$field] = $request->boolean($field);
+        }
+
+        foreach ([
+            'rsbsa_no',
+            'ffrs',
+            'middle_name',
+            'ext_name',
+            'owner_name',
+            'contact_number',
+            'farm_location',
+            'farm_province',
+            'farm_municipality',
+            'ecosystem',
+            'ecosystem_source',
+        ] as $field) {
+            $data[$field] = $this->nullIfEmpty($data[$field] ?? null);
+        }
+
+        return $data;
+    }
+
+    /**
+     * Store, replace, or remove a farmer photo on the protected local disk.
+     */
+    private function syncProfilePhoto(
+        Request $request,
+        Farmer $farmer
+    ): void {
+        $oldPath = $farmer->profile_photo_path;
+
+        if ($request->hasFile('profile_photo')) {
+            $newPath = $request->file('profile_photo')->store(
+                'farmer-photos/'.$farmer->municipality_id,
+                'local'
+            );
+
+            if (! $newPath) {
+                abort(500, 'The farmer photo could not be stored.');
+            }
+
+            $farmer->forceFill(['profile_photo_path' => $newPath])->save();
+
+            if ($oldPath && $oldPath !== $newPath) {
+                Storage::disk('local')->delete($oldPath);
+            }
+
+            return;
+        }
+
+        if ($request->boolean('remove_profile_photo') && $oldPath) {
+            $farmer->forceFill(['profile_photo_path' => null])->save();
+            Storage::disk('local')->delete($oldPath);
+
+            return;
+        }
+
+        $municipalityFolder = 'farmer-photos/'.$farmer->municipality_id.'/';
+        if (
+            $oldPath
+            && ! Str::startsWith($oldPath, $municipalityFolder)
+            && Storage::disk('local')->exists($oldPath)
+        ) {
+            $extension = pathinfo($oldPath, PATHINFO_EXTENSION);
+            $newPath = $municipalityFolder.Str::uuid()
+                .($extension ? '.'.$extension : '');
+
+            Storage::disk('local')->move($oldPath, $newPath);
+            $farmer->forceFill(['profile_photo_path' => $newPath])->save();
+        }
+    }
+
+    /**
+     * Display the Excel import form.
+     */
+    public function showImport(Request $request)
+    {
+        $this->authorize('import', Farmer::class);
+        $user = $this->authenticatedUser($request);
+
+        return view('farmers.import', [
+            'municipalities' => $this->municipalityOptionsFor($user),
+            'canChooseMunicipality' => $user->isProvincialUser(),
+        ]);
+    }
+
+    /**
+     * Import farmers into one explicitly controlled municipality.
+     */
+    public function import(Request $request)
+    {
+        $this->authorize('import', Farmer::class);
+        $user = $this->authenticatedUser($request);
+
+        $rules = [
+            'file' => ['required', 'file', 'mimes:xlsx,xls'],
+        ];
+
+        if ($user->isProvincialUser()) {
+            $rules['municipality_id'] = [
+                'required',
+                'integer',
+                Rule::exists('municipalities', 'id')
+                    ->where(fn ($query) => $query->where('is_active', true)),
+            ];
+        }
+
+        $request->validate($rules);
+
+        $municipality = $this->resolveMunicipalityForWrite(
+            $request,
+            $user
+        );
+
+        $path = $request->file('file')->getRealPath();
+
+        $reader = IOFactory::createReaderForFile($path);
+        $reader->setReadDataOnly(true);
+        $reader->setLoadSheetsOnly([
+            'PARCEL LISTING',
+            'OUTSIDE LGU',
+        ]);
+
+        $spreadsheet = $reader->load($path);
+
+        $sheetsToRead = [
+            'PARCEL LISTING',
+            'OUTSIDE LGU',
+        ];
 
         $agg = [];
 
         foreach ($sheetsToRead as $sheetName) {
             $sheet = $spreadsheet->getSheetByName($sheetName);
-            if (!$sheet) continue;
 
-            $rows = $sheet->toArray(null, true, true, true);
-            if (count($rows) < 2) continue;
-
-            $headerRow = array_shift($rows);
-            $map = [];
-            foreach ($headerRow as $col => $name) {
-                $name = trim((string) $name);
-                if ($name !== '') $map[$name] = $col;
+            if (!$sheet) {
+                continue;
             }
 
+            $rows = $sheet->toArray(null, true, true, true);
+
+            if (count($rows) < 2) {
+                continue;
+            }
+
+            $headerRow = array_shift($rows);
+            $map = $this->makeHeaderMap($headerRow);
+
             foreach ($rows as $row) {
-                $last  = $this->cellStr($row, $map, 'LAST NAME');
-                $first = $this->cellStr($row, $map, 'FIRST NAME');
+                $last = $this->cellStr($row, $map, ['LAST NAME']);
+                $first = $this->cellStr($row, $map, ['FIRST NAME']);
 
-                if ($last === '' || $first === '') continue;
+                if ($last === '' || $first === '') {
+                    continue;
+                }
 
-                $middle = $this->cellStr($row, $map, 'MIDDLE NAME');
-                $ext    = $this->cellStr($row, $map, 'EXT NAME');
+                $middle = $this->nullIfEmpty(
+                    $this->cellStr($row, $map, ['MIDDLE NAME'])
+                );
 
-                $ffrs   = $this->cellStr($row, $map, 'FFRS System Generated No.');
-                $rsbsa  = $this->cellStr($row, $map, 'LGU RSBSA Number');
+                $ext = $this->nullIfEmpty(
+                    $this->cellStr($row, $map, ['EXT NAME'])
+                );
 
-                $dob = $this->cellDateYmd($row, $map, 'BIRTHDATE');
+                $ffrs = $this->nullIfEmpty(
+                    $this->cellStr(
+                        $row,
+                        $map,
+                        ['FFRS System Generated No.', 'FFRS']
+                    )
+                );
 
-                $genderRaw = strtoupper($this->cellStr($row, $map, 'GENDER'));
+                $rsbsa = $this->nullIfEmpty(
+                    $this->cellStr(
+                        $row,
+                        $map,
+                        ['LGU RSBSA Number', 'RSBSA NO.', 'RSBSA']
+                    )
+                );
+
+                $dob = $this->cellDateYmd(
+                    $row,
+                    $map,
+                    ['BIRTHDATE', 'DATE OF BIRTH']
+                );
+
+                $genderRaw = strtoupper(
+                    $this->cellStr($row, $map, ['GENDER', 'SEX'])
+                );
+
                 $gender = match ($genderRaw) {
-                    'MALE' => 'Male',
-                    'FEMALE' => 'Female',
+                    'MALE', 'M' => 'Male',
+                    'FEMALE', 'F' => 'Female',
                     default => null,
                 };
 
-                $farmLocation = $this->cellStr($row, $map, 'FARMER ADDRESS 1');
-                $farmMunicipality = $this->cellStr($row, $map, 'FARMER ADDRESS 2');
-                $farmProvince = $this->cellStr($row, $map, 'FARMER ADDRESS 3');
+                $farmLocation = $this->nullIfEmpty(
+                    $this->cellStr(
+                        $row,
+                        $map,
+                        ['FARMER ADDRESS 1', 'ADDRESS 1', 'BARANGAY']
+                    )
+                );
 
-                $isArb = $this->cellYesNo($row, $map, 'ARB');
-                $isIp  = $this->cellYesNo($row, $map, 'IF IP');
+                $ownerName = $this->nullIfEmpty(
+                    $this->cellStr(
+                        $row,
+                        $map,
+                        ['OWNER NAME', 'OWNER', 'LAND OWNER']
+                    )
+                );
 
-                $farmerKey = $ffrs !== ''
+                $isArb = $this->cellYesNo($row, $map, ['ARB']);
+                $isIp = $this->cellYesNo($row, $map, ['IF IP', 'IP']);
+
+                $farmerKey = $ffrs
                     ? 'FFRS|' . $ffrs
-                    : 'NOFFRS|' . $last . '|' . $first . '|' . $middle . '|' . $ext . '|' . ($dob ?? '');
+                    : 'NOFFRS|'
+                        . mb_strtoupper($last)
+                        . '|'
+                        . mb_strtoupper($first)
+                        . '|'
+                        . mb_strtoupper((string) $middle)
+                        . '|'
+                        . mb_strtoupper((string) $ext)
+                        . '|'
+                        . ($dob ?? '');
 
                 if (!isset($agg[$farmerKey])) {
                     $agg[$farmerKey] = [
-                        'ffrs' => $ffrs !== '' ? $ffrs : null,
-                        'rsbsa_no' => $rsbsa !== '' ? $rsbsa : null,
+                        'municipality_id' => $municipality->id,
+                        'ffrs' => $ffrs,
+                        'rsbsa_no' => $rsbsa,
 
                         'last_name' => $last,
                         'first_name' => $first,
-                        'middle_name' => $middle !== '' ? $middle : null,
-                        'ext_name' => $ext !== '' ? $ext : null,
+                        'middle_name' => $middle,
+                        'ext_name' => $ext,
+                        'owner_name' => $ownerName,
 
                         'date_of_birth' => $dob,
                         'gender' => $gender,
                         'contact_number' => null,
 
-                        'farm_location' => $farmLocation !== '' ? $farmLocation : 'UNKNOWN',
-                        'farm_municipality' => $farmMunicipality !== '' ? $farmMunicipality : null,
-                        'farm_province' => $farmProvince !== '' ? $farmProvince : null,
+                        'farm_location' => $farmLocation ?: 'UNKNOWN',
+                        'farm_municipality' => $municipality->name,
+                        'farm_province' => $municipality->province ?: 'Tarlac',
 
                         'ecosystem' => null,
                         'ecosystem_source' => null,
 
                         'is_arb' => $isArb,
                         'is_ip' => $isIp,
-
                         'is_4ps' => false,
                         'is_pwd' => false,
-                        'is_sc'  => false,
+                        'is_sc' => false,
                         'is_ofw' => false,
 
                         'parcels' => [],
                     ];
                 } else {
-                    $agg[$farmerKey]['is_arb'] = $agg[$farmerKey]['is_arb'] || $isArb;
-                    $agg[$farmerKey]['is_ip']  = $agg[$farmerKey]['is_ip']  || $isIp;
+                    $agg[$farmerKey]['is_arb'] =
+                        $agg[$farmerKey]['is_arb'] || $isArb;
 
-                    if (($agg[$farmerKey]['farm_location'] ?? '') === 'UNKNOWN' && $farmLocation !== '') {
+                    $agg[$farmerKey]['is_ip'] =
+                        $agg[$farmerKey]['is_ip'] || $isIp;
+
+                    if (
+                        ($agg[$farmerKey]['farm_location'] ?? 'UNKNOWN')
+                            === 'UNKNOWN'
+                        && $farmLocation
+                    ) {
                         $agg[$farmerKey]['farm_location'] = $farmLocation;
                     }
-                    if (empty($agg[$farmerKey]['farm_municipality']) && $farmMunicipality !== '') {
-                        $agg[$farmerKey]['farm_municipality'] = $farmMunicipality;
+
+                    if ($ownerName) {
+                        if (empty($agg[$farmerKey]['owner_name'])) {
+                            $agg[$farmerKey]['owner_name'] = $ownerName;
+                        } elseif (
+                            stripos(
+                                $agg[$farmerKey]['owner_name'],
+                                $ownerName
+                            ) === false
+                        ) {
+                            $agg[$farmerKey]['owner_name'] = trim(
+                                $agg[$farmerKey]['owner_name']
+                                . ', '
+                                . $ownerName
+                            );
+                        }
                     }
-                    if (empty($agg[$farmerKey]['farm_province']) && $farmProvince !== '') {
-                        $agg[$farmerKey]['farm_province'] = $farmProvince;
+
+                    if (
+                        empty($agg[$farmerKey]['rsbsa_no'])
+                        && $rsbsa
+                    ) {
+                        $agg[$farmerKey]['rsbsa_no'] = $rsbsa;
                     }
                 }
 
-                $parcelNo = $this->cellStr($row, $map, 'PARCEL NO');
-                $parcelArea = $this->cellFloat($row, $map, 'PARCEL AREA');
+                $parcelNo = $this->nullIfEmpty(
+                    $this->cellStr(
+                        $row,
+                        $map,
+                        ['PARCEL NO', 'PARCEL NUMBER']
+                    )
+                );
 
-                if ($parcelNo !== '' && $parcelArea !== null) {
-                    $prev = $agg[$farmerKey]['parcels'][$parcelNo] ?? 0;
-                    $agg[$farmerKey]['parcels'][$parcelNo] = max($prev, $parcelArea);
+                $parcelArea = $this->cellFloat(
+                    $row,
+                    $map,
+                    ['PARCEL AREA']
+                );
+
+                if ($parcelNo !== null && $parcelArea !== null) {
+                    $previous = $agg[$farmerKey]['parcels'][$parcelNo] ?? 0;
+
+                    $agg[$farmerKey]['parcels'][$parcelNo] = max(
+                        $previous,
+                        $parcelArea
+                    );
                 }
             }
         }
@@ -268,28 +855,61 @@ public function index(Request $request)
         $created = 0;
         $updated = 0;
 
-        DB::transaction(function () use (&$created, &$updated, $agg) {
+        DB::transaction(function () use (
+            &$created,
+            &$updated,
+            $agg,
+            $municipality
+        ) {
             foreach ($agg as $data) {
-                $farmArea = null;
-                if (!empty($data['parcels'])) {
-                    $farmArea = round(array_sum($data['parcels']), 2);
-                }
+                $farmArea = !empty($data['parcels'])
+                    ? round(array_sum($data['parcels']), 2)
+                    : null;
+
                 unset($data['parcels']);
+
                 $data['farm_area_ha'] = $farmArea;
+                $data['municipality_id'] = $municipality->id;
+                $data['farm_municipality'] = $municipality->name;
+                $data['farm_province'] = $municipality->province ?: 'Tarlac';
 
-                if (!empty($data['ffrs'])) {
-                    $unique = ['ffrs' => $data['ffrs']];
-                } else {
-                    $unique = [
-                        'last_name' => $data['last_name'],
-                        'first_name' => $data['first_name'],
-                        'middle_name' => $data['middle_name'],
-                        'ext_name' => $data['ext_name'],
-                        'date_of_birth' => $data['date_of_birth'],
-                    ];
+                $existing = Farmer::query()
+                    ->where('municipality_id', $municipality->id)
+                    ->when(
+                        !empty($data['ffrs']) || !empty($data['rsbsa_no']),
+                        function ($query) use ($data) {
+                            $query->where(function ($sub) use ($data) {
+                                if (!empty($data['ffrs'])) {
+                                    $sub->orWhere('ffrs', $data['ffrs']);
+                                }
+
+                                if (!empty($data['rsbsa_no'])) {
+                                    $sub->orWhere(
+                                        'rsbsa_no',
+                                        $data['rsbsa_no']
+                                    );
+                                }
+                            });
+                        }
+                    )
+                    ->first();
+
+                if (
+                    !$existing
+                    && empty($data['ffrs'])
+                    && empty($data['rsbsa_no'])
+                ) {
+                    $existing = Farmer::query()
+                        ->where('municipality_id', $municipality->id)
+                        ->where([
+                            'last_name' => $data['last_name'],
+                            'first_name' => $data['first_name'],
+                            'middle_name' => $data['middle_name'],
+                            'ext_name' => $data['ext_name'],
+                            'date_of_birth' => $data['date_of_birth'],
+                        ])
+                        ->first();
                 }
-
-                $existing = Farmer::where($unique)->first();
 
                 if ($existing) {
                     $existing->fill($data)->save();
@@ -301,28 +921,72 @@ public function index(Request $request)
             }
         });
 
-        return redirect()->route('farmers.index')
-            ->with('success', "Farmers import done. Created: {$created}, Updated: {$updated}");
+        return redirect()
+            ->route('farmers.index')
+            ->with(
+                'success',
+                "{$municipality->name} farmers import completed. "
+                . "Created: {$created}, Updated: {$updated}"
+            );
     }
 
-    private function baseQuery(Request $request, bool $withSelect)
-    {
+    /**
+     * Build the municipality-aware farmer listing query.
+     */
+    private function baseQuery(
+        Request $request,
+        bool $withSelect
+    ): Builder {
+        $user = $this->authenticatedUser($request);
+
         $aggSub = DB::table('rice_seed_distributions')
-            ->selectRaw('farmer_id, COUNT(*) as records_count, SUM(kgs_received) as total_kgs, MAX(date_received) as last_received')
+            ->selectRaw(
+                'farmer_id,
+                 COUNT(*) as records_count,
+                 SUM(kgs_received) as total_kgs,
+                 MAX(date_received) as last_received'
+            );
+
+        if (!$user->isProvincialUser()) {
+            $aggSub->where(
+                'rice_seed_distributions.municipality_id',
+                $user->municipality_id
+            );
+        }
+
+        $aggSub->groupBy('farmer_id');
+
+        $plotAggSub = DB::table('farm_plots')
+            ->selectRaw(
+                'farmer_id,
+                 COUNT(*) as plot_count,
+                 SUM(COALESCE(area_ha, 0)) as mapped_area_ha'
+            )
             ->groupBy('farmer_id');
 
         $query = Farmer::query()
             ->leftJoinSub($aggSub, 'a', function ($join) {
                 $join->on('a.farmer_id', '=', 'farmers.id');
+            })
+            ->leftJoinSub($plotAggSub, 'p', function ($join) {
+                $join->on('p.farmer_id', '=', 'farmers.id');
             });
 
+        $this->applyMunicipalityScope(
+            $query,
+            $user,
+            'farmers.municipality_id'
+        );
+
         if ($withSelect) {
-            $query->selectRaw('
-                farmers.*,
-                COALESCE(a.records_count, 0) as records_count,
-                COALESCE(a.total_kgs, 0) as total_kgs,
-                a.last_received as last_received
-            ');
+            $query->selectRaw(
+                'farmers.*,
+                 COALESCE(a.records_count, 0) as records_count,
+                 COALESCE(a.total_kgs, 0) as total_kgs,
+                 a.last_received as last_received,
+                 COALESCE(p.plot_count, 0) as plot_count,
+                 COALESCE(p.mapped_area_ha, 0) as mapped_area_ha'
+            );
         }
 
         $this->applyFilters($query, $request);
@@ -330,62 +994,344 @@ public function index(Request $request)
         return $query;
     }
 
-    private function applyFilters($query, Request $request): void
+    /**
+     * Apply the farmer search filters.
+     */
+    private function applyFilters(Builder $query, Request $request): void
     {
-        $q = $request->query('q');
+        $q = trim((string) $request->query('q', ''));
 
-        $query->when($q, function ($qq) use ($q) {
-            $qq->where(function ($sub) use ($q) {
+        if ($q !== '') {
+            $registryId = null;
+            if (preg_match('/^PAIS-FRM-(\d+)$/i', $q, $matches) === 1) {
+                $registryId = (int) $matches[1];
+            }
+
+            $query->where(function ($sub) use ($q, $registryId) {
                 $sub->where('farmers.last_name', 'like', "%{$q}%")
                     ->orWhere('farmers.first_name', 'like', "%{$q}%")
                     ->orWhere('farmers.middle_name', 'like', "%{$q}%")
+                    ->orWhere('farmers.owner_name', 'like', "%{$q}%")
                     ->orWhere('farmers.ffrs', 'like', "%{$q}%")
                     ->orWhere('farmers.rsbsa_no', 'like', "%{$q}%")
                     ->orWhere('farmers.farm_location', 'like', "%{$q}%")
                     ->orWhere('farmers.farm_municipality', 'like', "%{$q}%")
                     ->orWhere('farmers.farm_province', 'like', "%{$q}%");
+
+                if ($registryId !== null) {
+                    $sub->orWhere('farmers.id', $registryId);
+                }
             });
-        });
-    }
-
-    private function cellStr(array $row, array $map, string $name): string
-    {
-        $col = $map[$name] ?? null;
-        if (!$col) return '';
-        return trim((string)($row[$col] ?? ''));
-    }
-
-    private function cellYesNo(array $row, array $map, string $name): bool
-    {
-        $v = strtoupper($this->cellStr($row, $map, $name));
-        return in_array($v, ['YES','Y','1','TRUE'], true);
-    }
-
-    private function cellFloat(array $row, array $map, string $name): ?float
-    {
-        $col = $map[$name] ?? null;
-        if (!$col) return null;
-
-        $v = $row[$col] ?? null;
-        if ($v === null || $v === '') return null;
-
-        return is_numeric($v) ? (float)$v : null;
-    }
-
-    private function cellDateYmd(array $row, array $map, string $name): ?string
-    {
-        $col = $map[$name] ?? null;
-        if (!$col) return null;
-
-        $v = $row[$col] ?? null;
-        if ($v === null || $v === '') return null;
-
-        try {
-            if ($v instanceof \DateTimeInterface) return $v->format('Y-m-d');
-            if (is_numeric($v)) return ExcelDate::excelToDateTimeObject($v)->format('Y-m-d');
-            return (new \DateTime((string)$v))->format('Y-m-d');
-        } catch (\Throwable $e) {
-            return null;
         }
+
+        $user = $this->authenticatedUser($request);
+        $municipalityId = (int) $request->query('municipality_id', 0);
+        if ($user->isProvincialUser() && $municipalityId > 0) {
+            $query->where('farmers.municipality_id', $municipalityId);
+        }
+
+        $gender = (string) $request->query('gender', '');
+        if (in_array($gender, ['Male', 'Female', 'Other', 'Unspecified'], true)) {
+            if ($gender === 'Unspecified') {
+                $query->where(function ($sub) {
+                    $sub->whereNull('farmers.gender')
+                        ->orWhere('farmers.gender', '')
+                        ->orWhere('farmers.gender', 'Unspecified');
+                });
+            } else {
+                $query->where('farmers.gender', $gender);
+            }
+        }
+
+        $mapping = (string) $request->query('mapping', '');
+        if ($mapping === 'mapped') {
+            $query->whereNotNull('p.farmer_id');
+        } elseif ($mapping === 'unmapped') {
+            $query->whereNull('p.farmer_id');
+        }
+
+        $quality = (string) $request->query('quality', '');
+        if ($quality === 'missing_ffrs') {
+            $query->where(function ($sub) {
+                $sub->whereNull('farmers.ffrs')
+                    ->orWhere('farmers.ffrs', '');
+            });
+        } elseif ($quality === 'missing_location') {
+            $query->where(function ($sub) {
+                $sub->whereNull('farmers.farm_location')
+                    ->orWhere('farmers.farm_location', '')
+                    ->orWhereRaw('UPPER(farmers.farm_location) = ?', ['UNKNOWN']);
+            });
+        }
+    }
+
+    /**
+     * Return one accessible farmer's map information.
+     */
+    public function mapCard(Request $request, Farmer $farmer)
+    {
+        $this->authorize('view', $farmer);
+        $user = $this->authenticatedUser($request);
+        $this->ensureFarmerIsAccessible($farmer, $user);
+
+        $distributionQuery = RiceSeedDistribution::query()
+            ->where('farmer_id', $farmer->id);
+
+        $this->applyMunicipalityScope(
+            $distributionQuery,
+            $user,
+            'rice_seed_distributions.municipality_id'
+        );
+
+        $recordsCount = (int) (clone $distributionQuery)->count();
+        $totalKgs = (float) (clone $distributionQuery)->sum('kgs_received');
+        $lastReceived = (clone $distributionQuery)->max('date_received');
+
+        return response()->json([
+            'id' => $farmer->id,
+            'registry_id' => $farmer->registry_id,
+            'profile_photo_url' => $farmer->profile_photo_path
+                ? route('farmers.photo', $farmer)
+                : null,
+            'municipality_id' => $farmer->municipality_id,
+
+            'last_name' => $farmer->last_name,
+            'first_name' => $farmer->first_name,
+            'middle_name' => $farmer->middle_name,
+            'ext_name' => $farmer->ext_name,
+            'owner_name' => $farmer->owner_name,
+
+            'ffrs' => $farmer->ffrs,
+            'rsbsa_no' => $farmer->rsbsa_no,
+            'date_of_birth' => $farmer->date_of_birth,
+            'gender' => $farmer->gender,
+
+            'location' => $farmer->farm_location,
+            'farm_location' => $farmer->farm_location,
+            'farm_municipality' => $farmer->farm_municipality,
+            'farm_province' => $farmer->farm_province,
+            'farm_area_ha' => $farmer->farm_area_ha,
+
+            'records_count' => $recordsCount,
+            'total_kgs' => $totalKgs,
+            'last_received' => $lastReceived,
+        ]);
+    }
+
+    /**
+     * Apply municipality filtering to an Eloquent query.
+     */
+    private function applyMunicipalityScope(
+        Builder $query,
+        User $user,
+        string $column = 'municipality_id'
+    ): Builder {
+        if ($user->isProvincialUser()) {
+            return $query;
+        }
+
+        if (!$user->municipality_id) {
+            abort(403, 'Your account is not assigned to a municipality.');
+        }
+
+        return $query->where($column, $user->municipality_id);
+    }
+
+    /**
+     * Prevent a municipal user from opening another municipality's farmer.
+     */
+    private function ensureFarmerIsAccessible(
+        Farmer $farmer,
+        User $user
+    ): void {
+        if ($user->isProvincialUser()) {
+            return;
+        }
+
+        if (
+            !$user->municipality_id
+            || (int) $farmer->municipality_id
+                !== (int) $user->municipality_id
+        ) {
+            abort(403, 'You cannot access farmers from another municipality.');
+        }
+    }
+
+    /**
+     * Resolve the municipality to use for create, update, and import actions.
+     */
+    private function resolveMunicipalityForWrite(
+        Request $request,
+        User $user
+    ): Municipality {
+        if ($user->isProvincialUser()) {
+            return Municipality::query()
+                ->whereKey((int) $request->input('municipality_id'))
+                ->where('is_active', true)
+                ->firstOrFail();
+        }
+
+        if (!$user->municipality_id) {
+            abort(403, 'Your account is not assigned to a municipality.');
+        }
+
+        return Municipality::query()
+            ->whereKey($user->municipality_id)
+            ->where('is_active', true)
+            ->firstOrFail();
+    }
+
+    /**
+     * Return municipality choices only to provincial-level users.
+     */
+    private function municipalityOptionsFor(User $user)
+    {
+        if (!$user->isProvincialUser()) {
+            return collect();
+        }
+
+        return Municipality::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'province']);
+    }
+
+    /**
+     * Return the authenticated user or stop the request.
+     */
+    private function authenticatedUser(Request $request): User
+    {
+        $user = $request->user();
+
+        if (!$user instanceof User) {
+            abort(401);
+        }
+
+        return $user;
+    }
+
+    private function makeHeaderMap(array $headerRow): array
+    {
+        $map = [];
+
+        foreach ($headerRow as $column => $name) {
+            $name = trim((string) $name);
+
+            if ($name !== '') {
+                $map[$name] = $column;
+            }
+        }
+
+        return $map;
+    }
+
+    private function cellStr(
+        array $row,
+        array $map,
+        array $possibleHeaders
+    ): string {
+        foreach ($possibleHeaders as $name) {
+            $column = $map[$name] ?? null;
+
+            if ($column) {
+                return trim((string) ($row[$column] ?? ''));
+            }
+        }
+
+        return '';
+    }
+
+    private function cellYesNo(
+        array $row,
+        array $map,
+        array $possibleHeaders
+    ): bool {
+        $value = strtoupper(
+            $this->cellStr($row, $map, $possibleHeaders)
+        );
+
+        return in_array(
+            $value,
+            ['YES', 'Y', '1', 'TRUE'],
+            true
+        );
+    }
+
+    private function cellFloat(
+        array $row,
+        array $map,
+        array $possibleHeaders
+    ): ?float {
+        foreach ($possibleHeaders as $name) {
+            $column = $map[$name] ?? null;
+
+            if (!$column) {
+                continue;
+            }
+
+            $value = $row[$column] ?? null;
+
+            if ($value === null || $value === '') {
+                return null;
+            }
+
+            if (is_numeric($value)) {
+                return (float) $value;
+            }
+
+            $clean = str_replace(',', '', (string) $value);
+
+            return is_numeric($clean)
+                ? (float) $clean
+                : null;
+        }
+
+        return null;
+    }
+
+    private function cellDateYmd(
+        array $row,
+        array $map,
+        array $possibleHeaders
+    ): ?string {
+        foreach ($possibleHeaders as $name) {
+            $column = $map[$name] ?? null;
+
+            if (!$column) {
+                continue;
+            }
+
+            $value = $row[$column] ?? null;
+
+            if ($value === null || $value === '') {
+                return null;
+            }
+
+            try {
+                if ($value instanceof \DateTimeInterface) {
+                    return $value->format('Y-m-d');
+                }
+
+                if (is_numeric($value)) {
+                    return ExcelDate::excelToDateTimeObject(
+                        (float) $value
+                    )->format('Y-m-d');
+                }
+
+                return (new \DateTime((string) $value))
+                    ->format('Y-m-d');
+            } catch (\Throwable $exception) {
+                return null;
+            }
+        }
+
+        return null;
+    }
+
+    private function nullIfEmpty(?string $value): ?string
+    {
+        $value = $value === null ? null : trim($value);
+
+        return $value === '' ? null : $value;
     }
 }

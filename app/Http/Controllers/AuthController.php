@@ -2,62 +2,286 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
+use App\Support\AuditTrail;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\View\View;
 
 class AuthController extends Controller
 {
-    public function showLogin()
+    /**
+     * Display the login page.
+     */
+    public function showLogin(): View
     {
         return view('auth.login');
     }
 
-    public function login(Request $request)
+    /**
+     * Authenticate the user.
+     */
+    public function login(Request $request): RedirectResponse
     {
-        $request->validate([
-            'email'    => ['required', 'email'],
-            'password' => ['required', 'string'],
-            'remember' => ['nullable'],
+        $validated = $request->validate([
+            'email' => [
+                'required',
+                'email',
+            ],
+            'password' => [
+                'required',
+                'string',
+            ],
+            'remember' => [
+                'nullable',
+                'boolean',
+            ],
         ]);
 
-        $credentials = $request->only('email', 'password');
+        $credentials = [
+            'email' => $validated['email'],
+            'password' => $validated['password'],
+        ];
+
         $remember = $request->boolean('remember');
 
-        if (Auth::attempt($credentials, $remember)) {
-            $request->session()->regenerate();
+        if (!Auth::attempt($credentials, $remember)) {
+            AuditTrail::record(
+                'login_failed',
+                'Authentication',
+                'A sign-in attempt failed for '.$validated['email'].'.',
+                [
+                    'actor_email' => $validated['email'],
+                    'metadata' => ['reason' => 'Invalid email or password'],
+                ]
+            );
 
-            $user = Auth::user();
+            return back()
+                ->withInput($request->only('email'))
+                ->withErrors([
+                    'email' => 'Invalid email or password.',
+                ]);
+        }
 
-            // allow only admin roles
-            if (!in_array($user->role ?? null, ['head_admin', 'admin'], true)) {
-                Auth::logout();
-                $request->session()->invalidate();
-                $request->session()->regenerateToken();
+        $request->session()->regenerate();
+
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Ensure the authenticated account exists
+        |--------------------------------------------------------------------------
+        */
+
+        if (!$user) {
+            AuditTrail::record(
+                'login_blocked',
+                'Authentication',
+                'A sign-in attempt was blocked because the account could not be loaded.',
+                [
+                    'actor_email' => $validated['email'],
+                    'metadata' => ['reason' => 'Authenticated account unavailable'],
+                ]
+            );
+            $this->logoutAuthenticatedUser($request);
+
+            return back()
+                ->withInput($request->only('email'))
+                ->withErrors([
+                    'email' => 'Unable to access your account.',
+                ]);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Validate the user's role
+        |--------------------------------------------------------------------------
+        */
+
+        if (!in_array($user->role, User::ROLES, true)) {
+            $this->recordBlockedLogin($user, 'Role is not authorized');
+            $this->logoutAuthenticatedUser($request);
+
+            return back()
+                ->withInput($request->only('email'))
+                ->withErrors([
+                    'email' => 'Your account is not authorized to access this system.',
+                ]);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Block inactive accounts
+        |--------------------------------------------------------------------------
+        */
+
+        if (!$user->isActive()) {
+            $this->recordBlockedLogin($user, 'Account is inactive');
+            $this->logoutAuthenticatedUser($request);
+
+            return back()
+                ->withInput($request->only('email'))
+                ->withErrors([
+                    'email' => 'Your account is inactive. Please contact the system administrator.',
+                ]);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Municipal accounts must have an assigned municipality
+        |--------------------------------------------------------------------------
+        */
+
+        if ($user->requiresMunicipality() && !$user->municipality_id) {
+            $this->recordBlockedLogin($user, 'Municipality is not assigned');
+            $this->logoutAuthenticatedUser($request);
+
+            return back()
+                ->withInput($request->only('email'))
+                ->withErrors([
+                    'email' => 'Your account is not assigned to a municipality. Please contact the Provincial Agriculture Office.',
+                ]);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Ensure the assigned municipality still exists and is active
+        |--------------------------------------------------------------------------
+        */
+
+        if ($user->requiresMunicipality()) {
+            $municipality = $user->municipality;
+
+            if (!$municipality) {
+                $this->recordBlockedLogin($user, 'Assigned municipality was not found');
+                $this->logoutAuthenticatedUser($request);
 
                 return back()
                     ->withInput($request->only('email'))
-                    ->withErrors(['email' => 'Your account is not authorized to access this system.']);
+                    ->withErrors([
+                        'email' => 'Your assigned municipality could not be found. Please contact the Provincial Agriculture Office.',
+                    ]);
             }
 
-            // ✅ Head Admin goes straight to Admins Management
-            if (($user->role ?? null) === 'head_admin') {
-                return redirect()->route('admins.index');
-            }
+            if (
+                isset($municipality->is_active) &&
+                !$municipality->is_active
+            ) {
+                $this->recordBlockedLogin($user, 'Assigned municipality is inactive');
+                $this->logoutAuthenticatedUser($request);
 
-            return redirect()->intended('/dashboard');
+                return back()
+                    ->withInput($request->only('email'))
+                    ->withErrors([
+                        'email' => 'Your assigned municipality is currently inactive.',
+                    ]);
+            }
         }
 
-        return back()
-            ->withInput($request->only('email'))
-            ->withErrors(['email' => 'Invalid email or password.']);
+        /*
+        |--------------------------------------------------------------------------
+        | Record successful login
+        |--------------------------------------------------------------------------
+        */
+
+        $user->forceFill([
+            'last_login_at' => now(),
+        ])->save();
+
+        AuditTrail::record(
+            'login',
+            'Authentication',
+            $user->name.' signed in successfully.',
+            [
+                'actor' => $user,
+                'auditable' => $user,
+                'metadata' => ['remembered_session' => $remember],
+            ]
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Redirect based on role
+        |--------------------------------------------------------------------------
+        |
+        | All users currently use the same dashboard route. The dashboard
+        | controller should filter its statistics and records based on the
+        | logged-in user's municipality and role.
+        |
+        */
+
+        return match ($user->role) {
+            User::ROLE_SUPER_ADMIN => redirect()->intended(
+                route('dashboard')
+            ),
+
+            User::ROLE_PROVINCIAL_STAFF => redirect()->intended(
+                route('dashboard')
+            ),
+
+            User::ROLE_MUNICIPAL_HEAD => redirect()->intended(
+                route('dashboard')
+            ),
+
+            User::ROLE_MUNICIPAL_STAFF => redirect()->intended(
+                route('dashboard')
+            ),
+
+            default => redirect()->route('login'),
+        };
     }
 
-    public function logout(Request $request)
+    /**
+     * Log the user out.
+     */
+    public function logout(Request $request): RedirectResponse
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        if ($user) {
+            AuditTrail::record(
+                'logout',
+                'Authentication',
+                $user->name.' signed out.',
+                [
+                    'actor' => $user,
+                    'auditable' => $user,
+                ]
+            );
+        }
+
+        $this->logoutAuthenticatedUser($request);
+
+        return redirect()
+            ->route('login')
+            ->with('success', 'You have been logged out successfully.');
+    }
+
+    /**
+     * Safely terminate the authenticated session.
+     */
+    private function logoutAuthenticatedUser(Request $request): void
     {
         Auth::logout();
+
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+    }
 
-        return redirect('/login');
+    private function recordBlockedLogin(User $user, string $reason): void
+    {
+        AuditTrail::record(
+            'login_blocked',
+            'Authentication',
+            'A sign-in attempt for '.$user->email.' was blocked.',
+            [
+                'actor' => $user,
+                'auditable' => $user,
+                'metadata' => ['reason' => $reason],
+            ]
+        );
     }
 }

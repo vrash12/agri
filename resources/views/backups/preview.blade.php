@@ -227,6 +227,7 @@
 @endpush
 
 @section('content')
+@include('partials.operations-ui-styles')
 @php
   $name = $file->original_name ?? 'file';
   $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
@@ -240,6 +241,8 @@
   $canEditExcel = in_array($ext, ['xlsx']); // keep simple
   $isPdf = ($ext === 'pdf') || str_contains($mime, 'pdf');
   $isImage = str_starts_with($mime, 'image/') || in_array($ext, ['png','jpg','jpeg','gif','webp']);
+  $isAudio = str_starts_with($mime, 'audio/') || in_array($ext, ['mp3','wav','ogg','m4a','aac','flac']);
+  $isVideo = str_starts_with($mime, 'video/') || in_array($ext, ['mp4','webm','mov','m4v']);
   $isWord  = in_array($ext, ['docx']);
   $isText = $canEditText || in_array($ext, ['txt','log','sql','csv','json','xml','md']);
   $isExcel = $canEditExcel;
@@ -249,30 +252,34 @@
   $saveUrl = route('backups.save', $file->id);
 @endphp
 
-<div class="pv-shell">
-  <div class="pv-top">
-    <div class="pv-title">
-      <h1>{{ $mode === 'edit' ? 'Edit' : 'Preview' }}</h1>
-      <div class="sub">{{ $name }}</div>
+<div class="module-page backup-preview-page">
+  <header class="module-header">
+    <div>
+      <div class="module-eyebrow">Backup repository · {{ $mode === 'edit' ? 'Editor' : 'Preview' }}</div>
+      <h1>{{ $name }}</h1>
+      <p>{{ strtoupper($ext ?: 'FILE') }} · {{ number_format($mb, 2) }} MB · {{ $folder }}{{ optional($file->municipality)->name ? ' · '.optional($file->municipality)->name : '' }}</p>
     </div>
 
-    <div class="pv-actions">
-      <a class="btn btn-soft btn-sm" href="{{ route('backups.index') }}">← Back</a>
+    <div class="module-actions">
+      <a class="module-button" href="{{ route('backups.index') }}">Back to files</a>
 
+      @can('update', $file)
       @if($mode !== 'edit' && ($canEditText || $canEditExcel))
-        <a class="btn btn-soft btn-sm" href="{{ route('backups.preview', $file->id) }}?mode=edit">Edit</a>
+        <a class="module-button" href="{{ route('backups.preview', $file->id) }}?mode=edit">Edit file</a>
       @endif
 
       @if($mode === 'edit')
-        <button class="btn btn-sm" type="button" id="saveBtn" style="background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.28);">Save</button>
+        <button class="module-button module-button-primary" type="button" id="saveBtn">Save changes</button>
       @endif
+      @endcan
 
-      <a class="btn btn-soft btn-sm" href="{{ $streamUrl }}" target="_blank" rel="noopener">Open in new tab</a>
-      <a class="btn btn-soft btn-sm" href="{{ $downloadUrl }}">Download</a>
-      <button class="btn btn-soft btn-sm" type="button" id="printBtn" style="display:none;">Print</button>
+      <a class="module-button" href="{{ $streamUrl }}" target="_blank" rel="noopener">Open raw file</a>
+      <a class="module-button module-button-primary" href="{{ $downloadUrl }}">Download</a>
+      <button class="module-button" type="button" id="printBtn" style="display:none;">Print</button>
     </div>
-  </div>
+  </header>
 
+  <div class="pv-shell">
   <div class="pv-body">
     {{-- Viewer --}}
     <div class="pv-view">
@@ -297,6 +304,19 @@
 
           @elseif($isImage)
             <div class="img-wrap"><img src="{{ $streamUrl }}" alt="{{ $name }}"></div>
+
+          @elseif($isAudio)
+            <div class="media-preview media-preview-audio">
+              <div class="media-preview-icon">♪</div>
+              <strong>{{ $name }}</strong>
+              <span>Audio backup</span>
+              <audio controls preload="metadata" src="{{ $streamUrl }}">Your browser cannot play this audio file.</audio>
+            </div>
+
+          @elseif($isVideo)
+            <div class="media-preview media-preview-video">
+              <video controls preload="metadata" src="{{ $streamUrl }}">Your browser cannot play this video file.</video>
+            </div>
 
           @elseif($isExcel)
             <div class="xl-wrap">
@@ -340,6 +360,9 @@
           <div class="kv"><div class="k">Size</div><div class="v">{{ number_format($mb, 2) }} MB</div></div>
           <div class="kv"><div class="k">Uploaded</div><div class="v">{{ optional($file->created_at)->format('Y-m-d H:i') ?? '—' }}</div></div>
           <div class="kv"><div class="k">Uploader</div><div class="v">{{ optional($file->uploader)->name ?? '—' }}</div></div>
+          <div class="kv"><div class="k">Municipality</div><div class="v">{{ optional($file->municipality)->name ?? 'Provincial / unassigned' }}</div></div>
+          <div class="kv"><div class="k">SHA-256</div><div class="v mono" title="{{ $file->sha256 }}">{{ $file->sha256 ? substr($file->sha256, 0, 20).'…' : 'Unavailable' }}</div></div>
+          <div class="kv"><div class="k">Notes</div><div class="v">{{ $file->notes ?: 'No notes' }}</div></div>
           <div class="kv"><div class="k">Path</div><div class="v mono" id="pathVal">{{ $file->path ?: '—' }}</div></div>
 
           <div class="info-actions">
@@ -354,7 +377,19 @@
     </aside>
   </div>
 </div>
+</div>
 @endsection
+
+@push('styles')
+<style>
+  .backup-preview-page .module-header h1{max-width:760px;overflow:hidden;font-size:25px;text-overflow:ellipsis;white-space:nowrap}
+  .backup-preview-page .pv-shell{border-radius:11px;box-shadow:0 2px 8px rgba(20,40,27,.03)}
+  .backup-preview-page .viewer-card,.backup-preview-page .info-card{border-radius:10px;box-shadow:0 2px 8px rgba(20,40,27,.04)}
+  .backup-preview-page .viewer-toolbar,.backup-preview-page .info-head{background:#f8faf8}
+  .backup-preview-page .media-preview{width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:9px;padding:24px;background:linear-gradient(145deg,#f8faf8,#eef6f0)}.backup-preview-page .media-preview-icon{width:58px;height:58px;display:grid;place-items:center;border-radius:16px;color:#fff;background:var(--module-green);font-size:25px;font-weight:800}.backup-preview-page .media-preview strong{max-width:80%;overflow:hidden;color:var(--module-ink);font-size:15px;text-overflow:ellipsis;white-space:nowrap}.backup-preview-page .media-preview span{color:var(--module-muted);font-size:10px}.backup-preview-page .media-preview audio{width:min(560px,90%);margin-top:8px}.backup-preview-page .media-preview-video{background:#101613}.backup-preview-page .media-preview video{max-width:100%;max-height:100%}
+  @media(max-width:620px){.backup-preview-page .module-header h1{max-width:100%;white-space:normal;overflow-wrap:anywhere}.backup-preview-page .pv-view,.backup-preview-page .pv-info{padding:10px}}
+</style>
+@endpush
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>

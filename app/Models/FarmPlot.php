@@ -15,6 +15,7 @@ class FarmPlot extends Model
         'area_ha',
         'centroid_lat',
         'centroid_lng',
+        'color',
     ];
 
     protected $casts = [

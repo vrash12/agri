@@ -1,398 +1,3 @@
-{{-- resources/views/farmers/index.blade.php --}}
-@extends('layouts.app')
-
-@section('title', 'Farmers')
-
-@section('content')
-  @php
-  $farmersMapData = collect($farmers->items())->map(function ($f) {
-    return [
-      'id' => $f->id,
-      'last_name' => $f->last_name,
-      'first_name' => $f->first_name,
-      'middle_name' => $f->middle_name,
-      'ffrs' => $f->ffrs,
-      'date_of_birth' => $f->date_of_birth,
-      'gender' => $f->gender,
-      'location' => $f->farm_location,
-      'records_count' => (int) ($f->records_count ?? 0),
-      'total_kgs' => (float) ($f->total_kgs ?? 0),
-      'last_received' => $f->last_received,
-    ];
-  })->values();
-@endphp
-
-  <div class="card farmers-card">
-    <div class="card-header farmers-header">
-      <div class="farmers-header-left">
-        <h1 class="h1" style="margin:0;">Farmers Dashboard</h1>
-        <p class="p" style="margin:30px 0 0;">
-          Unique list of farmers based on recorded distributions.
-        </p>
-
-        {{-- GLOBAL STATISTICS --}}
-        <div class="farmers-stats">
-          <div class="stat-pill">
-            Total Farmers:
-            <span class="stat-num" style="color:#0b1220;">{{ number_format($totalFarmers) }}</span>
-          </div>
-          <div class="stat-pill pill-green">
-            Total Kgs Distributed:
-            <span class="stat-num">{{ number_format($totalKgs, 2) }}</span>
-          </div>
-          <div class="stat-pill stat-soft" title="Source: Rice Seed Distribution records">
-            Data source: distributions
-          </div>
-        </div>
-      </div>
-
-      <div class="farmers-header-actions">
-        <a class="btn farmers-add" href="{{ route('rice-seed-distributions.create') }}">
-          + Add Distribution Record
-        </a>
-      </div>
-    </div>
-
-    <div class="farmers-body">
-
-      {{-- ===== Charts Section ===== --}}
-      <div class="charts-grid">
-        <div class="chart-card">
-          <h3 class="chart-title">Gender Distribution</h3>
-          <div class="chart-wrapper">
-            <canvas id="genderChart"></canvas>
-          </div>
-        </div>
-
-        <div class="chart-card">
-          <h3 class="chart-title">Top 10 Farm Locations</h3>
-          <div class="chart-wrapper">
-            <canvas id="locationChart"></canvas>
-          </div>
-        </div>
-      </div>
-
-      {{-- ===== Google Maps 3D Map Module ===== --}}
-      @include('farmers.maps', [
-        'farmersMapData' => $farmersMapData,
-      ])
-
-      <div class="table-shell">
-        <table id="farmersTable" class="display farmers-table" style="width:100%;">
-          <thead>
-            <tr>
-              <th style="width:60px;">No.</th>
-              <th>Last Name</th>
-              <th>First Name</th>
-              <th>Middle Name</th>
-              <th>FFRS No.</th>
-              <th>Date of Birth</th>
-              <th>Gender</th>
-              <th>Location of Farm</th>
-              <th>Total Records</th>
-              <th>Total Kgs</th>
-              <th>Last Received</th>
-              <th class="th-action">Action</th>
-            </tr>
-          </thead>
-
-          <tbody>
-          @forelse($farmers as $f)
-            @php
-              $middle = $f->middle_name ?? '—';
-              $ffrs = $f->ffrs ?? '—';
-              $dob = $f->date_of_birth ?? '—';
-              $gender = $f->gender ?? '—';
-              $loc = $f->farm_location ?? '—';
-              $records = (int) ($f->records_count ?? 0);
-              $kgsRaw = (float) ($f->total_kgs ?? 0);
-              $kgsDisplay = number_format($kgsRaw, 2);
-              $last = $f->last_received ?? '—';
-            @endphp
-
-            <tr
-              id="farmer-row-{{ $f->id }}"
-              data-farmer-id="{{ $f->id }}"
-              data-location="{{ e((string) $loc) }}"
-            >
-              <td class="td-no"></td>
-              <td class="td-strong">{{ $f->last_name }}</td>
-              <td>{{ $f->first_name }}</td>
-              <td>{{ $middle }}</td>
-              <td class="td-mono">{{ $ffrs }}</td>
-              <td>{{ $dob }}</td>
-              <td>
-                <span class="badge {{ in_array(strtolower((string)$gender), ['male','m']) ? 'badge-green' : (in_array(strtolower((string)$gender), ['female','f']) ? 'badge-yellow' : 'badge-gray') }}">
-                  {{ $gender }}
-                </span>
-              </td>
-              <td>{{ $loc }}</td>
-              <td class="td-strong" data-order="{{ $records }}">
-                <span class="pill pill-gray">{{ $records }}</span>
-              </td>
-              <td class="td-strong" data-order="{{ $kgsRaw }}">
-                <span class="pill pill-green">{{ $kgsDisplay }}</span>
-              </td>
-              <td data-order="{{ $last }}">{{ $last }}</td>
-              <td class="td-action">
-                <a class="btn btn-soft btn-sm" href="{{ route('farmers.records', $f->id) }}">
-                  View Records
-                </a>
-              </td>
-            </tr>
-          @empty
-            <tr>
-              <td colspan="12" class="td-empty">
-                No farmers found.
-              </td>
-            </tr>
-          @endforelse
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    // Chart data
-    window.__genderStats   = @json($genderStats ?? []);
-    window.__locationStats = @json($locationStats ?? []);
-
-    // Map data
-    window.__farmersMapData = window.__farmersMapData || @json($farmersMapData);
-  </script>
-@endsection
-
-@push('styles')
-<style>
-  .farmers-header{ align-items: flex-start; }
-  .farmers-header-left{ min-width: 260px; }
-  .farmers-header-actions{
-    display:flex;
-    align-items:flex-start;
-    justify-content:flex-end;
-  }
-  .farmers-stats{
-    display:flex;
-    gap: 10px;
-    flex-wrap:wrap;
-    margin-top: 10px;
-  }
-  .stat-pill{
-    display:inline-flex;
-    align-items:center;
-    gap: 8px;
-    padding: 7px 10px;
-    border-radius: 999px;
-    border: 1px solid var(--border);
-    background: #fff;
-    font-size: 12px;
-    font-weight: 900;
-    color: #0b1220;
-  }
-  .stat-soft{ background: rgba(2,6,23,.03); font-weight: 800; color: var(--muted); }
-  .stat-num{ color: var(--green); font-weight: 900; }
-  .farmers-body{ padding: 14px 16px 18px; }
-
-  /* Charts Grid CSS */
-  .charts-grid {
-    display: grid;
-    grid-template-columns: 1fr 2.5fr;
-    gap: 14px;
-    margin-bottom: 14px;
-  }
-  @media (max-width: 900px) {
-    .charts-grid { grid-template-columns: 1fr; }
-  }
-  .chart-card {
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    background: #fff;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-  }
-  .chart-title {
-    margin: 0 0 12px 0;
-    font-size: 14px;
-    font-weight: 900;
-    color: #0b1220;
-  }
-  .chart-wrapper {
-    position: relative;
-    height: 220px;
-    width: 100%;
-  }
-
-  .table-shell{
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    overflow: hidden;
-    background: #fff;
-  }
-  .dt-top, .dt-bottom{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap: 12px;
-    flex-wrap: wrap;
-    padding: 10px 4px;
-  }
-  .dt-top{ padding-top: 0; }
-  .dt-bottom{ padding-bottom: 0; }
-  .dataTables_filter label, .dataTables_length label{
-    display:flex; align-items:center; gap: 10px; font-weight: 900; color:#0b1220;
-  }
-  .dataTables_filter input{ min-width: 260px; }
-  @media (max-width: 700px){
-    .dataTables_filter input{ min-width: 180px; }
-  }
-  table.farmers-table thead th{
-    background: #f8fafc; font-weight: 900; border-bottom: 1px solid var(--border);
-  }
-  table.farmers-table tbody tr:hover td{ background: rgba(34,197,94,.04); }
-  .td-no{ font-weight: 900; }
-  .td-strong{ font-weight: 900; }
-  .td-mono{
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    font-size: 12px; color:#0b1220;
-  }
-  .th-action, .td-action{ text-align:right; white-space: nowrap; }
-  .btn-sm{ padding: 8px 10px; border-radius: 12px; box-shadow: none; }
-  .badge{
-    display:inline-flex; align-items:center; padding: 4px 10px; border-radius: 999px;
-    border: 1px solid var(--border); font-size: 12px; font-weight: 900;
-    text-transform: uppercase; letter-spacing: .2px;
-  }
-  .badge-green{ border-color: rgba(34,197,94,.25); background: rgba(34,197,94,.10); color: var(--green); }
-  .badge-yellow{ border-color: rgba(250,204,21,.35); background: rgba(250,204,21,.18); color:#854d0e; }
-  .badge-gray{ background: rgba(2,6,23,.03); color: var(--muted); }
-  .pill{
-    display:inline-flex; align-items:center; justify-content:center; padding: 4px 10px;
-    border-radius: 999px; border: 1px solid var(--border); font-weight: 900; font-size: 12px;
-  }
-  .pill-green{ border-color: rgba(34,197,94,.25); background: rgba(34,197,94,.10); color: var(--green); }
-  .pill-gray{ background: rgba(2,6,23,.03); color: #0b1220; }
-  .td-empty{ padding: 18px !important; color: var(--muted); }
-  .row-highlight td{ background: rgba(59,130,246,.10) !important; }
-</style>
-@endpush
-
-@push('scripts')
-{{-- Include Chart.js --}}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<script>
-  $(function () {
-    // --------------------------------------------------------------
-    // 1) Charts
-    // --------------------------------------------------------------
-    var genderCtx = document.getElementById('genderChart');
-    if (genderCtx && window.__genderStats && Object.keys(window.__genderStats).length > 0) {
-      new Chart(genderCtx, {
-        type: 'doughnut',
-        data: {
-          labels: Object.keys(window.__genderStats),
-          datasets: [{
-            data: Object.values(window.__genderStats),
-            backgroundColor: ['#22c55e', '#eab308', '#94a3b8', '#3b82f6'],
-            borderWidth: 2,
-            borderColor: '#ffffff',
-            hoverOffset: 4
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { position: 'right', labels: { font: { size: 11, family: 'ui-sans-serif, system-ui' } } }
-          },
-          cutout: '70%'
-        }
-      });
-    }
-
-    var locationCtx = document.getElementById('locationChart');
-    if (locationCtx && window.__locationStats && Object.keys(window.__locationStats).length > 0) {
-      new Chart(locationCtx, {
-        type: 'bar',
-        data: {
-          labels: Object.keys(window.__locationStats),
-          datasets: [{
-            label: 'Total Farmers',
-            data: Object.values(window.__locationStats),
-            backgroundColor: 'rgba(34,197,94,0.85)',
-            borderRadius: 4
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            y: { beginAtZero: true, ticks: { precision: 0 } },
-            x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45, font: { size: 10 } } }
-          }
-        }
-      });
-    }
-
-    // --------------------------------------------------------------
-    // 2) DataTable
-    // --------------------------------------------------------------
-    var already = $.fn.DataTable.isDataTable('#farmersTable');
-    var table = already
-      ? $('#farmersTable').DataTable()
-      : $('#farmersTable').DataTable({
-          pageLength: 10,
-          lengthMenu: [10, 25, 50, 100],
-          order: [[1, 'asc']],
-          autoWidth: false,
-          deferRender: true,
-          columnDefs: [
-            { orderable: false, targets: [0, 11] },
-            { searchable: false, targets: [0, 11] }
-          ],
-          dom: '<"dt-top"lf>rt<"dt-bottom"ip><"clear">',
-          language: {
-            search: "Search:",
-            lengthMenu: "Show _MENU_ entries",
-            info: "Showing _START_ to _END_ of _TOTAL_ farmers",
-            infoEmpty: "Showing 0 to 0 of 0 farmers",
-            zeroRecords: "No matching farmers found"
-          }
-        });
-
-    table.on('order.dt search.dt draw.dt', function () {
-      var info = table.page.info();
-      table.column(0, { search: 'applied', order: 'applied' }).nodes().each(function (cell, i) {
-        cell.innerHTML = '<span style="font-weight:900;">' + (info.start + i + 1) + '</span>';
-      });
-    }).draw();
-
-    // --------------------------------------------------------------
-    // 3) Row click -> open farmer on the 3D map
-    // --------------------------------------------------------------
-    $('#farmersTable')
-      .off('click.__rowToMap')
-      .on('click.__rowToMap', 'tbody tr', function (e) {
-        if ($(e.target).closest('a,button,input,select,textarea,label').length) return;
-
-        var id = this && this.dataset ? this.dataset.farmerId : null;
-        if (!id) return;
-
-        if (typeof window.__openFarmer3d === 'function') {
-          window.__openFarmer3d(String(id));
-        } else if (typeof window.__mapToast === 'function') {
-          window.__mapToast('Map is still loading… try again in a moment.', 'warn');
-        } else {
-          console.warn('Map not ready yet: __openFarmer3d not defined.');
-        }
-      });
-  });
-</script>
-@endpush
-
 @push('scripts')
 <script>
   var GOOGLE_MAPS_API_KEY = window.__gmapsApiKey || "";
@@ -432,7 +37,6 @@
 
         var nonceEl = m.querySelector("script[nonce]");
         a.nonce = nonceEl ? nonceEl.nonce : "";
-
         m.head.appendChild(a);
       });
 
@@ -464,6 +68,7 @@
     function showToast(msg, kind) {
       var el = document.getElementById('mapToast');
       if (!el) return;
+
       el.className = 'map-toast is-show' + (kind ? (' is-' + kind) : '');
       el.textContent = msg;
 
@@ -490,94 +95,714 @@
 
     function bindRowClickToMap() {
       if (!window.jQuery) return;
+
       $('#farmersTable')
         .off('click.__rowToMap')
         .on('click.__rowToMap', 'tbody tr', function (e) {
           if ($(e.target).closest('a,button,input,select,textarea,label').length) return;
+
           var id = this && this.dataset ? this.dataset.farmerId : null;
           if (!id) return;
-          if (typeof window.__openFarmer3d === 'function') window.__openFarmer3d(String(id));
+
+          if (typeof window.__openFarmer3d === 'function') {
+window.__openFarmer3d(String(id), { showMarker: false });
+          } else if (typeof window.__mapToast === 'function') {
+            window.__mapToast('Map is still loading… try again in a moment.', 'warn');
+          }
         });
     }
 
-    function bindButtons() {
-      var btnFit = document.getElementById('recenterMapBtn');
-      if (btnFit) btnFit.addEventListener('click', function () {
-        if (typeof window.__fit3dToVisibleMarkers === "function") window.__fit3dToVisibleMarkers();
-      });
 
-      var btnReset = document.getElementById('resetMapBtn');
-      if (btnReset) btnReset.addEventListener('click', function () {
-        if (typeof window.__reset3dMap === "function") window.__reset3dMap();
-      });
-
-      var btnClear = document.getElementById('clearSelectionBtn');
-      if (btnClear) btnClear.addEventListener('click', function () {
-        if (typeof window.__clearFarmerSelection === "function") window.__clearFarmerSelection();
-      });
-
-      var btnFocus = document.getElementById('focusSelectedBtn');
-      if (btnFocus) btnFocus.addEventListener('click', function () {
-        if (typeof window.__focusSelectedFarmer === "function") window.__focusSelectedFarmer();
-      });
-
-      var btnDownloadSelectedPlot = document.getElementById('downloadSelectedPlotBtn');
-      if (btnDownloadSelectedPlot) btnDownloadSelectedPlot.addEventListener('click', function () {
-        if (typeof window.__downloadCurrentPlotSheet === "function") window.__downloadCurrentPlotSheet();
-      });
-
-      var btnPrintSelectedPlot = document.getElementById('printSelectedPlotBtn');
-      if (btnPrintSelectedPlot) btnPrintSelectedPlot.addEventListener('click', function () {
-        if (typeof window.__printCurrentPlotSheet === "function") window.__printCurrentPlotSheet();
-      });
-
-      var tMarkers = document.getElementById('toggleMarkers');
-      if (tMarkers) tMarkers.addEventListener('change', function () {
-        if (typeof window.__applyMarkerVisibility === "function") window.__applyMarkerVisibility();
-      });
-
-      var tPlots = document.getElementById('togglePlots');
-      if (tPlots) tPlots.addEventListener('change', function () {
-        if (typeof window.__applyPlotVisibility === "function") window.__applyPlotVisibility();
-        if (typeof window.__setPlotsLoadingEnabled === "function") window.__setPlotsLoadingEnabled(!!tPlots.checked);
-      });
+function bindButtons() {
+  var btnFit = document.getElementById('recenterMapBtn');
+  if (btnFit) btnFit.addEventListener('click', function () {
+    if (typeof window.__fit3dToVisibleMarkers === "function") {
+      window.__fit3dToVisibleMarkers();
     }
+  });
 
-    $(function () {
-      bindRowClickToMap();
-      bindButtons();
+  var btnReset = document.getElementById('resetMapBtn');
+  if (btnReset) btnReset.addEventListener('click', function () {
+    if (typeof window.__reset3dMap === "function") {
+      window.__reset3dMap();
+    }
+  });
 
-      initFarmersMap3D().catch(function (e) {
-        console.error(e);
-        var statusEl = document.getElementById('mapStatus');
-        var statusSmall = document.getElementById('mapStatusSmall');
-        if (statusEl) statusEl.textContent = '3D map failed to load.';
-        if (statusSmall) statusSmall.textContent = 'Check your API key / Map ID.';
-        showToast('3D map failed to load. Check API key and Map ID.', 'bad');
-      });
-    });
+  var btnClear = document.getElementById('clearSelectionBtn');
+  if (btnClear) btnClear.addEventListener('click', function () {
+    if (typeof window.__clearFarmerSelection === "function") {
+      window.__clearFarmerSelection();
+    }
+  });
+
+  var btnFocus = document.getElementById('focusSelectedBtn');
+  if (btnFocus) btnFocus.addEventListener('click', function () {
+    if (typeof window.__focusSelectedFarmer === "function") {
+      window.__focusSelectedFarmer();
+    }
+  });
+
+ var btnDownloadAll = document.getElementById('downloadAllPlotsBtn');
+if (btnDownloadAll) {
+  btnDownloadAll.addEventListener('click', function () {
+    if (typeof window.__handleDownloadAllPlots === 'function') {
+      window.__handleDownloadAllPlots();
+    } else if (typeof window.__mapToast === 'function') {
+      window.__mapToast('Map is still loading… try again in a moment.', 'warn');
+    }
+  });
+}
+
+  var tMarkers = document.getElementById('toggleMarkers');
+  if (tMarkers) tMarkers.addEventListener('change', function () {
+    if (typeof window.__applyMarkerVisibility === "function") {
+      window.__applyMarkerVisibility();
+    }
+  });
+
+  var tPlots = document.getElementById('togglePlots');
+  if (tPlots) tPlots.addEventListener('change', function () {
+    if (typeof window.__applyPlotVisibility === "function") {
+      window.__applyPlotVisibility();
+    }
+    if (typeof window.__setPlotsLoadingEnabled === "function") {
+      window.__setPlotsLoadingEnabled(!!tPlots.checked);
+    }
+  });
+}
+   $(function () {
+  bindRowClickToMap();
+  bindButtons();
+
+  initFarmersMap3D().catch(function (e) {
+    console.error(e);
+    var statusEl = document.getElementById('mapStatus');
+    var statusSmall = document.getElementById('mapStatusSmall');
+
+    if (statusEl) statusEl.textContent = '3D map failed to load.';
+    if (statusSmall) statusSmall.textContent = 'Check your API key / Map ID.';
+
+    showToast('3D map failed to load. Check API key and Map ID.', 'bad');
+  });
+});
   })();
 
   async function initFarmersMap3D() {
+function buildCornerHandleElement(isSelected) {
+  var el = document.createElement('div');
+  el.style.width = '18px';
+  el.style.height = '18px';
+  el.style.position = 'relative';
+  el.style.boxSizing = 'border-box';
+  el.style.border = '1.5px solid rgba(255,255,255,0.98)';
+  el.style.background = 'rgba(255,255,255,0.06)';
+  el.style.borderRadius = '2px';
+  el.style.pointerEvents = 'auto';
+  el.style.boxShadow = isSelected
+    ? '0 0 0 2px rgba(59,130,246,0.35), 0 1px 6px rgba(0,0,0,0.35)'
+    : '0 1px 4px rgba(0,0,0,0.28)';
+
+  function makeLine(styles) {
+    var line = document.createElement('span');
+    line.style.position = 'absolute';
+    for (var key in styles) line.style[key] = styles[key];
+    return line;
+  }
+
+  var lineColor = isSelected ? '#60a5fa' : '#ffffff';
+
+  el.appendChild(makeLine({
+    left: '2px',
+    right: '2px',
+    top: '50%',
+    height: '1px',
+    background: lineColor,
+    transform: 'translateY(-50%)'
+  }));
+
+  el.appendChild(makeLine({
+    top: '2px',
+    bottom: '2px',
+    left: '50%',
+    width: '1px',
+    background: lineColor,
+    transform: 'translateX(-50%)'
+  }));
+
+  return el;
+}
+
+
+function buildCornerHandleTemplate(isSelected) {
+  var tpl = document.createElement('template');
+  tpl.content.appendChild(buildCornerHandleElement(isSelected));
+  return tpl;
+}
+  // =========================
+// KMZ / KML IMPORT FOR 3D MAP
+// =========================
+
+function getKmzImportBtn() {
+  return document.getElementById('importKmzBtn');
+}
+
+function getKmzFileInput() {
+  return document.getElementById('kmzFileInput');
+}
+
+function bindKmzImport() {
+  var btn = getKmzImportBtn();
+  var input = getKmzFileInput();
+
+  if (!btn) {
+    console.warn('KMZ import button #importKmzBtn not found.');
+    return;
+  }
+
+  if (!input) {
+    console.warn('KMZ file input #kmzFileInput not found.');
+    return;
+  }
+
+  btn.addEventListener('click', function () {
+    if (!selectedFarmerId) {
+      toast('Select a farmer first before importing KMZ.', 'warn');
+      return;
+    }
+
+    input.value = '';
+    input.click();
+  });
+
+  input.addEventListener('change', async function (e) {
+    var file = e.target && e.target.files ? e.target.files[0] : null;
+    if (!file) return;
+
+    try {
+      await importKmzOrKmlToSelectedFarmer(file);
+    } catch (err) {
+      console.error(err);
+      toast(err && err.message ? err.message : 'KMZ import failed.', 'bad');
+      setStatus('KMZ import failed.', '');
+    } finally {
+      input.value = '';
+    }
+  });
+}
+
+function pointEquals(a, b) {
+  return Math.abs(Number(a.lat) - Number(b.lat)) < 1e-10 &&
+         Math.abs(Number(a.lng) - Number(b.lng)) < 1e-10;
+}
+
+function orientation(a, b, c) {
+  var v = (Number(b.lng) - Number(a.lng)) * (Number(c.lat) - Number(a.lat)) -
+          (Number(b.lat) - Number(a.lat)) * (Number(c.lng) - Number(a.lng));
+
+  if (Math.abs(v) < 1e-12) return 0;
+  return v > 0 ? 1 : 2;
+}
+
+function onSegment(a, p, b) {
+  return (
+    Math.min(Number(a.lng), Number(b.lng)) - 1e-12 <= Number(p.lng) &&
+    Number(p.lng) <= Math.max(Number(a.lng), Number(b.lng)) + 1e-12 &&
+    Math.min(Number(a.lat), Number(b.lat)) - 1e-12 <= Number(p.lat) &&
+    Number(p.lat) <= Math.max(Number(a.lat), Number(b.lat)) + 1e-12
+  );
+}
+
+function segmentsIntersect(a1, a2, b1, b2) {
+  // ignore shared endpoints so touching your own corner does not count as overlap
+  if (pointEquals(a1, b1) || pointEquals(a1, b2) || pointEquals(a2, b1) || pointEquals(a2, b2)) {
+    return false;
+  }
+
+  var o1 = orientation(a1, a2, b1);
+  var o2 = orientation(a1, a2, b2);
+  var o3 = orientation(b1, b2, a1);
+  var o4 = orientation(b1, b2, a2);
+
+  if (o1 !== o2 && o3 !== o4) return true;
+
+  if (o1 === 0 && onSegment(a1, b1, a2)) return true;
+  if (o2 === 0 && onSegment(a1, b2, a2)) return true;
+  if (o3 === 0 && onSegment(b1, a1, b2)) return true;
+  if (o4 === 0 && onSegment(b1, a2, b2)) return true;
+
+  return false;
+}
+
+function pointInPolygon(point, ring) {
+  ring = openRing(ring);
+  if (!ring || ring.length < 3) return false;
+
+  var x = Number(point.lng);
+  var y = Number(point.lat);
+  var inside = false;
+
+  for (var i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    var xi = Number(ring[i].lng), yi = Number(ring[i].lat);
+    var xj = Number(ring[j].lng), yj = Number(ring[j].lat);
+
+    var intersect = ((yi > y) !== (yj > y)) &&
+      (x < ((xj - xi) * (y - yi)) / ((yj - yi) || 1e-12) + xi);
+
+    if (intersect) inside = !inside;
+  }
+
+  return inside;
+}
+
+function getClosedEdges(ring) {
+  var pts = openRing(ring);
+  var edges = [];
+  if (!pts || pts.length < 2) return edges;
+
+  for (var i = 0; i < pts.length; i++) {
+    edges.push([pts[i], pts[(i + 1) % pts.length]]);
+  }
+
+  return edges;
+}
+
+function polygonEdgesIntersect(ringA, ringB) {
+  var edgesA = getClosedEdges(ringA);
+  var edgesB = getClosedEdges(ringB);
+
+  for (var i = 0; i < edgesA.length; i++) {
+    for (var j = 0; j < edgesB.length; j++) {
+      if (segmentsIntersect(edgesA[i][0], edgesA[i][1], edgesB[j][0], edgesB[j][1])) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+function lineIntersectsPolygon(a, b, ring) {
+  var edges = getClosedEdges(ring);
+
+  for (var i = 0; i < edges.length; i++) {
+    if (segmentsIntersect(a, b, edges[i][0], edges[i][1])) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function polygonsOverlap(ringA, ringB) {
+  var a = openRing(ringA);
+  var b = openRing(ringB);
+
+  if (!a.length || !b.length) return false;
+
+  if (polygonEdgesIntersect(a, b)) return true;
+  if (pointInPolygon(a[0], b)) return true;
+  if (pointInPolygon(b[0], a)) return true;
+
+  return false;
+}
+
+function getOtherSavedPlotsForCollisionCheck() {
+  var out = [];
+
+  plotsCacheByFarmerId.forEach(function (plots, farmerId) {
+    if (!Array.isArray(plots)) return;
+
+    for (var i = 0; i < plots.length; i++) {
+      var pl = plots[i];
+      if (!pl) continue;
+
+      if (editingPlotId && String(pl.id) === String(editingPlotId)) {
+        continue;
+      }
+
+      var ring = normalizePolygonRing(pl.polygon_json || pl.polygon || pl.polygonJson);
+      if (!ring || ring.length < 3) continue;
+
+      out.push({
+        plotId: String(pl.id),
+        farmerId: String(farmerId),
+        name: pl.name || ('Plot #' + pl.id),
+        ring: openRing(ring)
+      });
+    }
+  });
+
+  return out;
+}
+
+function findDraftOverlap(candidateVertices) {
+  var pts = openRing(candidateVertices);
+  if (!pts || pts.length < 2) return null;
+
+  var others = getOtherSavedPlotsForCollisionCheck();
+
+  for (var i = 0; i < others.length; i++) {
+    var other = others[i];
+    var ring = other.ring;
+
+    // only a line so far (point 1 -> point 2)
+    if (pts.length === 2) {
+      if (
+        lineIntersectsPolygon(pts[0], pts[1], ring) ||
+        pointInPolygon(pts[0], ring) ||
+        pointInPolygon(pts[1], ring)
+      ) {
+        return other;
+      }
+      continue;
+    }
+
+    // 3+ points: treat as polygon draft
+    if (polygonsOverlap(pts, ring)) {
+      return other;
+    }
+  }
+
+  return null;
+}
+
+function canUseDraftVertices(candidateVertices, silent) {
+  var hit = findDraftOverlap(candidateVertices);
+  if (!hit) return true;
+
+  if (!silent) {
+    toast('This draft overlaps with existing ' + hit.name + '. Move it away from the other plot.', 'warn');
+    setStatus('Overlap detected', 'Draft cannot overlap another saved plot.');
+  }
+
+  return false;
+}
+
+function stripXmlNs(tagName) {
+  return String(tagName || '').replace(/^.*:/, '');
+}
+
+function firstDirectChildByTag(parent, tagName) {
+  if (!parent) return null;
+  var nodes = parent.children || [];
+  tagName = String(tagName || '').toLowerCase();
+
+  for (var i = 0; i < nodes.length; i++) {
+    if (stripXmlNs(nodes[i].tagName).toLowerCase() === tagName) {
+      return nodes[i];
+    }
+  }
+  return null;
+}
+
+function childText(parent, tagName) {
+  var node = firstDirectChildByTag(parent, tagName);
+  return node ? String(node.textContent || '').trim() : '';
+}
+
+function parseKmlColorToHex(kmlColor, fallback) {
+  fallback = fallback || '#22c55e';
+  var s = String(kmlColor || '').trim();
+
+  // KML color format: aabbggrr
+  if (!/^[0-9a-fA-F]{8}$/.test(s)) return fallback;
+
+  var bb = s.slice(2, 4);
+  var gg = s.slice(4, 6);
+  var rr = s.slice(6, 8);
+
+  return ('#' + rr + gg + bb).toLowerCase();
+}
+
+function parseCoordinatesBlock(text) {
+  text = String(text || '').trim();
+  if (!text) return [];
+
+  var out = [];
+  var chunks = text.split(/\s+/);
+
+  for (var i = 0; i < chunks.length; i++) {
+    var p = chunks[i].split(',');
+    if (p.length < 2) continue;
+
+    var lng = parseFloat(p[0]);
+    var lat = parseFloat(p[1]);
+
+    if (!isFinite(lat) || !isFinite(lng)) continue;
+    out.push({ lat: lat, lng: lng });
+  }
+
+  // remove duplicate closing point before save
+  if (out.length > 1) {
+    var a = out[0];
+    var b = out[out.length - 1];
+    if (Math.abs(a.lat - b.lat) < 1e-10 && Math.abs(a.lng - b.lng) < 1e-10) {
+      out.pop();
+    }
+  }
+
+  return out;
+}
+
+function parseOuterBoundaryPolygon(polygonNode) {
+  if (!polygonNode) return [];
+
+  var outer = null;
+  var kids = polygonNode.getElementsByTagName('*');
+  for (var i = 0; i < kids.length; i++) {
+    if (stripXmlNs(kids[i].tagName).toLowerCase() === 'outerboundaryis') {
+      outer = kids[i];
+      break;
+    }
+  }
+  if (!outer) return [];
+
+  var coordsNode = null;
+  var outerKids = outer.getElementsByTagName('*');
+  for (var j = 0; j < outerKids.length; j++) {
+    if (stripXmlNs(outerKids[j].tagName).toLowerCase() === 'coordinates') {
+      coordsNode = outerKids[j];
+      break;
+    }
+  }
+
+  if (!coordsNode) return [];
+  return parseCoordinatesBlock(coordsNode.textContent || '');
+}
+
+function buildKmlStyleLookup(xmlDoc) {
+  var styleById = new Map();
+  var styleMapById = new Map();
+
+  var all = xmlDoc.getElementsByTagName('*');
+  for (var i = 0; i < all.length; i++) {
+    var tag = stripXmlNs(all[i].tagName).toLowerCase();
+
+    if (tag === 'style') {
+      var id = all[i].getAttribute('id');
+      if (!id) continue;
+
+      var polyColor = '';
+      var lineColor = '';
+
+      var descendants = all[i].getElementsByTagName('*');
+      for (var j = 0; j < descendants.length; j++) {
+        var dtag = stripXmlNs(descendants[j].tagName).toLowerCase();
+
+        if (dtag === 'polystyle') {
+          polyColor = childText(descendants[j], 'color') || polyColor;
+        }
+        if (dtag === 'linestyle') {
+          lineColor = childText(descendants[j], 'color') || lineColor;
+        }
+      }
+
+      styleById.set('#' + id, {
+        line: parseKmlColorToHex(lineColor, ''),
+        poly: parseKmlColorToHex(polyColor, '')
+      });
+    }
+
+    if (tag === 'stylemap') {
+      var mapId = all[i].getAttribute('id');
+      if (!mapId) continue;
+
+      var normalUrl = '';
+      var pairs = all[i].getElementsByTagName('*');
+      for (var k = 0; k < pairs.length; k++) {
+        if (stripXmlNs(pairs[k].tagName).toLowerCase() !== 'pair') continue;
+        var key = childText(pairs[k], 'key');
+        var styleUrl = childText(pairs[k], 'styleUrl');
+        if (key === 'normal' && styleUrl) {
+          normalUrl = styleUrl;
+          break;
+        }
+      }
+
+      if (normalUrl) {
+        styleMapById.set('#' + mapId, normalUrl);
+      }
+    }
+  }
+
+  return {
+    resolve: function (styleUrl) {
+      var url = String(styleUrl || '').trim();
+      if (!url) return '#22c55e';
+
+      if (styleMapById.has(url)) {
+        url = styleMapById.get(url);
+      }
+
+      var style = styleById.get(url);
+      if (!style) return '#22c55e';
+
+      return style.line || style.poly || '#22c55e';
+    }
+  };
+}
+
+function extractKmlPolygons(xmlText) {
+  var parser = new DOMParser();
+  var xmlDoc = parser.parseFromString(xmlText, 'application/xml');
+
+  var parseError = xmlDoc.getElementsByTagName('parsererror');
+  if (parseError && parseError.length) {
+    throw new Error('The KMZ/KML file could not be parsed.');
+  }
+
+  var styleLookup = buildKmlStyleLookup(xmlDoc);
+  var placemarks = xmlDoc.getElementsByTagName('*');
+  var imported = [];
+
+  for (var i = 0; i < placemarks.length; i++) {
+    if (stripXmlNs(placemarks[i].tagName).toLowerCase() !== 'placemark') continue;
+
+    var placemark = placemarks[i];
+    var placeName = childText(placemark, 'name') || ('Imported Plot ' + (imported.length + 1));
+    var styleUrl = childText(placemark, 'styleUrl');
+    var colorHex = styleLookup.resolve(styleUrl);
+
+    var descendants = placemark.getElementsByTagName('*');
+    var polygonCountForPlacemark = 0;
+
+    for (var j = 0; j < descendants.length; j++) {
+      if (stripXmlNs(descendants[j].tagName).toLowerCase() !== 'polygon') continue;
+
+      var ring = parseOuterBoundaryPolygon(descendants[j]);
+      if (!ring || ring.length < 3) continue;
+
+      polygonCountForPlacemark++;
+
+      imported.push({
+        name: polygonCountForPlacemark > 1 ? (placeName + ' ' + polygonCountForPlacemark) : placeName,
+        color: colorHex || '#22c55e',
+        polygon: ring
+      });
+    }
+  }
+
+  return imported;
+}
+
+async function readKmzOrKmlText(file) {
+  var fileName = String(file && file.name ? file.name : '').toLowerCase();
+
+  if (fileName.endsWith('.kml') || fileName.endsWith('.xml')) {
+    return await file.text();
+  }
+
+  if (!fileName.endsWith('.kmz')) {
+    throw new Error('Please select a .kmz or .kml file.');
+  }
+
+  if (typeof JSZip === 'undefined') {
+    throw new Error('JSZip is required for KMZ import.');
+  }
+
+  var zip = await JSZip.loadAsync(file);
+  var kmlEntry = null;
+
+  zip.forEach(function (relativePath, zipEntry) {
+    if (!kmlEntry && /\.kml$/i.test(relativePath)) {
+      kmlEntry = zipEntry;
+    }
+  });
+
+  if (!kmlEntry) {
+    throw new Error('No KML file was found inside the KMZ.');
+  }
+
+  return await kmlEntry.async('string');
+}
+
+async function saveImportedPlotsToSelectedFarmer(importedPlots) {
+  if (!selectedFarmerId) {
+    throw new Error('Select a farmer first before importing.');
+  }
+
+  var total = importedPlots.length;
+  var saved = 0;
+
+  for (var i = 0; i < importedPlots.length; i++) {
+    var item = importedPlots[i];
+
+    setStatus('Importing KMZ…', 'Saving plot ' + (i + 1) + ' of ' + total);
+
+    var res = await fetch('/farmers/' + encodeURIComponent(String(selectedFarmerId)) + '/plots', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': csrfToken()
+      },
+      body: JSON.stringify({
+        name: item.name,
+        color: item.color,
+        polygon: item.polygon
+      })
+    });
+
+    if (!res.ok) {
+      throw new Error('Saving imported plot failed at item ' + (i + 1) + '.');
+    }
+
+    saved++;
+  }
+
+  return saved;
+}
+
+async function importKmzOrKmlToSelectedFarmer(file) {
+  if (!selectedFarmerId) {
+    toast('Select a farmer first before importing KMZ.', 'warn');
+    return;
+  }
+
+  var farmer = farmersById.get(String(selectedFarmerId)) || dataById.get(String(selectedFarmerId));
+  var farmerName = farmer ? formatName(farmer) : 'selected farmer';
+
+  setStatus('Reading KMZ…', 'Opening ' + (file.name || 'file'));
+  toast('Reading KMZ/KML for ' + farmerName + '…', 'ok');
+
+  var xmlText = await readKmzOrKmlText(file);
+  var importedPlots = extractKmlPolygons(xmlText);
+
+  if (!importedPlots.length) {
+    throw new Error('No polygon placemarks were found in that KMZ/KML.');
+  }
+
+  setStatus('KMZ parsed.', importedPlots.length + ' polygon(s) found');
+
+  var saved = await saveImportedPlotsToSelectedFarmer(importedPlots);
+
+  plotsCacheByFarmerId.delete(String(selectedFarmerId));
+  await loadPlotsForSelectedFarmer(String(selectedFarmerId), { force: true, autoZoom: true });
+
+  var plots = findSelectedFarmerPlots();
+  syncSuggestedPlotName(plots || [], false);
+
+  setStatus('KMZ import complete.', saved + ' plot(s) imported');
+  toast(saved + ' KMZ plot(s) imported successfully.', 'ok');
+}
     var statusEl = document.getElementById('mapStatus');
     var statusSmallEl = document.getElementById('mapStatusSmall');
     var progressBar = document.getElementById('mapProgressBar');
     var hintEl = document.getElementById('mapHint');
     var plotModeBadge = document.getElementById('plotModeBadge');
-    var selectionChipEl = document.getElementById('mapSelectionChip');
-    var selectionChipTextEl = document.getElementById('mapSelectionChipText');
-    var workflowStepEl = document.getElementById('plotWorkflowStep');
-    var workflowTextEl = document.getElementById('plotWorkflowText');
     var mapGeocodedPillEl = document.getElementById('mapGeocodedPill');
-    var mapSelectedPillEl = document.getElementById('mapSelectedPill');
     var plotNameInputEl = document.getElementById('plotNameInput');
 
     var data = Array.isArray(window.__farmersMapData) ? window.__farmersMapData : [];
     var farmersById = new Map();
-    for (var i = 0; i < data.length; i++) farmersById.set(String(data[i].id), data[i]);
+    for (var i = 0; i < data.length; i++) {
+      farmersById.set(String(data[i].id), data[i]);
+    }
 
-    var DEFAULT_CENTER = { lat: 15.667267, lng: 120.624936 };
-    var DEFAULT_RANGE = 45000;
+    var DEFAULT_CENTER = { lat: 15.325834, lng: 120.822706 };
+    var DEFAULT_RANGE = 160000;
+    var DEFAULT_TILT = 22;
+    var DEFAULT_HEADING = 0;
     var PLOT_CONCURRENCY = 2;
 
     function setStatus(main, small) {
@@ -592,7 +817,9 @@
     }
 
     function toast(msg, kind) {
-      if (typeof window.__mapToast === "function") window.__mapToast(msg, kind);
+      if (typeof window.__mapToast === "function") {
+        window.__mapToast(msg, kind);
+      }
     }
 
     function csrfToken() {
@@ -601,17 +828,23 @@
     }
 
     function escapeHtml(str) {
-      str = String(str == null ? "" : str);
-      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+      str = String(str == null ? '' : str);
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
     }
 
     function escapeXml(str) {
-      str = String(str == null ? "" : str);
-      return str.replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
+      str = String(str == null ? '' : str);
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
     }
 
     function safeFilename(str) {
@@ -621,12 +854,18 @@
         .replace(/^_+|_+$/g, '') || 'plot';
     }
 
-    function formatName(f) {
-      var fn = (f.first_name || '').trim();
-      var ln = (f.last_name || '').trim();
-      var nm = (fn + ' ' + ln).trim();
-      return nm || (f.last_name || 'Farmer');
-    }
+function formatName(f) {
+  if (!f) return 'Farmer';
+
+  var parts = [];
+  if ((f.first_name || '').trim()) parts.push((f.first_name || '').trim());
+  if ((f.middle_name || '').trim()) parts.push((f.middle_name || '').trim());
+  if ((f.last_name || '').trim()) parts.push((f.last_name || '').trim());
+  if ((f.ext_name || '').trim()) parts.push((f.ext_name || '').trim());
+
+  var full = parts.join(' ').replace(/\s+/g, ' ').trim();
+  return full || (f.last_name || 'Farmer');
+}
 
     function getFarmerGlyph(f) {
       var fn = String(f && f.first_name ? f.first_name : '').trim();
@@ -636,76 +875,9 @@
       return (a + b) || 'F';
     }
 
-    function setWorkflow(stepText, bodyHtml) {
-      if (workflowStepEl) workflowStepEl.textContent = stepText || '';
-      if (workflowTextEl) workflowTextEl.innerHTML = bodyHtml || '';
-    }
-
-    function updateSelectionChip(f) {
-      if (!selectionChipEl || !selectionChipTextEl) return;
-      if (!f) {
-        selectionChipEl.style.display = 'none';
-        selectionChipTextEl.textContent = '';
-        return;
-      }
-      selectionChipTextEl.textContent = formatName(f);
-      selectionChipEl.style.display = '';
-    }
-
-    function updateSelectionPill(f) {
-      if (!mapSelectedPillEl) return;
-      mapSelectedPillEl.textContent = f ? ('Selected: ' + formatName(f)) : 'No selection';
-    }
-
     function updateGeocodedPill(geocoded, total) {
       if (!mapGeocodedPillEl) return;
       mapGeocodedPillEl.textContent = geocoded + ' / ' + total + ' geocoded';
-    }
-
-    function setWorkflowFarmer(name) {
-      window.__mapUiSetText && window.__mapUiSetText('workflowFarmer', name || '—');
-    }
-
-    function setWorkflowCorners(n) {
-      window.__mapUiSetText && window.__mapUiSetText('workflowCorners', Number(n || 0));
-    }
-
-    function setWorkflowArea(ha) {
-      window.__mapUiSetText && window.__mapUiSetText('workflowArea', (Number(ha || 0)).toFixed(2) + ' ha');
-    }
-
-    function syncWorkflowUi() {
-      var f = selectedFarmerId ? (farmersById.get(String(selectedFarmerId)) || dataById.get(String(selectedFarmerId))) : null;
-
-      if (!f && !plotMode) {
-        setWorkflow('Step 1', 'Select a farmer first, then click <b>Plot Land</b>.');
-        setWorkflowFarmer('—');
-        setWorkflowCorners(0);
-        setWorkflowArea(0);
-        return;
-      }
-
-      if (f && !plotMode) {
-        setWorkflow('Step 2', 'Click <b>Plot Land</b> to start. A starter rectangle will appear automatically around the selected farmer.');
-        setWorkflowFarmer(formatName(f));
-        setWorkflowCorners(0);
-        setWorkflowArea(0);
-        return;
-      }
-
-      if (plotMode && plotVertices.length) {
-        if (selectedVertexIndex >= 0) {
-          setWorkflow('Step 4', 'Corner <b>' + (selectedVertexIndex + 1) + '</b> is selected. Click the map to move it, or use <b>Arrow keys</b> for fine adjustment.');
-        } else {
-          setWorkflow('Step 3', 'Review the draft. Click a corner dot to adjust it, then press <b>Save</b> when ready.');
-        }
-      } else if (plotMode) {
-        setWorkflow('Step 3', 'Draft mode is active. Use <b>New rectangle</b> if you want a fresh starter plot.');
-      }
-
-      setWorkflowFarmer(f ? formatName(f) : '—');
-      setWorkflowCorners(plotVertices.length || 0);
-      setWorkflowArea(estimateAreaHa(plotVertices));
     }
 
     function toLatLng(pos) {
@@ -721,7 +893,8 @@
       var dLng = toRad(b.lng - a.lng);
       var lat1 = toRad(a.lat);
       var lat2 = toRad(b.lat);
-      var s = Math.pow(Math.sin(dLat / 2), 2) + Math.cos(lat1) * Math.cos(lat2) * Math.pow(Math.sin(dLng / 2), 2);
+      var s = Math.pow(Math.sin(dLat / 2), 2) +
+              Math.cos(lat1) * Math.cos(lat2) * Math.pow(Math.sin(dLng / 2), 2);
       return 2 * R * Math.asin(Math.sqrt(s));
     }
 
@@ -729,45 +902,87 @@
       return Math.max(min, Math.min(max, n));
     }
 
-    function flyTo(lat, lng, range, durationMillis) {
+    function flyTo(lat, lng, range, durationMillis, tilt, heading) {
       durationMillis = durationMillis == null ? 900 : durationMillis;
+
       map3d.flyCameraTo({
         endCamera: {
           center: { lat: lat, lng: lng, altitude: 200 },
-          tilt: map3d.tilt || 67.5,
-          heading: map3d.heading || 0,
+          tilt: tilt == null ? DEFAULT_TILT : tilt,
+          heading: heading == null ? DEFAULT_HEADING : heading,
           range: range
         },
         durationMillis: durationMillis
       });
     }
 
+    function extendBounds(b, ring) {
+      for (var i = 0; i < ring.length; i++) {
+        var p = ring[i];
+        if (!p) continue;
+        b.minLat = Math.min(b.minLat, p.lat);
+        b.maxLat = Math.max(b.maxLat, p.lat);
+        b.minLng = Math.min(b.minLng, p.lng);
+        b.maxLng = Math.max(b.maxLng, p.lng);
+      }
+    }
+
     function zoomToRing(ring, multiplier, minRange, maxRange) {
       if (!ring || ring.length < 3) return;
+
       var b = { minLat: Infinity, maxLat: -Infinity, minLng: Infinity, maxLng: -Infinity };
       extendBounds(b, ring);
+
       var centerLat = (b.minLat + b.maxLat) / 2;
       var centerLng = (b.minLng + b.maxLng) / 2;
-      var diag = haversineMeters({ lat: b.minLat, lng: b.minLng }, { lat: b.maxLat, lng: b.maxLng });
+      var diag = haversineMeters(
+        { lat: b.minLat, lng: b.minLng },
+        { lat: b.maxLat, lng: b.maxLng }
+      );
       var range = clamp(diag * (multiplier || 4), minRange || 700, maxRange || 15000);
+      flyTo(centerLat, centerLng, range, 900);
+    }
+
+    function zoomToPlots(plots) {
+      if (!plots || !plots.length) return;
+
+      var b = { minLat: Infinity, maxLat: -Infinity, minLng: Infinity, maxLng: -Infinity };
+      var any = false;
+
+      for (var i = 0; i < plots.length; i++) {
+        var ring = normalizePolygonRing(plots[i].polygon_json || plots[i].polygon || plots[i].polygonJson);
+        if (!ring || ring.length < 3) continue;
+        extendBounds(b, ring);
+        any = true;
+      }
+
+      if (!any) return;
+
+      var centerLat = (b.minLat + b.maxLat) / 2;
+      var centerLng = (b.minLng + b.maxLng) / 2;
+      var diag = haversineMeters(
+        { lat: b.minLat, lng: b.minLng },
+        { lat: b.maxLat, lng: b.maxLng }
+      );
+      var range = clamp(diag * 4.0, 700, 15000);
       flyTo(centerLat, centerLng, range, 900);
     }
 
     function highlightRow(id) {
       var highlighted = document.querySelectorAll('#farmersTable tbody tr.row-highlight');
-      for (var i = 0; i < highlighted.length; i++) highlighted[i].classList.remove('row-highlight');
-
-      var row = document.getElementById("farmer-row-" + id);
-      if (row) {
-        row.classList.add('row-highlight');
-        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      for (var i = 0; i < highlighted.length; i++) {
+        highlighted[i].classList.remove('row-highlight');
       }
+
+      var row = document.getElementById('farmer-row-' + id);
+      if (row) row.classList.add('row-highlight');
     }
 
     function estimateAreaHa(points) {
       if (!points || points.length < 3) return 0;
 
-      var lat0 = 0, lng0 = 0;
+      var lat0 = 0;
+      var lng0 = 0;
       for (var i = 0; i < points.length; i++) {
         lat0 += points[i].lat;
         lng0 += points[i].lng;
@@ -808,9 +1023,9 @@
       }
 
       if (/^#([0-9a-fA-F]{6})$/.test(hex)) {
-        var r6 = parseInt(hex.slice(1,3), 16);
-        var g6 = parseInt(hex.slice(3,5), 16);
-        var b6 = parseInt(hex.slice(5,7), 16);
+        var r6 = parseInt(hex.slice(1, 3), 16);
+        var g6 = parseInt(hex.slice(3, 5), 16);
+        var b6 = parseInt(hex.slice(5, 7), 16);
         return "rgba(" + r6 + "," + g6 + "," + b6 + "," + alpha + ")";
       }
 
@@ -821,11 +1036,13 @@
       hex = String(hex || '').trim();
       if (!hex) return '#22c55e' + aHex;
       if (hex[0] !== '#') hex = '#' + hex;
+
       if (/^#([0-9a-fA-F]{3})$/.test(hex)) {
         hex = '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
       }
       if (/^#([0-9a-fA-F]{6})$/.test(hex)) return hex + aHex;
       if (/^#([0-9a-fA-F]{8})$/.test(hex)) return hex.slice(0, 7) + aHex;
+
       return '#22c55e' + aHex;
     }
 
@@ -833,13 +1050,23 @@
       hex = String(hex || '').trim();
       if (!hex) return '#3b82f6';
       if (hex[0] !== '#') hex = '#' + hex;
+
       if (/^#([0-9a-fA-F]{3})$/.test(hex)) {
         return '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
       }
       if (/^#([0-9a-fA-F]{6})$/.test(hex)) return hex;
       if (/^#([0-9a-fA-F]{8})$/.test(hex)) return hex.slice(0, 7);
+
       return '#3b82f6';
     }
+
+
+function getEffectivePlotColor(plot) {
+  return normalizeHexColor(
+    plot && plot.color ? String(plot.color) : '#22c55e'
+  );
+}
+
 
     function hexToRgb(hex) {
       hex = normalizeHexColor(hex);
@@ -856,31 +1083,35 @@
       if (typeof ringRaw === "string") {
         var s = ringRaw.trim();
         if (!s) return [];
-        try { ringRaw = JSON.parse(s); } catch(e) { return []; }
+        try { ringRaw = JSON.parse(s); } catch (e) { return []; }
       }
 
       if (ringRaw && typeof ringRaw === "object" && !Array.isArray(ringRaw) && ringRaw.coordinates) {
         try {
           var coords = ringRaw.coordinates;
           if (Array.isArray(coords) && Array.isArray(coords[0])) {
-            ringRaw = coords[0].map(function(pt){
+            ringRaw = coords[0].map(function (pt) {
               return Array.isArray(pt) ? { lng: pt[0], lat: pt[1] } : pt;
             });
           }
-        } catch(e) { return []; }
+        } catch (e2) {
+          return [];
+        }
       }
 
       if (!Array.isArray(ringRaw)) return [];
 
       var ring = [];
-      for (var i = 0; i < ringRaw.length; i++) {
-        var p = ringRaw[i];
+      for (var i2 = 0; i2 < ringRaw.length; i2++) {
+        var p = ringRaw[i2];
 
         if (Array.isArray(p)) {
           if (p.length >= 2) {
-            var a0 = parseFloat(p[0]), a1 = parseFloat(p[1]);
+            var a0 = parseFloat(p[0]);
+            var a1 = parseFloat(p[1]);
             if (isFinite(a0) && isFinite(a1)) {
-              var latGuess = a0, lngGuess = a1;
+              var latGuess = a0;
+              var lngGuess = a1;
               if (Math.abs(a0) > 90 && Math.abs(a1) <= 90) {
                 lngGuess = a0;
                 latGuess = a1;
@@ -898,7 +1129,7 @@
         }
       }
 
-      ring = ring.filter(function(pt){
+      ring = ring.filter(function (pt) {
         return pt && isFinite(pt.lat) && isFinite(pt.lng);
       });
 
@@ -934,9 +1165,9 @@
 
       var lat = 0;
       var lng = 0;
-      for (var i = 0; i < ring.length; i++) {
-        lat += Number(ring[i].lat || 0);
-        lng += Number(ring[i].lng || 0);
+      for (var i3 = 0; i3 < ring.length; i3++) {
+        lat += Number(ring[i3].lat || 0);
+        lng += Number(ring[i3].lng || 0);
       }
 
       return {
@@ -952,188 +1183,6 @@
       };
     }
 
-    function offsetPointOutward(pt, center, meters) {
-      meters = Number(meters || 8);
-
-      var dLat = Number(pt.lat) - Number(center.lat);
-      var dLng = Number(pt.lng) - Number(center.lng);
-      var len = Math.sqrt((dLat * dLat) + (dLng * dLng));
-
-      if (!len) {
-        return { lat: Number(pt.lat), lng: Number(pt.lng) };
-      }
-
-      var unitLat = dLat / len;
-      var unitLng = dLng / len;
-
-      var latPerMeter = 1 / 111320;
-      var lngPerMeter = 1 / (111320 * Math.max(0.25, Math.cos(Number(center.lat) * Math.PI / 180)));
-
-      return {
-        lat: Number(pt.lat) + (unitLat * meters * latPerMeter),
-        lng: Number(pt.lng) + (unitLng * meters * lngPerMeter)
-      };
-    }
-
-    function createGuideMarker(position, opts) {
-      opts = opts || {};
-
-      var marker = new Marker3DInteractiveElement({
-        altitudeMode: AltitudeMode.CLAMP_TO_GROUND,
-        position: position,
-        title: opts.title || '',
-        sizePreserved: true,
-        drawsWhenOccluded: true
-      });
-
-      marker.replaceChildren(new PinElement({
-        scale: opts.scale == null ? 0.52 : opts.scale,
-        background: opts.background || '#ef4444',
-        borderColor: opts.borderColor || '#991b1b',
-        glyphColor: opts.glyphColor || '#ffffff',
-        glyphText: opts.glyphText || ''
-      }));
-
-      marker.zIndex = opts.zIndex == null ? 980 : opts.zIndex;
-      return marker;
-    }
-
-    function attachGuideMarkers(markers) {
-      if (!markers || !markers.length) return;
-      for (var i = 0; i < markers.length; i++) {
-        try {
-          if (markers[i] && !markers[i].isConnected) map3d.append(markers[i]);
-        } catch (e) {}
-      }
-    }
-
-    function detachGuideMarkers(markers) {
-      if (!markers || !markers.length) return;
-      for (var i = 0; i < markers.length; i++) {
-        try {
-          if (markers[i] && markers[i].isConnected) map3d.removeChild(markers[i]);
-        } catch (e) {}
-      }
-    }
-
-    function buildGuideMarkersFromRing(ring, opts) {
-      opts = opts || {};
-      var pts = openRing(ring);
-      var markers = [];
-
-      if (pts.length < 2) return markers;
-
-      var center = ringCentroid(pts);
-
-      for (var i = 0; i < pts.length; i++) {
-        var cornerPos = offsetPointOutward(pts[i], center, opts.cornerOffsetMeters || 8);
-
-        var cornerMarker = createGuideMarker(cornerPos, {
-          title: 'Corner guide ' + (i + 1),
-          scale: opts.cornerScale == null ? 0.54 : opts.cornerScale,
-          background: opts.cornerBackground || '#ef4444',
-          borderColor: opts.cornerBorderColor || '#991b1b',
-          glyphText: opts.cornerGlyphText || '',
-          zIndex: 985
-        });
-
-        if (typeof opts.onCornerClick === 'function') {
-          cornerMarker.addEventListener('gmp-click', (function (index) {
-            return function (ev) {
-              if (ev && ev.stopPropagation) ev.stopPropagation();
-              opts.onCornerClick(index);
-            };
-          })(i));
-        }
-
-        markers.push(cornerMarker);
-
-        var next = pts[(i + 1) % pts.length];
-        var mid = midpointLatLng(pts[i], next);
-
-        var midMarker = createGuideMarker(mid, {
-          title: 'Side guide ' + (i + 1),
-          scale: opts.midScale == null ? 0.44 : opts.midScale,
-          background: opts.midBackground || '#dc2626',
-          borderColor: opts.midBorderColor || '#7f1d1d',
-          glyphText: opts.midGlyphText || '',
-          zIndex: 970
-        });
-
-        markers.push(midMarker);
-      }
-
-      return markers;
-    }
-
-    function extendBounds(b, ring) {
-      for (var i = 0; i < ring.length; i++) {
-        var p = ring[i];
-        if (!p) continue;
-        b.minLat = Math.min(b.minLat, p.lat);
-        b.maxLat = Math.max(b.maxLat, p.lat);
-        b.minLng = Math.min(b.minLng, p.lng);
-        b.maxLng = Math.max(b.maxLng, p.lng);
-      }
-    }
-
-    function zoomToPlots(plots) {
-      if (!plots || !plots.length) return;
-      var b = { minLat: Infinity, maxLat: -Infinity, minLng: Infinity, maxLng: -Infinity };
-      var any = false;
-
-      for (var i = 0; i < plots.length; i++) {
-        var ring = normalizePolygonRing(plots[i].polygon_json || plots[i].polygon || plots[i].polygonJson);
-        if (!ring || ring.length < 3) continue;
-        extendBounds(b, ring);
-        any = true;
-      }
-
-      if (!any) return;
-
-      var centerLat = (b.minLat + b.maxLat) / 2;
-      var centerLng = (b.minLng + b.maxLng) / 2;
-      var diag = haversineMeters({ lat: b.minLat, lng: b.minLng }, { lat: b.maxLat, lng: b.maxLng });
-      var range = clamp(diag * 4.0, 700, 15000);
-      flyTo(centerLat, centerLng, range, 900);
-    }
-
-    function setPlotModeUi(on) {
-      var module = document.getElementById('farmersMapModule');
-      if (!module) return;
-      if (on) module.classList.add('is-plot-mode');
-      else module.classList.remove('is-plot-mode');
-      syncWorkflowUi();
-    }
-
-    var moduleEl = document.getElementById('farmersMapModule');
-    var stageEl  = document.querySelector('#farmersMapModule .farmers-map-stage');
-    var cursorEl = document.getElementById('plotCursor');
-
-    function updateFakeCursor(e) {
-      if (!moduleEl || !cursorEl || !stageEl) return;
-      if (!moduleEl.classList.contains('is-plot-mode')) return;
-
-      var r = stageEl.getBoundingClientRect();
-      var x = e.clientX - r.left;
-      var y = e.clientY - r.top;
-      x = Math.max(0, Math.min(r.width, x));
-      y = Math.max(0, Math.min(r.height, y));
-      cursorEl.style.left = x + "px";
-      cursorEl.style.top  = y + "px";
-    }
-
-    if (stageEl) {
-      stageEl.addEventListener('pointermove', updateFakeCursor, true);
-      stageEl.addEventListener('mousemove', updateFakeCursor, true);
-      stageEl.addEventListener('mouseenter', function (e) { updateFakeCursor(e); }, true);
-      stageEl.addEventListener('mouseleave', function () {
-        if (!cursorEl) return;
-        cursorEl.style.left = "-9999px";
-        cursorEl.style.top  = "-9999px";
-      }, true);
-    }
-
     if (!GOOGLE_MAPS_API_KEY || !GOOGLE_MAPS_MAP_ID || GOOGLE_MAPS_MAP_ID === "YOUR_REAL_MAP_ID_HERE") {
       setStatus('Map error.', 'Check API key or Map ID.');
       return;
@@ -1142,14 +1191,14 @@
     var maps3d = await google.maps.importLibrary("maps3d");
     var markerLib = await google.maps.importLibrary("marker");
 
-    var Map3DElement = maps3d.Map3DElement;
-    var MapMode = maps3d.MapMode;
-    var AltitudeMode = maps3d.AltitudeMode;
-    var Marker3DInteractiveElement = maps3d.Marker3DInteractiveElement;
-    var PopoverElement = maps3d.PopoverElement;
-    var Polyline3DElement = maps3d.Polyline3DElement;
-    var Polygon3DElement = maps3d.Polygon3DElement;
+var Map3DElement = maps3d.Map3DElement;
+var MapMode = maps3d.MapMode;
+var AltitudeMode = maps3d.AltitudeMode;
+var Marker3DInteractiveElement = maps3d.Marker3DInteractiveElement;
+var Marker3DElement = maps3d.Marker3DElement;
+var PopoverElement = maps3d.PopoverElement;
     var Polyline3DInteractiveElement = maps3d.Polyline3DInteractiveElement;
+    var Polygon3DElement = maps3d.Polygon3DElement;
     var Polygon3DInteractiveElement = maps3d.Polygon3DInteractiveElement;
     var PinElement = markerLib.PinElement;
 
@@ -1160,15 +1209,13 @@
     var map3d = new Map3DElement({
       mapId: GOOGLE_MAPS_MAP_ID,
       center: { lat: DEFAULT_CENTER.lat, lng: DEFAULT_CENTER.lng, altitude: 220 },
-      tilt: 67.5,
-      heading: 15,
+      tilt: DEFAULT_TILT,
+      heading: DEFAULT_HEADING,
       range: DEFAULT_RANGE,
       mode: MapMode.HYBRID,
       gestureHandling: "GREEDY"
     });
     host.appendChild(map3d);
-
-    var geocoder = new google.maps.Geocoder();
 
     var markersById = new Map();
     var dataById = new Map();
@@ -1179,16 +1226,17 @@
 
     var selectedFarmerId = null;
     var selectedVertexIndex = -1;
+    var selectedMarkerVisible = true;
 
     var plotsCacheByFarmerId = new Map();
     var plotFetchPromisesByFarmerId = new Map();
     var savedPlotOverlays = [];
-    var draftGuideMarkers = [];
 
     var plotsLoadingEnabled = true;
     var plotQueue = [];
     var plotQueueSet = new Set();
     var plotInFlight = 0;
+    bindKmzImport();
 
     function buildMarkerPin(f, isSelected) {
       return new PinElement({
@@ -1206,43 +1254,38 @@
       marker.zIndex = isSelected ? 999 : 1;
     }
 
-    // UPDATED: Controls individual marker visibility. Now keeps all unselected markers hidden!
+    function farmerHasSavedPlots(farmerId) {
+      var plots = plotsCacheByFarmerId.get(String(farmerId));
+      return Array.isArray(plots) && plots.length > 0;
+    }
+
     function refreshAllMarkerPins() {
       var t = document.getElementById('toggleMarkers');
       var on = !t || t.checked;
+
       markersById.forEach(function (marker, id) {
         var isSelected = String(id) === String(selectedFarmerId || '');
         var farmer = dataById.get(String(id)) || farmersById.get(String(id));
+
         applyMarkerPin(marker, farmer, isSelected);
-        
-        // VISIBILITY LOGIC: Marker is only visible if it's the selected one AND the toggle is on.
-        marker.style.display = (on && isSelected) ? "" : "none";
+
+        var shouldShow = on && selectedMarkerVisible && isSelected && farmerHasSavedPlots(id);
+
+        try {
+          if (shouldShow) {
+            if (!marker.isConnected) map3d.append(marker);
+          } else {
+            if (marker.isConnected) map3d.removeChild(marker);
+          }
+        } catch (e3) {}
       });
     }
 
-    function refreshSavedGuideMarkers() {
-      var togglePlotsEl = document.getElementById('togglePlots');
-      var showPlots = !togglePlotsEl || !!togglePlotsEl.checked;
-
-      for (var i = 0; i < savedPlotOverlays.length; i++) {
-        var item = savedPlotOverlays[i];
-        if (!item || !item.guides || !item.guides.length) continue;
-
-        var shouldShow = showPlots &&
-          !!selectedFarmerId &&
-          String(item.farmerId) === String(selectedFarmerId);
-
-        if (shouldShow) attachGuideMarkers(item.guides);
-        else detachGuideMarkers(item.guides);
-      }
-    }
-
-    // Apply the localized visibility correctly via the toggle change handler
     window.__applyMarkerVisibility = function () {
       refreshAllMarkerPins();
     };
 
-    window.__setPlotsLoadingEnabled = function(on){
+    window.__setPlotsLoadingEnabled = function (on) {
       plotsLoadingEnabled = !!on;
       if (plotsLoadingEnabled) runPlotQueue();
     };
@@ -1266,10 +1309,12 @@
           plotQueueSet.delete(fid);
           plotInFlight++;
 
-          fetchPlotsForFarmer(fid).then(function(plots){
+          fetchPlotsForFarmer(fid).then(function (plots) {
             renderPlotsForFarmer(fid, plots);
-            if (typeof window.__applyPlotVisibility === "function") window.__applyPlotVisibility();
-          }).finally(function(){
+            if (typeof window.__applyPlotVisibility === "function") {
+              window.__applyPlotVisibility();
+            }
+          }).finally(function () {
             plotInFlight--;
             runPlotQueue();
           });
@@ -1292,14 +1337,14 @@
       var req = fetch("/farmers/" + encodeURIComponent(farmerId) + "/plots", {
         method: "GET",
         headers: { "Accept": "application/json" }
-      }).then(function(r){
+      }).then(function (r) {
         if (!r.ok) return { plots: [] };
         return r.json();
-      }).then(function(json){
+      }).then(function (json) {
         var plots = (json && json.plots) ? json.plots : [];
         plotsCacheByFarmerId.set(farmerId, plots);
         return plots;
-      }).catch(function(){
+      }).catch(function () {
         plotsCacheByFarmerId.set(farmerId, []);
         return [];
       }).finally(function () {
@@ -1310,25 +1355,123 @@
       return req;
     }
 
+    async function ensureFarmerData(id) {
+  id = String(id);
+
+  var existing = dataById.get(id) || farmersById.get(id);
+  if (existing) return existing;
+
+  var tpl = window.__farmerMapCardUrlTemplate || '';
+  if (!tpl) throw new Error('Farmer map-card URL is missing.');
+
+  var url = tpl.replace('__ID__', encodeURIComponent(id));
+
+  var res = await fetch(url, {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' }
+  });
+
+  if (!res.ok) {
+    throw new Error('Farmer not found.');
+  }
+
+  var farmer = await res.json();
+  if (!farmer || !farmer.id) {
+    throw new Error('Farmer not found.');
+  }
+
+  farmersById.set(String(farmer.id), farmer);
+  dataById.set(String(farmer.id), farmer);
+
+  return farmer;
+}
+
     function clearPlotsForFarmer(farmerId) {
       farmerId = String(farmerId);
       var keep = [];
 
-      for (var i = 0; i < savedPlotOverlays.length; i++) {
-        var it = savedPlotOverlays[i];
+      for (var i4 = 0; i4 < savedPlotOverlays.length; i4++) {
+        var it = savedPlotOverlays[i4];
         if (String(it.farmerId) !== farmerId) {
           keep.push(it);
           continue;
         }
 
-        try { if (it.poly && it.poly.isConnected) map3d.removeChild(it.poly); } catch(e){}
-        try { if (it.line && it.line.isConnected) map3d.removeChild(it.line); } catch(e){}
-        detachGuideMarkers(it.guides || []);
+        try { if (it.poly && it.poly.isConnected) map3d.removeChild(it.poly); } catch (e4) {}
+        try { if (it.line && it.line.isConnected) map3d.removeChild(it.line); } catch (e5) {}
       }
 
       savedPlotOverlays = keep;
     }
 
+
+    function setOverlayVisible(el, visible) {
+  if (!el) return;
+
+  try {
+    if (visible) {
+      if (!el.isConnected) map3d.append(el);
+    } else {
+      if (el.isConnected) map3d.removeChild(el);
+    }
+  } catch (e) {}
+}
+
+function setSavedPlotOverlayVisible(plotId, visible) {
+  plotId = String(plotId);
+
+  for (var i = 0; i < savedPlotOverlays.length; i++) {
+    var it = savedPlotOverlays[i];
+    if (!it || String(it.plotId) !== plotId) continue;
+
+    setOverlayVisible(it.poly, visible);
+    setOverlayVisible(it.line, visible);
+  }
+}
+
+function setAllSavedPlotsVisible(visible) {
+  for (var i = 0; i < savedPlotOverlays.length; i++) {
+    var it = savedPlotOverlays[i];
+    if (!it) continue;
+
+    setOverlayVisible(it.poly, visible);
+    setOverlayVisible(it.line, visible);
+  }
+}
+
+function restoreSavedPlotsVisibility() {
+  if (typeof window.__applyPlotVisibility === "function") {
+    window.__applyPlotVisibility();
+  }
+}
+
+    function setSavedPlotOverlayVisible(plotId, visible) {
+  plotId = String(plotId);
+
+  for (var i = 0; i < savedPlotOverlays.length; i++) {
+    var it = savedPlotOverlays[i];
+    if (!it || String(it.plotId) !== plotId) continue;
+
+    try {
+      if (visible) {
+        if (it.poly && !it.poly.isConnected) map3d.append(it.poly);
+        if (it.line && !it.line.isConnected) map3d.append(it.line);
+      } else {
+        if (it.poly && it.poly.isConnected) map3d.removeChild(it.poly);
+        if (it.line && it.line.isConnected) map3d.removeChild(it.line);
+      }
+    } catch (e) {}
+  }
+}
+
+function reloadSelectedFarmerPlots(autoZoom) {
+  if (!selectedFarmerId) return Promise.resolve([]);
+  plotsCacheByFarmerId.delete(String(selectedFarmerId));
+  return loadPlotsForSelectedFarmer(String(selectedFarmerId), {
+    force: true,
+    autoZoom: !!autoZoom
+  });
+}
     function setPlotHoverCursor(on) {
       if (moduleEl && moduleEl.classList.contains('is-plot-mode')) return;
       var cursor = on ? 'pointer' : '';
@@ -1341,47 +1484,55 @@
 
       function applyHoverState() {
         if (plotMode) return;
+
         if (poly) {
           poly.fillColor = styleOpts.fillHover || styleOpts.fillSoft;
           poly.strokeColor = styleOpts.strokeHover || styleOpts.strokeStrong;
           poly.strokeWidth = styleOpts.polyHoverWidth || 10;
         }
+
         if (outline) {
           outline.strokeColor = styleOpts.strokeHover || styleOpts.strokeStrong;
           outline.strokeWidth = styleOpts.lineHoverWidth || 12;
           outline.outerWidth = styleOpts.lineHoverOuterWidth || 0.7;
         }
+
         setPlotHoverCursor(true);
         setStatus('Plot ready', 'Click this plot to select ' + (plotLabel || 'farmer'));
       }
 
-      function resetHoverState() {
-        if (poly) {
-          poly.fillColor = styleOpts.fillSoft;
-          poly.strokeColor = styleOpts.strokeStrong;
-          poly.strokeWidth = styleOpts.polyWidth || 8;
-        }
-        if (outline) {
-          outline.strokeColor = styleOpts.strokeStrong;
-          outline.strokeWidth = styleOpts.lineWidth || 10;
-          outline.outerWidth = styleOpts.lineOuterWidth || 0.45;
-        }
-        setPlotHoverCursor(false);
-        if (!plotMode) {
-          if (selectedFarmerId) setStatus('Selected plot owner', 'Click the map or another plot to change selection.');
-          else setStatus('Ready', 'Hover a plot or marker, then click to select a farmer.');
-        }
-      }
+    function resetHoverState() {
+  if (plotMode) return;
+
+  if (poly) {
+    poly.fillColor = styleOpts.fillSoft;
+    poly.strokeColor = styleOpts.strokeStrong;
+    poly.strokeWidth = styleOpts.polyWidth || 8;
+  }
+
+  if (outline) {
+    outline.strokeColor = styleOpts.strokeStrong;
+    outline.strokeWidth = styleOpts.lineWidth || 10;
+    outline.outerWidth = styleOpts.lineOuterWidth || 0.45;
+  }
+
+  setPlotHoverCursor(false);
+
+  if (!plotMode) {
+    if (selectedFarmerId) setStatus('Selected plot owner', 'Click the map or another plot to change selection.');
+    else setStatus('Ready', 'Hover a plot or row, then click to select a farmer.');
+  }
+}
 
       function handlePlotOverlayClick(ev) {
         if (ev && ev.stopPropagation) ev.stopPropagation();
         if (plotMode) return;
-        window.__openFarmer3d(String(farmerId));
+        window.__openFarmer3d(String(farmerId), { showMarker: false });
       }
 
       var targets = [outline, poly];
-      for (var i = 0; i < targets.length; i++) {
-        var target = targets[i];
+      for (var i5 = 0; i5 < targets.length; i5++) {
+        var target = targets[i5];
         if (!target || typeof target.addEventListener !== 'function') continue;
 
         target.addEventListener('gmp-click', handlePlotOverlayClick);
@@ -1395,120 +1546,236 @@
       }
     }
 
-    function renderPlotsForFarmer(farmerId, plots) {
-      farmerId = String(farmerId);
-      clearPlotsForFarmer(farmerId);
+function renderPlotsForFarmer(farmerId, plots) {
+  farmerId = String(farmerId);
+  clearPlotsForFarmer(farmerId);
 
-      if (!plots || !plots.length || !Polygon3DInteractiveElement) return;
+  if (!plots || !plots.length || !Polygon3DInteractiveElement) return;
 
-      var show = true;
-      var t = document.getElementById('togglePlots');
-      if (t) show = t.checked;
+  var show = true;
+  var t = document.getElementById('togglePlots');
+  if (t) show = t.checked;
 
-      for (var i = 0; i < plots.length; i++) {
-        var pl = plots[i];
-        var ring = normalizePolygonRing(pl.polygon_json || pl.polygon || pl.polygonJson);
-        if (!ring || ring.length < 3) continue;
+  for (var i6 = 0; i6 < plots.length; i6++) {
+    var pl = plots[i6];
+    var ring = normalizePolygonRing(pl.polygon_json || pl.polygon || pl.polygonJson);
+    if (!ring || ring.length < 3) continue;
 
-        var strokeHex = pl.color ? String(pl.color) : "#22c55e";
-        var strokeStrong = hexAlpha(strokeHex, "CC");
-        var fillSoft = hexToRgba(strokeHex, 0.20);
+    var fillHex = getEffectivePlotColor(pl);
 
-        var outline = null;
-        if (Polyline3DInteractiveElement) {
-          outline = new Polyline3DInteractiveElement({
-            path: ring,
-            strokeColor: strokeStrong,
-            outerColor: "#ffffff",
-            strokeWidth: 10,
-            outerWidth: 0.45,
-            altitudeMode: AltitudeMode.CLAMP_TO_GROUND,
-            drawsOccludedSegments: true
-          });
-          if (show) map3d.append(outline);
-        }
+    // very subtle border, same family as fill color
+    var visibleBorder = hexAlpha(fillHex, '90');
 
-        var poly = new Polygon3DInteractiveElement({
-          path: ring,
-          strokeColor: strokeStrong,
-          strokeWidth: 8,
-          fillColor: fillSoft,
-          altitudeMode: AltitudeMode.CLAMP_TO_GROUND,
-          drawsOccludedSegments: true
-        });
-        if (show) map3d.append(poly);
+    // stronger fill so polygon is easier to see on satellite view
+    var fillSoft = hexToRgba(fillHex, 0.38);
 
-        bindClickablePlotOverlay(outline, poly, farmerId, (pl.name || ('Plot #' + pl.id)), {
-          strokeStrong: strokeStrong,
-          strokeHover: hexAlpha(strokeHex, 'FF'),
-          fillSoft: fillSoft,
-          fillHover: hexToRgba(strokeHex, 0.32),
-          polyWidth: 8,
-          polyHoverWidth: 10,
-          lineWidth: 10,
-          lineHoverWidth: 12,
-          lineOuterWidth: 0.45,
-          lineHoverOuterWidth: 0.7
-        });
-
-        var guides = [];
-        if (String(selectedFarmerId || '') === farmerId) {
-          guides = buildGuideMarkersFromRing(ring, {
-            cornerOffsetMeters: 8,
-            cornerScale: 0.54,
-            midScale: 0.44
-          });
-          if (show) attachGuideMarkers(guides);
-        }
-
-        savedPlotOverlays.push({
-          farmerId: farmerId,
-          plotId: pl.id,
-          poly: poly,
-          line: outline,
-          ring: ring,
-          guides: guides
-        });
-      }
-
-      refreshSavedGuideMarkers();
+    // invisible click target only
+    var outline = null;
+    if (Polyline3DInteractiveElement) {
+      outline = new Polyline3DInteractiveElement({
+        path: ring,
+        strokeColor: '#ffffff01',
+        outerColor: '#ffffff00',
+        strokeWidth: 14,
+        outerWidth: 0,
+        altitudeMode: AltitudeMode.CLAMP_TO_GROUND,
+        drawsOccludedSegments: true
+      });
+      if (show) map3d.append(outline);
     }
 
-    function syncSelectedPanel(f) {
-      if (!f) {
-        window.__mapUiSetText && window.__mapUiSetText('selName', '—');
-        window.__mapUiSetText && window.__mapUiSetText('selFfrs', '—');
-        window.__mapUiSetText && window.__mapUiSetText('selLocation', '—');
-        window.__mapUiSetText && window.__mapUiSetText('selRecords', '0');
-        window.__mapUiSetText && window.__mapUiSetText('selKgs', '0.00');
-        window.__mapUiSetText && window.__mapUiSetText('selLast', '—');
-        window.__mapUiSetHref && window.__mapUiSetHref('viewRecordsBtn', '#');
-        updateSelectionChip(null);
-        updateSelectionPill(null);
-        return;
-      }
+    // actual visible polygon
+    var poly = new Polygon3DInteractiveElement({
+      path: ring,
+      strokeColor: visibleBorder,
+      strokeWidth: 0.8,
+      fillColor: fillSoft,
+      altitudeMode: AltitudeMode.CLAMP_TO_GROUND,
+      drawsOccludedSegments: true
+    });
+    if (show) map3d.append(poly);
 
-      window.__mapUiSetText && window.__mapUiSetText('selName', formatName(f));
-      window.__mapUiSetText && window.__mapUiSetText('selFfrs', f.ffrs || '—');
-      window.__mapUiSetText && window.__mapUiSetText('selLocation', (f.location || '').trim() || '—');
-      window.__mapUiSetText && window.__mapUiSetText('selRecords', Number(f.records_count || 0));
-      window.__mapUiSetText && window.__mapUiSetText('selKgs', (Number(f.total_kgs || 0)).toFixed(2));
-      window.__mapUiSetText && window.__mapUiSetText('selLast', f.last_received || '—');
+    bindClickablePlotOverlay(outline, poly, farmerId, (pl.name || ('Plot #' + pl.id)), {
+      strokeStrong: visibleBorder,
+      strokeHover: hexAlpha(fillHex, 'B0'),
+      fillSoft: fillSoft,
+      fillHover: hexToRgba(fillHex, 0.46),
+      polyWidth: 0.8,
+      polyHoverWidth: 1.1,
+      lineWidth: 14,
+      lineHoverWidth: 14,
+      lineOuterWidth: 0,
+      lineHoverOuterWidth: 0
+    });
 
-      var base = window.__farmersRecordsBaseUrl || "/farmers";
-      window.__mapUiSetHref && window.__mapUiSetHref(
-        'viewRecordsBtn',
-        base.replace(/\/$/, '') + "/" + encodeURIComponent(String(f.id)) + "/records"
-      );
+    savedPlotOverlays.push({
+      farmerId: farmerId,
+      plotId: pl.id,
+      poly: poly,
+      line: outline,
+      ring: ring
+    });
+  }
+}
 
-      updateSelectionChip(f);
-      updateSelectionPill(f);
+
+    async function loadAllMunicipalPlots() {
+  var url = window.__allFarmPlotsUrl;
+  if (!url) throw new Error('All plots URL is missing.');
+
+  setStatus('Loading plots…', 'Fetching all saved polygons');
+  setProgress(15);
+
+  var res = await fetch(url, {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' }
+  });
+
+  if (!res.ok) {
+    throw new Error('Could not load all farm plots.');
+  }
+
+  var json = await res.json();
+  var plots = Array.isArray(json && json.plots) ? json.plots : [];
+
+  savedPlotOverlays = [];
+  plotsCacheByFarmerId.clear();
+
+  var grouped = new Map();
+
+  for (var i = 0; i < plots.length; i++) {
+    var pl = plots[i];
+    var fid = String(pl.farmer_id || '0');
+
+    if (!grouped.has(fid)) grouped.set(fid, []);
+    grouped.get(fid).push(pl);
+  }
+
+  grouped.forEach(function (items, fid) {
+    plotsCacheByFarmerId.set(String(fid), items);
+    renderPlotsForFarmer(String(fid), items);
+  });
+
+  if (typeof window.__applyPlotVisibility === 'function') {
+    window.__applyPlotVisibility();
+  }
+
+  setProgress(100);
+
+  if (mapGeocodedPillEl) {
+    mapGeocodedPillEl.textContent = plots.length + ' plots loaded';
+  }
+
+  setStatus('Ready', plots.length + ' plot(s) shown on the map.');
+  toast(plots.length + ' plots loaded.', 'ok');
+
+  return plots;
+}
+
+function zoomToAllLoadedPlots() {
+  var b = { minLat: Infinity, maxLat: -Infinity, minLng: Infinity, maxLng: -Infinity };
+  var any = false;
+
+  for (var i = 0; i < savedPlotOverlays.length; i++) {
+    var ring = savedPlotOverlays[i] && savedPlotOverlays[i].ring;
+    if (!ring || !ring.length) continue;
+    extendBounds(b, ring);
+    any = true;
+  }
+
+  if (!any) return;
+
+  var centerLat = (b.minLat + b.maxLat) / 2;
+  var centerLng = (b.minLng + b.maxLng) / 2;
+  var diag = haversineMeters(
+    { lat: b.minLat, lng: b.minLng },
+    { lat: b.maxLat, lng: b.maxLng }
+  );
+
+  var range = clamp(diag * 2.8, 6000, 250000);
+  flyTo(centerLat, centerLng, range, 1200);
+}
+
+function syncSelectedPanel(f) {
+  var avatarEl = document.getElementById('selAvatar');
+
+  if (!f) {
+    window.__mapUiSetText('selName', 'No farmer selected');
+    window.__mapUiSetText('selFfrs', 'Choose a farmer to load their record');
+    window.__mapUiSetText('selLocation', 'Use the finder, a map marker, or a directory row');
+    window.__mapUiSetText('selRecords', '0');
+    window.__mapUiSetText('selKgs', '0.00');
+
+    window.__mapUiSetText('selOwnerName', '—');
+    window.__mapUiSetText('selOwnerFfrs', '—');
+    window.__mapUiSetText('selOwnerBarangay', '—');
+    window.__mapUiSetText('selOwnerMunicipality', '—');
+    window.__mapUiSetText('selOwnerProvince', '—');
+    window.__mapUiSetText('selOwnerFarmArea', '—');
+
+    window.__mapUiSetHref('viewRecordsBtn', '#');
+
+    if (avatarEl) {
+      avatarEl.textContent = '—';
+      avatarEl.style.backgroundImage = '';
     }
+    return;
+  }
 
-    function updatePlotCount(n) {
-      var el = document.getElementById('plotCountPill');
-      if (el) el.textContent = (n || 0) + ((n === 1) ? ' plot' : ' plots');
+  var fullName = formatName(f);
+  var farmLocation = (f.farm_location || f.location || '').trim();
+  var farmMunicipality = (f.farm_municipality || '').trim();
+  var farmProvince = (f.farm_province || '').trim();
+
+  var prettyLocation = [farmLocation, farmMunicipality, farmProvince]
+    .filter(function (v) { return String(v || '').trim() !== ''; })
+    .join(', ');
+
+  window.__mapUiSetText('selName', fullName || '—');
+  window.__mapUiSetText('selFfrs', f.ffrs || '—');
+  window.__mapUiSetText('selLocation', prettyLocation || '—');
+  window.__mapUiSetText('selRecords', Number(f.records_count || 0));
+  window.__mapUiSetText('selKgs', (Number(f.total_kgs || 0)).toFixed(2));
+
+var ownerName = (f.owner_name || '').trim();
+
+window.__mapUiSetText('selOwnerName', ownerName || fullName || '—');
+  window.__mapUiSetText('selOwnerFfrs', f.ffrs || '—');
+  window.__mapUiSetText('selOwnerBarangay', farmLocation || '—');
+  window.__mapUiSetText('selOwnerMunicipality', farmMunicipality || '—');
+  window.__mapUiSetText('selOwnerProvince', farmProvince || '—');
+  window.__mapUiSetText(
+    'selOwnerFarmArea',
+    f.farm_area_ha != null && f.farm_area_ha !== ''
+      ? Number(f.farm_area_ha).toFixed(2) + ' ha'
+      : '—'
+  );
+
+  if (avatarEl) {
+    var a = (f.first_name || 'F').charAt(0);
+    var b = (f.last_name || 'L').charAt(0);
+    if (f.profile_photo_url) {
+      avatarEl.textContent = '';
+      avatarEl.style.backgroundImage = 'url("' + String(f.profile_photo_url).replace(/"/g, '\\"') + '")';
+    } else {
+      avatarEl.textContent = (a + b).toUpperCase();
+      avatarEl.style.backgroundImage = '';
     }
+  }
+
+  var base = window.__farmersRecordsBaseUrl || "/farmers";
+  window.__mapUiSetHref(
+    'viewRecordsBtn',
+    base.replace(/\/$/, '') + "/" + encodeURIComponent(String(f.id)) + "/records"
+  );
+}
+  function updatePlotCount(n) {
+  var el = document.getElementById('plotCountPill');
+  if (el) el.textContent = (n || 0) + ((n === 1) ? ' plot' : ' plots');
+
+  var heroEl = document.getElementById('plotCountHero');
+  if (heroEl) heroEl.textContent = (n || 0);
+}
 
     function updatePlotTotalArea(ha) {
       var el = document.getElementById('plotAreaTotalPill');
@@ -1517,71 +1784,566 @@
 
     function sumPlotAreas(plots) {
       var sum = 0;
-      for (var i = 0; i < plots.length; i++) {
-        var ring = normalizePolygonRing(plots[i].polygon_json || plots[i].polygon || plots[i].polygonJson);
-        var ha = (plots[i].area_ha != null ? plots[i].area_ha : (plots[i].areaHa != null ? plots[i].areaHa : null));
+      for (var i7 = 0; i7 < plots.length; i7++) {
+        var ring = normalizePolygonRing(plots[i7].polygon_json || plots[i7].polygon || plots[i7].polygonJson);
+        var ha = (plots[i7].area_ha != null ? plots[i7].area_ha : (plots[i7].areaHa != null ? plots[i7].areaHa : null));
         if (ha == null) ha = estimateAreaHa(ring);
         sum += Number(ha || 0);
       }
       return sum;
     }
 
-    function buildStaticPlotMapUrl(plot) {
-      var ring = normalizePolygonRing(plot.polygon_json || plot.polygon || plot.polygonJson);
-      if (!ring || ring.length < 3) throw new Error('Plot has no valid polygon.');
 
-      var pts = openRing(ring);
-      var colorHex = normalizeHexColor(plot.color || '#3b82f6');
-      var colorNoHash = colorHex.replace('#', '').toUpperCase();
-      var strokeColor = '0x' + colorNoHash + 'FF';
-      var fillColor = '0x' + colorNoHash + '26';
+    function latRad(lat) {
+  var sin = Math.sin((Number(lat) || 0) * Math.PI / 180);
+  var radX2 = Math.log((1 + sin) / (1 - sin)) / 2;
+  return Math.max(Math.min(radX2, Math.PI), -Math.PI) / 2;
+}
 
-      var params = [
-        'size=640x420',
-        'scale=2',
-        'format=png',
-        'maptype=hybrid',
-        'key=' + encodeURIComponent(GOOGLE_MAPS_API_KEY)
-      ];
+function estimateStaticMapZoom(points, widthPx, heightPx, paddingPx) {
+  paddingPx = paddingPx == null ? 64 : paddingPx;
+  if (!points || points.length < 2) return 20;
 
-      if (window.__gmapsMapId) {
-        params.push('map_id=' + encodeURIComponent(window.__gmapsMapId));
-      }
+  var minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+  for (var i = 0; i < points.length; i++) {
+    minLat = Math.min(minLat, Number(points[i].lat));
+    maxLat = Math.max(maxLat, Number(points[i].lat));
+    minLng = Math.min(minLng, Number(points[i].lng));
+    maxLng = Math.max(maxLng, Number(points[i].lng));
+  }
 
-      var pathBits = [
-        'fillcolor:' + fillColor,
-        'color:' + strokeColor,
-        'weight:4'
-      ];
+  var latFraction = Math.max(1e-9, Math.abs(latRad(maxLat) - latRad(minLat)) / Math.PI);
+  var lngDiff = maxLng - minLng;
+  if (lngDiff < 0) lngDiff += 360;
+  if (lngDiff > 180) lngDiff = 360 - lngDiff;
+  var lngFraction = Math.max(1e-9, lngDiff / 360);
 
-      for (var i = 0; i < pts.length; i++) {
-        pathBits.push(Number(pts[i].lat).toFixed(6) + ',' + Number(pts[i].lng).toFixed(6));
-      }
+  function zoom(mapPx, worldPx, fraction) {
+    return Math.floor(Math.log(mapPx / worldPx / fraction) / Math.LN2);
+  }
 
-      pathBits.push(Number(pts[0].lat).toFixed(6) + ',' + Number(pts[0].lng).toFixed(6));
-      params.push('path=' + encodeURIComponent(pathBits.join('|')));
+  var usableW = Math.max(64, widthPx - (paddingPx * 2));
+  var usableH = Math.max(64, heightPx - (paddingPx * 2));
+  var z = Math.min(
+    zoom(usableW, 256, lngFraction),
+    zoom(usableH, 256, latFraction),
+    21
+  );
 
-      var labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-      for (var j = 0; j < pts.length && j < labels.length; j++) {
-        params.push(
-          'markers=' + encodeURIComponent(
-            'color:red|label:' + labels.charAt(j) + '|' +
-            Number(pts[j].lat).toFixed(6) + ',' + Number(pts[j].lng).toFixed(6)
-          )
-        );
-      }
+  return clamp(z, 1, 21);
+}
 
-      var centroid = ringCentroid(pts);
-      params.push(
-        'markers=' + encodeURIComponent(
-          'color:blue|label:F|' +
-          Number(centroid.lat).toFixed(6) + ',' + Number(centroid.lng).toFixed(6)
-        )
-      );
+function buildStaticPlotMapUrl(plot) {
+  var ring = normalizePolygonRing(plot.polygon_json || plot.polygon || plot.polygonJson);
+  if (!ring || ring.length < 3) throw new Error('Plot has no valid polygon.');
 
-      return 'https://maps.googleapis.com/maps/api/staticmap?' + params.join('&');
+  var pts = openRing(ring);
+  var colorHex = getEffectivePlotColor(plot);
+  var colorNoHash = colorHex.replace('#', '').toUpperCase();
+
+  var strokeColor = '0x' + colorNoHash + 'FF';
+  var fillColor   = '0x' + colorNoHash + '66';
+
+  var exportW = 1280;
+  var exportH = 720;
+  var center = ringCentroid(pts);
+
+  // Bigger padding = more surrounding space around the plot
+  var zoom = estimateStaticMapZoom(pts, exportW, exportH, 180);
+
+  // Optional extra zoom-out for safer margin
+  zoom = Math.max(1, zoom - 1);
+
+  var params = [
+    'size=640x360',
+    'scale=2',
+    'format=png',
+    'maptype=hybrid',
+    'center=' + encodeURIComponent(
+      Number(center.lat).toFixed(6) + ',' + Number(center.lng).toFixed(6)
+    ),
+    'zoom=' + encodeURIComponent(String(zoom)),
+    'key=' + encodeURIComponent(GOOGLE_MAPS_API_KEY)
+  ];
+
+  var pathBits = [
+    'fillcolor:' + fillColor,
+    'color:' + strokeColor,
+    'weight:5'
+  ];
+
+  for (var j = 0; j < pts.length; j++) {
+    pathBits.push(
+      Number(pts[j].lat).toFixed(6) + ',' + Number(pts[j].lng).toFixed(6)
+    );
+  }
+
+  pathBits.push(
+    Number(pts[0].lat).toFixed(6) + ',' + Number(pts[0].lng).toFixed(6)
+  );
+
+  params.push('path=' + encodeURIComponent(pathBits.join('|')));
+
+  return 'https://maps.googleapis.com/maps/api/staticmap?' + params.join('&');
+}
+var PRINT_LEFT_LOGO  = @json(asset('images/mao-logo.jpg'));
+var PRINT_RIGHT_LOGO = @json(asset('images/ramos-logo.jpg'));
+function buildPrintablePlotHtml(farmer, plot) {
+  var ring = normalizePolygonRing(plot.polygon_json || plot.polygon || plot.polygonJson);
+  if (!ring || ring.length < 3) throw new Error('Plot has no valid polygon.');
+
+  var pts = openRing(ring);
+  if (!pts || pts.length < 3) throw new Error('Plot has no valid polygon.');
+
+  var farmerName = farmer ? formatName(farmer) : 'Selected Farmer';
+  var farmerFfrs = farmer && farmer.ffrs ? farmer.ffrs : '—';
+  var farmerLocation = farmer && farmer.location ? farmer.location : '—';
+  var plotName = plot.name || ('Plot #' + plot.id);
+  var areaHa = plot.area_ha != null ? Number(plot.area_ha) : estimateAreaHa(pts);
+  var createdAt = plot.created_at ? String(plot.created_at).split('T')[0] : '—';
+  var staticMapUrl = buildStaticPlotMapUrl(plot);
+
+  var rows = '';
+  for (var i = 0; i < pts.length; i++) {
+    rows += `
+      <tr>
+        <td>P${i + 1}</td>
+        <td>${Number(pts[i].lat).toFixed(6)}</td>
+        <td>${Number(pts[i].lng).toFixed(6)}</td>
+      </tr>
+    `;
+  }
+
+  return `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Printable Land Plot Sheet</title>
+<style>
+  @page{
+    size: A4 landscape;
+    margin: 8mm;
+  }
+
+  *{
+    box-sizing:border-box;
+  }
+
+  html,body{
+    margin:0;
+    padding:0;
+    background:#ffffff;
+    font-family:Arial,Helvetica,sans-serif;
+    color:#111827;
+  }
+
+  body{
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .sheet-wrap{
+    padding:0;
+  }
+
+  .page{
+    width:auto;
+    min-height:auto;
+    margin:0;
+    background:#ffffff;
+    box-shadow:none;
+    padding:8mm 10mm 10mm;
+    break-inside:avoid;
+    page-break-inside:avoid;
+  }
+
+  .header{
+    display:grid;
+    grid-template-columns:22mm 1fr 22mm;
+    align-items:center;
+    gap:8mm;
+    margin-bottom:4mm;
+  }
+
+  .logo-wrap{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  .logo-wrap img{
+    width:18mm;
+    height:18mm;
+    object-fit:contain;
+    display:block;
+  }
+
+  .header-center{
+    text-align:center;
+  }
+
+  .office-title{
+    font-size:18px;
+    font-weight:800;
+    line-height:1.2;
+    color:#111827;
+  }
+
+  .office-sub{
+    margin-top:3px;
+    font-size:11px;
+    color:#64748b;
+    letter-spacing:.2px;
+  }
+
+  .header-rule{
+    margin-top:3mm;
+    border-top:1.5px solid #111827;
+  }
+
+  .sheet-title{
+    text-align:center;
+    font-size:18px;
+    font-weight:900;
+    letter-spacing:.6px;
+    margin:5mm 0 5mm;
+  }
+
+  .content-grid{
+    display:grid;
+    grid-template-columns:1.55fr 1fr;
+    gap:8mm;
+    align-items:start;
+    break-inside:avoid;
+    page-break-inside:avoid;
+  }
+
+  .map-card,
+  .side-col,
+  .details-grid,
+  .coords{
+    break-inside:avoid;
+    page-break-inside:avoid;
+  }
+
+  .map-card{
+    border:1px solid #cbd5e1;
+    border-radius:14px;
+    overflow:hidden;
+    background:#f8fafc;
+  }
+
+  .map-card-head{
+    padding:10px 12px;
+    border-bottom:1px solid #dbe4ef;
+    background:#ffffff;
+  }
+
+  .map-title{
+    font-size:16px;
+    font-weight:800;
+    margin:0;
+    color:#111827;
+  }
+
+  .map-subtitle{
+    margin:4px 0 0;
+    font-size:11px;
+    color:#64748b;
+  }
+
+  .map-card img{
+    width:100%;
+    height:auto;
+    max-height:105mm;
+    display:block;
+    object-fit:contain;
+    object-position:center center;
+    background:#eef4fb;
+  }
+
+  .side-col{
+    display:flex;
+    flex-direction:column;
+    gap:5mm;
+  }
+
+  .details-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:3.5mm;
+  }
+
+  .detail-card{
+    border:1px solid #dbe4ef;
+    border-radius:12px;
+    background:#ffffff;
+    padding:8px 10px;
+    min-height:58px;
+  }
+
+  .detail-k{
+    font-size:10px;
+    font-weight:700;
+    color:#6b7280;
+    text-transform:uppercase;
+    letter-spacing:.3px;
+    margin-bottom:3px;
+  }
+
+  .detail-v{
+    font-size:13px;
+    font-weight:800;
+    color:#111827;
+    word-break:break-word;
+    line-height:1.25;
+  }
+
+  .coords{
+    border:1px solid #dbe4ef;
+    border-radius:12px;
+    overflow:hidden;
+    background:#ffffff;
+  }
+
+  .coords-head{
+    padding:8px 10px;
+    background:#f8fafc;
+    border-bottom:1px solid #dbe4ef;
+    font-size:13px;
+    font-weight:800;
+    color:#111827;
+  }
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+  }
+
+  thead th{
+    background:#eef4ff;
+    color:#1d4ed8;
+    font-size:10px;
+    text-align:left;
+    padding:6px 8px;
+    border-bottom:1px solid #dbe4ef;
+  }
+
+  tbody td{
+    font-size:10px;
+    padding:6px 8px;
+    border-bottom:1px solid #e5e7eb;
+    vertical-align:top;
+  }
+
+  tbody td:nth-child(2),
+  tbody td:nth-child(3){
+    font-family:monospace;
+  }
+
+  tbody tr:last-child td{
+    border-bottom:none;
+  }
+
+  .footer{
+    margin-top:8mm;
+    position:static;
+  }
+
+  .signature-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14mm;
+    align-items:end;
+  }
+
+  .signature-item{
+    display:flex;
+    align-items:flex-end;
+    gap:8px;
+  }
+
+  .signature-label{
+    font-size:12px;
+    font-weight:500;
+    color:#111827;
+    white-space:nowrap;
+  }
+
+  .signature-line{
+    flex:1;
+    min-width:40mm;
+    height:16px;
+    border-bottom:1.2px solid #111827;
+  }
+
+  @media print{
+    html,body{
+      background:#ffffff;
     }
 
+    .sheet-wrap{
+      padding:0;
+    }
+
+    .page{
+      margin:0;
+      box-shadow:none;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="sheet-wrap">
+    <div class="page">
+      <div class="header">
+        <div class="logo-wrap">
+          <img src="${PRINT_LEFT_LOGO}" alt="Left Logo" onerror="this.style.visibility='hidden';">
+        </div>
+
+        <div class="header-center">
+          <div class="office-title">Municipal Agriculture Office – Ramos</div>
+          <div class="office-sub">Printable land plot information sheet</div>
+          <div class="header-rule"></div>
+        </div>
+
+        <div class="logo-wrap">
+          <img src="${PRINT_RIGHT_LOGO}" alt="Right Logo" onerror="this.style.visibility='hidden';">
+        </div>
+      </div>
+
+      <div class="sheet-title">LAND PLOT INFORMATION</div>
+
+      <div class="content-grid">
+        <div class="map-card">
+          <div class="map-card-head">
+            <div class="map-title">Plot Map</div>
+            <div class="map-subtitle">Exported view focused on the selected land plot.</div>
+          </div>
+          <img id="plotStaticMap" src="${staticMapUrl}" alt="Plot map">
+        </div>
+
+        <div class="side-col">
+          <div class="details-grid">
+            <div class="detail-card">
+              <div class="detail-k">Farmer</div>
+              <div class="detail-v">${escapeXml(farmerName)}</div>
+            </div>
+
+            <div class="detail-card">
+              <div class="detail-k">FFRS</div>
+              <div class="detail-v">${escapeXml(farmerFfrs)}</div>
+            </div>
+
+            <div class="detail-card">
+              <div class="detail-k">Location</div>
+              <div class="detail-v">${escapeXml(farmerLocation)}</div>
+            </div>
+
+            <div class="detail-card">
+              <div class="detail-k">Plot Name</div>
+              <div class="detail-v">${escapeXml(plotName)}</div>
+            </div>
+
+            <div class="detail-card">
+              <div class="detail-k">Area</div>
+              <div class="detail-v">${areaHa.toFixed(2)} ha</div>
+            </div>
+
+            <div class="detail-card">
+              <div class="detail-k">Created</div>
+              <div class="detail-v">${escapeXml(createdAt)}</div>
+            </div>
+          </div>
+
+          <div class="coords">
+            <div class="coords-head">Coordinates</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Point</th>
+                  <th>Latitude</th>
+                  <th>Longitude</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div class="signature-grid">
+          <div class="signature-item">
+            <span class="signature-label">Prepared By:</span>
+            <span class="signature-line"></span>
+          </div>
+          <div class="signature-item">
+            <span class="signature-label">Certified By:</span>
+            <span class="signature-line"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+function printPlotSheet(farmer, plot) {
+  var html = buildPrintablePlotHtml(farmer, plot);
+
+  var iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = '0';
+  document.body.appendChild(iframe);
+
+  var doc = iframe.contentWindow.document;
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  var waitUntilReady = function () {
+    var img = doc.getElementById('plotStaticMap');
+
+    if (!img) {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      return;
+    }
+
+    if (img.complete && img.naturalWidth > 0) {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+
+      setTimeout(function () {
+        if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+      }, 1500);
+      return;
+    }
+
+    img.onload = function () {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+
+      setTimeout(function () {
+        if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+      }, 1500);
+    };
+
+    img.onerror = function () {
+      alert('Static map failed to load in print view.');
+    };
+  };
+
+  setTimeout(waitUntilReady, 400);
+}
     function buildSuggestedPlotName(plots) {
       var f = selectedFarmerId ? (farmersById.get(String(selectedFarmerId)) || dataById.get(String(selectedFarmerId))) : null;
       if (!f) return 'e.g., North Field';
@@ -1609,17 +2371,17 @@
 
     function getPlotById(plotId) {
       var plots = findSelectedFarmerPlots();
-      for (var i = 0; i < plots.length; i++) {
-        if (String(plots[i].id) === String(plotId)) return plots[i];
+      for (var i9 = 0; i9 < plots.length; i9++) {
+        if (String(plots[i9].id) === String(plotId)) return plots[i9];
       }
       return null;
     }
 
     function focusPlotById(plotId) {
       var plots = findSelectedFarmerPlots();
-      for (var i = 0; i < plots.length; i++) {
-        if (String(plots[i].id) !== String(plotId)) continue;
-        var ring = normalizePolygonRing(plots[i].polygon_json || plots[i].polygon || plots[i].polygonJson);
+      for (var i10 = 0; i10 < plots.length; i10++) {
+        if (String(plots[i10].id) !== String(plotId)) continue;
+        var ring = normalizePolygonRing(plots[i10].polygon_json || plots[i10].polygon || plots[i10].polygonJson);
         if (ring && ring.length >= 3) zoomToRing(ring, 4.2, 700, 18000);
         return;
       }
@@ -1629,31 +2391,30 @@
       var ring = normalizePolygonRing(plot.polygon_json || plot.polygon || plot.polygonJson);
       if (!ring || ring.length < 3) throw new Error('Plot has no valid polygon.');
 
-      var plotColor = normalizeHexColor(plot.color || '#3b82f6');
+var plotColor = getEffectivePlotColor(plot);
       var rgb = hexToRgb(plotColor);
       var areaHa = plot.area_ha != null ? Number(plot.area_ha) : estimateAreaHa(ring);
 
       var centroidLat = 0;
       var centroidLng = 0;
-      for (var c = 0; c < ring.length; c++) {
-        centroidLat += ring[c].lat;
-        centroidLng += ring[c].lng;
+      for (var c2 = 0; c2 < ring.length; c2++) {
+        centroidLat += ring[c2].lat;
+        centroidLng += ring[c2].lng;
       }
       centroidLat /= ring.length;
       centroidLng /= ring.length;
 
       var width = 1600;
-      var height = 1000;
-
+      var height = 1250;
       var mapX = 70, mapY = 170, mapW = 920, mapH = 470;
       var rightX = 1040, rightY = 170, rightW = 490, rightH = 740;
 
       var minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
-      for (var j = 0; j < ring.length; j++) {
-        minLat = Math.min(minLat, ring[j].lat);
-        maxLat = Math.max(maxLat, ring[j].lat);
-        minLng = Math.min(minLng, ring[j].lng);
-        maxLng = Math.max(maxLng, ring[j].lng);
+      for (var j3 = 0; j3 < ring.length; j3++) {
+        minLat = Math.min(minLat, ring[j3].lat);
+        maxLat = Math.max(maxLat, ring[j3].lat);
+        minLng = Math.min(minLng, ring[j3].lng);
+        maxLng = Math.max(maxLng, ring[j3].lng);
       }
 
       var pad = 70;
@@ -1670,37 +2431,35 @@
       }
 
       var points = [];
-      for (var k = 0; k < ring.length; k++) points.push(proj(ring[k]));
+      for (var k2 = 0; k2 < ring.length; k2++) points.push(proj(ring[k2]));
 
       var polyPoints = points.map(function (p) {
         return p.x.toFixed(2) + ',' + p.y.toFixed(2);
       }).join(' ');
 
       var cx = 0, cy = 0;
-      for (var n = 0; n < points.length; n++) {
-        cx += points[n].x;
-        cy += points[n].y;
+      for (var n2 = 0; n2 < points.length; n2++) {
+        cx += points[n2].x;
+        cy += points[n2].y;
       }
       cx /= points.length;
       cy /= points.length;
 
+      var coordinatePoints = openRing(ring);
       var rows = '';
-      var maxRows = Math.min(ring.length, 10);
-      for (var r = 0; r < maxRows; r++) {
-        var y = 835 + (r * 28);
+      var maxRows = Math.min(coordinatePoints.length, 10);
+      for (var r2 = 0; r2 < maxRows; r2++) {
+        var y = 835 + (r2 * 28);
         rows += ''
           + '<line x1="85" y1="' + (y + 12) + '" x2="975" y2="' + (y + 12) + '" stroke="#dbe4ef" stroke-width="1"/>'
-          + '<text x="110" y="' + y + '" font-size="16" font-weight="700" fill="#0f172a">P' + (r + 1) + '</text>'
-          + '<text x="250" y="' + y + '" font-size="16" fill="#0f172a" font-family="monospace">' + ring[r].lat.toFixed(6) + '</text>'
-          + '<text x="550" y="' + y + '" font-size="16" fill="#0f172a" font-family="monospace">' + ring[r].lng.toFixed(6) + '</text>';
+          + '<text x="110" y="' + y + '" font-size="16" font-weight="700" fill="#0f172a">P' + (r2 + 1) + '</text>'
+          + '<text x="250" y="' + y + '" font-size="16" fill="#0f172a" font-family="monospace">' + coordinatePoints[r2].lat.toFixed(6) + '</text>'
+          + '<text x="550" y="' + y + '" font-size="16" fill="#0f172a" font-family="monospace">' + coordinatePoints[r2].lng.toFixed(6) + '</text>';
+      }
+      if (coordinatePoints.length > maxRows) {
+        rows += '<text x="110" y="1125" font-size="15" font-weight="700" fill="#64748b">+ ' + (coordinatePoints.length - maxRows) + ' additional corner point(s)</text>';
       }
 
-      var pointDots = '';
-      for (var p = 0; p < points.length; p++) {
-        pointDots += ''
-          + '<circle cx="' + points[p].x.toFixed(2) + '" cy="' + points[p].y.toFixed(2) + '" r="9" fill="#ffffff" stroke="' + plotColor + '" stroke-width="4"/>'
-          + '<text x="' + (points[p].x + 16).toFixed(2) + '" y="' + (points[p].y - 12).toFixed(2) + '" font-size="18" font-weight="700" fill="' + plotColor + '">P' + (p + 1) + '</text>';
-      }
 
       var createdAt = plot.created_at ? String(plot.created_at).split('T')[0] : '—';
       var farmerName = farmer ? formatName(farmer) : 'Selected Farmer';
@@ -1711,7 +2470,7 @@
       var svg = '';
       svg += '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '">';
       svg += '<rect width="100%" height="100%" fill="#f4f7fb"/>';
-      svg += '<rect x="20" y="20" width="1560" height="960" rx="28" fill="#f8fbff" stroke="#d7e3f1" stroke-width="2"/>';
+      svg += '<rect x="20" y="20" width="1560" height="' + (height - 40) + '" rx="28" fill="#f8fbff" stroke="#d7e3f1" stroke-width="2"/>';
 
       svg += '<text x="60" y="90" font-size="42" font-weight="800" fill="#0f172a">Printable Land Plot Sheet</text>';
       svg += '<text x="60" y="125" font-size="20" fill="#64748b">Generated from your saved polygon data for download and printing.</text>';
@@ -1732,16 +2491,13 @@
       svg += '<text x="85" y="242" font-size="18" fill="#64748b">Polygon preview exported from the selected farmer plot.</text>';
 
       svg += '<polygon points="' + polyPoints + '" fill="rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',0.18)" stroke="' + plotColor + '" stroke-width="6"/>';
-      svg += pointDots;
-      svg += '<circle cx="' + cx.toFixed(2) + '" cy="' + cy.toFixed(2) + '" r="10" fill="#10b981" stroke="#ffffff" stroke-width="3"/>';
-      svg += '<text x="' + (cx + 18).toFixed(2) + '" y="' + (cy + 6).toFixed(2) + '" font-size="20" font-weight="700" fill="#047857">Centroid</text>';
 
       svg += '<text x="' + (mapX + mapW - 70) + '" y="' + (mapY + 55) + '" font-size="28" font-weight="800" text-anchor="middle" fill="#0f172a">N</text>';
       svg += '<polygon points="' + (mapX + mapW - 70) + ',' + (mapY + 68) + ' ' + (mapX + mapW - 90) + ',' + (mapY + 110) + ' ' + (mapX + mapW - 50) + ',' + (mapY + 110) + '" fill="#0f172a"/>';
 
-      svg += '<rect x="70" y="670" width="920" height="250" rx="22" fill="#ffffff" stroke="#dbe4ef" stroke-width="2"/>';
+      svg += '<rect x="70" y="670" width="920" height="500" rx="22" fill="#ffffff" stroke="#dbe4ef" stroke-width="2"/>';
       svg += '<text x="85" y="710" font-size="30" font-weight="800" fill="#0f172a">Coordinates</text>';
-      svg += '<text x="85" y="738" font-size="17" fill="#64748b">Corner points stored in polygon_json.</text>';
+      svg += '<text x="85" y="738" font-size="17" fill="#64748b">GPS corner points used to define this parcel.</text>';
 
       svg += '<rect x="82" y="760" width="895" height="42" rx="16" fill="#e8f0ff"/>';
       svg += '<text x="110" y="787" font-size="18" font-weight="700" fill="#2563eb">Point</text>';
@@ -1767,7 +2523,7 @@
 
       svg += '<rect x="' + (rightX + 255) + '" y="' + (rightY + 190) + '" width="210" height="90" rx="18" fill="#fbfdff" stroke="#dbe4ef"/>';
       svg += '<text x="' + (rightX + 270) + '" y="' + (rightY + 220) + '" font-size="16" font-weight="700" fill="#64748b">Vertices</text>';
-      svg += '<text x="' + (rightX + 270) + '" y="' + (rightY + 255) + '" font-size="24" font-weight="800" fill="#0f172a">' + ring.length + ' corners</text>';
+      svg += '<text x="' + (rightX + 270) + '" y="' + (rightY + 255) + '" font-size="24" font-weight="800" fill="#0f172a">' + coordinatePoints.length + ' corners</text>';
 
       svg += '<rect x="' + (rightX + 25) + '" y="' + (rightY + 305) + '" width="' + (rightW - 50) + '" height="405" rx="18" fill="#fbfdff" stroke="#dbe4ef"/>';
       svg += '<text x="' + (rightX + 40) + '" y="' + (rightY + 345) + '" font-size="16" font-weight="700" fill="#64748b">Farmer</text>';
@@ -1790,10 +2546,10 @@
 
       svg += '<text x="' + (rightX + 25) + '" y="' + (rightY + 735) + '" font-size="16" fill="#64748b">Created: ' + escapeXml(createdAt) + '</text>';
 
-      svg += '<text x="60" y="955" font-size="16" fill="#64748b">Generated from the selected plot. Suitable for download or print.</text>';
-      svg += '<text x="1530" y="955" font-size="16" font-weight="700" text-anchor="end" fill="#0f172a">PNG export</text>';
-      svg += '</svg>';
+      svg += '<text x="60" y="' + (height - 45) + '" font-size="16" fill="#64748b">Generated from the selected plot. Suitable for download or print.</text>';
+      svg += '<text x="1530" y="' + (height - 45) + '" font-size="16" font-weight="700" text-anchor="end" fill="#0f172a">PNG export</text>';
 
+      svg += '</svg>';
       return svg;
     }
 
@@ -1837,224 +2593,414 @@
       });
     }
 
-    async function downloadPlotSheetPng(farmer, plot) {
-      var svg = buildPlotSheetSvg(farmer, plot);
-      var pngBlob = await svgToPngBlob(svg, 1600, 1000);
+async function downloadPlotSheetPng(farmer, plot) {
+  var ring = normalizePolygonRing(plot.polygon_json || plot.polygon || plot.polygonJson);
+  if (!ring || ring.length < 3) {
+    throw new Error('Plot has no valid polygon.');
+  }
 
+  var fileBase = safeFilename((farmer ? formatName(farmer) : 'farmer') + '_' + (plot.name || ('plot_' + plot.id)));
+  var exportWidth = 2600;
+  var exportPoints = openRing(ring);
+  var exportVisibleRows = Math.min(exportPoints.length, 12);
+  var exportHasMoreRows = exportPoints.length > exportVisibleRows;
+  var exportTableHeight = 188 + (exportVisibleRows * 34) + (exportHasMoreRows ? 36 : 0);
+  var exportHeight = Math.max(1700, 1180 + exportTableHeight + 160);
+
+  function downloadBlob(blob, name) {
+    return new Promise(function (resolve) {
       var a = document.createElement('a');
-      var url = URL.createObjectURL(pngBlob);
-      var fileBase = safeFilename((farmer ? formatName(farmer) : 'farmer') + '_' + (plot.name || ('plot_' + plot.id)));
-
-      a.href = url;
-      a.download = fileBase + '.png';
+      var dlUrl = URL.createObjectURL(blob);
+      a.href = dlUrl;
+      a.download = name;
       document.body.appendChild(a);
       a.click();
       a.remove();
-
       setTimeout(function () {
-        URL.revokeObjectURL(url);
+        URL.revokeObjectURL(dlUrl);
+        resolve();
       }, 1500);
-    }
+    });
+  }
 
-    function buildPrintablePlotHtml(farmer, plot) {
-      var ring = normalizePolygonRing(plot.polygon_json || plot.polygon || plot.polygonJson);
-      if (!ring || ring.length < 3) throw new Error('Plot has no valid polygon.');
-
-      var farmerName = farmer ? formatName(farmer) : 'Selected Farmer';
-      var farmerFfrs = farmer && farmer.ffrs ? farmer.ffrs : '—';
-      var farmerLocation = farmer && farmer.location ? farmer.location : '—';
-      var plotName = plot.name || ('Plot #' + plot.id);
-      var areaHa = plot.area_ha != null ? Number(plot.area_ha) : estimateAreaHa(ring);
-      var createdAt = plot.created_at ? String(plot.created_at).split('T')[0] : '—';
-      var centroid = ringCentroid(openRing(ring));
-      var colorHex = normalizeHexColor(plot.color || '#3b82f6');
-      var staticMapUrl = buildStaticPlotMapUrl(plot);
-
-      var rows = '';
-      for (var i = 0; i < ring.length; i++) {
-        rows += `
-          <tr>
-            <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-weight:700;">P${i + 1}</td>
-            <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:monospace;">${Number(ring[i].lat).toFixed(6)}</td>
-            <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-family:monospace;">${Number(ring[i].lng).toFixed(6)}</td>
-          </tr>
-        `;
+  function loadImage(url, allowFailure) {
+    return new Promise(function (resolve, reject) {
+      if (!url) {
+        if (allowFailure) return resolve(null);
+        return reject(new Error('Image URL is missing.'));
       }
 
-      return `<!doctype html>
-<html>
-<head>
-<meta charset="utf-8">
-<title>Printable Land Plot Sheet</title>
+      var img = new Image();
+      if (/^https?:/i.test(url)) img.crossOrigin = 'anonymous';
 
-<style>
-html,body{margin:0;padding:0;background:#eef2f7;font-family:Arial,Helvetica,sans-serif;color:#0f172a;}
-.page{width:1200px;max-width:calc(100vw - 40px);margin:24px auto;background:#f8fbff;border:1px solid #dbe4ef;border-radius:20px;padding:22px 22px 18px;box-sizing:border-box;}
-.title{font-size:34px;font-weight:800;margin:0 0 8px;}
-.sub{font-size:14px;color:#64748b;margin:0 0 12px;}
-.badge{display:inline-block;background:#e8f0ff;color:#2563eb;font-weight:800;font-size:12px;border-radius:999px;padding:6px 10px;margin-bottom:14px;}
-.grid{display:grid;grid-template-columns:2fr 1fr;gap:18px;align-items:start;}
-.card{background:#fff;border:1px solid #dbe4ef;border-radius:16px;padding:14px;box-sizing:border-box;}
-.card-title{font-size:18px;font-weight:800;margin:0 0 6px;}
-.card-sub{font-size:12px;color:#64748b;margin:0 0 12px;}
-.mapimg{display:block;width:100%;height:auto;border:1px solid #dbe4ef;border-radius:14px;background:#f8fafc;}
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
-.stat{border:1px solid #dbe4ef;border-radius:12px;padding:10px;background:#fbfdff;}
-.stat-k{font-size:11px;font-weight:700;color:#64748b;margin-bottom:4px;}
-.stat-v{font-size:18px;font-weight:800;}
-.section{margin-top:10px;padding-top:10px;border-top:1px solid #e5e7eb;}
-.label{font-size:11px;font-weight:700;color:#64748b;margin-bottom:4px;}
-.value{font-size:16px;font-weight:700;word-break:break-word;}
-.coords{margin-top:18px;}
-table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;}
-thead th{background:#eef4ff;color:#2563eb;font-size:12px;text-align:left;padding:10px;border-bottom:1px solid #dbe4ef;}
-.footer{display:flex;justify-content:space-between;gap:12px;margin-top:12px;font-size:12px;color:#64748b;}
-.swatch{display:inline-block;width:12px;height:12px;border-radius:3px;background:${colorHex};margin-right:6px;vertical-align:middle;}
-@media print{html,body{background:#fff;} .page{width:auto;max-width:none;margin:0;border:none;border-radius:0;padding:12px;}}
-</style>
-</head>
-
-<body>
-
-<div class="page">
-
-  <div class="title">Printable Land Plot Sheet</div>
-  <div class="sub">Generated from your saved polygon data for download and printing.</div>
-
-  <div class="badge">LAND PLOT</div>
-
-  <div class="grid">
-
-    <div>
-      <div class="card">
-        <div class="card-title">Plot map</div>
-        <div class="card-sub">Static satellite/hybrid map with polygon overlay.</div>
-        <img id="plotStaticMap" class="mapimg" src="${staticMapUrl}" alt="Plot map">
-      </div>
-
-      <div class="card coords">
-        <div class="card-title">Coordinates</div>
-        <div class="card-sub">Corner points stored in polygon_json.</div>
-
-        <table>
-          <thead>
-            <tr>
-              <th>Point</th>
-              <th>Latitude</th>
-              <th>Longitude</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows}
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">Plot summary</div>
-
-      <div class="stats">
-        <div class="stat">
-          <div class="stat-k">Plot Name</div>
-          <div class="stat-v">${escapeXml(plotName)}</div>
-        </div>
-
-        <div class="stat">
-          <div class="stat-k">Plot Color</div>
-          <div class="stat-v"><span class="swatch"></span>${escapeXml(colorHex)}</div>
-        </div>
-
-        <div class="stat">
-          <div class="stat-k">Area</div>
-          <div class="stat-v">${areaHa.toFixed(2)} ha</div>
-        </div>
-
-        <div class="stat">
-          <div class="stat-k">Vertices</div>
-          <div class="stat-v">${ring.length} corners</div>
-        </div>
-      </div>
-
-      <div class="section">
-        <div class="label">Farmer</div>
-        <div class="value">${escapeXml(farmerName)}</div>
-      </div>
-
-      <div class="section">
-        <div class="label">FFRS</div>
-        <div class="value">${escapeXml(farmerFfrs)}</div>
-      </div>
-
-      <div class="section">
-        <div class="label">Location</div>
-        <div class="value">${escapeXml(farmerLocation)}</div>
-      </div>
-
-      <div class="section">
-        <div class="label">Centroid Lat</div>
-        <div class="value">${Number(centroid.lat).toFixed(6)}</div>
-      </div>
-
-      <div class="section">
-        <div class="label">Centroid Lng</div>
-        <div class="value">${Number(centroid.lng).toFixed(6)}</div>
-      </div>
-
-      <div class="section">
-        <div class="label">Created</div>
-        <div class="value">${escapeXml(createdAt)}</div>
-      </div>
-    </div>
-
-  </div>
-
-  <div class="footer">
-    <span>Generated from the selected plot.</span>
-    <span>Google Maps Static API</span>
-  </div>
-
-</div>
-
-</body>
-</html>`;
-    }
-
-    function printPlotSheet(farmer, plot) {
-      var html = buildPrintablePlotHtml(farmer, plot);
-      
-      var iframe = document.createElement('iframe');
-      iframe.style.position = 'absolute';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
-      iframe.style.border = 'none';
-      document.body.appendChild(iframe);
-
-      var doc = iframe.contentWindow.document;
-      doc.open();
-      doc.write(html);
-      doc.close();
-
-      var img = doc.getElementById("plotStaticMap");
-      
-      var doPrint = function () {
-        setTimeout(function () {
-          iframe.contentWindow.focus();
-          iframe.contentWindow.print();
-          
-          setTimeout(function() {
-            if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-          }, 10000);
-        }, 500); 
+      img.onload = function () { resolve(img); };
+      img.onerror = function () {
+        if (allowFailure) return resolve(null);
+        reject(new Error('Failed to load image.'));
       };
+      img.src = url;
+    });
+  }
 
-      if (img && !img.complete) {
-        img.onload = doPrint;
-        img.onerror = doPrint; 
+  function roundedRectPath(ctx, x, y, w, h, r) {
+    r = Math.max(0, Math.min(r, Math.min(w, h) / 2));
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function fillRoundedRect(ctx, x, y, w, h, r, color) {
+    ctx.save();
+    roundedRectPath(ctx, x, y, w, h, r);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function strokeRoundedRect(ctx, x, y, w, h, r, color, lineWidth) {
+    ctx.save();
+    roundedRectPath(ctx, x, y, w, h, r);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth || 1;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+ function drawImageContain(ctx, img, x, y, w, h, bgColor) {
+  var iw = img.naturalWidth || img.width;
+  var ih = img.naturalHeight || img.height;
+
+  if (bgColor) {
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(x, y, w, h);
+  }
+
+  var scale = Math.min(w / iw, h / ih);
+  var dw = iw * scale;
+  var dh = ih * scale;
+  var dx = x + (w - dw) / 2;
+  var dy = y + (h - dh) / 2;
+
+  ctx.drawImage(img, dx, dy, dw, dh);
+}
+  function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight, maxLines) {
+    text = String(text || '');
+    var words = text.split(/\s+/).filter(Boolean);
+    var lines = [];
+    var line = '';
+
+    for (var i = 0; i < words.length; i++) {
+      var test = line ? (line + ' ' + words[i]) : words[i];
+      if (ctx.measureText(test).width <= maxWidth || !line) {
+        line = test;
       } else {
-        doPrint();
+        lines.push(line);
+        line = words[i];
       }
     }
+    if (line) lines.push(line);
+
+    if (maxLines && lines.length > maxLines) {
+      lines = lines.slice(0, maxLines);
+      var last = lines[lines.length - 1];
+      while (last && ctx.measureText(last + '...').width > maxWidth) {
+        last = last.slice(0, -1);
+      }
+      lines[lines.length - 1] = (last || '').trim() + '...';
+    }
+
+    for (var j = 0; j < lines.length; j++) {
+      ctx.fillText(lines[j], x, y + (j * lineHeight));
+    }
+
+    return lines.length;
+  }
+
+  function drawLabelValueCard(ctx, x, y, w, h, label, value, colorSwatch) {
+    fillRoundedRect(ctx, x, y, w, h, 26, '#ffffff');
+    strokeRoundedRect(ctx, x, y, w, h, 26, '#dbe4ef', 2);
+
+    ctx.fillStyle = '#64748b';
+    ctx.font = '700 24px Arial';
+    ctx.fillText(label, x + 28, y + 42);
+
+    if (colorSwatch) {
+      fillRoundedRect(ctx, x + 28, y + 58, 34, 34, 8, colorSwatch);
+      ctx.fillStyle = '#0f172a';
+      ctx.font = '800 34px Arial';
+      ctx.fillText(String(value || ''), x + 76, y + 86);
+      return;
+    }
+
+    ctx.fillStyle = '#0f172a';
+    ctx.font = '800 36px Arial';
+    drawWrappedText(ctx, String(value || ''), x + 28, y + 86, w - 56, 40, 2);
+  }
+
+  function drawFallbackPlot(ctx, ringPts, x, y, w, h, colorHex) {
+    var pts = openRing(ringPts);
+    if (!pts.length) return;
+
+    var minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+    for (var i = 0; i < pts.length; i++) {
+      minLat = Math.min(minLat, pts[i].lat);
+      maxLat = Math.max(maxLat, pts[i].lat);
+      minLng = Math.min(minLng, pts[i].lng);
+      maxLng = Math.max(maxLng, pts[i].lng);
+    }
+
+    var pad = 70;
+    var innerW = Math.max(10, w - (pad * 2));
+    var innerH = Math.max(10, h - (pad * 2));
+
+    ctx.save();
+    roundedRectPath(ctx, x, y, w, h, 28);
+    ctx.clip();
+
+    ctx.fillStyle = '#eef4fb';
+    ctx.fillRect(x, y, w, h);
+
+    ctx.strokeStyle = '#d7e3f1';
+    ctx.lineWidth = 1;
+    for (var gx = x + 20; gx < x + w; gx += 70) {
+      ctx.beginPath();
+      ctx.moveTo(gx, y + 20);
+      ctx.lineTo(gx, y + h - 20);
+      ctx.stroke();
+    }
+    for (var gy = y + 20; gy < y + h; gy += 70) {
+      ctx.beginPath();
+      ctx.moveTo(x + 20, gy);
+      ctx.lineTo(x + w - 20, gy);
+      ctx.stroke();
+    }
+
+    var rgb = hexToRgb(colorHex);
+    ctx.beginPath();
+    for (var j = 0; j < pts.length; j++) {
+      var px = x + pad + (((pts[j].lng - minLng) / ((maxLng - minLng) || 1)) * innerW);
+      var py = y + pad + (((maxLat - pts[j].lat) / ((maxLat - minLat) || 1)) * innerH);
+      if (j === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',0.22)';
+    ctx.fill();
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = colorHex;
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function composeCanvas(mapImg, leftLogo, rightLogo) {
+    var canvas = document.createElement('canvas');
+    canvas.width = exportWidth;
+    canvas.height = exportHeight;
+    var ctx = canvas.getContext('2d');
+var colorHex = getEffectivePlotColor(plot);
+    var plotName = plot.name || ('Plot #' + plot.id);
+    var farmerName = farmer ? formatName(farmer) : 'Selected Farmer';
+    var farmerFfrs = farmer && farmer.ffrs ? farmer.ffrs : '-';
+    var farmerLocation = farmer && farmer.location ? farmer.location : '-';
+    var areaHa = plot.area_ha != null ? Number(plot.area_ha) : estimateAreaHa(ring);
+    var createdAt = plot.created_at ? String(plot.created_at).split('T')[0] : '-';
+    var vertexCount = openRing(ring).length;
+
+    ctx.fillStyle = '#edf3f8';
+    ctx.fillRect(0, 0, exportWidth, exportHeight);
+
+    fillRoundedRect(ctx, 26, 26, exportWidth - 52, exportHeight - 52, 34, '#f8fbff');
+    strokeRoundedRect(ctx, 26, 26, exportWidth - 52, exportHeight - 52, 34, '#d7e3f1', 2);
+
+    if (leftLogo) ctx.drawImage(leftLogo, 72, 48, 82, 82);
+    if (rightLogo) ctx.drawImage(rightLogo, exportWidth - 154, 48, 82, 82);
+
+    ctx.fillStyle = '#0f172a';
+    ctx.font = '800 42px Arial';
+    ctx.fillText('LAND PLOT EXPORT', 190, 82);
+    ctx.fillStyle = '#64748b';
+    ctx.font = '500 24px Arial';
+    ctx.fillText('High resolution downloaded plot image', 190, 118);
+
+    fillRoundedRect(ctx, 72, 142, 168, 38, 19, '#e8f0ff');
+    ctx.fillStyle = '#2563eb';
+    ctx.font = '700 20px Arial';
+    ctx.fillText('MAXIMIZED VIEW', 96, 168);
+
+    var mapX = 72;
+    var mapY = 210;
+    var mapW = 1650;
+    var mapH = 930;
+    var sideX = 1760;
+    var sideY = 210;
+    var sideW = 760;
+    var tableX = 72;
+    var tableY = 1180;
+    var tableW = 2448;
+    var tableH = exportTableHeight;
+
+    fillRoundedRect(ctx, mapX, mapY, mapW, mapH, 28, '#ffffff');
+    strokeRoundedRect(ctx, mapX, mapY, mapW, mapH, 28, '#dbe4ef', 2);
+
+    ctx.fillStyle = '#0f172a';
+    ctx.font = '800 30px Arial';
+    ctx.fillText(mapImg ? 'Satellite plot map' : 'Parcel boundary preview', mapX + 28, mapY + 44);
+    ctx.fillStyle = '#64748b';
+    ctx.font = '500 20px Arial';
+    ctx.fillText(
+      mapImg
+        ? 'Satellite view focused on the selected land plot.'
+        : 'Coordinate-grid fallback. Enable Google Maps Static API to include satellite imagery.',
+      mapX + 28,
+      mapY + 74
+    );
+
+    var mapInnerX = mapX + 24;
+    var mapInnerY = mapY + 92;
+    var mapInnerW = mapW - 48;
+    var mapInnerH = mapH - 116;
+
+    ctx.save();
+    roundedRectPath(ctx, mapInnerX, mapInnerY, mapInnerW, mapInnerH, 24);
+    ctx.clip();
+    if (mapImg) {
+     drawImageContain(ctx, mapImg, mapInnerX, mapInnerY, mapInnerW, mapInnerH, '#eef4fb');
+    } else {
+      drawFallbackPlot(ctx, ring, mapInnerX, mapInnerY, mapInnerW, mapInnerH, colorHex);
+    }
+    ctx.restore();
+    strokeRoundedRect(ctx, mapInnerX, mapInnerY, mapInnerW, mapInnerH, 24, '#dbe4ef', 2);
+
+    fillRoundedRect(ctx, mapX + mapW - 230, mapY + 30, 180, 40, 20, 'rgba(255,255,255,0.92)');
+    strokeRoundedRect(ctx, mapX + mapW - 230, mapY + 30, 180, 40, 20, '#dbe4ef', 1.5);
+    ctx.fillStyle = '#0f172a';
+    ctx.font = '700 20px Arial';
+    ctx.fillText('Area: ' + areaHa.toFixed(2) + ' ha', mapX + mapW - 210, mapY + 57);
+
+    fillRoundedRect(ctx, sideX, sideY, sideW, 930, 28, '#ffffff');
+    strokeRoundedRect(ctx, sideX, sideY, sideW, 930, 28, '#dbe4ef', 2);
+    ctx.fillStyle = '#0f172a';
+    ctx.font = '800 30px Arial';
+    ctx.fillText('Plot summary', sideX + 28, sideY + 46);
+
+    drawLabelValueCard(ctx, sideX + 24, sideY + 74, 330, 120, 'Plot Name', plotName);
+    drawLabelValueCard(ctx, sideX + 382, sideY + 74, 330, 120, 'Plot Color', colorHex, colorHex);
+    drawLabelValueCard(ctx, sideX + 24, sideY + 216, 330, 120, 'Area', areaHa.toFixed(2) + ' ha');
+    drawLabelValueCard(ctx, sideX + 382, sideY + 216, 330, 120, 'Vertices', String(vertexCount));
+    drawLabelValueCard(ctx, sideX + 24, sideY + 358, 688, 120, 'Farmer', farmerName);
+    drawLabelValueCard(ctx, sideX + 24, sideY + 500, 688, 120, 'FFRS', farmerFfrs);
+    drawLabelValueCard(ctx, sideX + 24, sideY + 642, 688, 150, 'Location', farmerLocation);
+    drawLabelValueCard(ctx, sideX + 24, sideY + 814, 688, 88, 'Created', createdAt);
+
+    fillRoundedRect(ctx, tableX, tableY, tableW, tableH, 28, '#ffffff');
+    strokeRoundedRect(ctx, tableX, tableY, tableW, tableH, 28, '#dbe4ef', 2);
+    ctx.fillStyle = '#0f172a';
+    ctx.font = '800 28px Arial';
+    ctx.fillText('Coordinates', tableX + 24, tableY + 42);
+    ctx.fillStyle = '#64748b';
+    ctx.font = '500 18px Arial';
+    ctx.fillText('GPS corner points used to define this parcel.', tableX + 24, tableY + 70);
+
+    var headerY = tableY + 94;
+    fillRoundedRect(ctx, tableX + 18, headerY, tableW - 36, 48, 18, '#e8f0ff');
+    ctx.fillStyle = '#2563eb';
+    ctx.font = '700 19px Arial';
+    ctx.fillText('Point', tableX + 48, headerY + 31);
+    ctx.fillText('Latitude', tableX + 240, headerY + 31);
+    ctx.fillText('Longitude', tableX + 710, headerY + 31);
+
+    var pts = exportPoints;
+    var maxRows = exportVisibleRows;
+    var rowY = headerY + 72;
+    ctx.font = '600 18px Arial';
+    for (var r = 0; r < maxRows; r++) {
+      var y = rowY + (r * 34);
+      ctx.strokeStyle = '#dbe4ef';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(tableX + 24, y + 12);
+      ctx.lineTo(tableX + tableW - 24, y + 12);
+      ctx.stroke();
+
+      ctx.fillStyle = '#0f172a';
+      ctx.fillText('P' + (r + 1), tableX + 48, y);
+      ctx.font = '16px monospace';
+      ctx.fillText(Number(pts[r].lat).toFixed(6), tableX + 240, y);
+      ctx.fillText(Number(pts[r].lng).toFixed(6), tableX + 710, y);
+      ctx.font = '600 18px Arial';
+    }
+
+    if (pts.length > maxRows) {
+      ctx.fillStyle = '#64748b';
+      ctx.font = '600 18px Arial';
+      ctx.fillText('... ' + (pts.length - maxRows) + ' more point(s)', tableX + 48, rowY + (maxRows * 34) + 8);
+    }
+
+    ctx.fillStyle = '#64748b';
+    ctx.font = '500 18px Arial';
+    ctx.fillText('Prepared By:', exportWidth - 700, exportHeight - 70);
+    ctx.fillText('Certified By:', exportWidth - 360, exportHeight - 70);
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(exportWidth - 560, exportHeight - 76);
+    ctx.lineTo(exportWidth - 390, exportHeight - 76);
+    ctx.moveTo(exportWidth - 215, exportHeight - 76);
+    ctx.lineTo(exportWidth - 45, exportHeight - 76);
+    ctx.stroke();
+
+    return canvas;
+  }
+
+  function canvasToPngBlob(canvas) {
+    return new Promise(function (resolve, reject) {
+      try {
+        canvas.toBlob(function (blob) {
+          if (!blob) return reject(new Error('Could not create PNG.'));
+          resolve(blob);
+        }, 'image/png', 1);
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
+  try {
+    var mapImg = await loadImage(buildStaticPlotMapUrl(plot), false);
+    var leftLogo = await loadImage(PRINT_LEFT_LOGO, true);
+    var rightLogo = await loadImage(PRINT_RIGHT_LOGO, true);
+
+    var canvas = composeCanvas(mapImg, leftLogo, rightLogo);
+    var pngBlob = await canvasToPngBlob(canvas);
+
+    await downloadBlob(pngBlob, fileBase + '_max.png');
+    return;
+  } catch (err) {
+    console.warn('Static map export failed, using the offline parcel preview.', err);
+  }
+
+  try {
+    var fallbackLeftLogo = await loadImage(PRINT_LEFT_LOGO, true);
+    var fallbackRightLogo = await loadImage(PRINT_RIGHT_LOGO, true);
+    var fallbackCanvas = composeCanvas(null, fallbackLeftLogo, fallbackRightLogo);
+    var fallbackCanvasBlob = await canvasToPngBlob(fallbackCanvas);
+    await downloadBlob(fallbackCanvasBlob, fileBase + '_max.png');
+    return;
+  } catch (fallbackCanvasError) {
+    console.warn('Offline canvas export failed, using the SVG renderer.', fallbackCanvasError);
+  }
+
+  var svg = buildPlotSheetSvg(farmer, plot);
+  var fallbackBlob = await svgToPngBlob(svg, 2600, 2032);
+  await downloadBlob(fallbackBlob, fileBase + '_max.png');
+}
+
+
 
     async function handleDownloadPlot(plotId) {
       if (!selectedFarmerId) {
@@ -2090,6 +3036,61 @@ thead th{background:#eef4ff;color:#2563eb;font-size:12px;text-align:left;padding
       }
     }
 
+ async function handleDownloadAllPlots() {
+  if (!selectedFarmerId) {
+    toast('Select a farmer first.', 'warn');
+    return;
+  }
+
+  var farmer = farmersById.get(String(selectedFarmerId)) || dataById.get(String(selectedFarmerId));
+  var plots = findSelectedFarmerPlots();
+
+  if (!plots || !plots.length) {
+    toast('This farmer has no saved plots yet.', 'warn');
+    return;
+  }
+
+  var btn = document.getElementById('downloadAllPlotsBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Downloading...';
+  }
+
+  try {
+    setStatus('Downloading all plot maps…', 'Preparing ' + plots.length + ' file(s)');
+    toast('Starting download of ' + plots.length + ' plot map(s).', 'ok');
+
+    for (var i = 0; i < plots.length; i++) {
+      var plot = plots[i];
+
+      setStatus(
+        'Downloading all plot maps…',
+        'Downloading ' + (i + 1) + ' of ' + plots.length + ': ' + (plot.name || ('Plot #' + plot.id))
+      );
+
+      await downloadPlotSheetPng(farmer, plot);
+
+      await new Promise(function (resolve) {
+        setTimeout(resolve, 900);
+      });
+    }
+
+    setStatus('Ready', 'All plot maps downloaded.');
+    toast('All plot maps downloaded.', 'ok');
+  } catch (err) {
+    console.error(err);
+    setStatus('Batch download failed.', '');
+    toast(err && err.message ? err.message : 'Could not download all plot maps.', 'bad');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Download All Maps';
+    }
+  }
+}
+
+window.__handleDownloadAllPlots = handleDownloadAllPlots;
+
     function handlePrintPlot(plotId) {
       if (!selectedFarmerId) {
         toast('Select a farmer first.', 'warn');
@@ -2121,114 +3122,122 @@ thead th{background:#eef4ff;color:#2563eb;font-size:12px;text-align:left;padding
       }
     }
 
-    window.__downloadCurrentPlotSheet = function () {
-      handleDownloadPlot(null);
-    };
+  function updatePlotList(plots) {
+  var list = document.getElementById('plotList');
+  if (!list) return;
 
-    window.__printCurrentPlotSheet = function () {
-      handlePrintPlot(null);
-    };
+  if (!plots || !plots.length) {
+    list.innerHTML = window.__canManageOperationalData
+      ? '<div class="map-empty">No plots yet. Select a farmer, then click <b>Plot Land</b>.</div>'
+      : '<div class="map-empty">No saved plots are available for this farmer.</div>';
+    syncSuggestedPlotName([], false);
+    return;
+  }
 
-    function updatePlotList(plots) {
-      var list = document.getElementById('plotList');
-      if (!list) return;
+  syncSuggestedPlotName(plots, false);
 
-      if (!plots || !plots.length) {
-        list.innerHTML = '<div class="map-empty">No plots yet. Select a farmer, then click <b>Plot Land</b>.</div>';
-        syncSuggestedPlotName([], false);
-        return;
-      }
+  var html = '';
+  for (var i12 = 0; i12 < plots.length; i12++) {
+    var pl = plots[i12];
+    var name = pl.name || ('Plot #' + pl.id);
+    var created = pl.created_at ? String(pl.created_at).split('T')[0] : '';
+    var ring = normalizePolygonRing(pl.polygon_json || pl.polygon || pl.polygonJson);
+    var ha = (pl.area_ha != null ? pl.area_ha : (pl.areaHa != null ? pl.areaHa : null));
+    if (ha == null) ha = estimateAreaHa(ring);
 
-      syncSuggestedPlotName(plots, false);
+    var sub = (created ? created : '—') + (' • ' + Number(ha || 0).toFixed(2) + ' ha');
+    var c = pl.color ? String(pl.color) : "#22c55e";
 
-      var html = '';
-      for (var i = 0; i < plots.length; i++) {
-        var pl = plots[i];
-        var name = pl.name || ('Plot #' + pl.id);
-        var created = pl.created_at ? String(pl.created_at).split('T')[0] : '';
-        var ring = normalizePolygonRing(pl.polygon_json || pl.polygon || pl.polygonJson);
-        var ha = (pl.area_ha != null ? pl.area_ha : (pl.areaHa != null ? pl.areaHa : null));
-        if (ha == null) ha = estimateAreaHa(ring);
+    html +=
+      '<div class="map-plot-item">' +
+        '<div>' +
+          '<div class="map-plot-name"><span class="plot-swatch" style="background:' + escapeHtml(c) + ';"></span>' + escapeHtml(name) + '</div>' +
+          '<div class="map-plot-sub">' + escapeHtml(sub) + '</div>' +
+        '</div>' +
+        '<div class="map-plot-actions">' +
+          '<button type="button" class="btn btn-soft btn-sm" data-action="focusPlot" data-plot-id="' + escapeHtml(pl.id) + '">Focus</button>' +
+          (window.__canManageOperationalData ? '<button type="button" class="btn btn-soft btn-sm" data-action="editPlot" data-plot-id="' + escapeHtml(pl.id) + '">Edit</button>' : '') +
+          '<button type="button" class="btn btn-soft btn-sm" data-action="downloadPlot" data-plot-id="' + escapeHtml(pl.id) + '">Download</button>' +
+          '<button type="button" class="btn btn-soft btn-sm" data-action="printPlot" data-plot-id="' + escapeHtml(pl.id) + '">Print</button>' +
+          (window.__canManageOperationalData ? '<button type="button" class="btn btn-soft btn-sm" data-action="deletePlot" data-plot-id="' + escapeHtml(pl.id) + '">Delete</button>' : '') +
+        '</div>' +
+      '</div>';
+  }
 
-        var sub = (created ? created : '—') + (' • ' + Number(ha || 0).toFixed(2) + ' ha');
-        var c = pl.color ? String(pl.color) : "#22c55e";
+  list.innerHTML = html;
 
-        html +=
-          '<div class="map-plot-item">' +
-            '<div>' +
-              '<div class="map-plot-name"><span class="plot-swatch" style="background:' + escapeHtml(c) + ';"></span>' + escapeHtml(name) + '</div>' +
-              '<div class="map-plot-sub">' + escapeHtml(sub) + '</div>' +
-            '</div>' +
-            '<div class="map-plot-actions">' +
-              '<button type="button" class="btn btn-soft btn-sm" data-action="focusPlot" data-plot-id="' + escapeHtml(pl.id) + '">Focus</button>' +
-              '<button type="button" class="btn btn-soft btn-sm" data-action="downloadPlot" data-plot-id="' + escapeHtml(pl.id) + '">Download</button>' +
-              '<button type="button" class="btn btn-soft btn-sm" data-action="printPlot" data-plot-id="' + escapeHtml(pl.id) + '">Print</button>' +
-              '<button type="button" class="btn btn-soft btn-sm" data-action="deletePlot" data-plot-id="' + escapeHtml(pl.id) + '">Delete</button>' +
-            '</div>' +
-          '</div>';
-      }
-      list.innerHTML = html;
+  var btnsFocus = list.querySelectorAll('button[data-action="focusPlot"]');
+  for (var j4 = 0; j4 < btnsFocus.length; j4++) {
+    btnsFocus[j4].addEventListener('click', function () {
+      var pid = this.getAttribute('data-plot-id');
+      if (!pid) return;
+      focusPlotById(pid);
+    });
+  }
 
-      var btnsFocus = list.querySelectorAll('button[data-action="focusPlot"]');
-      for (var j = 0; j < btnsFocus.length; j++) {
-        btnsFocus[j].addEventListener('click', function () {
-          var pid = this.getAttribute('data-plot-id');
-          if (!pid) return;
-          focusPlotById(pid);
-        });
-      }
+  var btnsEdit = list.querySelectorAll('button[data-action="editPlot"]');
+  for (var e = 0; e < btnsEdit.length; e++) {
+    btnsEdit[e].addEventListener('click', function () {
+      var pid = this.getAttribute('data-plot-id');
+      if (!pid) return;
+      startEditPlot(pid);
+    });
+  }
 
-      var btnsDownload = list.querySelectorAll('button[data-action="downloadPlot"]');
-      for (var d = 0; d < btnsDownload.length; d++) {
-        btnsDownload[d].addEventListener('click', function () {
-          var pid = this.getAttribute('data-plot-id');
-          if (!pid) return;
-          handleDownloadPlot(pid);
-        });
-      }
+  var btnsDownload = list.querySelectorAll('button[data-action="downloadPlot"]');
+  for (var d2 = 0; d2 < btnsDownload.length; d2++) {
+    btnsDownload[d2].addEventListener('click', function () {
+      var pid = this.getAttribute('data-plot-id');
+      if (!pid) return;
+      handleDownloadPlot(pid);
+    });
+  }
 
-      var btnsPrint = list.querySelectorAll('button[data-action="printPlot"]');
-      for (var p = 0; p < btnsPrint.length; p++) {
-        btnsPrint[p].addEventListener('click', function () {
-          var pid = this.getAttribute('data-plot-id');
-          if (!pid) return;
-          handlePrintPlot(pid);
-        });
-      }
+  var btnsPrint = list.querySelectorAll('button[data-action="printPlot"]');
+  for (var p3 = 0; p3 < btnsPrint.length; p3++) {
+    btnsPrint[p3].addEventListener('click', function () {
+      var pid = this.getAttribute('data-plot-id');
+      if (!pid) return;
+      handlePrintPlot(pid);
+    });
+  }
 
-      var btnsDelete = list.querySelectorAll('button[data-action="deletePlot"]');
-      for (var k = 0; k < btnsDelete.length; k++) {
-        btnsDelete[k].addEventListener('click', function () {
-          var pid = this.getAttribute('data-plot-id');
-          if (!pid || !selectedFarmerId) return;
-          if (!confirm('Delete this plot?')) return;
+  var btnsDelete = list.querySelectorAll('button[data-action="deletePlot"]');
+  for (var k3 = 0; k3 < btnsDelete.length; k3++) {
+    btnsDelete[k3].addEventListener('click', function () {
+      var pid = this.getAttribute('data-plot-id');
+      if (!pid || !selectedFarmerId) return;
+      if (!confirm('Delete this plot?')) return;
 
-          setStatus('Deleting plot…', '');
-          fetch("/farm-plots/" + encodeURIComponent(String(pid)), {
-            method: "DELETE",
-            headers: { "Accept": "application/json", "X-CSRF-TOKEN": csrfToken() }
-          }).then(function (r) {
-            if (!r.ok) throw new Error("Delete failed (" + r.status + ")");
-            toast("Plot deleted.", "ok");
+      setStatus('Deleting plot…', '');
+      fetch("/farm-plots/" + encodeURIComponent(String(pid)), {
+        method: "DELETE",
+        headers: { "Accept": "application/json", "X-CSRF-TOKEN": csrfToken() }
+      }).then(function (r) {
+        if (!r.ok) throw new Error("Delete failed (" + r.status + ")");
+        toast("Plot deleted.", "ok");
 
-            plotsCacheByFarmerId.delete(String(selectedFarmerId));
-            return loadPlotsForSelectedFarmer(String(selectedFarmerId), { force: true, autoZoom: false });
-          }).catch(function (err) {
-            console.error(err);
-            toast(err && err.message ? err.message : "Delete failed", "bad");
-            setStatus('Delete failed.', '');
-          });
-        });
-      }
-    }
+        plotsCacheByFarmerId.delete(String(selectedFarmerId));
+        return loadPlotsForSelectedFarmer(String(selectedFarmerId), { force: true, autoZoom: false });
+      }).catch(function (err) {
+        console.error(err);
+        toast(err && err.message ? err.message : "Delete failed", "bad");
+        setStatus('Delete failed.', '');
+      });
+    });
+  }
+}
 
     function loadPlotsForSelectedFarmer(farmerId, opts) {
       opts = opts || {};
       farmerId = String(farmerId);
 
-      return fetchPlotsForFarmer(farmerId, opts).then(function(plots){
+      return fetchPlotsForFarmer(farmerId, opts).then(function (plots) {
         renderPlotsForFarmer(farmerId, plots);
-        if (typeof window.__applyPlotVisibility === "function") window.__applyPlotVisibility();
+
+        if (typeof window.__applyPlotVisibility === "function") {
+          window.__applyPlotVisibility();
+        }
 
         if (opts.autoZoom && plots && plots.length) {
           zoomToPlots(plots);
@@ -2240,34 +3249,37 @@ thead th{background:#eef4ff;color:#2563eb;font-size:12px;text-align:left;padding
           updatePlotList(plots);
         }
 
+
         return plots;
       });
     }
 
-    function showPlotButtons(on) {
-      var elClear = document.getElementById('plotClearBtn');
-      var elSave = document.getElementById('plotSaveBtn');
-      var elCancel = document.getElementById('plotCancelBtn');
+  function showPlotButtons(on) {
+  var elClear = document.getElementById('plotClearBtn');
+  var elDeleteCorner = document.getElementById('plotDeleteCornerBtn');
+  var elSave = document.getElementById('plotSaveBtn');
+  var elCancel = document.getElementById('plotCancelBtn');
 
-      if (elClear) elClear.style.display = on ? "" : "none";
-      if (elSave) elSave.style.display = on ? "" : "none";
-      if (elCancel) elCancel.style.display = on ? "" : "none";
-      if (plotModeBadge) plotModeBadge.style.display = on ? "" : "none";
+  if (elClear) elClear.style.display = on ? "" : "none";
+  if (elDeleteCorner) elDeleteCorner.style.display = on ? "" : "none";
+  if (elSave) elSave.style.display = on ? "" : "none";
+  if (elCancel) elCancel.style.display = on ? "" : "none";
+  if (plotModeBadge) plotModeBadge.style.display = on ? "" : "none";
 
-      var draftInfo = document.getElementById('plotDraftInfo');
-      if (draftInfo) draftInfo.style.display = on ? "" : "none";
+  var draftInfo = document.getElementById('plotDraftInfo');
+  if (draftInfo) draftInfo.style.display = on ? "" : "none";
 
-      syncWorkflowUi();
-    }
+  updateDeleteCornerButtonState();
+}
 
-    // This zoom out uses all points (even hidden) to structure viewport correctly 
     function fitToMarkers(onlyVisible) {
       var minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
       var count = 0;
 
       markersById.forEach(function (marker) {
-        if (onlyVisible && marker.style.display === "none") return;
+        if (onlyVisible && !marker.isConnected) return;
         if (!marker.position) return;
+
         var ll = toLatLng(marker.position);
         minLat = Math.min(minLat, ll.lat);
         maxLat = Math.max(maxLat, ll.lat);
@@ -2280,75 +3292,101 @@ thead th{background:#eef4ff;color:#2563eb;font-size:12px;text-align:left;padding
 
       var centerLat = (minLat + maxLat) / 2;
       var centerLng = (minLng + maxLng) / 2;
-      var diag = haversineMeters({ lat: minLat, lng: minLng }, { lat: maxLat, lng: maxLng });
+      var diag = haversineMeters(
+        { lat: minLat, lng: minLng },
+        { lat: maxLat, lng: maxLng }
+      );
       var range = clamp(diag * 2.0, 2500, 1200000);
       flyTo(centerLat, centerLng, range, 1100);
     }
 
     window.__fit3dToVisibleMarkers = function () {
-      fitToMarkers(false); // Calculates bounds based on all geocoded positions even though pins are hidden
+      fitToMarkers(false);
     };
 
-    window.__applyPlotVisibility = function () {
-      var t = document.getElementById('togglePlots');
-      var on = !t || t.checked;
+window.__applyPlotVisibility = function () {
+  var t = document.getElementById('togglePlots');
+  var on = !t || t.checked;
+  var selectedId = selectedFarmerId ? String(selectedFarmerId) : null;
 
-      for (var i = 0; i < savedPlotOverlays.length; i++) {
-        var it = savedPlotOverlays[i];
-        try {
-          if (!it.poly) continue;
+  // show all saved plots while creating a new plot
+  var showAllPlots = !!plotMode && !editingPlotId;
 
-          if (on) {
-            if (!it.poly.isConnected) map3d.append(it.poly);
-            if (it.line && !it.line.isConnected) map3d.append(it.line);
-          } else {
-            if (it.poly.isConnected) map3d.removeChild(it.poly);
-            if (it.line && it.line.isConnected) map3d.removeChild(it.line);
-          }
-        } catch(e) {}
+  for (var i13 = 0; i13 < savedPlotOverlays.length; i13++) {
+    var it = savedPlotOverlays[i13];
+    if (!it || !it.poly) continue;
+
+var belongsToSelected = selectedId && String(it.farmerId) === selectedId;
+var shouldShow = on && (!selectedId || belongsToSelected);
+
+    var shouldShow = on && (
+      showAllPlots ||       // while plotting a new land, show every farmer plot
+      !selectedId ||        // if no selected farmer, show all
+      belongsToSelected     // otherwise keep current selected-only behavior
+    );
+
+    try {
+      if (shouldShow) {
+        if (!it.poly.isConnected) map3d.append(it.poly);
+        if (it.line && !it.line.isConnected) map3d.append(it.line);
+      } else {
+        if (it.poly.isConnected) map3d.removeChild(it.poly);
+        if (it.line && it.line.isConnected) map3d.removeChild(it.line);
       }
+    } catch (e6) {}
+  }
+};
 
-      refreshSavedGuideMarkers();
-    };
+  window.__reset3dMap = function () {
+  popover.open = false;
+  selectedFarmerId = null;
+  selectedMarkerVisible = false;
+  plotMode = false;
 
-    window.__reset3dMap = function () {
-      popover.open = false;
-      selectedFarmerId = null;
-      plotMode = false;
-      setPlotModeUi(false);
-      showPlotButtons(false);
-      clearDraftPlot();
+  setPlotModeUi(false);
+  showPlotButtons(false);
+  clearDraftPlot();
 
-      if (hintEl && !selectedFarmerId) hintEl.style.display = "";
-      flyTo(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng, DEFAULT_RANGE, 900);
+  if (hintEl) hintEl.style.display = "";
+  flyTo(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng, DEFAULT_RANGE, 900);
 
-      setStatus("Ready", "Reset camera.");
-      refreshAllMarkerPins(); // hides all unselected pins
-      refreshSavedGuideMarkers();
-      toast('Map reset.', 'ok');
-    };
+  setStatus("Ready", "Reset camera.");
+  refreshAllMarkerPins();
+
+  if (typeof window.__applyPlotVisibility === "function") {
+    window.__applyPlotVisibility();
+  }
+
+  toast('Map reset.', 'ok');
+};
 
     window.__focusSelectedFarmer = function () {
       if (!selectedFarmerId) {
         toast('Select a farmer first.', 'warn');
         return;
       }
+
       var marker = markersById.get(String(selectedFarmerId));
       if (!marker || !marker.position) return;
+
       var ll = toLatLng(marker.position);
       flyTo(ll.lat, ll.lng, 9000, 700);
     };
 
-    window.__clearFarmerSelection = function () {
-      popover.open = false;
-      selectedFarmerId = null;
-      refreshSavedGuideMarkers();
-      refreshAllMarkerPins(); // Automatically hides previously selected pin!
+ window.__clearFarmerSelection = function () {
+  popover.open = false;
+  selectedFarmerId = null;
+  selectedMarkerVisible = false;
+  plotMode = false;
 
-      plotMode = false;
-      setPlotModeUi(false);
-      showPlotButtons(false);
-      clearDraftPlot();
+  setPlotModeUi(false);
+  showPlotButtons(false);
+  clearDraftPlot();
+  refreshAllMarkerPins();
+
+  if (typeof window.__applyPlotVisibility === "function") {
+    window.__applyPlotVisibility();
+  }
 
       if (hintEl) hintEl.style.display = "";
       syncSelectedPanel(null);
@@ -2357,27 +3395,38 @@ thead th{background:#eef4ff;color:#2563eb;font-size:12px;text-align:left;padding
       updatePlotTotalArea(0);
       updatePlotList([]);
       setStatus("Ready", "Select a farmer.");
-      syncWorkflowUi();
+
       if (plotNameInputEl) plotNameInputEl.value = '';
     };
 
-    var plotMode = false;
-    var plotVertices = [];
-    var draftDots = [];
-    var draftPoly = null;
+ var plotMode = false;
+var editingPlotId = null;
+var plotVertices = [];
+var draftDots = [];
+var draftEdgeHandles = [];
+var draftLine = null;
+var draftPoly = null;
+var btnDownloadAll = document.getElementById('downloadAllPlotsBtn');
+if (btnDownloadAll) btnDownloadAll.disabled = false;
 
     function normalizeHex(h) {
       h = String(h || '').trim();
-      if (!h) return '#3b82f6';
+if (!h) return '#22c55e';
       if (h[0] !== '#') h = '#' + h;
-      if (/^#([0-9a-fA-F]{3})$/.test(h) || /^#([0-9a-fA-F]{6})$/.test(h) || /^#([0-9a-fA-F]{8})$/.test(h)) return h;
+
+      if (/^#([0-9a-fA-F]{3})$/.test(h) ||
+          /^#([0-9a-fA-F]{6})$/.test(h) ||
+          /^#([0-9a-fA-F]{8})$/.test(h)) {
+        return h;
+      }
+
       return '#3b82f6';
     }
 
     function getPlotColor() {
       var colorInput = document.getElementById('plotColorInput');
       var colorHexInput = document.getElementById('plotColorHex');
-      var h = colorHexInput ? colorHexInput.value : (colorInput ? colorInput.value : '#3b82f6');
+var h = colorHexInput ? colorHexInput.value : (colorInput ? colorInput.value : '#22c55e');
       return normalizeHex(h);
     }
 
@@ -2385,59 +3434,64 @@ thead th{background:#eef4ff;color:#2563eb;font-size:12px;text-align:left;padding
       h = normalizeHex(h);
       var colorInput = document.getElementById('plotColorInput');
       var colorHexInput = document.getElementById('plotColorHex');
-      if (colorInput) colorInput.value = h.length === 9 ? h.slice(0,7) : h;
+
+      if (colorInput) colorInput.value = h.length === 9 ? h.slice(0, 7) : h;
       if (colorHexInput) colorHexInput.value = h;
+
       syncColorPresetState();
     }
 
     function randomColor() {
       var letters = '0123456789ABCDEF';
-      var c = '#';
-      for (var i = 0; i < 6; i++) c += letters[Math.floor(Math.random() * 16)];
-      return c;
+      var c3 = '#';
+      for (var i14 = 0; i14 < 6; i14++) {
+        c3 += letters[Math.floor(Math.random() * 16)];
+      }
+      return c3;
     }
 
     function syncColorPresetState() {
       var current = normalizeHex(getPlotColor()).slice(0, 7).toLowerCase();
-      var chips = document.querySelectorAll('#plotColorPresets .map-color-chip');
-      for (var i = 0; i < chips.length; i++) {
-        var chipColor = normalizeHex(chips[i].getAttribute('data-color') || '').slice(0, 7).toLowerCase();
-        if (chipColor === current) chips[i].classList.add('is-active');
-        else chips[i].classList.remove('is-active');
+      var chips = document.querySelectorAll('#plotColorPresets [data-color]');
+
+      for (var i15 = 0; i15 < chips.length; i15++) {
+        var chipColor = normalizeHex(chips[i15].getAttribute('data-color') || '').slice(0, 7).toLowerCase();
+        if (chipColor === current) chips[i15].classList.add('is-active');
+        else chips[i15].classList.remove('is-active');
       }
     }
 
-    (function bindColorControls(){
+    (function bindColorControls() {
       var colorInput = document.getElementById('plotColorInput');
       var colorHexInput = document.getElementById('plotColorHex');
       var colorRandomBtn = document.getElementById('plotColorRandomBtn');
-      var presetBtns = document.querySelectorAll('#plotColorPresets .map-color-chip');
+      var presetBtns = document.querySelectorAll('#plotColorPresets [data-color]');
 
       if (colorInput) {
-        colorInput.addEventListener('input', function(){
+        colorInput.addEventListener('input', function () {
           setPlotColor(colorInput.value);
           if (plotMode && plotVertices.length) refreshDraftDots();
         });
       }
 
       if (colorHexInput) {
-        colorHexInput.addEventListener('input', function(){
+        colorHexInput.addEventListener('input', function () {
           setPlotColor(colorHexInput.value);
           if (plotMode && plotVertices.length) refreshDraftDots();
         });
       }
 
       if (colorRandomBtn) {
-        colorRandomBtn.addEventListener('click', function(){
+        colorRandomBtn.addEventListener('click', function () {
           setPlotColor(randomColor());
           if (plotMode && plotVertices.length) refreshDraftDots();
         });
       }
 
-      for (var i = 0; i < presetBtns.length; i++) {
-        presetBtns[i].addEventListener('click', function () {
-          var c = this.getAttribute('data-color') || '#3b82f6';
-          setPlotColor(c);
+      for (var i16 = 0; i16 < presetBtns.length; i16++) {
+        presetBtns[i16].addEventListener('click', function () {
+          var c4 = this.getAttribute('data-color') || '#3b82f6';
+          setPlotColor(c4);
           if (plotMode && plotVertices.length) refreshDraftDots();
         });
       }
@@ -2447,186 +3501,401 @@ thead th{background:#eef4ff;color:#2563eb;font-size:12px;text-align:left;padding
 
     function updateDraftStats() {
       var areaEl = document.getElementById('plotDraftArea');
+      var pointsEl = document.getElementById('plotDraftPoints');
       var ha = estimateAreaHa(plotVertices);
 
       if (areaEl) areaEl.textContent = (ha || 0).toFixed(2);
-
-      setWorkflowCorners(plotVertices.length || 0);
-      setWorkflowArea(ha || 0);
+      if (pointsEl) pointsEl.textContent = plotVertices.length || 0;
 
       if (plotMode) {
         if (plotVertices.length === 0) {
-          setStatus('Plot mode', 'Draft ready. Click New rectangle to start.');
+          setStatus('Plot mode', 'Click the map to place point 1.');
         } else if (selectedVertexIndex >= 0) {
           setStatus('Adjusting plot', 'Corner ' + (selectedVertexIndex + 1) + ' selected.');
+        } else if (plotVertices.length < 4) {
+          setStatus('Plot mode', 'Point ' + plotVertices.length + ' added. Click point ' + (plotVertices.length + 1) + '.');
         } else {
-          setStatus('Plot mode', 'Draft: ~' + (ha || 0).toFixed(2) + ' ha');
+          setStatus('Draft ready', 'Click a blue edge to add more points, or click a corner to move it.');
         }
       }
-
-      syncWorkflowUi();
     }
 
-    function clearDraftDots() {
-      for (var i = 0; i < draftDots.length; i++) {
-        try { if (draftDots[i] && draftDots[i].isConnected) map3d.removeChild(draftDots[i]); } catch(e) {}
-      }
-      draftDots = [];
+function clearDraftDots() {
+  for (var i17 = 0; i17 < draftDots.length; i17++) {
+    try { if (draftDots[i17] && draftDots[i17].isConnected) map3d.removeChild(draftDots[i17]); } catch (e7) {}
+  }
+  draftDots = [];
 
-      detachGuideMarkers(draftGuideMarkers);
-      draftGuideMarkers = [];
+  for (var j5 = 0; j5 < draftEdgeHandles.length; j5++) {
+    try { if (draftEdgeHandles[j5] && draftEdgeHandles[j5].isConnected) map3d.removeChild(draftEdgeHandles[j5]); } catch (e8) {}
+  }
+  draftEdgeHandles = [];
 
-      if (draftPoly && draftPoly.isConnected) {
-        try { map3d.removeChild(draftPoly); } catch(e) {}
+  if (draftLine && draftLine.isConnected) {
+    try { map3d.removeChild(draftLine); } catch (e9) {}
+  }
+  draftLine = null;
+
+  if (draftPoly && draftPoly.isConnected) {
+    try { map3d.removeChild(draftPoly); } catch (e10) {}
+  }
+  draftPoly = null;
+}
+
+    function renderDraftEdgeHandles() {
+      if (!Polyline3DInteractiveElement) return;
+      if (!plotVertices || plotVertices.length < 2) return;
+
+      var edgeCount = plotVertices.length >= 3 ? plotVertices.length : (plotVertices.length - 1);
+
+      for (var i18 = 0; i18 < edgeCount; i18++) {
+        var a = plotVertices[i18];
+        var b = plotVertices[(i18 + 1) % plotVertices.length];
+        if (!a || !b) continue;
+
+      var edge = new Polyline3DInteractiveElement({
+  path: [a, b],
+  strokeColor: "#3b82f601",
+  outerColor: "#3b82f600",
+  strokeWidth: 14,
+  outerWidth: 0,
+  altitudeMode: AltitudeMode.CLAMP_TO_GROUND,
+  drawsOccludedSegments: true
+});
+
+        edge.addEventListener("gmp-click", (function (edgeIndex, start, end) {
+          return function (ev) {
+            if (ev && ev.stopPropagation) ev.stopPropagation();
+            if (!plotMode) return;
+
+            var point = (ev && ev.position) ? toLatLng(ev.position) : midpointLatLng(start, end);
+            insertDraftVertexAfter(edgeIndex, point.lat, point.lng);
+          };
+        })(i18, a, b));
+
+        map3d.append(edge);
+        draftEdgeHandles.push(edge);
       }
-      draftPoly = null;
     }
 
     function refreshDraftDots() {
-      clearDraftDots();
+  clearDraftDots();
 
-      var strokeHex = getPlotColor();
-      var fillRgba = hexToRgba(strokeHex, 0.20);
+  var strokeHex = getPlotColor();
+  var fillRgba = hexToRgba(strokeHex, 0.42);
+  var draftStroke = hexAlpha(strokeHex, "CC");
 
-      if (plotVertices.length >= 3 && Polygon3DElement) {
-        draftPoly = new Polygon3DElement({
-          path: plotVertices,
-          strokeColor: hexAlpha(strokeHex, "CC"),
-          strokeWidth: 9,
-          fillColor: fillRgba,
-          altitudeMode: AltitudeMode.CLAMP_TO_GROUND,
-          drawsOccludedSegments: true
-        });
-        map3d.append(draftPoly);
-      }
+  // visible line for Point 1 -> Point 2 -> Point 3...
+  if (plotVertices.length >= 2 && Polyline3DInteractiveElement) {
+    draftLine = new Polyline3DInteractiveElement({
+      path: plotVertices,
+      strokeColor: draftStroke,
+      outerColor: "#ffffff00",
+      strokeWidth: 4,
+      outerWidth: 0,
+      altitudeMode: AltitudeMode.CLAMP_TO_GROUND,
+      drawsOccludedSegments: true
+    });
+    map3d.append(draftLine);
+  }
 
-      for (var i = 0; i < plotVertices.length; i++) {
-        (function (idx) {
-          var v = plotVertices[idx];
-          var dot = new Marker3DInteractiveElement({
-            altitudeMode: AltitudeMode.CLAMP_TO_GROUND,
-            position: { lat: v.lat, lng: v.lng },
-            title: "Corner " + (idx + 1)
-          });
+  // filled polygon once there are at least 3 points
+  if (plotVertices.length >= 3 && Polygon3DElement) {
+    draftPoly = new Polygon3DElement({
+      path: plotVertices,
+      strokeColor: draftStroke,
+      strokeWidth: 1,
+      fillColor: fillRgba,
+      altitudeMode: AltitudeMode.CLAMP_TO_GROUND,
+      drawsOccludedSegments: true
+    });
+    map3d.append(draftPoly);
+  }
 
-          applyMarkerPin(dot, { first_name: 'C', last_name: String(idx + 1) }, idx === selectedVertexIndex);
+for (var i19 = 0; i19 < plotVertices.length; i19++) {
+  (function (idx) {
+    var v = plotVertices[idx];
+    var dot = new Marker3DElement({
+      altitudeMode: AltitudeMode.CLAMP_TO_GROUND,
+      position: { lat: v.lat, lng: v.lng },
+      title: "Corner " + (idx + 1),
+      sizePreserved: true,
+      drawsWhenOccluded: true
+    });
 
-          dot.drawsWhenOccluded = true;
-          dot.sizePreserved = true;
+    dot.replaceChildren(buildCornerHandleTemplate(idx === selectedVertexIndex));
 
-          dot.addEventListener("gmp-click", function (ev) {
-            if (ev && ev.stopPropagation) ev.stopPropagation();
-            if (!plotMode) return;
-            selectedVertexIndex = idx;
-            toast("Selected corner " + (idx + 1) + ". Click the map or use arrow keys to move it.", "ok");
-            refreshDraftDots();
-          });
+    dot.addEventListener("click", function (ev) {
+      if (ev && ev.stopPropagation) ev.stopPropagation();
+      if (!plotMode) return;
 
-          map3d.append(dot);
-          draftDots.push(dot);
-        })(i);
-      }
-
-      draftGuideMarkers = buildGuideMarkersFromRing(plotVertices, {
-        cornerOffsetMeters: 8,
-        cornerScale: 0.54,
-        midScale: 0.44,
-        onCornerClick: function (idx) {
-          if (!plotMode) return;
-          selectedVertexIndex = idx;
-          toast("Selected corner " + (idx + 1) + ".", "ok");
-          refreshDraftDots();
-        }
-      });
-
-      attachGuideMarkers(draftGuideMarkers);
-
-      updateDraftStats();
-    }
-
-    function clearDraftPlot() {
-      plotVertices = [];
-      selectedVertexIndex = -1;
-      clearDraftDots();
-      updateDraftStats();
-    }
-
-    function moveSelectedVertex(lat, lng) {
-      if (selectedVertexIndex < 0 || selectedVertexIndex >= plotVertices.length) return;
-      plotVertices[selectedVertexIndex] = { lat: lat, lng: lng };
-      toast("Moved corner.", "ok");
-      selectedVertexIndex = -1;
+      selectedVertexIndex = idx;
+      toast(
+        "Selected corner " + (idx + 1) + ". Click the map to move it, use arrow keys, or press Delete to remove it.",
+        "ok"
+      );
       refreshDraftDots();
+    });
+
+    map3d.append(dot);
+    draftDots.push(dot);
+  })(i19);
+}
+
+  renderDraftEdgeHandles();
+  updateDraftStats();
+  updateDeleteCornerButtonState();
+}
+
+  function clearDraftPlot() {
+  plotVertices = [];
+  selectedVertexIndex = -1;
+  clearDraftDots();
+  updateDraftStats();
+  updateDeleteCornerButtonState();
+}
+
+    function resetPlotEditorFields() {
+  editingPlotId = null;
+
+  if (plotNameInputEl) {
+    plotNameInputEl.value = '';
+  }
+
+setPlotColor('#22c55e');
+
+  var btnSave = document.getElementById('plotSaveBtn');
+  if (btnSave) btnSave.textContent = 'Save Plot';
+
+  var badge = document.getElementById('plotModeBadge');
+  if (badge) badge.textContent = 'Plotting Mode Active';
+}
+
+function startEditPlot(plotId) {
+  var plot = getPlotById(plotId);
+  if (!plot) {
+    toast('Plot not found.', 'warn');
+    return;
+  }
+
+  var ring = normalizePolygonRing(plot.polygon_json || plot.polygon || plot.polygonJson);
+  if (!ring || ring.length < 3) {
+    toast('This plot has no valid polygon.', 'warn');
+    return;
+  }
+
+  clearDraftPlot();
+
+  plotMode = true;
+  editingPlotId = String(plot.id);
+  selectedVertexIndex = -1;
+
+  setPlotModeUi(true);
+  showPlotButtons(true);
+
+  // Hide all saved polygons while editing to reduce lag
+  setAllSavedPlotsVisible(false);
+
+  plotVertices = openRing(ring).map(function (p) {
+    return { lat: Number(p.lat), lng: Number(p.lng) };
+  });
+
+  if (plotNameInputEl) {
+    plotNameInputEl.value = plot.name || '';
+  }
+
+  setPlotColor(plot.color || '#22c55e');
+  refreshDraftDots();
+
+  var btnSave = document.getElementById('plotSaveBtn');
+  if (btnSave) btnSave.textContent = 'Update Plot';
+
+  var badge = document.getElementById('plotModeBadge');
+  if (badge) badge.textContent = 'Editing Plot';
+
+  if (hintEl) hintEl.style.display = 'none';
+
+  zoomToRing(ring, 4.2, 700, 18000);
+  setStatus('Edit mode', 'Adjust the plot, then click Update Plot.');
+  toast('Editing plot: ' + (plot.name || ('Plot #' + plot.id)), 'ok');
+}
+function updateDeleteCornerButtonState() {
+  var btn = document.getElementById('plotDeleteCornerBtn');
+  if (!btn) return;
+
+  var hasSelectedCorner = selectedVertexIndex >= 0 && selectedVertexIndex < plotVertices.length;
+  var canDelete = hasSelectedCorner && plotVertices.length > 3;
+
+  btn.disabled = !canDelete;
+
+  if (!hasSelectedCorner) {
+    btn.title = 'Select a corner first';
+  } else if (plotVertices.length <= 3) {
+    btn.title = 'A plot must keep at least 3 corners';
+  } else {
+    btn.title = 'Delete selected corner';
+  }
+}
+
+function deleteSelectedVertex() {
+  if (selectedVertexIndex < 0 || selectedVertexIndex >= plotVertices.length) {
+    toast("Select a corner first.", "warn");
+    return;
+  }
+
+  if (plotVertices.length <= 3) {
+    toast("A plot must keep at least 3 corners.", "warn");
+    return;
+  }
+
+  var removedCornerNo = selectedVertexIndex + 1;
+
+  plotVertices.splice(selectedVertexIndex, 1);
+  selectedVertexIndex = -1;
+
+  refreshDraftDots();
+  toast("Deleted corner " + removedCornerNo + ".", "ok");
+}
+ function moveSelectedVertex(lat, lng) {
+  if (selectedVertexIndex < 0 || selectedVertexIndex >= plotVertices.length) return;
+
+  var candidate = plotVertices.slice();
+  candidate[selectedVertexIndex] = { lat: lat, lng: lng };
+
+  if (!canUseDraftVertices(candidate, false)) {
+    return;
+  }
+
+  plotVertices = candidate;
+  selectedVertexIndex = -1;
+
+  refreshDraftDots();
+  updateDeleteCornerButtonState();
+  toast("Moved corner.", "ok");
+}
+
+function insertDraftVertexAfter(edgeIndex, lat, lng) {
+  edgeIndex = Number(edgeIndex);
+  if (edgeIndex < 0 || edgeIndex >= plotVertices.length) return;
+
+  var candidate = plotVertices.slice();
+  candidate.splice(edgeIndex + 1, 0, { lat: lat, lng: lng });
+
+  if (!canUseDraftVertices(candidate, false)) {
+    return;
+  }
+
+  plotVertices = candidate;
+  selectedVertexIndex = edgeIndex + 1;
+
+  refreshDraftDots();
+  toast("New point added on the line. Click the map to move it if needed.", "ok");
+}
+
+function addDraftVertex(lat, lng) {
+  var candidate = plotVertices.slice();
+  candidate.push({ lat: lat, lng: lng });
+
+  if (!canUseDraftVertices(candidate, false)) {
+    return;
+  }
+
+  plotVertices = candidate;
+  selectedVertexIndex = -1;
+  refreshDraftDots();
+
+  if (plotVertices.length < 4) {
+    toast("Point " + plotVertices.length + " added.", "ok");
+  } else {
+    setStatus("Draft ready", "Use an edge to add more points or click a corner to move it.");
+  }
+}
+
+function nudgeSelectedVertex(latStep, lngStep) {
+  if (selectedVertexIndex < 0 || selectedVertexIndex >= plotVertices.length) return;
+
+  var candidate = plotVertices.slice();
+  candidate[selectedVertexIndex] = {
+    lat: candidate[selectedVertexIndex].lat + latStep,
+    lng: candidate[selectedVertexIndex].lng + lngStep
+  };
+
+  if (!canUseDraftVertices(candidate, false)) {
+    return;
+  }
+
+  plotVertices = candidate;
+  refreshDraftDots();
+}
+    function setPlotModeUi(on) {
+      var module = document.getElementById('farmersMapModule');
+      if (!module) return;
+
+      if (on) module.classList.add('is-plot-mode');
+      else module.classList.remove('is-plot-mode');
     }
 
-    function nudgeSelectedVertex(latStep, lngStep) {
-      if (selectedVertexIndex < 0 || selectedVertexIndex >= plotVertices.length) return;
-      plotVertices[selectedVertexIndex] = {
-        lat: plotVertices[selectedVertexIndex].lat + latStep,
-        lng: plotVertices[selectedVertexIndex].lng + lngStep
-      };
-      refreshDraftDots();
+ function enterPlotMode() {
+  if (!selectedFarmerId) {
+    toast("Select a farmer first, then plot.", "warn");
+    return;
+  }
+
+  plotMode = true;
+  editingPlotId = null;
+  setPlotModeUi(true);
+  showPlotButtons(true);
+  clearDraftPlot();
+  resetPlotEditorFields();
+
+  if (typeof window.__applyPlotVisibility === "function") {
+    window.__applyPlotVisibility();
+  }
+
+  if (hintEl) hintEl.style.display = "none";
+
+  var plots = findSelectedFarmerPlots();
+  syncSuggestedPlotName(plots, true);
+
+  setStatus("Plot mode", "Click the map to place point 1 of 4.");
+  toast("Plot mode enabled. Click 4 points on the map.", "ok");
+}
+
+    var moduleEl = document.getElementById('farmersMapModule');
+    var stageEl = document.querySelector('#farmersMapModule .farmers-map-stage');
+    var cursorEl = document.getElementById('plotCursor');
+
+    function updateFakeCursor(e) {
+      if (!moduleEl || !cursorEl || !stageEl) return;
+      if (!moduleEl.classList.contains('is-plot-mode')) return;
+
+      var r3 = stageEl.getBoundingClientRect();
+      var x = e.clientX - r3.left;
+      var y = e.clientY - r3.top;
+
+      x = Math.max(0, Math.min(r3.width, x));
+      y = Math.max(0, Math.min(r3.height, y));
+
+      cursorEl.style.left = x + "px";
+      cursorEl.style.top = y + "px";
     }
 
-    function buildDefaultDraftAroundSelected() {
-      var mk = markersById.get(String(selectedFarmerId));
-      if (!mk || !mk.position) {
-        toast("Marker not ready yet. Try again in a moment.", "warn");
-        return false;
-      }
-
-      var ll = toLatLng(mk.position);
-      var offsetLat = 0.00015;
-      var offsetLng = 0.00015;
-
-      plotVertices = [
-        { lat: ll.lat + offsetLat, lng: ll.lng - offsetLng },
-        { lat: ll.lat + offsetLat, lng: ll.lng + offsetLng },
-        { lat: ll.lat - offsetLat, lng: ll.lng + offsetLng },
-        { lat: ll.lat - offsetLat, lng: ll.lng - offsetLng }
-      ];
-
-      selectedVertexIndex = -1;
-      refreshDraftDots();
-      flyTo(ll.lat, ll.lng, 1800, 750);
-      return true;
+    if (stageEl) {
+      stageEl.addEventListener('pointermove', updateFakeCursor, true);
+      stageEl.addEventListener('mousemove', updateFakeCursor, true);
+      stageEl.addEventListener('mouseenter', function (e) { updateFakeCursor(e); }, true);
+      stageEl.addEventListener('mouseleave', function () {
+        if (!cursorEl) return;
+        cursorEl.style.left = "-9999px";
+        cursorEl.style.top = "-9999px";
+      }, true);
     }
 
-    function focusDraft() {
-      if (!plotVertices || plotVertices.length < 3) {
-        toast('No draft to center.', 'warn');
-        return;
-      }
-      zoomToRing(plotVertices, 4.2, 600, 15000);
-    }
-
-    function enterPlotMode() {
-      if (!selectedFarmerId) {
-        toast("Select a farmer first, then plot.", "warn");
-        return;
-      }
-
-      plotMode = true;
-      setPlotModeUi(true);
-      showPlotButtons(true);
-
-      clearDraftPlot();
-      if (hintEl) hintEl.style.display = "none";
-
-      var plots = findSelectedFarmerPlots();
-      syncSuggestedPlotName(plots, true);
-
-      if (buildDefaultDraftAroundSelected()) {
-        toast("Draft rectangle created. Adjust corners, then save.", "ok");
-      }
-    }
-
-    var btnPlotMode = document.getElementById('plotModeBtn');
-    var btnClear = document.getElementById('plotClearBtn');
-    var btnSave = document.getElementById('plotSaveBtn');
-    var btnCancel = document.getElementById('plotCancelBtn');
-    var btnNewRect = document.getElementById('plotNewRectBtn');
-    var btnCenterDraft = document.getElementById('plotCenterDraftBtn');
+var btnPlotMode = document.getElementById('plotModeBtn');
+var btnClear2 = document.getElementById('plotClearBtn');
+var btnDeleteCorner = document.getElementById('plotDeleteCornerBtn');
+var btnSave = document.getElementById('plotSaveBtn');
+var btnCancel = document.getElementById('plotCancelBtn');
 
     if (btnPlotMode) {
       btnPlotMode.addEventListener('click', function () {
@@ -2634,94 +3903,114 @@ thead th{background:#eef4ff;color:#2563eb;font-size:12px;text-align:left;padding
       });
     }
 
-    if (btnNewRect) {
-      btnNewRect.addEventListener('click', function () {
-        if (!plotMode) {
-          enterPlotMode();
-          return;
-        }
-        if (buildDefaultDraftAroundSelected()) {
-          toast("Draft rectangle reset.", "ok");
-        }
-      });
-    }
+    if (btnDeleteCorner) {
+  btnDeleteCorner.addEventListener('click', function () {
+    deleteSelectedVertex();
+  });
+}
 
-    if (btnCenterDraft) {
-      btnCenterDraft.addEventListener('click', function () {
-        focusDraft();
-      });
-    }
+if (btnCancel) {
+  btnCancel.addEventListener('click', function () {
+    plotMode = false;
+    editingPlotId = null;
+    selectedVertexIndex = -1;
 
-    if (btnCancel) {
-      btnCancel.addEventListener('click', function () {
-        plotMode = false;
-        setPlotModeUi(false);
-        showPlotButtons(false);
+    setPlotModeUi(false);
+    showPlotButtons(false);
+    clearDraftPlot();
+    resetPlotEditorFields();
+
+    restoreSavedPlotsVisibility();
+
+    setStatus('Ready', selectedFarmerId ? 'Selected farmer loaded.' : 'Select a farmer.');
+    toast("Plot cancelled.", "warn");
+  });
+}
+
+    if (btnClear2) {
+      btnClear2.addEventListener('click', function () {
         clearDraftPlot();
-        setStatus('Ready', selectedFarmerId ? 'Selected farmer loaded.' : 'Select a farmer.');
-        toast("Plot cancelled.", "warn");
+        toast("Draft cleared.", "warn");
       });
     }
 
-    if (btnClear) {
-      btnClear.addEventListener('click', function () {
-        clearDraftPlot();
-        toast("Draft cleared. Use New rectangle to start again.", "warn");
-      });
+ if (btnSave) {
+  btnSave.addEventListener('click', function () {
+    if (!selectedFarmerId) return;
+
+    if (plotVertices.length < 3) {
+      toast("Please place at least 3 points first.", "warn");
+      return;
     }
 
-    if (btnSave) {
-      btnSave.addEventListener('click', function () {
-        if (!selectedFarmerId) return;
-        if (plotVertices.length < 3) {
-          toast("Draft not ready.", "warn");
-          return;
-        }
-
-        var plotName = (plotNameInputEl && plotNameInputEl.value) ? String(plotNameInputEl.value).trim() : '';
-        if (!plotName) plotName = "Plot";
-
-        var plotColor = getPlotColor();
-
-        setStatus("Saving plot…", "");
-        toast("Saving plot…", "ok");
-
-        fetch("/farmers/" + encodeURIComponent(String(selectedFarmerId)) + "/plots", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "X-CSRF-TOKEN": csrfToken()
-          },
-          body: JSON.stringify({
-            name: plotName,
-            color: plotColor,
-            polygon: plotVertices
-          })
-        }).then(function (r) {
-          if (!r.ok) throw new Error("Save failed (" + r.status + ")");
-          return r.json();
-        }).then(function () {
-          plotMode = false;
-          setPlotModeUi(false);
-          showPlotButtons(false);
-          clearDraftPlot();
-
-          setStatus("Saved ✅", "Plot added.");
-          toast("Saved plot ✅", "ok");
-
-          plotsCacheByFarmerId.delete(String(selectedFarmerId));
-          return loadPlotsForSelectedFarmer(String(selectedFarmerId), { force: true, autoZoom: true });
-        }).then(function (plots) {
-          syncSuggestedPlotName(plots || [], false);
-          if (plotNameInputEl) plotNameInputEl.value = '';
-        }).catch(function (err) {
-          console.error(err);
-          toast(err && err.message ? err.message : "Save failed", "bad");
-          setStatus("Save failed.", "");
-        });
-      });
+    if (!canUseDraftVertices(plotVertices, false)) {
+      return;
     }
+
+    var plotName = (plotNameInputEl && plotNameInputEl.value) ? String(plotNameInputEl.value).trim() : '';
+    if (!plotName) plotName = "Plot";
+
+    var plotColor = getPlotColor();
+
+    var isEditing = !!editingPlotId;
+    var currentEditingPlotId = editingPlotId;
+
+    var url = isEditing
+      ? ("/farm-plots/" + encodeURIComponent(String(editingPlotId)))
+      : ("/farmers/" + encodeURIComponent(String(selectedFarmerId)) + "/plots");
+
+    var method = isEditing ? "PUT" : "POST";
+
+    setStatus(isEditing ? "Updating plot…" : "Saving plot…", "");
+    toast(isEditing ? "Updating plot…" : "Saving plot…", "ok");
+
+    fetch(url, {
+      method: method,
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "X-CSRF-TOKEN": csrfToken()
+      },
+      body: JSON.stringify({
+        name: plotName,
+        color: plotColor,
+        polygon: plotVertices
+      })
+    }).then(function (r) {
+      if (!r.ok) throw new Error((isEditing ? "Update" : "Save") + " failed (" + r.status + ")");
+      return r.json();
+    }).then(function () {
+  plotMode = false;
+  editingPlotId = null;
+  selectedVertexIndex = -1;
+
+  setPlotModeUi(false);
+  showPlotButtons(false);
+  clearDraftPlot();
+  resetPlotEditorFields();
+
+  setStatus(isEditing ? "Updated ✅" : "Saved ✅", isEditing ? "Plot updated." : "Plot added.");
+  toast(isEditing ? "Updated plot ✅" : "Saved plot ✅", "ok");
+
+  restoreSavedPlotsVisibility();
+
+  plotsCacheByFarmerId.delete(String(selectedFarmerId));
+  return loadPlotsForSelectedFarmer(String(selectedFarmerId), { force: true, autoZoom: true });
+}).then(function (plots) {
+      syncSuggestedPlotName(plots || [], false);
+      if (plotNameInputEl) plotNameInputEl.value = '';
+    }).catch(function (err) {
+      console.error(err);
+
+      if (currentEditingPlotId) {
+        setSavedPlotOverlayVisible(currentEditingPlotId, true);
+      }
+
+      toast(err && err.message ? err.message : (isEditing ? "Update failed" : "Save failed"), "bad");
+      setStatus(isEditing ? "Update failed." : "Save failed.", "");
+    });
+  });
+}
 
     document.addEventListener('keydown', function (e) {
       if (!plotMode) return;
@@ -2744,13 +4033,25 @@ thead th{background:#eef4ff;color:#2563eb;font-size:12px;text-align:left;padding
 
       if (typing) return;
 
-      if (e.key === 'Backspace') {
-        e.preventDefault();
-        if (btnClear) btnClear.click();
-        return;
-      }
+    if ((e.key === 'Delete' || e.key === 'Del') && selectedVertexIndex >= 0) {
+  e.preventDefault();
+  deleteSelectedVertex();
+  return;
+}
 
-      if (selectedVertexIndex < 0) return;
+if (e.key === 'Backspace' && selectedVertexIndex >= 0) {
+  e.preventDefault();
+  deleteSelectedVertex();
+  return;
+}
+
+if (e.key === 'Backspace') {
+  e.preventDefault();
+  if (btnClear2) btnClear2.click();
+  return;
+}
+
+if (selectedVertexIndex < 0) return;
 
       var step = e.shiftKey ? 0.00008 : 0.00002;
       if (e.key === 'ArrowUp') {
@@ -2768,22 +4069,31 @@ thead th{background:#eef4ff;color:#2563eb;font-size:12px;text-align:left;padding
       }
     });
 
-    map3d.addEventListener("gmp-click", function (ev) {
-      if (plotMode) {
-        var pos = ev.position;
-        if (!pos) return;
-        var ll = toLatLng(pos);
+  map3d.addEventListener("gmp-click", function (ev) {
+  if (plotMode) {
+    var pos = ev.position;
+    if (!pos) return;
 
-        if (selectedVertexIndex >= 0) {
-          moveSelectedVertex(ll.lat, ll.lng);
-        } else {
-          toast("Click a corner dot first, then click the map to move it.", "warn");
-        }
-        return;
-      }
+    var ll = toLatLng(pos);
 
-      popover.open = false;
-    });
+    if (selectedVertexIndex >= 0) {
+      moveSelectedVertex(ll.lat, ll.lng);
+      return;
+    }
+
+    // only allow direct point adding during new plot creation
+    if (!editingPlotId && plotVertices.length < 4) {
+      addDraftVertex(ll.lat, ll.lng);
+      return;
+    }
+
+    // no toast here, just keep the status text
+    setStatus("Draft ready", "Click an edge to add points or click a corner to move it.");
+    return;
+  }
+
+  popover.open = false;
+});
 
     function createFarmerMarker(f, lat, lng) {
       dataById.set(String(f.id), f);
@@ -2798,175 +4108,186 @@ thead th{background:#eef4ff;color:#2563eb;font-size:12px;text-align:left;padding
 
       applyMarkerPin(marker, f, false);
 
-      // HIDDEN BY DEFAULT: only shows up when clicked in the table.
-      marker.style.display = "none";
+    marker.addEventListener("gmp-click", function (event) {
+  if (event && event.stopPropagation) event.stopPropagation();
+  window.__openFarmer3d(String(f.id), { showMarker: false });
+});
 
-      marker.addEventListener("gmp-click", function (event) {
-        if (event && event.stopPropagation) event.stopPropagation();
-        window.__openFarmer3d(String(f.id));
-      });
-
-      map3d.append(marker);
       markersById.set(String(f.id), marker);
-
       queuePlotFetch(String(f.id));
 
-      if (typeof window.__applyMarkerVisibility === "function") window.__applyMarkerVisibility();
+      if (typeof window.__applyMarkerVisibility === "function") {
+        window.__applyMarkerVisibility();
+      }
 
       return marker;
     }
 
-    function ensureMarkerForFarmer(id) {
-      id = String(id);
-      if (markersById.has(id)) return Promise.resolve(markersById.get(id));
-      if (geocodePromisesById.has(id)) return geocodePromisesById.get(id);
+  function ensureMarkerForFarmer(id) {
+  id = String(id);
 
-      var f = farmersById.get(id);
-      if (!f) return Promise.reject(new Error("Farmer not found in map dataset."));
+  if (markersById.has(id)) {
+    return Promise.resolve(markersById.get(id));
+  }
 
-      var loc = (f.location || "").trim();
-      if (!loc || loc === "—") return Promise.reject(new Error("No farm location to geocode."));
+  if (geocodePromisesById.has(id)) {
+    return geocodePromisesById.get(id);
+  }
 
-      var p = new Promise(function (resolve, reject) {
-        setStatus("Geocoding selected farmer…", "Please wait");
-        toast("Finding location for " + formatName(f) + "…", "warn");
+  var p = ensureFarmerData(id).then(function (f) {
+    var loc = (f.location || '').trim();
 
-        geocoder.geocode({ address: loc + ", Philippines" }, function (results, status) {
-          if (status === "OK" && results && results[0]) {
-            var ll = results[0].geometry.location;
-            var marker = createFarmerMarker(f, ll.lat(), ll.lng());
-            setStatus("Ready", "Selected farmer located.");
-            resolve(marker);
-          } else {
-            reject(new Error("Could not geocode this farmer (" + status + ")"));
-          }
-        });
-      });
-
-      geocodePromisesById.set(id, p);
-      p.finally(function () { geocodePromisesById.delete(id); });
-
-      return p;
+    if (!loc || loc === '—') {
+      return null;
     }
 
-    window.__openFarmer3d = function (id) {
-      id = String(id);
+    var endpoint = window.__farmerGeocodeUrl || '/api/geocode';
+    var separator = endpoint.indexOf('?') >= 0 ? '&' : '?';
 
-      ensureMarkerForFarmer(id).then(function (marker) {
-        var f = dataById.get(id) || farmersById.get(id);
-        if (!marker || !f) return;
-
-        selectedFarmerId = id;
-        refreshSavedGuideMarkers();
-        selectedVertexIndex = -1;
-        
-        // This makes the newly selected pin visible and keeps the rest hidden
-        refreshAllMarkerPins(); 
-
-        var ll = toLatLng(marker.position);
-        flyTo(ll.lat, ll.lng, 9000, 900);
-
-        popover.positionAnchor = marker;
-        popover.open = true;
-
-        var html = document.createElement("div");
-        html.style.minWidth = "260px";
-        html.style.fontFamily = "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial";
-        html.innerHTML =
-          '<div style="font-weight:900; font-size:14px; margin-bottom:6px;">' +
-            escapeHtml(formatName(f)) +
-          '</div>' +
-          '<div style="font-size:12px; line-height:1.35; color:#0b1220;">' +
-            '<div><strong>FFRS:</strong> ' + escapeHtml(f.ffrs || '—') + '</div>' +
-            '<div><strong>DOB:</strong> ' + escapeHtml(f.date_of_birth || '—') + '</div>' +
-            '<div><strong>Gender:</strong> ' + escapeHtml(f.gender || '—') + '</div>' +
-            '<div style="margin-top:6px;"><strong>Location:</strong> ' + escapeHtml((f.location || '').trim()) + '</div>' +
-            '<div style="margin-top:6px;"><strong>Records:</strong> ' + Number(f.records_count || 0) + '</div>' +
-            '<div><strong>Total Kgs:</strong> ' + (Number(f.total_kgs || 0)).toFixed(2) + '</div>' +
-            '<div><strong>Last Received:</strong> ' + escapeHtml(f.last_received || '—') + '</div>' +
-          '</div>';
-
-        popover.replaceChildren(html);
-        highlightRow(f.id);
-        syncSelectedPanel(f);
-        syncWorkflowUi();
-
-        if (hintEl) hintEl.style.display = "none";
-        setStatus("Selected: " + (f.last_name || "Farmer"), "Ready");
-        toast("Selected " + formatName(f) + ".", "ok");
-
-        loadPlotsForSelectedFarmer(selectedFarmerId, { autoZoom: true }).then(function (plots) {
-          syncSuggestedPlotName(plots || [], false);
-        });
-      }).catch(function (err) {
-        console.error(err);
-        toast(err && err.message ? err.message : "Could not open farmer.", "bad");
+    return fetch(
+      endpoint + separator + 'q=' + encodeURIComponent(loc + ', Philippines'),
+      { headers: { 'Accept': 'application/json' } }
+    )
+      .then(function (response) {
+        if (!response.ok) return null;
+        return response.json();
+      })
+      .then(function (result) {
+        if (!result || result.lat == null || result.lng == null) return null;
+        return createFarmerMarker(f, Number(result.lat), Number(result.lng));
+      })
+      .catch(function () {
+        return null;
       });
-    };
+  });
 
-    var geocoded = 0;
-    var skipped = 0;
+  geocodePromisesById.set(id, p);
+  p.finally(function () {
+    geocodePromisesById.delete(id);
+  });
 
-    function updateCounters(done, total, extra) {
-      extra = extra || "";
-      setStatus("Markers: " + geocoded + " • Skipped: " + skipped + " • Total: " + total, extra);
-      if (total > 0) setProgress((done / total) * 100);
-      updateGeocodedPill(geocoded, total);
+  return p;
+}
+
+window.__openFarmer3d = function (id, opts) {
+  opts = opts || {};
+  id = String(id);
+
+  var showMarker = opts.showMarker !== false;
+  var markerPromise = ensureMarkerForFarmer(id).catch(function () {
+    return null;
+  });
+
+  return ensureFarmerData(id).then(function (f) {
+    if (!f) {
+      throw new Error('Farmer not found.');
     }
 
-    function geocodeNext(i) {
-      if (i >= data.length) {
-        updateCounters(data.length, data.length, "Done");
-        if (geocoded > 0) setTimeout(function () { fitToMarkers(false); }, 250);
-        if (geocoded === 0) setStatus("No locations could be geocoded.", "Check address completeness.");
-        toast("Geocoding complete. Plots will render progressively.", "ok");
+    selectedFarmerId = id;
+    selectedVertexIndex = -1;
+    selectedMarkerVisible = showMarker;
+
+    highlightRow(f.id);
+    syncSelectedPanel(f);
+
+    if (typeof window.__applyPlotVisibility === 'function') {
+      window.__applyPlotVisibility();
+    }
+
+    if (hintEl) hintEl.style.display = 'none';
+
+    return Promise.all([
+      loadPlotsForSelectedFarmer(selectedFarmerId, { autoZoom: false }),
+      markerPromise
+    ]).then(function (results) {
+      var plots = Array.isArray(results[0]) ? results[0] : [];
+      var marker = results[1];
+      refreshAllMarkerPins();
+
+      if (!plots.length) {
+        popover.open = false;
+        setStatus('No saved plot', 'This farmer has not been plotted yet.');
+        toast(formatName(f) + ' has no saved plot yet.', 'warn');
+        syncSuggestedPlotName([], false);
         return;
       }
 
-      var f = data[i];
-      var loc = (f.location || "").trim();
+    if (marker && marker.position) {
+  var ll = toLatLng(marker.position);
+  flyTo(ll.lat, ll.lng, 9000, 900);
 
-      updateCounters(i, data.length, "Geocoding " + (i + 1) + " / " + data.length);
+  if (showMarker) {
+    popover.positionAnchor = marker;
+    popover.open = true;
 
-      if (!loc || loc === "—") {
-        skipped++;
-        updateCounters(i + 1, data.length, "Skipped missing address");
-        return setTimeout(function () { geocodeNext(i + 1); }, 40);
-      }
+    var html = document.createElement('div');
+    html.style.minWidth = '260px';
+    html.style.fontFamily = 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
+    html.innerHTML =
+      '<div style="font-weight:900; font-size:14px; margin-bottom:6px;">' +
+        escapeHtml(formatName(f)) +
+      '</div>' +
+      '<div style="font-size:12px; line-height:1.35; color:#0b1220;">' +
+        '<div><strong>FFRS:</strong> ' + escapeHtml(f.ffrs || '—') + '</div>' +
+        '<div><strong>DOB:</strong> ' + escapeHtml(f.date_of_birth || '—') + '</div>' +
+        '<div><strong>Gender:</strong> ' + escapeHtml(f.gender || '—') + '</div>' +
+        '<div style="margin-top:6px;"><strong>Location:</strong> ' + escapeHtml((f.location || '').trim()) + '</div>' +
+        '<div style="margin-top:6px;"><strong>Records:</strong> ' + Number(f.records_count || 0) + '</div>' +
+        '<div><strong>Total Kgs:</strong> ' + (Number(f.total_kgs || 0)).toFixed(2) + '</div>' +
+        '<div><strong>Last Received:</strong> ' + escapeHtml(f.last_received || '—') + '</div>' +
+      '</div>';
 
-      geocoder.geocode({ address: loc + ", Philippines" }, function (results, status) {
-        if (status === "OK" && results && results[0]) {
-          var ll = results[0].geometry.location;
-          createFarmerMarker(f, ll.lat(), ll.lng());
-          geocoded++;
-          updateCounters(i + 1, data.length, "Located " + geocoded + " / " + data.length);
-          setTimeout(function () { geocodeNext(i + 1); }, 110);
-        } else {
-          if (status === "OVER_QUERY_LIMIT") {
-            updateCounters(i, data.length, "Rate limit… retrying");
-            setTimeout(function () { geocodeNext(i); }, 800);
-            return;
-          }
-          skipped++;
-          updateCounters(i + 1, data.length, "Could not resolve address");
-          setTimeout(function () { geocodeNext(i + 1); }, 60);
-        }
-      });
-    }
+    popover.replaceChildren(html);
+  } else {
+    popover.open = false;
+  }
+} else {
+  popover.open = false;
+}
+
+      zoomToPlots(plots);
+
+      setStatus('Selected: ' + (f.last_name || 'Farmer'), 'Plot owner loaded');
+      toast('Selected ' + formatName(f) + '.', 'ok');
+      syncSuggestedPlotName(plots, false);
+    });
+  }).catch(function (err) {
+    console.error(err);
+    toast(err && err.message ? err.message : 'Could not open farmer.', 'bad');
+  });
+};
 
     setPlotModeUi(false);
     showPlotButtons(false);
     syncSelectedPanel(null);
     updatePlotCount(0);
     updatePlotTotalArea(0);
-    syncWorkflowUi();
+    updatePlotList([]);
     syncSuggestedPlotName([], false);
 
-    setStatus("Loading 3D map…", "Starting geocoding…");
-    setProgress(0);
-    updateGeocodedPill(0, data.length);
+  setPlotModeUi(false);
+showPlotButtons(false);
+syncSelectedPanel(null);
+updatePlotCount(0);
+updatePlotTotalArea(0);
+updatePlotList([]);
+syncSuggestedPlotName([], false);
 
-    geocodeNext(0);
+setStatus('Loading 3D map…', 'Loading all saved plots…');
+setProgress(0);
+
+if (mapGeocodedPillEl) {
+  mapGeocodedPillEl.textContent = 'Loading plots…';
+}
+
+try {
+  await loadAllMunicipalPlots();
+  zoomToAllLoadedPlots();
+} catch (err) {
+  console.error(err);
+  setStatus('Plot loading failed.', '');
+  toast(err && err.message ? err.message : 'Could not load all plots.', 'bad');
+}
   }
 </script>
 @endpush

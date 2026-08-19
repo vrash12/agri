@@ -2,17 +2,25 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\RiceSeedDistribution;
 use App\Models\Farmer;
+use App\Models\RiceSeedDistribution;
+use App\Support\MunicipalityAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
 class RiceSeedDistributionController extends Controller
 {
+    public function __construct(
+        private MunicipalityAccess $municipalityAccess
+    ) {
+        $this->middleware('auth');
+    }
+
     /**
      * Centralized dropdown options (from your Excel unique values)
      */
@@ -44,6 +52,8 @@ class RiceSeedDistributionController extends Controller
 
     public function index(Request $request)
     {
+        $this->authorize('viewAny', RiceSeedDistribution::class);
+
         $perPage = (int) $request->query('per_page', 10);
         $perPage = max(5, min($perPage, 100));
 
@@ -52,9 +62,24 @@ class RiceSeedDistributionController extends Controller
         // Totals (filtered)
         $totalRecords = (clone $baseQuery)->count();
         $totalKgs     = (float) (clone $baseQuery)->sum('kgs_received');
+        $averageKgs   = (float) ((clone $baseQuery)->avg('kgs_received') ?? 0);
+        $uniqueRecipients = (clone $baseQuery)
+            ->whereNotNull('farmer_id')
+            ->distinct()
+            ->count('farmer_id');
 
         // Stats
         $latestReceived = (clone $baseQuery)->max('date_received');
+        $trendYear = $latestReceived
+            ? (int) date('Y', strtotime($latestReceived))
+            : (int) now()->year;
+
+        $monthlyReleases = (clone $baseQuery)
+            ->whereYear('date_received', $trendYear)
+            ->selectRaw('MONTH(date_received) as month_number, SUM(kgs_received) as total_kgs')
+            ->groupBy('month_number')
+            ->orderBy('month_number')
+            ->pluck('total_kgs', 'month_number');
 
         // ===== Charts (based on current filters) =====
 
@@ -118,7 +143,7 @@ class RiceSeedDistributionController extends Controller
             ->orderByDesc('cnt')
             ->get();
 
-        // 7) NEW: Top Yielding Planted Varieties (By Production Bags)
+        // 7) Top Yielding Planted Varieties (By Production Bags)
         $topYieldingVarieties = (clone $baseQuery)
             ->whereNotNull('seed_variety_planted')
             ->where('seed_variety_planted', '!=', '')
@@ -128,7 +153,7 @@ class RiceSeedDistributionController extends Controller
             ->limit(10)
             ->get();
 
-        // 8) NEW: Seed Class Distribution
+        // 8) Seed Class Distribution
         $seedClasses = (clone $baseQuery)
             ->whereNotNull('seed_class')
             ->where('seed_class', '!=', '')
@@ -137,7 +162,7 @@ class RiceSeedDistributionController extends Controller
             ->orderByDesc('cnt')
             ->get();
 
-        // 9) NEW: Total Farm Area by Municipality
+        // 9) Total Farm Area by Municipality
         $areaByMunicipality = (clone $baseQuery)
             ->whereNotNull('farm_municipality')
             ->where('farm_municipality', '!=', '')
@@ -149,6 +174,7 @@ class RiceSeedDistributionController extends Controller
 
         $stats = [
             'latestReceived' => $latestReceived,
+            'trendYear' => $trendYear,
         ];
 
         $charts = [
@@ -177,7 +203,6 @@ class RiceSeedDistributionController extends Controller
             'crop_est_labels' => $cropEst->pluck('crop_establishment')->values(),
             'crop_est_values' => $cropEst->pluck('cnt')->map(fn ($v) => (int) $v)->values(),
 
-            // DATA FOR NEW CHARTS
             'yield_variety_labels' => $topYieldingVarieties->pluck('seed_variety_planted')->values(),
             'yield_variety_values' => $topYieldingVarieties->pluck('total_bags')->map(fn ($v) => (int) $v)->values(),
 
@@ -186,6 +211,11 @@ class RiceSeedDistributionController extends Controller
 
             'area_mun_labels' => $areaByMunicipality->pluck('farm_municipality')->values(),
             'area_mun_values' => $areaByMunicipality->pluck('total_area')->map(fn ($v) => (float) $v)->values(),
+
+            'monthly_labels' => ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            'monthly_values' => collect(range(1, 12))
+                ->map(fn ($month) => (float) ($monthlyReleases[$month] ?? 0))
+                ->values(),
         ];
 
         $records = $baseQuery
@@ -203,28 +233,52 @@ class RiceSeedDistributionController extends Controller
             'perPage',
             'totalRecords',
             'totalKgs',
+            'averageKgs',
+            'uniqueRecipients',
             'stats',
             'charts'
-        ));
+        ) + [
+            'seedVarietyClaimedOptions' => $this->seedVarietyClaimedOptions,
+            'municipalities' => $this->municipalityAccess->choices(
+                $request->user()
+            ),
+            'canChooseMunicipality' => $request->user()
+                ->canAccessAllMunicipalities(),
+            'selectedMunicipalityId' => $request->query('municipality_id'),
+        ]);
     }
 
-    /** GET import page */
-    public function importForm()
+    public function importForm(Request $request)
     {
-        return view('rice_seed_distributions.import');
+        $this->authorize('import', RiceSeedDistribution::class);
+
+        return view('rice_seed_distributions.import', [
+            'municipalities' => $this->municipalityAccess->choices(
+                $request->user()
+            ),
+            'canChooseMunicipality' => $request->user()
+                ->canAccessAllMunicipalities(),
+        ]);
     }
 
-    /** (Optional) Keep this if you already referenced showImport somewhere */
-    public function showImport()
+    public function showImport(Request $request)
     {
-        return view('rice_seed_distributions.import');
+        return $this->importForm($request);
     }
 
     public function import(Request $request)
     {
-        $request->validate([
+        $this->authorize('import', RiceSeedDistribution::class);
+
+        $validated = $request->validate([
             'file' => ['required', 'file', 'mimes:xlsx,xls'],
+            'municipality_id' => ['nullable', 'integer'],
         ]);
+
+        $municipalityId = $this->municipalityAccess->resolveForWrite(
+            $request->user(),
+            $validated['municipality_id'] ?? null
+        );
 
         $path = $request->file('file')->getRealPath();
         $spreadsheet = IOFactory::load($path);
@@ -243,7 +297,14 @@ class RiceSeedDistributionController extends Controller
         $updated = 0;
         $skipped = 0;
 
-        DB::transaction(function () use (&$created, &$updated, &$skipped, $rows, $headerMap) {
+        DB::transaction(function () use (
+            &$created,
+            &$updated,
+            &$skipped,
+            $rows,
+            $headerMap,
+            $municipalityId
+        ) {
             foreach ($rows as $row) {
                 $ffrs = $this->cellStr($row, $headerMap, ['FFRS RSBSA Number']);
                 if ($ffrs === '') {
@@ -251,8 +312,12 @@ class RiceSeedDistributionController extends Controller
                     continue;
                 }
 
-                $farmer = Farmer::where('ffrs', $ffrs)
-                    ->orWhere('rsbsa_no', $ffrs)
+                $farmer = Farmer::query()
+                    ->where('municipality_id', $municipalityId)
+                    ->where(function (Builder $query) use ($ffrs) {
+                        $query->where('ffrs', $ffrs)
+                            ->orWhere('rsbsa_no', $ffrs);
+                    })
                     ->first();
 
                 $prov = $this->cellStr($row, $headerMap, ['Farm Address (Province)']);
@@ -280,6 +345,7 @@ class RiceSeedDistributionController extends Controller
                 $dob = $this->cellDateYmd($row, $headerMap, ['Birthdate']);
 
                 $data = [
+                    'municipality_id' => $municipalityId,
                     'farmer_id' => $farmer?->id,
 
                     'last_name'      => $farmer?->last_name ?? $this->cellStr($row, $headerMap, ['Farmer Last Name']),
@@ -317,6 +383,7 @@ class RiceSeedDistributionController extends Controller
                 ];
 
                 $unique = [
+                    'municipality_id'      => $municipalityId,
                     'ffrs'                 => $ffrs,
                     'seed_variety_claimed' => $seedVarietyClaimed,
                     'lot_series'           => $lotSeries,
@@ -343,136 +410,106 @@ class RiceSeedDistributionController extends Controller
 
     public function create(Request $request)
     {
+        $this->authorize('create', RiceSeedDistribution::class);
+
+        $farmers = $this->getFarmersForForm($request);
+        $selectedFarmerId = $request->query('farmer_id');
+        $selectedFarmer = $farmers->firstWhere('id', (int) $selectedFarmerId);
+
         return view('rice_seed_distributions.create', [
+            'farmers' => $farmers,
             'seedVarietyClaimedOptions' => $this->seedVarietyClaimedOptions,
             'cropEstablishmentOptions'  => $this->cropEstablishmentOptions,
             'seedClassOptions'          => $this->seedClassOptions,
-            'farmer_id' => $request->query('farmer_id'),
+            'farmer_id'                 => $selectedFarmerId,
+            'municipalities' => $this->municipalityAccess->choices(
+                $request->user()
+            ),
+            'canChooseMunicipality' => $request->user()
+                ->canAccessAllMunicipalities(),
+            'selectedMunicipalityId' => $selectedFarmer?->municipality_id
+                ?? $request->query('municipality_id')
+                ?? $request->user()->municipality_id,
         ]);
     }
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'farmer_id' => ['nullable', 'exists:farmers,id'],
+        $this->authorize('create', RiceSeedDistribution::class);
 
-            'last_name'      => ['required', 'string', 'max:80'],
-            'first_name'     => ['required', 'string', 'max:80'],
-            'middle_name'    => ['nullable', 'string', 'max:80'],
-            'ext_name'       => ['nullable', 'string', 'max:10'],
-            'ffrs'           => ['nullable', 'string', 'max:50'],
-            'contact_number' => ['nullable', 'string', 'max:20'],
-            'date_of_birth'  => ['nullable', 'date'],
-            'gender'         => ['nullable', Rule::in(['Male', 'Female', 'Other'])],
+        $validated = $this->validateDistributionForm($request);
+        $farmer = Farmer::findOrFail($validated['farmer_id']);
+        $municipalityId = $this->resolveDistributionMunicipality(
+            $request,
+            $validated,
+            $farmer
+        );
 
-            'farm_location'     => ['required', 'string', 'max:255'],
-            'farm_province'     => ['nullable', 'string', 'max:80'],
-            'farm_municipality' => ['nullable', 'string', 'max:80'],
-            'ecosystem'         => ['nullable', 'string', 'max:60'],
-            'ecosystem_source'  => ['nullable', 'string', 'max:60'],
+        $payload = $this->buildDistributionPayload(
+            $validated,
+            $farmer,
+            $municipalityId
+        );
 
-            'is_arb' => ['nullable', 'boolean'],
-            'is_4ps' => ['nullable', 'boolean'],
-            'is_ip'  => ['nullable', 'boolean'],
-            'is_pwd' => ['nullable', 'boolean'],
-            'is_sc'  => ['nullable', 'boolean'],
-            'is_ofw' => ['nullable', 'boolean'],
+        RiceSeedDistribution::create($payload);
 
-            'seed_variety_claimed' => ['nullable', Rule::in($this->seedVarietyClaimedOptions)],
-            'claimed_area_ha'       => ['nullable', 'numeric', 'min:0'],
-            'claimed_seeds_kg'      => ['nullable', 'numeric', 'min:0'],
-            'lot_series'            => ['nullable', 'string'],
-            'crop_establishment'    => ['nullable', Rule::in($this->cropEstablishmentOptions)],
-            'date_of_sowing_label'  => ['nullable', 'string', 'max:60'],
-
-            'avg_weight_per_bag_kg'  => ['nullable', 'integer', 'min:0'],
-            'total_production_bags'  => ['nullable', 'integer', 'min:0'],
-            'avg_area_harvested_ha'  => ['nullable', 'numeric', 'min:0'],
-            'seed_variety_planted'   => ['nullable', 'string', 'max:200'],
-            'seed_class'             => ['nullable', Rule::in($this->seedClassOptions)],
-
-            'farm_area_ha'  => ['nullable', 'numeric', 'min:0'],
-            'kgs_received'  => ['required', 'numeric', 'min:0'],
-            'date_received' => ['required', 'date'],
-        ]);
-
-        foreach (['is_arb', 'is_4ps', 'is_ip', 'is_pwd', 'is_sc', 'is_ofw'] as $k) {
-            $data[$k] = (bool) ($data[$k] ?? false);
-        }
-
-        RiceSeedDistribution::create($data);
-
-        return redirect()->route('rice-seed-distributions.index')
-            ->with('success', 'Recipient record added successfully.');
+        return redirect()
+            ->route('rice-seed-distributions.index')
+            ->with('success', 'Rice seed distribution record added successfully.');
     }
 
-    public function edit(RiceSeedDistribution $riceSeedDistribution)
+    public function edit(
+        Request $request,
+        RiceSeedDistribution $riceSeedDistribution
+    )
     {
+        $this->authorize('update', $riceSeedDistribution);
+        $riceSeedDistribution->loadMissing('farmer');
+
         return view('rice_seed_distributions.edit', [
             'record' => $riceSeedDistribution,
+            'farmers' => $this->getFarmersForForm($request),
             'seedVarietyClaimedOptions' => $this->seedVarietyClaimedOptions,
             'cropEstablishmentOptions'  => $this->cropEstablishmentOptions,
             'seedClassOptions'          => $this->seedClassOptions,
+            'farmer_id'                 => $riceSeedDistribution->farmer_id,
+            'municipalities' => $this->municipalityAccess->choices(
+                $request->user()
+            ),
+            'canChooseMunicipality' => $request->user()
+                ->canAccessAllMunicipalities(),
+            'selectedMunicipalityId' => $riceSeedDistribution
+                ->municipality_id,
         ]);
     }
 
     public function update(Request $request, RiceSeedDistribution $riceSeedDistribution)
     {
-        $data = $request->validate([
-            'farmer_id' => ['nullable', 'exists:farmers,id'],
+        $this->authorize('update', $riceSeedDistribution);
+        $validated = $this->validateDistributionForm($request);
+        $farmer = Farmer::findOrFail($validated['farmer_id']);
+        $municipalityId = $this->resolveDistributionMunicipality(
+            $request,
+            $validated,
+            $farmer
+        );
 
-            'last_name'      => ['required', 'string', 'max:80'],
-            'first_name'     => ['required', 'string', 'max:80'],
-            'middle_name'    => ['nullable', 'string', 'max:80'],
-            'ext_name'       => ['nullable', 'string', 'max:10'],
-            'ffrs'           => ['nullable', 'string', 'max:50'],
-            'contact_number' => ['nullable', 'string', 'max:20'],
-            'date_of_birth'  => ['nullable', 'date'],
-            'gender'         => ['nullable', Rule::in(['Male', 'Female', 'Other'])],
+        $payload = $this->buildDistributionPayload(
+            $validated,
+            $farmer,
+            $municipalityId
+        );
 
-            'farm_location'     => ['required', 'string', 'max:255'],
-            'farm_province'     => ['nullable', 'string', 'max:80'],
-            'farm_municipality' => ['nullable', 'string', 'max:80'],
-            'ecosystem'         => ['nullable', 'string', 'max:60'],
-            'ecosystem_source'  => ['nullable', 'string', 'max:60'],
+        $riceSeedDistribution->update($payload);
 
-            'is_arb' => ['nullable', 'boolean'],
-            'is_4ps' => ['nullable', 'boolean'],
-            'is_ip'  => ['nullable', 'boolean'],
-            'is_pwd' => ['nullable', 'boolean'],
-            'is_sc'  => ['nullable', 'boolean'],
-            'is_ofw' => ['nullable', 'boolean'],
-
-            'seed_variety_claimed' => ['nullable', Rule::in($this->seedVarietyClaimedOptions)],
-            'claimed_area_ha'       => ['nullable', 'numeric', 'min:0'],
-            'claimed_seeds_kg'      => ['nullable', 'numeric', 'min:0'],
-            'lot_series'            => ['nullable', 'string'],
-            'crop_establishment'    => ['nullable', Rule::in($this->cropEstablishmentOptions)],
-            'date_of_sowing_label'  => ['nullable', 'string', 'max:60'],
-
-            'avg_weight_per_bag_kg'  => ['nullable', 'integer', 'min:0'],
-            'total_production_bags'  => ['nullable', 'integer', 'min:0'],
-            'avg_area_harvested_ha'  => ['nullable', 'numeric', 'min:0'],
-            'seed_variety_planted'   => ['nullable', 'string', 'max:200'],
-            'seed_class'             => ['nullable', Rule::in($this->seedClassOptions)],
-
-            'farm_area_ha'  => ['nullable', 'numeric', 'min:0'],
-            'kgs_received'  => ['required', 'numeric', 'min:0'],
-            'date_received' => ['required', 'date'],
-        ]);
-
-        foreach (['is_arb', 'is_4ps', 'is_ip', 'is_pwd', 'is_sc', 'is_ofw'] as $k) {
-            $data[$k] = (bool) ($data[$k] ?? false);
-        }
-
-        $riceSeedDistribution->update($data);
-
-        return redirect()->route('rice-seed-distributions.index')
-            ->with('success', 'Recipient record updated successfully.');
+        return redirect()
+            ->route('rice-seed-distributions.index')
+            ->with('success', 'Rice seed distribution record updated successfully.');
     }
 
     public function destroy(RiceSeedDistribution $riceSeedDistribution)
     {
+        $this->authorize('delete', $riceSeedDistribution);
         $riceSeedDistribution->delete();
 
         return redirect()->route('rice-seed-distributions.index')
@@ -481,6 +518,8 @@ class RiceSeedDistributionController extends Controller
 
     public function export(Request $request)
     {
+        $this->authorize('export', RiceSeedDistribution::class);
+
         $query = $this->buildFilteredQuery($request)
             ->orderBy('last_name')
             ->orderBy('first_name');
@@ -550,6 +589,11 @@ class RiceSeedDistributionController extends Controller
         $q = trim((string) $request->query('q', ''));
 
         $query = RiceSeedDistribution::query();
+        $this->municipalityAccess->applyOptionalFilter(
+            $query,
+            $request->user(),
+            $request->query('municipality_id')
+        );
 
         if ($q !== '') {
             $query->where(function ($sub) use ($q) {
@@ -571,6 +615,14 @@ class RiceSeedDistributionController extends Controller
         $gender = $request->query('gender');
         if (in_array($gender, ['Male', 'Female', 'Other'], true)) {
             $query->where('gender', $gender);
+        }
+
+        $seedVariety = trim((string) $request->query(
+            'seed_variety_claimed',
+            ''
+        ));
+        if (in_array($seedVariety, $this->seedVarietyClaimedOptions, true)) {
+            $query->where('seed_variety_claimed', $seedVariety);
         }
 
         foreach (['is_arb', 'is_4ps', 'is_ip', 'is_pwd', 'is_sc', 'is_ofw'] as $col) {
@@ -607,6 +659,141 @@ class RiceSeedDistributionController extends Controller
         if ($to !== null && $to !== '') {
             $query->whereDate($column, '<=', $to);
         }
+    }
+
+    private function getFarmersForForm(Request $request)
+    {
+        $query = Farmer::query();
+        $this->municipalityAccess->scope($query, $request->user());
+
+        return $query
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->get([
+                'id',
+                'municipality_id',
+                'rsbsa_no',
+                'ffrs',
+                'last_name',
+                'first_name',
+                'middle_name',
+                'ext_name',
+                'date_of_birth',
+                'contact_number',
+                'gender',
+                'farm_location',
+                'farm_province',
+                'farm_municipality',
+                'ecosystem',
+                'ecosystem_source',
+                'farm_area_ha',
+                'is_arb',
+                'is_4ps',
+                'is_ip',
+                'is_pwd',
+                'is_sc',
+                'is_ofw',
+            ]);
+    }
+
+    private function validateDistributionForm(Request $request): array
+    {
+        return $request->validate([
+            'municipality_id' => ['nullable', 'integer'],
+            'farmer_id' => ['required', 'exists:farmers,id'],
+
+            'seed_variety_claimed' => ['required', Rule::in($this->seedVarietyClaimedOptions)],
+            'claimed_area_ha'      => ['nullable', 'numeric', 'min:0'],
+            'claimed_seeds_kg'     => ['nullable', 'numeric', 'min:0'],
+            'lot_series'           => ['nullable', 'string'],
+            'crop_establishment'   => ['nullable', Rule::in($this->cropEstablishmentOptions)],
+            'date_of_sowing_label' => ['nullable', 'string', 'max:60'],
+
+            'avg_weight_per_bag_kg' => ['nullable', 'integer', 'min:0'],
+            'total_production_bags' => ['nullable', 'integer', 'min:0'],
+            'avg_area_harvested_ha' => ['nullable', 'numeric', 'min:0'],
+            'seed_variety_planted'  => ['nullable', 'string', 'max:200'],
+            'seed_class'            => ['nullable', Rule::in($this->seedClassOptions)],
+
+            'kgs_received'  => ['required', 'numeric', 'min:0'],
+            'date_received' => ['required', 'date'],
+        ]);
+    }
+
+    private function buildDistributionPayload(
+        array $validated,
+        Farmer $farmer,
+        int $municipalityId
+    ): array
+    {
+        return array_merge(
+            $this->buildFarmerSnapshot($farmer),
+            [
+                'municipality_id'       => $municipalityId,
+                'farmer_id'             => $farmer->id,
+                'seed_variety_claimed'  => $validated['seed_variety_claimed'],
+                'claimed_area_ha'       => $validated['claimed_area_ha'] ?? null,
+                'claimed_seeds_kg'      => $validated['claimed_seeds_kg'] ?? null,
+                'lot_series'            => $this->nullIfEmpty($validated['lot_series'] ?? null),
+                'crop_establishment'    => $validated['crop_establishment'] ?? null,
+                'date_of_sowing_label'  => $this->nullIfEmpty($validated['date_of_sowing_label'] ?? null),
+                'avg_weight_per_bag_kg' => $validated['avg_weight_per_bag_kg'] ?? null,
+                'total_production_bags' => $validated['total_production_bags'] ?? null,
+                'avg_area_harvested_ha' => $validated['avg_area_harvested_ha'] ?? null,
+                'seed_variety_planted'  => $this->nullIfEmpty($validated['seed_variety_planted'] ?? null),
+                'seed_class'            => $validated['seed_class'] ?? null,
+                'kgs_received'          => $validated['kgs_received'],
+                'date_received'         => $validated['date_received'],
+            ]
+        );
+    }
+
+    private function resolveDistributionMunicipality(
+        Request $request,
+        array $validated,
+        Farmer $farmer
+    ): int {
+        $municipalityId = $this->municipalityAccess->resolveForWrite(
+            $request->user(),
+            $validated['municipality_id'] ?? null
+        );
+
+        if ((int) $farmer->municipality_id !== $municipalityId) {
+            throw ValidationException::withMessages([
+                'farmer_id' => 'The selected farmer does not belong to the selected municipality.',
+            ]);
+        }
+
+        return $municipalityId;
+    }
+
+    private function buildFarmerSnapshot(Farmer $farmer): array
+    {
+        return [
+            'last_name'         => $farmer->last_name,
+            'first_name'        => $farmer->first_name,
+            'middle_name'       => $farmer->middle_name,
+            'ext_name'          => $farmer->ext_name,
+            'ffrs'              => $farmer->ffrs ?: $farmer->rsbsa_no,
+            'date_of_birth'     => $farmer->date_of_birth,
+            'gender'            => $farmer->gender,
+            'contact_number'    => $farmer->contact_number,
+
+            'farm_location'     => $farmer->farm_location,
+            'farm_province'     => $farmer->farm_province,
+            'farm_municipality' => $farmer->farm_municipality,
+            'farm_area_ha'      => $farmer->farm_area_ha,
+
+            'ecosystem'         => $farmer->ecosystem,
+            'ecosystem_source'  => $farmer->ecosystem_source,
+
+            'is_arb'            => (bool) $farmer->is_arb,
+            'is_4ps'            => (bool) $farmer->is_4ps,
+            'is_ip'             => (bool) $farmer->is_ip,
+            'is_pwd'            => (bool) $farmer->is_pwd,
+            'is_sc'             => (bool) $farmer->is_sc,
+            'is_ofw'            => (bool) $farmer->is_ofw,
+        ];
     }
 
     /** =========================
@@ -647,7 +834,9 @@ class RiceSeedDistributionController extends Controller
     private function cellFloat(array $row, array $headerMap, array $possibleHeaders): ?float
     {
         $raw = $this->cellStr($row, $headerMap, $possibleHeaders);
-        if ($raw === '') return null;
+        if ($raw === '') {
+            return null;
+        }
 
         $raw = str_replace(',', '', $raw);
         return is_numeric($raw) ? (float) $raw : null;
@@ -667,10 +856,14 @@ class RiceSeedDistributionController extends Controller
         foreach ($possibleHeaders as $name) {
             $key = $this->normalizeHeader($name);
             $col = $headerMap[$key] ?? null;
-            if (!$col) continue;
+            if (!$col) {
+                continue;
+            }
 
             $v = $row[$col] ?? null;
-            if ($v === null || $v === '') return null;
+            if ($v === null || $v === '') {
+                return null;
+            }
 
             try {
                 if ($v instanceof \DateTimeInterface) {
@@ -683,7 +876,6 @@ class RiceSeedDistributionController extends Controller
 
                 $s = trim((string) $v);
 
-                // If looks like m/d/Y or mm/dd/YYYY
                 if (preg_match('~^\d{1,2}/\d{1,2}/\d{2,4}$~', $s)) {
                     $dt = \DateTime::createFromFormat('m/d/Y', $s) ?: \DateTime::createFromFormat('n/j/Y', $s);
                     if (!$dt) {

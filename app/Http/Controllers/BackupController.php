@@ -4,27 +4,36 @@ namespace App\Http\Controllers;
 
 use App\Models\BackupFile;
 use App\Models\User;
+use App\Support\MunicipalityAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
 class BackupController extends Controller
 {
-    /**
-     * File extensions allowed for in-site editing.
-     * - Text-like: edited as plain text in the browser
-     * - Excel: edited in browser then uploaded back as XLSX blob
-     */
+    public function __construct(
+        private MunicipalityAccess $municipalityAccess
+    ) {
+        $this->middleware('auth');
+    }
+
     private array $editableTextExts  = ['txt','log','sql','csv','json','xml','md'];
     private array $editableExcelExts = ['xlsx'];
 
     public function index(Request $request)
     {
+        $this->authorize('viewAny', BackupFile::class);
+
         $q = BackupFile::query()
-            ->with(['uploader:id,name'])
+            ->with(['uploader:id,name', 'municipality:id,name'])
             ->select([
-                'id','disk','folder','original_name','stored_name','path','size','mime','sha256','notes','uploaded_by','created_at'
+                'id','municipality_id','disk','folder','original_name','stored_name','path','size','mime','sha256','notes','uploaded_by','created_at'
             ]);
+        $this->municipalityAccess->applyOptionalFilter(
+            $q,
+            $request->user(),
+            $request->query('municipality_id')
+        );
 
         // --------------------------
         // BASIC SEARCH (field + mode)
@@ -120,6 +129,22 @@ class BackupController extends Controller
             $q->where('size', '<=', max(0, $maxBytes));
         }
 
+        // Summary cards reflect the active filter set, before pagination.
+        $filteredFileCount = (int) (clone $q)->reorder()->count();
+        $filteredBytes = (int) (clone $q)->reorder()->sum('size');
+        $hashedFileCount = (int) (clone $q)
+            ->reorder()
+            ->whereNotNull('sha256')
+            ->where('sha256', '<>', '')
+            ->count();
+        $filteredFolderCount = (int) (clone $q)
+            ->reorder()
+            ->whereNotNull('folder')
+            ->where('folder', '<>', '')
+            ->distinct()
+            ->count('folder');
+        $latestUploadAt = (clone $q)->reorder()->max('created_at');
+
         // --------------------------
         // SORTING (whitelist)
         // --------------------------
@@ -139,7 +164,13 @@ class BackupController extends Controller
         $files = $q->paginate($perPage)->withQueryString();
 
         // Dropdown data
-        $folders = BackupFile::query()
+        $folderQuery = BackupFile::query();
+        $this->municipalityAccess->applyOptionalFilter(
+            $folderQuery,
+            $request->user(),
+            $request->query('municipality_id')
+        );
+        $folders = $folderQuery
             ->select('folder')
             ->whereNotNull('folder')
             ->where('folder', '<>', '')
@@ -148,9 +179,17 @@ class BackupController extends Controller
             ->limit(300)
             ->pluck('folder');
 
+        $visibleUploaderIds = BackupFile::query()
+            ->select('uploaded_by')
+            ->whereNotNull('uploaded_by');
+        $this->municipalityAccess->applyOptionalFilter(
+            $visibleUploaderIds,
+            $request->user(),
+            $request->query('municipality_id')
+        );
         $uploaders = User::query()
             ->select('id','name')
-            ->whereIn('id', BackupFile::query()->select('uploaded_by')->whereNotNull('uploaded_by'))
+            ->whereIn('id', $visibleUploaderIds)
             ->orderBy('name', 'asc')
             ->get();
 
@@ -172,19 +211,43 @@ class BackupController extends Controller
             'max_mb' => $maxMb,
             'sort' => $sort,
             'per_page' => $perPage,
+            'municipality_id' => $request->query('municipality_id'),
         ];
 
-        return view('backups.index', compact('files','folders','uploaders','extPresets','active'));
+        return view('backups.index', [
+            'files' => $files,
+            'folders' => $folders,
+            'uploaders' => $uploaders,
+            'extPresets' => $extPresets,
+            'active' => $active,
+            'municipalities' => $this->municipalityAccess->choices(
+                $request->user()
+            ),
+            'canChooseMunicipality' => $request->user()
+                ->canAccessAllMunicipalities(),
+            'selectedMunicipalityId' => $request->query('municipality_id'),
+            'filteredFileCount' => $filteredFileCount,
+            'filteredBytes' => $filteredBytes,
+            'hashedFileCount' => $hashedFileCount,
+            'filteredFolderCount' => $filteredFolderCount,
+            'latestUploadAt' => $latestUploadAt,
+        ]);
     }
 
     public function store(Request $request)
     {
+        $this->authorize('create', BackupFile::class);
         $data = $request->validate([
+            'municipality_id' => ['nullable','integer'],
             'files' => ['required','array','min:1'],
             'files.*' => ['file','max:51200'], // 50MB each
             'folder' => ['nullable','string','max:120'],
             'notes' => ['nullable','string','max:2000'],
         ]);
+        $municipalityId = $this->municipalityAccess->resolveForWrite(
+            $request->user(),
+            $data['municipality_id'] ?? null
+        );
 
         $disk = 'local';
         $folder = trim($data['folder'] ?? '');
@@ -202,6 +265,7 @@ class BackupController extends Controller
             $sha256 = $this->computeSha256($disk, $path);
 
             BackupFile::create([
+                'municipality_id' => $municipalityId,
                 'disk' => $disk,
                 'folder' => $folder,
                 'original_name' => $original,
@@ -220,6 +284,7 @@ class BackupController extends Controller
 
     public function download(BackupFile $backup)
     {
+        $this->authorize('view', $backup);
         $disk = $backup->disk;
         if (!Storage::disk($disk)->exists($backup->path)) {
             return redirect()->route('backups.index')->with('error', 'File not found in storage.');
@@ -230,6 +295,7 @@ class BackupController extends Controller
 
     public function destroy(BackupFile $backup)
     {
+        $this->authorize('delete', $backup);
         $disk = $backup->disk;
         if (Storage::disk($disk)->exists($backup->path)) {
             Storage::disk($disk)->delete($backup->path);
@@ -246,8 +312,14 @@ class BackupController extends Controller
     /**
      * Shows the preview/editor UI (resources/views/backups/preview.blade.php)
      */
-    public function preview(BackupFile $backup)
+    public function preview(Request $request, BackupFile $backup)
     {
+        $this->authorize('view', $backup);
+
+        if ($request->query('mode') === 'edit') {
+            $this->authorize('update', $backup);
+        }
+
         $disk = $backup->disk;
         if (!Storage::disk($disk)->exists($backup->path)) {
             return redirect()->route('backups.index')->with('error', 'File not found in storage.');
@@ -261,6 +333,7 @@ class BackupController extends Controller
      */
     public function stream(BackupFile $backup)
     {
+        $this->authorize('view', $backup);
         $disk = $backup->disk;
         if (!Storage::disk($disk)->exists($backup->path)) {
             abort(404);
@@ -289,6 +362,7 @@ class BackupController extends Controller
      */
     public function save(Request $request, BackupFile $backup)
     {
+        $this->authorize('update', $backup);
         $disk = $backup->disk;
 
         if (!Storage::disk($disk)->exists($backup->path)) {

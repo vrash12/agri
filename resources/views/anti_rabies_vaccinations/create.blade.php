@@ -1,28 +1,17 @@
-{{-- resources/views/anti_rabies_vaccinations/create.blade.php --}}
 @extends('layouts.app')
 
-@section('title', 'Add Anti-Rabies Vaccination')
+@section('title', 'Record Anti-Rabies Vaccination')
+
+@push('styles')
+  @include('partials.operations-ui-styles')
+@endpush
 
 @section('content')
-  <div class="card">
-    <div class="card-header">
-      <div>
-        <h1 class="h1">Add Anti-Rabies Vaccination</h1>
-        <p class="p">Create a new vaccination record.</p>
-      </div>
-      <a class="btn btn-soft" href="{{ route('anti-rabies-vaccinations.index') }}">Back</a>
-    </div>
-
-    <div style="padding:16px;">
-      <form method="POST" action="{{ route('anti-rabies-vaccinations.store') }}">
-        @csrf
-
-        @include('anti_rabies_vaccinations._form', ['record' => $record])
-
-        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:14px;">
-          <button class="btn" type="submit">Save</button>
-        </div>
-      </form>
-    </div>
-  </div>
+<div class="module-page">
+  <header class="module-header">
+    <div><div class="module-eyebrow">Animal health service</div><h1>Record vaccination</h1><p>Find the owner, reuse an existing animal when possible, and record today’s anti-rabies service.</p></div>
+    <div class="module-actions"><a class="module-button" href="{{ route('anti-rabies-vaccinations.index') }}">Back to register</a></div>
+  </header>
+  <form method="POST" action="{{ route('anti-rabies-vaccinations.store') }}">@csrf @include('anti_rabies_vaccinations._form', ['record' => $record, 'buttonText' => 'Save vaccination'])</form>
+</div>
 @endsection

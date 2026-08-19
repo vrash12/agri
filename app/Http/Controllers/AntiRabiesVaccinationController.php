@@ -3,18 +3,23 @@
 namespace App\Http\Controllers;
 
 use App\Models\AntiRabiesVaccination;
+use App\Support\MunicipalityAccess;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 
 class AntiRabiesVaccinationController extends Controller
 {
-    public function __construct()
-    {
+    public function __construct(
+        private MunicipalityAccess $municipalityAccess
+    ) {
         $this->middleware('auth');
     }
 
     public function index(Request $request)
     {
+        $this->authorize('viewAny', AntiRabiesVaccination::class);
+
         $q        = trim((string) $request->query('q', ''));
         $barangay = trim((string) $request->query('barangay', ''));
         $petType  = trim((string) $request->query('pet_type', '')); // Dog/Cat
@@ -25,7 +30,10 @@ class AntiRabiesVaccinationController extends Controller
         $yearInt  = ($year !== '' && ctype_digit($year)) ? (int) $year : null;
 
         // Base query for BOTH list + stats/charts
-        $base = AntiRabiesVaccination::query();
+        $base = $this->scopedQuery(
+            $request,
+            $request->query('municipality_id')
+        );
 
         if ($q !== '') {
             $base->where(function ($w) use ($q) {
@@ -62,7 +70,10 @@ class AntiRabiesVaccinationController extends Controller
         // -----------------------------
         $petTypeOptions = ['Dog', 'Cat'];
 
-        $barangayOptions = AntiRabiesVaccination::query()
+        $barangayOptions = $this->scopedQuery(
+            $request,
+            $request->query('municipality_id')
+        )
             ->select('barangay')
             ->whereNotNull('barangay')
             ->where('barangay', '!=', '')
@@ -71,14 +82,20 @@ class AntiRabiesVaccinationController extends Controller
             ->pluck('barangay');
 
         // If you still want a Year dropdown in the future:
-        $yearOptions = AntiRabiesVaccination::query()
+        $yearOptions = $this->scopedQuery(
+            $request,
+            $request->query('municipality_id')
+        )
             ->selectRaw('YEAR(vaccination_date) AS y')
             ->distinct()
             ->orderByDesc('y')
             ->pluck('y');
 
         // Owner name suggestions for datalist/search field
-        $ownerNameOptions = AntiRabiesVaccination::query()
+        $ownerNameOptions = $this->scopedQuery(
+            $request,
+            $request->query('municipality_id')
+        )
             ->whereNotNull('owner_name')
             ->where('owner_name', '!=', '')
             ->distinct()
@@ -100,6 +117,11 @@ class AntiRabiesVaccinationController extends Controller
             ->value('c');
 
         $latestVaccinationDate = (clone $base)->max('vaccination_date');
+
+        $currentMonthVaccinations = (clone $base)
+            ->whereYear('vaccination_date', now()->year)
+            ->whereMonth('vaccination_date', now()->month)
+            ->count();
 
         // -----------------------------
         // chartYear for monthly chart
@@ -216,6 +238,7 @@ class AntiRabiesVaccinationController extends Controller
             'uniqueOwners',
             'uniquePets',
             'latestVaccinationDate',
+            'currentMonthVaccinations',
 
             // charts
             'yearChartLabels',
@@ -230,28 +253,76 @@ class AntiRabiesVaccinationController extends Controller
             'monthlyChartData',
             'ageChartLabels',
             'ageChartData',
-        ));
+        ) + [
+            'municipalities' => $this->municipalityAccess->choices(
+                $request->user()
+            ),
+            'canChooseMunicipality' => $request->user()
+                ->canAccessAllMunicipalities(),
+            'selectedMunicipalityId' => $request->query('municipality_id'),
+        ]);
     }
 
-    public function create()
+    public function create(Request $request)
     {
-        $ownerNameOptions = AntiRabiesVaccination::query()
+        $this->authorize('create', AntiRabiesVaccination::class);
+
+        $selectedMunicipalityId = $request->query('municipality_id')
+            ?? $request->user()->municipality_id;
+        $ownerNameOptions = $this->ownerNameOptions(
+            $request,
+            $selectedMunicipalityId
+        );
+
+        return view('anti_rabies_vaccinations.create', [
+            'record' => null,
+            'ownerNameOptions' => $ownerNameOptions,
+            'municipalities' => $this->municipalityAccess->choices(
+                $request->user()
+            ),
+            'canChooseMunicipality' => $request->user()
+                ->canAccessAllMunicipalities(),
+            'selectedMunicipalityId' => $selectedMunicipalityId,
+        ]);
+    }
+
+    private function ownerNameOptions(
+        Request $request,
+        mixed $municipalityId
+    ) {
+        $query = AntiRabiesVaccination::query();
+
+        if (
+            $request->user()->canAccessAllMunicipalities()
+            && ($municipalityId === null || $municipalityId === '')
+        ) {
+            return collect();
+        }
+
+        $this->municipalityAccess->applyOptionalFilter(
+            $query,
+            $request->user(),
+            $municipalityId
+        );
+
+        return $query
             ->whereNotNull('owner_name')
             ->where('owner_name', '!=', '')
             ->distinct()
             ->orderBy('owner_name')
             ->limit(500)
             ->pluck('owner_name');
-
-        return view('anti_rabies_vaccinations.create', [
-            'record' => null,
-            'ownerNameOptions' => $ownerNameOptions,
-        ]);
     }
 
     public function store(Request $request)
     {
+        $this->authorize('create', AntiRabiesVaccination::class);
         $data = $this->validateData($request);
+        $data['municipality_id'] = $this->municipalityAccess
+            ->resolveForWrite(
+                $request->user(),
+                $data['municipality_id'] ?? null
+            );
 
         // ✅ If the column still exists in DB, auto-fill it from vaccination_date
         if (Schema::hasColumn('anti_rabies_vaccinations', 'vaccination_year')) {
@@ -265,25 +336,39 @@ class AntiRabiesVaccinationController extends Controller
             ->with('success', 'Anti-rabies vaccination record added successfully.');
     }
 
-    public function edit(AntiRabiesVaccination $antiRabiesVaccination)
+    public function edit(
+        Request $request,
+        AntiRabiesVaccination $antiRabiesVaccination
+    )
     {
-        $ownerNameOptions = AntiRabiesVaccination::query()
-            ->whereNotNull('owner_name')
-            ->where('owner_name', '!=', '')
-            ->distinct()
-            ->orderBy('owner_name')
-            ->limit(500)
-            ->pluck('owner_name');
+        $this->authorize('update', $antiRabiesVaccination);
+        $ownerNameOptions = $this->ownerNameOptions(
+            $request,
+            $antiRabiesVaccination->municipality_id
+        );
 
         return view('anti_rabies_vaccinations.edit', [
             'record' => $antiRabiesVaccination,
             'ownerNameOptions' => $ownerNameOptions,
+            'municipalities' => $this->municipalityAccess->choices(
+                $request->user()
+            ),
+            'canChooseMunicipality' => $request->user()
+                ->canAccessAllMunicipalities(),
+            'selectedMunicipalityId' => $antiRabiesVaccination
+                ->municipality_id,
         ]);
     }
 
     public function update(Request $request, AntiRabiesVaccination $antiRabiesVaccination)
     {
+        $this->authorize('update', $antiRabiesVaccination);
         $data = $this->validateData($request);
+        $data['municipality_id'] = $this->municipalityAccess
+            ->resolveForWrite(
+                $request->user(),
+                $data['municipality_id'] ?? null
+            );
 
         // ✅ If the column still exists in DB, auto-fill it from vaccination_date
         if (Schema::hasColumn('anti_rabies_vaccinations', 'vaccination_year')) {
@@ -299,6 +384,7 @@ class AntiRabiesVaccinationController extends Controller
 
     public function destroy(AntiRabiesVaccination $antiRabiesVaccination)
     {
+        $this->authorize('delete', $antiRabiesVaccination);
         $antiRabiesVaccination->delete();
 
         return back()->with('success', 'Record deleted successfully.');
@@ -307,6 +393,7 @@ class AntiRabiesVaccinationController extends Controller
     private function validateData(Request $request): array
     {
         return $request->validate([
+            'municipality_id' => ['nullable', 'integer'],
             // Owner
             'owner_name' => ['required', 'string', 'max:120'],
             'barangay'   => ['required', 'string', 'max:120'],
@@ -325,12 +412,20 @@ class AntiRabiesVaccinationController extends Controller
 
     public function ownerLookup(Request $request)
     {
+        $this->authorize('viewAny', AntiRabiesVaccination::class);
+
         $name = trim((string) $request->query('name', ''));
         if ($name === '') {
             return response()->json(['exists' => false, 'pets' => []]);
         }
 
+        $municipalityId = $this->municipalityAccess->resolveForWrite(
+            $request->user(),
+            $request->query('municipality_id')
+        );
+
         $records = AntiRabiesVaccination::query()
+            ->where('municipality_id', $municipalityId)
             ->where('owner_name', $name)
             ->orderByDesc('vaccination_date')
             ->get();
@@ -369,5 +464,19 @@ class AntiRabiesVaccinationController extends Controller
             ],
             'pets' => $pets,
         ]);
+    }
+
+    private function scopedQuery(
+        Request $request,
+        mixed $municipalityId = null
+    ): Builder {
+        $query = AntiRabiesVaccination::query();
+        $this->municipalityAccess->applyOptionalFilter(
+            $query,
+            $request->user(),
+            $municipalityId
+        );
+
+        return $query;
     }
 }

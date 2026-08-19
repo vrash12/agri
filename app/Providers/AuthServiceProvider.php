@@ -2,7 +2,20 @@
 
 namespace App\Providers;
 
-// use Illuminate\Support\Facades\Gate;
+use App\Models\AntiRabiesVaccination;
+use App\Models\BackupFile;
+use App\Models\Farmer;
+use App\Models\FarmersCooperative;
+use App\Models\FarmPlot;
+use App\Models\RiceSeedDistribution;
+use App\Models\User;
+use App\Policies\AntiRabiesVaccinationPolicy;
+use App\Policies\BackupFilePolicy;
+use App\Policies\FarmerPolicy;
+use App\Policies\FarmersCooperativePolicy;
+use App\Policies\FarmPlotPolicy;
+use App\Policies\RiceSeedDistributionPolicy;
+use App\Policies\UserPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
 class AuthServiceProvider extends ServiceProvider
@@ -13,7 +26,13 @@ class AuthServiceProvider extends ServiceProvider
      * @var array<class-string, class-string>
      */
     protected $policies = [
-        // 'App\Models\Model' => 'App\Policies\ModelPolicy',
+        Farmer::class => FarmerPolicy::class,
+        FarmPlot::class => FarmPlotPolicy::class,
+        RiceSeedDistribution::class => RiceSeedDistributionPolicy::class,
+        AntiRabiesVaccination::class => AntiRabiesVaccinationPolicy::class,
+        FarmersCooperative::class => FarmersCooperativePolicy::class,
+        BackupFile::class => BackupFilePolicy::class,
+        User::class => UserPolicy::class,
     ];
 
     /**
@@ -24,7 +43,5 @@ class AuthServiceProvider extends ServiceProvider
     public function boot()
     {
         $this->registerPolicies();
-
-        //
     }
 }

@@ -1,586 +1,198 @@
-{{-- resources/views/rice_seed_distributions/index.blade.php --}}
 @extends('layouts.app')
 
-@section('title', 'Rice Seed Distributions')
+@section('title', 'Rice Seed Distribution')
+
+@push('styles')
+  @include('partials.operations-ui-styles')
+@endpush
+
+@php
+  $charts = $charts ?? [];
+  $latestReceived = $stats['latestReceived'] ?? null;
+  $trendYear = $stats['trendYear'] ?? now()->year;
+  $hasFilters = collect([
+      'q', 'municipality_id', 'seed_variety_claimed', 'received_from',
+      'received_to', 'gender', 'kgs_min', 'kgs_max'
+  ])->contains(fn ($key) => filled(request($key))) || (int) ($perPage ?? 10) !== 10;
+  $fmtDate = function ($value, $format = 'M d, Y') {
+      if (blank($value)) return 'No releases yet';
+      try { return \Illuminate\Support\Carbon::parse($value)->format($format); }
+      catch (\Throwable $e) { return 'Not recorded'; }
+  };
+  $canManageOperations = auth()->user()->canManageOperationalData();
+@endphp
 
 @section('content')
-<style>
-  .rsd-card { border-radius: 16px; overflow: hidden; }
-  .rsd-header {
-    display:flex; justify-content:space-between; align-items:flex-start; gap:16px;
-    padding: 16px;
-    background: linear-gradient(180deg, rgba(13,110,253,.06), rgba(13,110,253,0));
-    border-bottom: 1px solid rgba(0,0,0,.06);
-  }
-  .rsd-title { margin:0; font-size: 1.25rem; font-weight: 800; }
-  .rsd-sub { margin-top:.5rem; display:flex; flex-wrap:wrap; gap:.5rem; }
-  .rsd-pill{
-    display:inline-flex; gap:.35rem; align-items:center;
-    padding:.35rem .6rem; border-radius:999px;
-    border:1px solid rgba(0,0,0,.08);
-    background: rgba(255,255,255,.80);
-    font-size: .85rem;
-  }
-  .rsd-pill-soft { background: rgba(25,135,84,.06); border-color: rgba(25,135,84,.16); }
-  .rsd-header-actions { display:flex; flex-wrap:wrap; gap:.5rem; }
-  .rsd-btn { border-radius: 12px; }
-
-  /* Charts Grid */
-  .rsd-grid{
-    display:grid;
-    grid-template-columns: repeat(12, 1fr);
-    gap: 12px;
-    margin: 12px 0 0;
-  }
-  .rsd-chart-card{
-    grid-column: span 12;
-    border:1px solid rgba(0,0,0,.08);
-    border-radius: 16px;
-    background: #fff;
-    box-shadow: 0 8px 20px rgba(0,0,0,.04);
-    overflow: hidden;
-  }
-  /* 2 columns on desktops */
-  @media (min-width: 992px){
-    .rsd-chart-card{ grid-column: span 6; }
-  }
-  /* 3 columns on large screens to fit 9 charts nicely */
-  @media (min-width: 1400px){
-    .rsd-chart-card{ grid-column: span 4; }
-  }
-  
-  .rsd-chart-head{
-    padding: 12px 14px;
-    border-bottom:1px solid rgba(0,0,0,.06);
-    background: rgba(0,0,0,.015);
-  }
-  .rsd-chart-title{ font-weight: 800; }
-  .rsd-chart-sub{ font-size:.85rem; color: rgba(0,0,0,.55); }
-  .rsd-chart-body{
-    padding: 10px 14px 14px;
-    height: 260px;
-  }
-  .rsd-chart-body canvas { width: 100% !important; height: 100% !important; }
-
-  /* Table */
-  .rsd-table-wrap{
-    margin-top: 14px;
-    border:1px solid rgba(0,0,0,.08);
-    border-radius: 16px;
-    overflow:auto;
-    box-shadow: 0 8px 20px rgba(0,0,0,.04);
-  }
-  table.rsd-table{
-    width:100%;
-    margin:0;
-    min-width: 2100px;
-    font-size: .88rem;
-    border-collapse: separate;
-    border-spacing: 0;
-  }
-  .rsd-table thead th{
-    position: sticky;
-    top: 0;
-    z-index: 3;
-    background: #f8f9fa;
-    border-bottom: 1px solid rgba(0,0,0,.12);
-    padding: 10px 10px;
-    white-space: nowrap;
-  }
-  .rsd-table tbody td{
-    border-bottom: 1px solid rgba(0,0,0,.06);
-    padding: 10px 10px;
-    vertical-align: middle;
-  }
-  
-  /* Solid Backgrounds for Rows */
-  .rsd-table tbody tr { background-color: #ffffff; }
-  .rsd-table tbody tr:nth-child(odd) { background-color: #fafafa; }
-  .rsd-table tbody tr:hover td { background-color: #f0f5ff; }
-
-  /* Sticky first column (Actions) with solid colors to prevent overlap */
-  .rsd-sticky-col{
-    position: sticky;
-    left: 0;
-    z-index: 2;
-    background-color: #ffffff; 
-    border-right: 2px solid rgba(0,0,0,.08);
-  }
-  /* Match row backgrounds for the sticky column */
-  .rsd-table tbody tr:nth-child(odd) .rsd-sticky-col { background-color: #fafafa; }
-  .rsd-table tbody tr:hover .rsd-sticky-col { background-color: #f0f5ff; }
-  
-  /* Elevate top-left header */
-  .rsd-table thead th.rsd-sticky-col {
-    z-index: 4; 
-    background-color: #f8f9fa;
-  }
-
-  .rsd-col-actions{
-    width: 170px;
-    min-width: 170px;
-    max-width: 170px;
-  }
-  .rsd-actions{ display:flex; gap:6px; align-items:center; }
-  .rsd-actions form{ margin:0; }
-
-  .rsd-cell{
-    max-width: 220px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .rsd-nowrap{ white-space: nowrap; }
-
-  .rsd-yn{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    min-width: 28px;
-    padding: 2px 8px;
-    border-radius: 999px;
-    font-weight: 800;
-    font-size: .78rem;
-    border: 1px solid rgba(0,0,0,.08);
-  }
-  .rsd-yes{ background: rgba(25,135,84,.12); color: #146c43; border-color: rgba(25,135,84,.20); }
-  .rsd-no { background: rgba(220,53,69,.10); color: #b02a37; border-color: rgba(220,53,69,.20); }
-
-  /* Clean Pagination Design */
-  .rsd-pagination-container {
-    margin-top: 1.25rem;
-    padding: 1rem 1.5rem;
-    background: #fff;
-    border: 1px solid rgba(0,0,0,.08);
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0,0,0,.02);
-  }
-  .rsd-pagination-container nav {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1rem;
-  }
-  .rsd-pagination-container p {
-    margin: 0 !important;
-    color: #6c757d;
-    font-size: 0.9rem;
-  }
-  .rsd-pagination-container div.hidden.sm\:flex-1 {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-  }
-  .rsd-pagination-container a, 
-  .rsd-pagination-container span[aria-disabled="true"] {
-    padding: 0.4rem 0.85rem;
-    border-radius: 8px;
-    border: 1px solid rgba(0,0,0,.1);
-    background: #fff;
-    color: #0d6efd;
-    text-decoration: none;
-    transition: all 0.2s;
-    margin: 0 0.15rem;
-    display: inline-flex;
-    align-items: center;
-  }
-  .rsd-pagination-container a:hover {
-    background: #f0f5ff;
-    border-color: rgba(13,110,253,.3);
-  }
-  .rsd-pagination-container span[aria-current="page"] > span {
-    background: #0d6efd;
-    color: #fff;
-    border-color: #0d6efd;
-    padding: 0.4rem 0.85rem;
-    border-radius: 8px;
-    margin: 0 0.15rem;
-    display: inline-flex;
-  }
-  .rsd-pagination-container svg { width: 1.25rem; height: 1.25rem; }
-</style>
-
-<div class="card rsd-card">
-  <div class="rsd-header">
+<div class="module-page">
+  <header class="module-header">
     <div>
-      <h1 class="rsd-title">Rice Seed Distributions</h1>
+      <div class="module-eyebrow">Rice program operations</div>
+      <h1>Rice seed distribution</h1>
+      <p>Record releases, verify recipient details, monitor seed utilization, and export the current filtered dataset.</p>
+    </div>
+    <div class="module-actions">
+      @if($canManageOperations)<a class="module-button" href="{{ route('rice-seed-distributions.import.form') }}"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"></path></svg>Import workbook</a>@endif
+      <a class="module-button" href="{{ route('rice-seed-distributions.export', request()->query()) }}"><svg viewBox="0 0 24 24"><path d="M12 15V3M7 10l5 5 5-5M5 21h14"></path></svg>Export CSV</a>
+      @if($canManageOperations)<a class="module-button module-button-primary" href="{{ route('rice-seed-distributions.create', ['municipality_id' => $selectedMunicipalityId ?? null]) }}"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>Record release</a>@else<span class="module-badge module-badge-green">Read-only oversight</span>@endif
+    </div>
+  </header>
 
-      <div class="rsd-sub">
-        <span class="rsd-pill">
-          Records: <strong>{{ number_format($totalRecords ?? 0) }}</strong>
-        </span>
-        <span class="rsd-pill rsd-pill-soft">
-          Total Kgs: <strong>{{ number_format($totalKgs ?? 0, 2) }}</strong>
-        </span>
+  @if(session('success'))<div class="module-alert">{{ session('success') }}</div>@endif
+  @if(session('error'))<div class="module-alert module-alert-error">{{ session('error') }}</div>@endif
 
-  
+  <section class="module-kpis" aria-label="Rice distribution summary">
+    <article class="module-kpi">
+      <div class="module-kpi-top"><span class="module-kpi-label">Release records</span><span class="module-kpi-icon"><svg viewBox="0 0 24 24"><path d="M7 3h10v18H7zM10 7h4M10 11h4M10 15h4"></path></svg></span></div>
+      <strong>{{ number_format((int) ($totalRecords ?? 0)) }}</strong>
+      <small>Records matching the current filters</small>
+    </article>
+    <article class="module-kpi">
+      <div class="module-kpi-top"><span class="module-kpi-label">Seed released</span><span class="module-kpi-icon module-kpi-icon-amber"><svg viewBox="0 0 24 24"><path d="M12 21V9M8 13c-3 0-5-2-5-5 3 0 5 2 5 5M16 11c3 0 5-2 5-5-3 0-5 2-5 5"></path></svg></span></div>
+      <strong>{{ number_format((float) ($totalKgs ?? 0), 2) }} <small>kg</small></strong>
+      <small>Total distribution volume</small>
+    </article>
+    <article class="module-kpi">
+      <div class="module-kpi-top"><span class="module-kpi-label">Recipients served</span><span class="module-kpi-icon module-kpi-icon-blue"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg></span></div>
+      <strong>{{ number_format((int) ($uniqueRecipients ?? 0)) }}</strong>
+      <small>Distinct linked farmer profiles</small>
+    </article>
+    <article class="module-kpi">
+      <div class="module-kpi-top"><span class="module-kpi-label">Average release</span><span class="module-kpi-icon"><svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"></path></svg></span></div>
+      <strong>{{ number_format((float) ($averageKgs ?? 0), 2) }} <small>kg</small></strong>
+      <small>Latest release: {{ $fmtDate($latestReceived) }}</small>
+    </article>
+  </section>
+
+  <section class="module-panel">
+    <div class="module-panel-head"><div><h2>Find distribution records</h2><p>Use a broad search or narrow by municipality, variety, date, gender, and quantity.</p></div>@if($hasFilters)<span class="module-panel-tag">Filtered view</span>@endif</div>
+    <form class="module-filter" method="GET" action="{{ route('rice-seed-distributions.index') }}">
+      <div class="module-filter-grid">
+        <div class="module-field module-field-search">
+          <label for="riceSearch">Search recipient</label>
+          <div class="module-search-wrap"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg><input class="module-input" id="riceSearch" type="search" name="q" value="{{ request('q') }}" placeholder="Name, FFRS, or farm location"></div>
+        </div>
+        @if($canChooseMunicipality ?? false)
+          <div class="module-field"><label for="riceMunicipality">Municipality</label><select class="module-input" id="riceMunicipality" name="municipality_id"><option value="">All municipalities</option>@foreach(($municipalities ?? []) as $municipality)<option value="{{ $municipality->id }}" @selected((string) ($selectedMunicipalityId ?? '') === (string) $municipality->id)>{{ $municipality->name }}</option>@endforeach</select></div>
+        @endif
+        <div class="module-field"><label for="riceVariety">Seed variety</label><select class="module-input" id="riceVariety" name="seed_variety_claimed"><option value="">All varieties</option>@foreach(($seedVarietyClaimedOptions ?? []) as $variety)<option value="{{ $variety }}" @selected(request('seed_variety_claimed') === $variety)>{{ $variety }}</option>@endforeach</select></div>
+        <div class="module-field"><label for="riceFrom">Received from</label><input class="module-input" id="riceFrom" type="date" name="received_from" value="{{ request('received_from') }}"></div>
+        <div class="module-field"><label for="riceTo">Received to</label><input class="module-input" id="riceTo" type="date" name="received_to" value="{{ request('received_to') }}"></div>
+        <div class="module-field"><label for="riceGender">Gender</label><select class="module-input" id="riceGender" name="gender"><option value="">All genders</option>@foreach(['Male','Female','Other'] as $gender)<option value="{{ $gender }}" @selected(request('gender') === $gender)>{{ $gender }}</option>@endforeach</select></div>
+        <div class="module-field"><label for="riceKgMin">Minimum kg</label><input class="module-input" id="riceKgMin" type="number" min="0" step="0.01" name="kgs_min" value="{{ request('kgs_min') }}" placeholder="0.00"></div>
+        <div class="module-field"><label for="riceKgMax">Maximum kg</label><input class="module-input" id="riceKgMax" type="number" min="0" step="0.01" name="kgs_max" value="{{ request('kgs_max') }}" placeholder="Any"></div>
+        <div class="module-field"><label for="ricePerPage">Rows per page</label><select class="module-input" id="ricePerPage" name="per_page">@foreach([10,20,50,100] as $n)<option value="{{ $n }}" @selected((int) $perPage === $n)>{{ $n }} rows</option>@endforeach</select></div>
+      </div>
+      <div class="module-filter-actions"><span>@if($hasFilters)<span class="module-active-filter">Totals and charts reflect these filters</span>@else Totals and charts reflect all accessible records @endif</span><div class="module-filter-buttons">@if($hasFilters)<a class="module-button" href="{{ route('rice-seed-distributions.index') }}">Clear filters</a>@endif<button class="module-button module-button-primary" type="submit">Apply filters</button></div></div>
+    </form>
+  </section>
+
+  <section class="module-analytics-grid" aria-label="Rice program analytics">
+    <article class="module-chart">
+      <div class="module-chart-head"><h3>Monthly release trend</h3><p>Kilograms distributed during {{ $trendYear }}</p></div>
+      <div class="module-chart-body"><canvas id="riceMonthlyChart"></canvas>@if(collect($charts['monthly_values'] ?? [])->sum() <= 0)<div class="module-chart-empty">No releases recorded for {{ $trendYear }}.</div>@endif</div>
+    </article>
+    <article class="module-chart">
+      <div class="module-chart-head"><h3>Leading seed varieties</h3><p>Top claimed varieties by released kilograms</p></div>
+      <div class="module-chart-body"><canvas id="riceVarietyChart"></canvas>@if(collect($charts['seed_variety_values'] ?? [])->sum() <= 0)<div class="module-chart-empty">No seed variety data for this view.</div>@endif</div>
+    </article>
+  </section>
+
+  <details class="module-more">
+    <summary>Open detailed program analytics</summary>
+    <div class="module-more-content">
+      <div class="module-analytics-grid">
+        @foreach([
+          ['riceLocationChart','Top farm locations','Kilograms by farm location'],
+          ['riceAreaChart','Farm area by municipality','Total recorded hectares'],
+          ['riceGenderChart','Recipient gender','Distribution record count'],
+          ['riceAgeChart','Recipient age groups','Distribution record count'],
+          ['riceCropChart','Crop establishment','Direct and transplanted methods'],
+          ['riceYieldChart','Leading planted varieties','Total production bags'],
+          ['riceClassChart','Seed class','Distribution record count'],
+          ['riceEligibilityChart','Eligibility groups','Tagged recipient records']
+        ] as [$id,$title,$subtitle])
+          <article class="module-chart"><div class="module-chart-head"><h3>{{ $title }}</h3><p>{{ $subtitle }}</p></div><div class="module-chart-body"><canvas id="{{ $id }}"></canvas></div></article>
+        @endforeach
       </div>
     </div>
+  </details>
 
-    <div class="rsd-header-actions">
-      <a class="btn btn-primary rsd-btn" href="{{ route('rice-seed-distributions.create') }}">+ Add Record</a>
-      <a class="btn btn-outline-secondary rsd-btn" href="{{ route('rice-seed-distributions.import.form') }}">Import Excel</a>
-      <a class="btn btn-outline-success rsd-btn" href="{{ route('rice-seed-distributions.export', request()->query()) }}">Export CSV</a>
-    </div>
-  </div>
-
-  <div class="card-body">
-    @if(session('success'))
-      <div class="alert alert-success">{{ session('success') }}</div>
+  <section class="module-panel">
+    <div class="module-table-tools"><div><strong>Distribution register</strong><span>{{ number_format($records->total()) }} {{ Str::plural('record', $records->total()) }} · open details for monitoring fields</span></div></div>
+    @if($records->isNotEmpty())
+      <div class="module-table-scroll">
+        <table class="module-table">
+          <thead><tr><th>Recipient</th><th>FFRS / RSBSA</th><th>Farm location</th><th>Seed issued</th><th class="module-numeric">Release</th><th>Claim details</th><th>Eligibility</th><th><span class="sr-only">Actions</span></th></tr></thead>
+          <tbody>
+            @foreach($records as $record)
+              @php
+                $name = trim($record->last_name . ', ' . $record->first_name . ' ' . ($record->middle_name ?? '') . ' ' . ($record->ext_name ?? ''));
+                $initials = mb_strtoupper(mb_substr($record->first_name ?? '', 0, 1) . mb_substr($record->last_name ?? '', 0, 1));
+                $eligibility = collect(['ARB' => $record->is_arb, '4Ps' => $record->is_4ps, 'IP' => $record->is_ip, 'PWD' => $record->is_pwd, 'SC' => $record->is_sc, 'OFW' => $record->is_ofw])->filter()->keys();
+              @endphp
+              <tr>
+                <td><div class="module-person"><span class="module-avatar">{{ $initials ?: 'FR' }}</span><span class="module-person-copy"><strong>{{ $name ?: 'Unnamed recipient' }}</strong><small>{{ $record->gender ?: 'Gender not recorded' }}</small></span></div></td>
+                <td class="module-mono"><strong>{{ $record->ffrs ?: 'Not assigned' }}</strong></td>
+                <td><strong>{{ $record->farm_municipality ?: 'Municipality not recorded' }}</strong><small>{{ $record->farm_location ?: 'Farm location not recorded' }}</small></td>
+                <td><strong>{{ $record->seed_variety_claimed ?: 'Not recorded' }}</strong><small>{{ $record->seed_class ?: 'Class not recorded' }} · {{ $record->crop_establishment ?: 'Method not recorded' }}</small></td>
+                <td class="module-numeric"><strong>{{ number_format((float) $record->kgs_received, 2) }} kg</strong><small>{{ $fmtDate($record->date_received) }}</small></td>
+                <td><strong>{{ $record->claimed_area_ha !== null ? number_format((float) $record->claimed_area_ha, 2).' ha' : '—' }}</strong><small>{{ $record->claimed_seeds_kg !== null ? number_format((float) $record->claimed_seeds_kg, 2).' kg claimed' : 'Claimed seeds not recorded' }}</small></td>
+                <td><div class="module-badges">@forelse($eligibility as $tag)<span class="module-badge module-badge-green">{{ $tag }}</span>@empty<span class="module-badge">None</span>@endforelse</div></td>
+                <td><div class="module-row-actions"><button class="module-button module-button-small" type="button" data-row-detail="rice-detail-{{ $record->id }}" aria-expanded="false">Details</button>@if($canManageOperations)<a class="module-button module-button-small" href="{{ route('rice-seed-distributions.edit', $record) }}">Edit</a><form method="POST" action="{{ route('rice-seed-distributions.destroy', $record) }}" onsubmit="return confirm('Delete this rice distribution record?')">@csrf @method('DELETE')<button class="module-button module-button-danger module-button-small" type="submit">Delete</button></form>@endif</div></td>
+              </tr>
+              <tr class="module-detail-row" id="rice-detail-{{ $record->id }}" hidden>
+                <td colspan="8"><dl class="module-detail-grid">
+                  <div><dt>Contact</dt><dd>{{ $record->contact_number ?: '—' }}</dd></div><div><dt>Date of birth</dt><dd>{{ $fmtDate($record->date_of_birth) }}</dd></div><div><dt>Farm area</dt><dd>{{ $record->farm_area_ha !== null ? number_format((float) $record->farm_area_ha, 2).' ha' : '—' }}</dd></div><div><dt>Ecosystem</dt><dd>{{ $record->ecosystem ?: '—' }}</dd></div><div><dt>Ecosystem source</dt><dd>{{ $record->ecosystem_source ?: '—' }}</dd></div>
+                  <div><dt>Lot series</dt><dd>{{ $record->lot_series ?: '—' }}</dd></div><div><dt>Sowing schedule</dt><dd>{{ $record->date_of_sowing_label ?: '—' }}</dd></div><div><dt>Average bag weight</dt><dd>{{ $record->avg_weight_per_bag_kg !== null ? $record->avg_weight_per_bag_kg.' kg' : '—' }}</dd></div><div><dt>Production</dt><dd>{{ $record->total_production_bags !== null ? number_format($record->total_production_bags).' bags' : '—' }}</dd></div><div><dt>Harvested area</dt><dd>{{ $record->avg_area_harvested_ha !== null ? number_format((float) $record->avg_area_harvested_ha, 2).' ha' : '—' }}</dd></div>
+                  <div><dt>Variety planted</dt><dd>{{ $record->seed_variety_planted ?: '—' }}</dd></div><div><dt>Province</dt><dd>{{ $record->farm_province ?: '—' }}</dd></div>
+                </dl></td>
+              </tr>
+            @endforeach
+          </tbody>
+        </table>
+      </div>
+    @else
+      <div class="module-empty"><span class="module-empty-icon"><svg viewBox="0 0 24 24"><path d="M12 21V9M8 13c-3 0-5-2-5-5 3 0 5 2 5 5M16 11c3 0 5-2 5-5-3 0-5 2-5 5"></path></svg></span><strong>No distribution records found</strong><span>{{ $hasFilters ? 'Clear or adjust the current filters to find other releases.' : 'No seed releases have been recorded yet.' }}</span>@if(!$hasFilters && $canManageOperations)<a class="module-button module-button-primary" href="{{ route('rice-seed-distributions.create') }}">Record release</a>@endif</div>
     @endif
-    @if(session('error'))
-      <div class="alert alert-danger">{{ session('error') }}</div>
-    @endif
-
-    {{-- GRAPHS --}}
-    <div class="rsd-grid">
-
-      <div class="rsd-chart-card">
-        <div class="rsd-chart-head">
-          <div class="rsd-chart-title">Top Locations</div>
-          <div class="rsd-chart-sub">Top 10 by total kgs</div>
-        </div>
-        <div class="rsd-chart-body"><canvas id="chartTopLoc"></canvas></div>
-      </div>
-
-      <div class="rsd-chart-card">
-        <div class="rsd-chart-head">
-          <div class="rsd-chart-title">Area by Municipality</div>
-          <div class="rsd-chart-sub">Total farm area (ha)</div>
-        </div>
-        <div class="rsd-chart-body"><canvas id="chartAreaMun"></canvas></div>
-      </div>
-
-      <div class="rsd-chart-card">
-        <div class="rsd-chart-head">
-          <div class="rsd-chart-title">Gender Distribution</div>
-          <div class="rsd-chart-sub">Count of recipients</div>
-        </div>
-        <div class="rsd-chart-body"><canvas id="chartGender"></canvas></div>
-      </div>
-
-  
-
-      <div class="rsd-chart-card">
-        <div class="rsd-chart-head">
-          <div class="rsd-chart-title">Age Groups</div>
-          <div class="rsd-chart-sub">Distribution by age bracket</div>
-        </div>
-        <div class="rsd-chart-body"><canvas id="chartAge"></canvas></div>
-      </div>
-
-      <div class="rsd-chart-card">
-        <div class="rsd-chart-head">
-          <div class="rsd-chart-title">Top Seed Varieties (Claimed)</div>
-          <div class="rsd-chart-sub">Top 10 claimed by total kgs</div>
-        </div>
-        <div class="rsd-chart-body"><canvas id="chartSeedVariety"></canvas></div>
-      </div>
-
-      <div class="rsd-chart-card">
-        <div class="rsd-chart-head">
-          <div class="rsd-chart-title">Crop Establishment</div>
-          <div class="rsd-chart-sub">Direct vs Transplanted methods</div>
-        </div>
-        <div class="rsd-chart-body"><canvas id="chartCropEst"></canvas></div>
-      </div>
-
-      <div class="rsd-chart-card">
-        <div class="rsd-chart-head">
-          <div class="rsd-chart-title">Top Yielding Varieties (Planted)</div>
-          <div class="rsd-chart-sub">Top 10 by total production bags</div>
-        </div>
-        <div class="rsd-chart-body"><canvas id="chartYieldVariety"></canvas></div>
-      </div>
-
-      <div class="rsd-chart-card">
-        <div class="rsd-chart-head">
-          <div class="rsd-chart-title">Seed Class Distribution</div>
-          <div class="rsd-chart-sub">Breakdown of seed classes</div>
-        </div>
-        <div class="rsd-chart-body"><canvas id="chartSeedClass"></canvas></div>
-      </div>
-
-    </div>
-
-    {{-- TABLE --}}
-    <div class="rsd-table-wrap">
-      <table class="rsd-table">
-        <thead>
-          <tr>
-            <th class="rsd-sticky-col rsd-col-actions">Actions</th>
-
-            <th>Date Received</th>
-            <th class="text-end">Kgs</th>
-
-            <th>FFRS / RSBSA</th>
-            <th>Last</th>
-            <th>First</th>
-            <th>Middle</th>
-            <th>Ext</th>
-
-            <th>Gender</th>
-            <th>Birthdate</th>
-            <th>Contact #</th>
-
-            <th>Farm Location</th>
-            <th>Province</th>
-            <th>Municipality</th>
-            <th class="text-end">Farm Area (ha)</th>
-
-            <th>Eco-System</th>
-            <th>Eco-System Source</th>
-
-            <th>Seed Variety Claimed</th>
-            <th class="text-end">Claimed Area</th>
-            <th class="text-end">Claimed Seeds</th>
-            <th>Lot Series</th>
-            <th>Crop Establishment</th>
-            <th>Date of Sowing</th>
-
-            <th class="text-end">Avg Wt/Bag</th>
-            <th class="text-end">Total Prod</th>
-            <th class="text-end">Avg Area Harv</th>
-            <th>Seed Variety Planted</th>
-            <th>Seed Class</th>
-
-            <th class="text-center">ARB</th>
-            <th class="text-center">4Ps</th>
-            <th class="text-center">IP</th>
-            <th class="text-center">PWD</th>
-            <th class="text-center">SC</th>
-            <th class="text-center">OFW</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          @forelse($records as $r)
-            <tr>
-              <td class="rsd-sticky-col rsd-col-actions">
-                <div class="rsd-actions">
-                  <a class="btn btn-sm btn-outline-primary" href="{{ route('rice-seed-distributions.edit', $r) }}">Edit</a>
-                  <form action="{{ route('rice-seed-distributions.destroy', $r) }}" method="POST" onsubmit="return confirm('Delete this record?')">
-                    @csrf
-                    @method('DELETE')
-                    <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
-                  </form>
-                </div>
-              </td>
-
-              <td class="rsd-nowrap">{{ optional($r->date_received)->format('Y-m-d') }}</td>
-              <td class="text-end rsd-nowrap">{{ number_format((float)$r->kgs_received, 2) }}</td>
-
-              <td class="rsd-nowrap">{{ $r->ffrs }}</td>
-
-              <td class="rsd-cell" title="{{ $r->last_name }}">{{ $r->last_name }}</td>
-              <td class="rsd-cell" title="{{ $r->first_name }}">{{ $r->first_name }}</td>
-              <td class="rsd-cell" title="{{ $r->middle_name }}">{{ $r->middle_name }}</td>
-              <td class="rsd-nowrap">{{ $r->ext_name }}</td>
-
-              <td class="rsd-nowrap">{{ $r->gender ?: '—' }}</td>
-              <td class="rsd-nowrap">{{ optional($r->date_of_birth)->format('Y-m-d') }}</td>
-              <td class="rsd-nowrap">{{ $r->contact_number }}</td>
-
-              <td class="rsd-cell" title="{{ $r->farm_location }}">{{ $r->farm_location }}</td>
-              <td class="rsd-cell" title="{{ $r->farm_province }}">{{ $r->farm_province }}</td>
-              <td class="rsd-cell" title="{{ $r->farm_municipality }}">{{ $r->farm_municipality }}</td>
-              <td class="text-end rsd-nowrap">{{ $r->farm_area_ha !== null ? number_format((float)$r->farm_area_ha, 2) : '' }}</td>
-
-              <td class="rsd-cell" title="{{ $r->ecosystem }}">{{ $r->ecosystem }}</td>
-              <td class="rsd-cell" title="{{ $r->ecosystem_source }}">{{ $r->ecosystem_source }}</td>
-
-              <td class="rsd-cell" title="{{ $r->seed_variety_claimed }}">{{ $r->seed_variety_claimed }}</td>
-              <td class="text-end rsd-nowrap">{{ $r->claimed_area_ha !== null ? number_format((float)$r->claimed_area_ha, 2) : '' }}</td>
-              <td class="text-end rsd-nowrap">{{ $r->claimed_seeds_kg !== null ? number_format((float)$r->claimed_seeds_kg, 2) : '' }}</td>
-              <td class="rsd-cell" title="{{ $r->lot_series }}">{{ $r->lot_series }}</td>
-              <td class="rsd-nowrap">{{ $r->crop_establishment }}</td>
-              <td class="rsd-cell" title="{{ $r->date_of_sowing_label }}">{{ $r->date_of_sowing_label }}</td>
-
-              <td class="text-end rsd-nowrap">{{ $r->avg_weight_per_bag_kg }}</td>
-              <td class="text-end rsd-nowrap">{{ $r->total_production_bags }}</td>
-              <td class="text-end rsd-nowrap">{{ $r->avg_area_harvested_ha !== null ? number_format((float)$r->avg_area_harvested_ha, 2) : '' }}</td>
-              <td class="rsd-cell" title="{{ $r->seed_variety_planted }}">{{ $r->seed_variety_planted }}</td>
-              <td class="rsd-nowrap">{{ $r->seed_class }}</td>
-
-              <td class="text-center">
-                @if($r->is_arb) <span class="rsd-yn rsd-yes">Y</span> @else <span class="rsd-yn rsd-no">N</span> @endif
-              </td>
-              <td class="text-center">
-                @if($r->is_4ps) <span class="rsd-yn rsd-yes">Y</span> @else <span class="rsd-yn rsd-no">N</span> @endif
-              </td>
-              <td class="text-center">
-                @if($r->is_ip) <span class="rsd-yn rsd-yes">Y</span> @else <span class="rsd-yn rsd-no">N</span> @endif
-              </td>
-              <td class="text-center">
-                @if($r->is_pwd) <span class="rsd-yn rsd-yes">Y</span> @else <span class="rsd-yn rsd-no">N</span> @endif
-              </td>
-              <td class="text-center">
-                @if($r->is_sc) <span class="rsd-yn rsd-yes">Y</span> @else <span class="rsd-yn rsd-no">N</span> @endif
-              </td>
-              <td class="text-center">
-                @if($r->is_ofw) <span class="rsd-yn rsd-yes">Y</span> @else <span class="rsd-yn rsd-no">N</span> @endif
-              </td>
-            </tr>
-          @empty
-            <tr>
-              <td colspan="34" class="text-center text-muted" style="padding:24px;">No records found.</td>
-            </tr>
-          @endforelse
-        </tbody>
-      </table>
-    </div>
-
-    {{-- WRAPPED PAGINATION FOR CLEAN DESIGN --}}
-    <div class="rsd-pagination-container">
-      {{ $records->links() }}
-    </div>
-  </div>
+    @include('partials.pagination', ['paginator' => $records, 'label' => 'distribution record'])
+  </section>
 </div>
-
-{{-- Use Chart.js UMD build for compatibility --}}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-
-<script>
-  // Ensure charts is an object (not array)
-  var charts = @json($charts ?? (object)[]);
-
-  function arr(v){ return (v && v.length) ? v : []; }
-
-  function makeBar(ctx, labels, values, label){
-    return new Chart(ctx, {
-      type: 'bar',
-      data: { labels: labels, datasets: [{ label: label, data: values, backgroundColor: '#0d6efd' }] },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: { y: { beginAtZero: true } }
-      }
-    });
-  }
-
-  // Top Locations (horizontal bar)
-  if (arr(charts.toploc_labels).length && arr(charts.toploc_values).length) {
-    new Chart(document.getElementById('chartTopLoc'), {
-      type: 'bar',
-      data: {
-        labels: charts.toploc_labels,
-        datasets: [{ label: 'Total Kgs', data: charts.toploc_values, backgroundColor: '#ffc107' }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        indexAxis: 'y',
-        scales: { x: { beginAtZero: true } }
-      }
-    });
-  }
-
-  // Gender (doughnut)
-  if (arr(charts.gender_labels).length && arr(charts.gender_values).length) {
-    new Chart(document.getElementById('chartGender'), {
-      type: 'doughnut',
-      data: {
-        labels: charts.gender_labels,
-        datasets: [{ label: 'Count', data: charts.gender_values }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false
-      }
-    });
-  }
-
-  // Eligibility (vertical bar)
-  if (arr(charts.elig_labels).length && arr(charts.elig_values).length) {
-    makeBar(document.getElementById('chartElig'), charts.elig_labels, charts.elig_values, 'Count');
-  }
-
-  // Age Groups (vertical bar)
-  if (arr(charts.age_labels).length && arr(charts.age_values).length) {
-    makeBar(document.getElementById('chartAge'), charts.age_labels, charts.age_values, 'Count');
-  }
-
-  // Top Seed Varieties Claimed (horizontal bar)
-  if (arr(charts.seed_variety_labels).length && arr(charts.seed_variety_values).length) {
-    new Chart(document.getElementById('chartSeedVariety'), {
-      type: 'bar',
-      data: {
-        labels: charts.seed_variety_labels,
-        datasets: [{ label: 'Total Kgs', data: charts.seed_variety_values, backgroundColor: '#20c997' }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        indexAxis: 'y',
-        scales: { x: { beginAtZero: true } }
-      }
-    });
-  }
-
-  // Crop Establishment (doughnut)
-  if (arr(charts.crop_est_labels).length && arr(charts.crop_est_values).length) {
-    new Chart(document.getElementById('chartCropEst'), {
-      type: 'doughnut',
-      data: {
-        labels: charts.crop_est_labels,
-        datasets: [{ label: 'Count', data: charts.crop_est_values }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false
-      }
-    });
-  }
-
-  // NEW: Top Yielding Planted Varieties (horizontal bar)
-  if (arr(charts.yield_variety_labels).length && arr(charts.yield_variety_values).length) {
-    new Chart(document.getElementById('chartYieldVariety'), {
-      type: 'bar',
-      data: {
-        labels: charts.yield_variety_labels,
-        datasets: [{ label: 'Total Production Bags', data: charts.yield_variety_values, backgroundColor: '#6f42c1' }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        indexAxis: 'y',
-        scales: { x: { beginAtZero: true } }
-      }
-    });
-  }
-
-  // NEW: Seed Class Distribution (doughnut)
-  if (arr(charts.seed_class_labels).length && arr(charts.seed_class_values).length) {
-    new Chart(document.getElementById('chartSeedClass'), {
-      type: 'doughnut',
-      data: {
-        labels: charts.seed_class_labels,
-        datasets: [{ label: 'Count', data: charts.seed_class_values }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false
-      }
-    });
-  }
-
-  // NEW: Area by Municipality (horizontal bar)
-  if (arr(charts.area_mun_labels).length && arr(charts.area_mun_values).length) {
-    new Chart(document.getElementById('chartAreaMun'), {
-      type: 'bar',
-      data: {
-        labels: charts.area_mun_labels,
-        datasets: [{ label: 'Total Area (ha)', data: charts.area_mun_values, backgroundColor: '#fd7e14' }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        indexAxis: 'y',
-        scales: { x: { beginAtZero: true } }
-      }
-    });
-  }
-</script>
 @endsection
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(() => {
+  document.querySelectorAll('[data-row-detail]').forEach(button => {
+    button.addEventListener('click', () => {
+      const detail = document.getElementById(button.dataset.rowDetail);
+      if (!detail) return;
+      const opening = detail.hidden;
+      detail.hidden = !opening;
+      button.setAttribute('aria-expanded', String(opening));
+      button.textContent = opening ? 'Hide' : 'Details';
+    });
+  });
+
+  if (typeof Chart === 'undefined') return;
+  const charts = @json($charts);
+  const grid = 'rgba(23,33,27,.07)';
+  const ticks = { color:'#68756d', font:{ size:9, weight:'600' } };
+  const baseOptions = { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false }, tooltip:{ backgroundColor:'#17211b', padding:9, cornerRadius:6 } }, scales:{ x:{ grid:{ display:false }, ticks }, y:{ beginAtZero:true, grid:{ color:grid }, ticks } } };
+  const create = (id, type, labels, data, options = {}, color = '#17643a') => {
+    const canvas = document.getElementById(id); if (!canvas) return;
+    new Chart(canvas, { type, data:{ labels:labels || [], datasets:[{ data:data || [], backgroundColor:type === 'line' ? 'rgba(23,100,58,.09)' : color, borderColor:color, borderWidth:type === 'line' ? 2 : 0, pointRadius:3, tension:.28, fill:type === 'line' }] }, options:{ ...baseOptions, ...options } });
+  };
+  create('riceMonthlyChart','line',charts.monthly_labels,charts.monthly_values);
+  create('riceVarietyChart','bar',charts.seed_variety_labels,charts.seed_variety_values,{ ...baseOptions, indexAxis:'y' },'#3f8659');
+  create('riceLocationChart','bar',charts.toploc_labels,charts.toploc_values,{ ...baseOptions, indexAxis:'y' },'#b47a19');
+  create('riceAreaChart','bar',charts.area_mun_labels,charts.area_mun_values,{ ...baseOptions, indexAxis:'y' },'#3575b5');
+  create('riceGenderChart','doughnut',charts.gender_labels,charts.gender_values,{ responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:9}}}} },['#3575b5','#d5a034','#85928a']);
+  create('riceAgeChart','bar',charts.age_labels,charts.age_values,{},'#588d6a');
+  create('riceCropChart','doughnut',charts.crop_est_labels,charts.crop_est_values,{ responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:9}}}} },['#17643a','#d5a034']);
+  create('riceYieldChart','bar',charts.yield_variety_labels,charts.yield_variety_values,{ ...baseOptions, indexAxis:'y' },'#6b75aa');
+  create('riceClassChart','doughnut',charts.seed_class_labels,charts.seed_class_values,{ responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:9}}}} },['#17643a','#d5a034','#8d9690']);
+  create('riceEligibilityChart','bar',charts.elig_labels,charts.elig_values,{},'#4d8762');
+})();
+</script>
+@endpush

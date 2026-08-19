@@ -1,151 +1,123 @@
 @extends('layouts.app')
 
-@section('title', 'Farmer Records')
+@section('title', 'Farmer Distribution History')
 
 @section('content')
-  <div class="card">
-    <div class="card-header" style="align-items:flex-start;">
+@include('partials.operations-ui-styles')
+@php
+  $farmerName = trim(collect([$farmer->first_name, $farmer->middle_name, $farmer->last_name, $farmer->ext_name])->filter()->implode(' '));
+  $farmAddress = collect([$farmer->farm_location, $farmer->farm_municipality, $farmer->farm_province])->filter()->implode(' · ');
+  $favoriteLabel = filled($favoriteVariety) && $favoriteVariety !== 'N/A' ? $favoriteVariety : 'No variety recorded';
+  $firstLabel = $firstReceived ? \Illuminate\Support\Carbon::parse($firstReceived)->format('M d, Y') : '—';
+  $lastLabel = $lastReceived ? \Illuminate\Support\Carbon::parse($lastReceived)->format('M d, Y') : '—';
+  $filterCount = collect([request('q'), request('received_from'), request('received_to')])->filter(fn ($value) => filled($value))->count();
+  $canManageOperations = auth()->user()->canManageOperationalData();
+@endphp
+
+<div class="module-page farmer-history-page">
+  @if (session('success'))<div class="module-alert">{{ session('success') }}</div>@endif
+  @if (session('error'))<div class="module-alert module-alert-error">{{ session('error') }}</div>@endif
+
+  <header class="module-header">
+    <div class="farmer-history-heading">
+      <span class="farmer-history-avatar">
+        @if ($farmer->profile_photo_path)
+          <img src="{{ route('farmers.photo', $farmer) }}" alt="{{ $farmerName ?: 'Farmer' }} profile photo">
+        @else
+          {{ strtoupper(substr($farmer->first_name ?: 'F', 0, 1).substr($farmer->last_name ?: 'R', 0, 1)) }}
+        @endif
+      </span>
       <div>
-        <h1 class="h1" style="margin:0;">Distribution Records</h1>
-
-        <p class="p" style="margin-top:8px;">
-          Farmer:
-          <strong>{{ $farmer->last_name }}, {{ $farmer->first_name }} {{ $farmer->middle_name ?? '' }}</strong>
-          @if(!empty($farmer->ffrs))
-            • <span style="font-weight:900;">FFRS:</span> <span class="td-mono">{{ $farmer->ffrs }}</span>
-          @endif
-        </p>
-
-        <p class="p" style="margin-top:6px;">
-          <strong>Farm Location:</strong> {{ $farmer->farm_location ?? '—' }}
-          @if(!empty($farmer->farm_municipality)) • {{ $farmer->farm_municipality }} @endif
-          @if(!empty($farmer->farm_province)) • {{ $farmer->farm_province }} @endif
-        </p>
-
-        <p class="p" style="margin-top:6px;">
-          <strong>Total Records:</strong> {{ $totalRecords }} •
-          <strong>Total Kgs:</strong> {{ number_format((float)$totalKgs, 2) }}
-        </p>
-      </div>
-
-      <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <a class="btn btn-soft" style="box-shadow:none;" href="{{ route('farmers.index') }}">
-          ← Back to Farmers
-        </a>
-
-        <a class="btn" href="{{ route('rice-seed-distributions.create', ['farmer_id' => $farmer->id]) }}">
-          + Add Distribution Record
-        </a>
+        <div class="module-eyebrow">Farmer assistance history</div>
+        <h1>{{ $farmerName ?: 'Farmer profile' }}</h1>
+        <p>{{ $farmer->registry_id }} · {{ $farmAddress ?: 'Farm location not yet recorded' }}{{ $farmer->ffrs ? ' · FFRS '.$farmer->ffrs : '' }}</p>
       </div>
     </div>
-
-    {{-- Filters --}}
-    <div style="padding:16px; border-bottom:1px solid var(--border);">
-      <form method="GET" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
-        <div style="flex:1; min-width:240px;">
-          <label>Search (within this farmer)</label>
-          <input class="input" name="q" value="{{ request('q') }}" placeholder="Variety / lot / sowing label / planted">
-        </div>
-
-        <div style="width:170px;">
-          <label>Rows</label>
-          <select name="per_page">
-            @foreach([10,25,50,100] as $n)
-              <option value="{{ $n }}" @selected((int)request('per_page', $perPage) === $n)>{{ $n }}</option>
-            @endforeach
-          </select>
-        </div>
-
-        <div style="width:170px;">
-          <label>Received From</label>
-          <input class="input" type="date" name="received_from" value="{{ request('received_from') }}">
-        </div>
-
-        <div style="width:170px;">
-          <label>Received To</label>
-          <input class="input" type="date" name="received_to" value="{{ request('received_to') }}">
-        </div>
-
-        <button class="btn btn-soft" style="box-shadow:none;" type="submit">Apply</button>
-
-        <a class="btn btn-soft" style="box-shadow:none;"
-           href="{{ route('farmers.records', $farmer->id) }}">
-          Reset
-        </a>
-      </form>
+    <div class="module-actions">
+      <a class="module-button" href="{{ route('farmers.id-card', $farmer) }}">View ID card</a>
+      @if($canManageOperations)<a class="module-button" href="{{ route('farmers.edit', $farmer) }}">Edit profile</a>@endif
+      <a class="module-button" href="{{ route('farmers.index') }}">Back to registry</a>
+      @if($canManageOperations)
+      <a class="module-button module-button-primary" href="{{ route('rice-seed-distributions.create', ['farmer_id' => $farmer->id]) }}">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        Add distribution
+      </a>
+      @endif
     </div>
+  </header>
 
-    {{-- Records Table --}}
-    <div style="overflow:auto;">
-      <table>
-        <thead>
-          <tr>
-            <th style="width:60px;">No.</th>
-            <th>Date Received</th>
-            <th>Kgs Received</th>
-            <th>Seed Variety Claimed</th>
-            <th>Claimed Area (ha)</th>
-            <th>Claimed Seeds (kg)</th>
-            <th>Lot Series</th>
-            <th style="text-align:right; white-space:nowrap;">Actions</th>
-          </tr>
-        </thead>
+  <section class="module-kpis">
+    <article class="module-kpi"><div class="module-kpi-top"><span class="module-kpi-label">Distribution records</span><span class="module-kpi-icon"><svg viewBox="0 0 24 24"><path d="M7 3h10v18H7zM10 7h4M10 11h4M10 15h4"/></svg></span></div><strong>{{ number_format($totalRecords) }}</strong><small>Matching this history view</small></article>
+    <article class="module-kpi"><div class="module-kpi-top"><span class="module-kpi-label">Seeds received</span><span class="module-kpi-icon module-kpi-icon-amber"><svg viewBox="0 0 24 24"><path d="M12 22V8M7 13c-3-1-4-4-4-7 3 0 6 1 7 4M17 13c3-1 4-4 4-7-3 0-6 1-7 4"/></svg></span></div><strong>{{ number_format($totalKgs, 2) }}<small> kg</small></strong><small>{{ $totalRecords ? number_format($totalKgs / $totalRecords, 2).' kg average per record' : 'No distributions yet' }}</small></article>
+    <article class="module-kpi"><div class="module-kpi-top"><span class="module-kpi-label">Most received variety</span><span class="module-kpi-icon module-kpi-icon-blue"><svg viewBox="0 0 24 24"><path d="M4 19c5-1 8-4 9-9 4 1 6 4 7 8-5 2-11 2-16 1Z"/><path d="M4 19c4-2 7-4 9-9"/></svg></span></div><strong class="farmer-kpi-text">{{ $favoriteLabel }}</strong><small>Based on the current filtered records</small></article>
+    <article class="module-kpi"><div class="module-kpi-top"><span class="module-kpi-label">Latest receipt</span><span class="module-kpi-icon"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg></span></div><strong class="farmer-kpi-text">{{ $lastLabel }}</strong><small>First recorded receipt: {{ $firstLabel }}</small></article>
+  </section>
 
+  <section class="module-panel">
+    <div class="module-panel-head"><div><h2>Search distribution history</h2><p>Filter this farmer's records by variety, lot series, sowing label, or receipt date.</p></div><span class="module-panel-tag">{{ $filterCount ? $filterCount.' active' : 'Complete history' }}</span></div>
+    <form class="module-filter" method="GET">
+      <div class="module-filter-grid">
+        <div class="module-field module-field-search"><label for="history_q">Search history</label><div class="module-search-wrap"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="module-input" type="search" id="history_q" name="q" value="{{ request('q') }}" placeholder="Variety, lot, sowing label, planted seed"></div></div>
+        <div class="module-field"><label for="received_from">Received from</label><input class="module-input" type="date" id="received_from" name="received_from" value="{{ request('received_from') }}"></div>
+        <div class="module-field"><label for="received_to">Received to</label><input class="module-input" type="date" id="received_to" name="received_to" value="{{ request('received_to') }}"></div>
+        <div class="module-field"><label for="history_per_page">Rows per page</label><select class="module-input" id="history_per_page" name="per_page">@foreach([10,25,50,100] as $amount)<option value="{{ $amount }}" @selected((int) $perPage === $amount)>{{ $amount }} rows</option>@endforeach</select></div>
+      </div>
+      <div class="module-filter-actions"><span>{{ number_format($records->total()) }} matching record{{ $records->total() === 1 ? '' : 's' }}</span><div class="module-filter-buttons">@if($filterCount)<a class="module-button" href="{{ route('farmers.records', $farmer) }}">Clear filters</a>@endif<button class="module-button module-button-primary" type="submit">Apply filters</button></div></div>
+    </form>
+  </section>
+
+  @if ($totalRecords > 0)
+    <section class="module-analytics-grid">
+      <article class="module-chart"><div class="module-chart-head"><h3>Seed volume over time</h3><p>Kilograms received on each recorded date.</p></div><div class="module-chart-body"><canvas id="historyTimelineChart"></canvas></div></article>
+      <article class="module-chart"><div class="module-chart-head"><h3>Volume by variety</h3><p>Total received kilograms grouped by claimed seed variety.</p></div><div class="module-chart-body"><canvas id="historyVarietyChart"></canvas></div></article>
+    </section>
+  @endif
+
+  <section class="module-panel">
+    <div class="module-table-tools"><div><strong>Distribution ledger</strong><span>All rice-seed releases linked to {{ $farmerName ?: 'this farmer' }}.</span></div><span>{{ number_format($totalKgs, 2) }} kg in results</span></div>
+    <div class="module-table-scroll">
+      <table class="module-table farmer-history-table">
+        <thead><tr><th>Date received</th><th>Seed variety</th><th class="module-numeric">Received</th><th class="module-numeric">Claimed area</th><th class="module-numeric">Claimed seeds</th><th>Lot series</th><th style="text-align:right">Actions</th></tr></thead>
         <tbody>
-        @forelse($records as $r)
-          <tr>
-            <td style="font-weight:900;">
-              {{ ($records->currentPage() - 1) * $records->perPage() + $loop->iteration }}
-            </td>
-
-            <td>{{ $r->date_received ? \Illuminate\Support\Carbon::parse($r->date_received)->format('Y-m-d') : '—' }}</td>
-            <td style="font-weight:900;">{{ number_format((float)$r->kgs_received, 2) }}</td>
-
-            <td>{{ $r->seed_variety_claimed ?? '—' }}</td>
-            <td>{{ $r->claimed_area_ha ?? '—' }}</td>
-            <td>{{ $r->claimed_seeds_kg ?? '—' }}</td>
-
-            <td style="max-width:320px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"
-                title="{{ $r->lot_series ?? '' }}">
-              {{ $r->lot_series ?? '—' }}
-            </td>
-
-            <td style="text-align:right; white-space:nowrap;">
-              <a class="btn btn-soft" style="padding:8px 10px; box-shadow:none;"
-                 href="{{ route('rice-seed-distributions.edit', $r) }}">
-                Edit
-              </a>
-
-              <form method="POST" action="{{ route('rice-seed-distributions.destroy', $r) }}"
-                    style="display:inline;" onsubmit="return confirm('Delete this record?')">
-                @csrf
-                @method('DELETE')
-                <button class="btn btn-danger" style="padding:8px 10px;" type="submit">Delete</button>
-              </form>
-            </td>
-          </tr>
-        @empty
-          <tr>
-            <td colspan="8" style="padding:18px; color:var(--muted);">
-              No distribution records found for this farmer.
-            </td>
-          </tr>
-        @endforelse
+          @forelse ($records as $record)
+            <tr>
+              <td><strong>{{ $record->date_received ? \Illuminate\Support\Carbon::parse($record->date_received)->format('M d, Y') : '—' }}</strong><small>{{ $record->date_received ? \Illuminate\Support\Carbon::parse($record->date_received)->diffForHumans() : 'Date not recorded' }}</small></td>
+              <td><span class="module-badge module-badge-green">{{ $record->seed_variety_claimed ?: 'Unspecified' }}</span><small>{{ $record->seed_variety_planted ? 'Planted: '.$record->seed_variety_planted : 'Planted variety not recorded' }}</small></td>
+              <td class="module-numeric"><strong>{{ number_format((float) $record->kgs_received, 2) }} kg</strong></td>
+              <td class="module-numeric">{{ $record->claimed_area_ha !== null ? number_format((float) $record->claimed_area_ha, 2).' ha' : '—' }}</td>
+              <td class="module-numeric">{{ $record->claimed_seeds_kg !== null ? number_format((float) $record->claimed_seeds_kg, 2).' kg' : '—' }}</td>
+              <td><strong class="module-mono">{{ $record->lot_series ?: '—' }}</strong><small>{{ $record->date_of_sowing_label ?: 'No sowing label' }}</small></td>
+              <td>@if($canManageOperations)<div class="module-row-actions"><a class="module-button module-button-small" href="{{ route('rice-seed-distributions.edit', $record) }}">Edit</a><form method="POST" action="{{ route('rice-seed-distributions.destroy', $record) }}" onsubmit="return confirm('Delete this distribution record?');">@csrf @method('DELETE')<button class="module-button module-button-small module-button-danger" type="submit">Delete</button></form></div>@else<span class="module-badge module-badge-green">Read only</span>@endif</td>
+            </tr>
+          @empty
+            <tr><td colspan="7"><div class="module-empty"><span class="module-empty-icon"><svg viewBox="0 0 24 24"><path d="M12 22V8M7 13c-3-1-4-4-4-7 3 0 6 1 7 4M17 13c3-1 4-4 4-7-3 0-6 1-7 4"/></svg></span><strong>No distribution records found</strong><span>{{ $filterCount ? 'No records match the current filters.' : 'No releases have been recorded for this farmer.' }}</span>@if($canManageOperations)<a class="module-button module-button-primary" href="{{ route('rice-seed-distributions.create', ['farmer_id' => $farmer->id]) }}">Add distribution</a>@endif</div></td></tr>
+          @endforelse
         </tbody>
       </table>
     </div>
-
-    <div style="padding:14px 16px;">
-      {{ $records->appends(request()->query())->links() }}
-    </div>
-  </div>
+    @include('partials.pagination', ['paginator' => $records, 'label' => 'distribution record'])
+  </section>
+</div>
 @endsection
 
 @push('styles')
 <style>
-  .td-mono{
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
-    font-size: 12px;
-  }
+  .farmer-history-heading{display:flex;align-items:center;gap:13px}.farmer-history-avatar{width:46px;height:46px;display:grid;place-items:center;overflow:hidden;flex:0 0 auto;border-radius:10px;color:#fff;background:#285a3b;font-size:12px;font-weight:900}.farmer-history-avatar img{width:100%;height:100%;display:block;object-fit:cover}.farmer-kpi-text{overflow:hidden;font-size:18px!important;line-height:1.15!important;text-overflow:ellipsis;white-space:nowrap}.farmer-history-table{min-width:980px}
+  @media(max-width:620px){.farmer-history-heading{align-items:flex-start}.farmer-history-avatar{display:none}}
 </style>
+@endpush
+
+@push('scripts')
+@if ($totalRecords > 0)
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const timeline = @json($kgsOverTime ?? []);
+    const varieties = @json($varietyChartData ?? []);
+    const common = {responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'#edf1ee'},ticks:{font:{size:9}}},x:{grid:{display:false},ticks:{font:{size:9}}}}};
+    new Chart(document.getElementById('historyTimelineChart'), {type:'line',data:{labels:Object.keys(timeline),datasets:[{data:Object.values(timeline),borderColor:'#17643a',backgroundColor:'rgba(23,100,58,.1)',fill:true,tension:.28,pointRadius:3}]},options:common});
+    new Chart(document.getElementById('historyVarietyChart'), {type:'bar',data:{labels:Object.keys(varieties),datasets:[{data:Object.values(varieties),backgroundColor:'#4f8765',borderRadius:4,maxBarThickness:38}]},options:common});
+  });
+</script>
+@endif
 @endpush
