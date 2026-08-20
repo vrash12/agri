@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AgriculturalMachineryController;
 use App\Http\Controllers\AntiRabiesVaccinationController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
@@ -153,6 +154,13 @@ Route::middleware('auth')->group(function () {
     )->name('farm-plots.all');
 
     Route::get(
+        '/farm-plots/{plot}/static-map',
+        [FarmPlotController::class, 'staticMap']
+    )
+        ->middleware('throttle:30,1')
+        ->name('farm-plots.static-map');
+
+    Route::get(
         '/farmers/{farmer}/plots',
         [FarmPlotController::class, 'index']
     )->name('farmers.plots.index');
@@ -290,6 +298,28 @@ Route::middleware('auth')->group(function () {
         RiceSeedDistributionController::class
     )->except(['show'])->parameters([
         'rice-seed-distributions' => 'riceSeedDistribution',
+    ]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | AGRICULTURAL MACHINERY INVENTORY
+    |--------------------------------------------------------------------------
+    */
+    Route::get(
+        '/machinery-inventory/export',
+        [AgriculturalMachineryController::class, 'export']
+    )->name('machinery-inventory.export');
+
+    Route::get(
+        '/machinery-inventory/holders',
+        [AgriculturalMachineryController::class, 'holders']
+    )->name('machinery-inventory.holders');
+
+    Route::resource(
+        'machinery-inventory',
+        AgriculturalMachineryController::class
+    )->except(['show'])->parameters([
+        'machinery-inventory' => 'machinery',
     ]);
 
     /*

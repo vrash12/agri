@@ -40,6 +40,64 @@ class RiceSeedDistributionController extends Controller
         'US 88',
     ];
 
+    private array $inputCategoryOptions = [
+        'rice_seed' => 'Rice seed',
+        'corn_seed' => 'Corn seed',
+        'vegetable_seed' => 'Vegetable seed',
+        'fertilizer' => 'Fertilizer / Abono',
+        'soil_amendment' => 'Soil amendment',
+        'other_input' => 'Other farm input',
+    ];
+
+    private array $inputSuggestions = [
+        'rice_seed' => [
+            'BIO ZARAP', 'Habilis Plus', 'Hatao Dinorado', 'LP 2096',
+            'LP 534', 'LP 937', 'S6003', 'SL-19H', 'SL-20H', 'SL-39H',
+            'SL-68H', 'SL-8H', 'US 88',
+        ],
+        'corn_seed' => [
+            'Hybrid yellow corn seed',
+            'Open-pollinated corn seed',
+            'White corn seed',
+        ],
+        'vegetable_seed' => [
+            'Eggplant seed',
+            'Okra seed',
+            'Tomato seed',
+            'String bean seed',
+            'Squash seed',
+        ],
+        'fertilizer' => [
+            'Urea 46-0-0',
+            'Complete 14-14-14',
+            'Ammonium Sulfate 21-0-0',
+            'Muriate of Potash 0-0-60',
+            'Organic fertilizer',
+        ],
+        'soil_amendment' => [
+            'Agricultural lime',
+            'Compost',
+            'Vermicast',
+            'Dolomite',
+        ],
+        'other_input' => [
+            'Seedling tray',
+            'Inoculant',
+            'Plant growth supplement',
+        ],
+    ];
+
+    private array $quantityUnitOptions = [
+        'kg' => 'Kilogram (kg)',
+        'sack' => 'Sack / bag',
+        'pack' => 'Pack',
+        'g' => 'Gram (g)',
+        'l' => 'Liter (L)',
+        'ml' => 'Milliliter (mL)',
+        'bottle' => 'Bottle',
+        'piece' => 'Piece',
+    ];
+
     private array $cropEstablishmentOptions = [
         'Direct',
         'Transplanted',
@@ -61,8 +119,10 @@ class RiceSeedDistributionController extends Controller
 
         // Totals (filtered)
         $totalRecords = (clone $baseQuery)->count();
-        $totalKgs     = (float) (clone $baseQuery)->sum('kgs_received');
-        $averageKgs   = (float) ((clone $baseQuery)->avg('kgs_received') ?? 0);
+        $totalKgs = (float) $this->kilogramReleases(clone $baseQuery)
+            ->sum('kgs_received');
+        $averageKgs = (float) ($this->kilogramReleases(clone $baseQuery)
+            ->avg('kgs_received') ?? 0);
         $uniqueRecipients = (clone $baseQuery)
             ->whereNotNull('farmer_id')
             ->distinct()
@@ -74,7 +134,7 @@ class RiceSeedDistributionController extends Controller
             ? (int) date('Y', strtotime($latestReceived))
             : (int) now()->year;
 
-        $monthlyReleases = (clone $baseQuery)
+        $monthlyReleases = $this->kilogramReleases(clone $baseQuery)
             ->whereYear('date_received', $trendYear)
             ->selectRaw('MONTH(date_received) as month_number, SUM(kgs_received) as total_kgs')
             ->groupBy('month_number')
@@ -84,7 +144,7 @@ class RiceSeedDistributionController extends Controller
         // ===== Charts (based on current filters) =====
 
         // 1) Top 10 Locations by total kgs
-        $topLocations = (clone $baseQuery)
+        $topLocations = $this->kilogramReleases(clone $baseQuery)
             ->whereNotNull('farm_location')
             ->where('farm_location', '!=', '')
             ->selectRaw("farm_location, SUM(kgs_received) as total")
@@ -125,13 +185,23 @@ class RiceSeedDistributionController extends Controller
             ->get();
 
         // 5) Top Seed Varieties Claimed (By Kgs)
-        $seedVarieties = (clone $baseQuery)
+        $seedVarieties = $this->kilogramReleases(clone $baseQuery)
+            ->where(function (Builder $query) {
+                $query->whereNull('input_category')
+                    ->orWhere('input_category', 'rice_seed');
+            })
             ->whereNotNull('seed_variety_claimed')
             ->where('seed_variety_claimed', '!=', '')
             ->selectRaw("seed_variety_claimed, SUM(kgs_received) as total_kgs")
             ->groupBy('seed_variety_claimed')
             ->orderByDesc('total_kgs')
             ->limit(10)
+            ->get();
+
+        $inputCategories = (clone $baseQuery)
+            ->selectRaw("COALESCE(NULLIF(input_category,''),'rice_seed') as category, COUNT(*) as cnt")
+            ->groupBy('category')
+            ->orderByDesc('cnt')
             ->get();
 
         // 6) Crop Establishment Methods (Count)
@@ -200,6 +270,13 @@ class RiceSeedDistributionController extends Controller
             'seed_variety_labels' => $seedVarieties->pluck('seed_variety_claimed')->values(),
             'seed_variety_values' => $seedVarieties->pluck('total_kgs')->map(fn ($v) => (float) $v)->values(),
 
+            'input_category_labels' => $inputCategories
+                ->pluck('category')
+                ->map(fn ($category) => $this->inputCategoryOptions[$category]
+                    ?? ucfirst(str_replace('_', ' ', $category)))
+                ->values(),
+            'input_category_values' => $inputCategories->pluck('cnt')->map(fn ($v) => (int) $v)->values(),
+
             'crop_est_labels' => $cropEst->pluck('crop_establishment')->values(),
             'crop_est_values' => $cropEst->pluck('cnt')->map(fn ($v) => (int) $v)->values(),
 
@@ -245,6 +322,8 @@ class RiceSeedDistributionController extends Controller
             'canChooseMunicipality' => $request->user()
                 ->canAccessAllMunicipalities(),
             'selectedMunicipalityId' => $request->query('municipality_id'),
+            'inputCategoryOptions' => $this->inputCategoryOptions,
+            'quantityUnitOptions' => $this->quantityUnitOptions,
         ]);
     }
 
@@ -366,6 +445,8 @@ class RiceSeedDistributionController extends Controller
 
                     'farm_area_ha'  => $farmer?->farm_area_ha ?? $claimedArea,
                     'kgs_received'  => $claimedSeeds ?? 0,
+                    'input_category' => 'rice_seed',
+                    'quantity_unit' => 'kg',
                     'date_received' => now()->toDateString(),
 
                     'seed_variety_claimed' => $seedVarietyClaimed,
@@ -421,6 +502,9 @@ class RiceSeedDistributionController extends Controller
             'seedVarietyClaimedOptions' => $this->seedVarietyClaimedOptions,
             'cropEstablishmentOptions'  => $this->cropEstablishmentOptions,
             'seedClassOptions'          => $this->seedClassOptions,
+            'inputCategoryOptions'      => $this->inputCategoryOptions,
+            'inputSuggestions'          => $this->inputSuggestions,
+            'quantityUnitOptions'       => $this->quantityUnitOptions,
             'farmer_id'                 => $selectedFarmerId,
             'municipalities' => $this->municipalityAccess->choices(
                 $request->user()
@@ -455,7 +539,7 @@ class RiceSeedDistributionController extends Controller
 
         return redirect()
             ->route('rice-seed-distributions.index')
-            ->with('success', 'Rice seed distribution record added successfully.');
+            ->with('success', 'Seed or farm-input release added successfully.');
     }
 
     public function edit(
@@ -472,6 +556,9 @@ class RiceSeedDistributionController extends Controller
             'seedVarietyClaimedOptions' => $this->seedVarietyClaimedOptions,
             'cropEstablishmentOptions'  => $this->cropEstablishmentOptions,
             'seedClassOptions'          => $this->seedClassOptions,
+            'inputCategoryOptions'      => $this->inputCategoryOptions,
+            'inputSuggestions'          => $this->inputSuggestions,
+            'quantityUnitOptions'       => $this->quantityUnitOptions,
             'farmer_id'                 => $riceSeedDistribution->farmer_id,
             'municipalities' => $this->municipalityAccess->choices(
                 $request->user()
@@ -504,7 +591,7 @@ class RiceSeedDistributionController extends Controller
 
         return redirect()
             ->route('rice-seed-distributions.index')
-            ->with('success', 'Rice seed distribution record updated successfully.');
+            ->with('success', 'Seed or farm-input release updated successfully.');
     }
 
     public function destroy(RiceSeedDistribution $riceSeedDistribution)
@@ -524,7 +611,7 @@ class RiceSeedDistributionController extends Controller
             ->orderBy('last_name')
             ->orderBy('first_name');
 
-        $filename = 'rice_seed_distribution_' . now()->format('Y-m-d_H-i-s') . '.csv';
+        $filename = 'seed_and_input_distribution_' . now()->format('Y-m-d_H-i-s') . '.csv';
 
         $headings = [
             'No.',
@@ -542,7 +629,11 @@ class RiceSeedDistributionController extends Controller
             'SC',
             'OFW',
             'Farm Area (ha)',
-            'No. of kgs Received',
+            'Input Category',
+            'Item / Variety',
+            'Quantity Released',
+            'Unit',
+            'Input Notes',
             'Date Received',
         ];
 
@@ -572,7 +663,12 @@ class RiceSeedDistributionController extends Controller
                         $r->is_sc ? 'Y' : 'N',
                         $r->is_ofw ? 'Y' : 'N',
                         $r->farm_area_ha,
+                        $this->inputCategoryOptions[$r->input_category]
+                            ?? ucfirst(str_replace('_', ' ', $r->input_category ?: 'rice_seed')),
+                        $r->seed_variety_claimed,
                         $r->kgs_received,
+                        $r->quantity_unit ?: 'kg',
+                        $r->input_notes,
                         optional($r->date_received)->format('Y-m-d'),
                     ]);
                 }
@@ -601,7 +697,9 @@ class RiceSeedDistributionController extends Controller
                     ->orWhere('first_name', 'like', "%{$q}%")
                     ->orWhere('middle_name', 'like', "%{$q}%")
                     ->orWhere('ffrs', 'like', "%{$q}%")
-                    ->orWhere('farm_location', 'like', "%{$q}%");
+                    ->orWhere('farm_location', 'like', "%{$q}%")
+                    ->orWhere('seed_variety_claimed', 'like', "%{$q}%")
+                    ->orWhere('input_notes', 'like', "%{$q}%");
             });
         }
 
@@ -621,8 +719,13 @@ class RiceSeedDistributionController extends Controller
             'seed_variety_claimed',
             ''
         ));
-        if (in_array($seedVariety, $this->seedVarietyClaimedOptions, true)) {
-            $query->where('seed_variety_claimed', $seedVariety);
+        if ($seedVariety !== '') {
+            $query->where('seed_variety_claimed', 'like', "%{$seedVariety}%");
+        }
+
+        $inputCategory = $request->query('input_category');
+        if (array_key_exists((string) $inputCategory, $this->inputCategoryOptions)) {
+            $query->where('input_category', $inputCategory);
         }
 
         foreach (['is_arb', 'is_4ps', 'is_ip', 'is_pwd', 'is_sc', 'is_ofw'] as $col) {
@@ -649,6 +752,15 @@ class RiceSeedDistributionController extends Controller
         if ($max !== null && $max !== '' && is_numeric($max)) {
             $query->where($column, '<=', $max);
         }
+    }
+
+    private function kilogramReleases(Builder $query): Builder
+    {
+        return $query->where(function (Builder $query) {
+            $query->whereNull('quantity_unit')
+                ->orWhere('quantity_unit', '')
+                ->orWhere('quantity_unit', 'kg');
+        });
     }
 
     private function applyDateRange(Builder $query, string $column, $from, $to): void
@@ -698,11 +810,19 @@ class RiceSeedDistributionController extends Controller
 
     private function validateDistributionForm(Request $request): array
     {
+        $request->merge([
+            'input_category' => $request->input('input_category', 'rice_seed'),
+            'quantity_unit' => $request->input('quantity_unit', 'kg'),
+        ]);
+
         return $request->validate([
             'municipality_id' => ['nullable', 'integer'],
             'farmer_id' => ['required', 'exists:farmers,id'],
 
-            'seed_variety_claimed' => ['required', Rule::in($this->seedVarietyClaimedOptions)],
+            'input_category'       => ['required', Rule::in(array_keys($this->inputCategoryOptions))],
+            'seed_variety_claimed' => ['required', 'string', 'max:200'],
+            'quantity_unit'        => ['required', Rule::in(array_keys($this->quantityUnitOptions))],
+            'input_notes'          => ['nullable', 'string', 'max:1000'],
             'claimed_area_ha'      => ['nullable', 'numeric', 'min:0'],
             'claimed_seeds_kg'     => ['nullable', 'numeric', 'min:0'],
             'lot_series'           => ['nullable', 'string'],
@@ -731,10 +851,12 @@ class RiceSeedDistributionController extends Controller
             [
                 'municipality_id'       => $municipalityId,
                 'farmer_id'             => $farmer->id,
+                'input_category'        => $validated['input_category'],
                 'seed_variety_claimed'  => $validated['seed_variety_claimed'],
                 'claimed_area_ha'       => $validated['claimed_area_ha'] ?? null,
                 'claimed_seeds_kg'      => $validated['claimed_seeds_kg'] ?? null,
                 'lot_series'            => $this->nullIfEmpty($validated['lot_series'] ?? null),
+                'input_notes'           => $this->nullIfEmpty($validated['input_notes'] ?? null),
                 'crop_establishment'    => $validated['crop_establishment'] ?? null,
                 'date_of_sowing_label'  => $this->nullIfEmpty($validated['date_of_sowing_label'] ?? null),
                 'avg_weight_per_bag_kg' => $validated['avg_weight_per_bag_kg'] ?? null,
@@ -743,6 +865,7 @@ class RiceSeedDistributionController extends Controller
                 'seed_variety_planted'  => $this->nullIfEmpty($validated['seed_variety_planted'] ?? null),
                 'seed_class'            => $validated['seed_class'] ?? null,
                 'kgs_received'          => $validated['kgs_received'],
+                'quantity_unit'         => $validated['quantity_unit'],
                 'date_received'         => $validated['date_received'],
             ]
         );

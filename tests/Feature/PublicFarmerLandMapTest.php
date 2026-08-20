@@ -7,7 +7,9 @@ use App\Models\FarmPlot;
 use App\Models\Municipality;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class PublicFarmerLandMapTest extends TestCase
@@ -104,5 +106,39 @@ class PublicFarmerLandMapTest extends TestCase
             ->assertSee('SCAN LAND MAP')
             ->assertSee('data:image/svg+xml;base64,', false)
             ->assertSee($scanUrl, false);
+    }
+
+    public function test_authorized_static_map_proxy_returns_same_origin_image(): void
+    {
+        config([
+            'services.google_maps.static_key' => 'test-static-key',
+            'app.url' => 'https://agritarlac.example',
+        ]);
+        Cache::flush();
+        Http::fake([
+            'maps.googleapis.com/*' => Http::response(
+                'fake-png-binary',
+                200,
+                ['Content-Type' => 'image/png']
+            ),
+        ]);
+
+        $plot = $this->farmer->farmPlots()->firstOrFail();
+
+        $this->actingAs($this->municipalUser)
+            ->get(route('farm-plots.static-map', $plot))
+            ->assertOk()
+            ->assertHeader('Content-Type', 'image/png')
+            ->assertSee('fake-png-binary');
+
+        Http::assertSent(function ($request) {
+            return str_starts_with(
+                $request->url(),
+                'https://maps.googleapis.com/maps/api/staticmap'
+            )
+                && $request['maptype'] === 'hybrid'
+                && $request['key'] === 'test-static-key'
+                && str_contains((string) $request['path'], 'fillcolor:');
+        });
     }
 }

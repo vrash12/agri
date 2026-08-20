@@ -282,7 +282,7 @@
                   <small>No saved boundary</small>
                 @endif
               </td>
-              <td data-label="Assistance history"><strong>{{ number_format((float) ($farmer->total_kgs ?? 0), 2) }} kg</strong><small>{{ number_format($recordCount) }} distribution record{{ $recordCount === 1 ? '' : 's' }}</small></td>
+              <td data-label="Assistance history"><strong>{{ number_format((float) ($farmer->total_kgs ?? 0), 2) }} kg</strong><small>Weight-based · {{ number_format($recordCount) }} distribution record{{ $recordCount === 1 ? '' : 's' }}</small></td>
               <td data-label="Latest activity"><strong>{{ $lastReceived ?: 'No distribution yet' }}</strong><small>{{ $farmer->updated_at ? 'Profile updated '.$farmer->updated_at->diffForHumans() : '—' }}</small></td>
               <td data-label="Actions">
                 <div class="module-row-actions">

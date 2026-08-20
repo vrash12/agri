@@ -10,6 +10,26 @@ class RiceSeedDistribution extends Model
 {
     use HasFactory;
 
+    public const INPUT_CATEGORY_LABELS = [
+        'rice_seed' => 'Rice seed',
+        'corn_seed' => 'Corn seed',
+        'vegetable_seed' => 'Vegetable seed',
+        'fertilizer' => 'Fertilizer / Abono',
+        'soil_amendment' => 'Soil amendment',
+        'other_input' => 'Other farm input',
+    ];
+
+    public const QUANTITY_UNIT_LABELS = [
+        'kg' => 'kg',
+        'sack' => 'sacks',
+        'pack' => 'packs',
+        'g' => 'g',
+        'l' => 'L',
+        'ml' => 'mL',
+        'bottle' => 'bottles',
+        'piece' => 'pieces',
+    ];
+
     protected $table = 'rice_seed_distributions';
 
     protected $fillable = [
@@ -17,6 +37,11 @@ class RiceSeedDistribution extends Model
 
         // FK (connected to farmers.id in your SQL)
         'farmer_id',
+
+        // Flexible seed and farm-input details
+        'input_category',
+        'quantity_unit',
+        'input_notes',
 
         // Excel/NRP claim fields
         'seed_variety_claimed',
@@ -88,6 +113,11 @@ class RiceSeedDistribution extends Model
         'farm_area_ha' => 'decimal:2', // decimal(10,2)
     ];
 
+    protected $attributes = [
+        'input_category' => 'rice_seed',
+        'quantity_unit' => 'kg',
+    ];
+
     /**
      * rice_seed_distributions.farmer_id -> farmers.id
      */
@@ -99,5 +129,28 @@ class RiceSeedDistribution extends Model
     public function municipality(): BelongsTo
     {
         return $this->belongsTo(Municipality::class);
+    }
+
+    public function inputCategoryLabel(): string
+    {
+        $category = $this->input_category ?: 'rice_seed';
+
+        return self::INPUT_CATEGORY_LABELS[$category]
+            ?? ucfirst(str_replace('_', ' ', $category));
+    }
+
+    public function quantityUnitLabel(): string
+    {
+        $unit = $this->quantity_unit ?: 'kg';
+
+        return self::QUANTITY_UNIT_LABELS[$unit] ?? $unit;
+    }
+
+    public function isSeedInput(): bool
+    {
+        return str_ends_with(
+            $this->input_category ?: 'rice_seed',
+            '_seed'
+        );
     }
 }

@@ -8,7 +8,9 @@ use App\Support\MunicipalityAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 
 class FarmPlotController extends Controller
 {
@@ -57,6 +59,109 @@ class FarmPlotController extends Controller
                     'centroid_lng',
                     'created_at',
                 ]),
+        ]);
+    }
+
+    /**
+     * Proxy a Google Static Maps image through the authenticated application.
+     *
+     * Loading the Google image directly in a browser canvas taints the canvas
+     * because the Static Maps response is cross-origin. Returning it from this
+     * same-origin endpoint keeps PNG exports usable and keeps the server-side
+     * Static Maps key out of generated HTML and JavaScript.
+     */
+    public function staticMap(FarmPlot $plot)
+    {
+        $this->authorize('view', $plot);
+
+        $apiKey = (string) config('services.google_maps.static_key', '');
+        if ($apiKey === '') {
+            return response('Google Maps Static API is not configured.', 503)
+                ->header('Cache-Control', 'no-store');
+        }
+
+        $polygon = $this->normalizePolygon($plot->polygon_json ?: []);
+        if (count($polygon) < 3) {
+            return response('The plot has no valid polygon.', 422)
+                ->header('Cache-Control', 'no-store');
+        }
+
+        $color = ltrim($this->normalizeHexColor($plot->color), '#');
+        $points = $this->sampleStaticMapPolygon($polygon);
+        $path = [
+            'fillcolor:0x'.$color.'66',
+            'color:0x'.$color.'FF',
+            'weight:5',
+        ];
+
+        foreach ($points as $point) {
+            $path[] = number_format($point['lat'], 6, '.', '')
+                .','.number_format($point['lng'], 6, '.', '');
+        }
+
+        $first = $points[0];
+        $path[] = number_format($first['lat'], 6, '.', '')
+            .','.number_format($first['lng'], 6, '.', '');
+
+        $cacheKey = 'farm-plot-static-map:v2:'
+            .$plot->getKey().':'
+            .sha1(json_encode([$points, $color]));
+
+        $map = Cache::remember(
+            $cacheKey,
+            now()->addHours(12),
+            function () use ($apiKey, $path): ?array {
+                $response = Http::withHeaders([
+                    'Accept' => 'image/png,image/*;q=0.9',
+                    'Referer' => rtrim((string) config('app.url'), '/').'/',
+                    'User-Agent' => 'AgriMS-Tarlac/1.0',
+                ])->timeout(20)->get(
+                    'https://maps.googleapis.com/maps/api/staticmap',
+                    [
+                        'size' => '640x360',
+                        'scale' => 2,
+                        'format' => 'png',
+                        'maptype' => 'hybrid',
+                        'path' => implode('|', $path),
+                        'key' => $apiKey,
+                    ]
+                );
+
+                $contentType = strtolower((string) $response->header(
+                    'Content-Type'
+                ));
+
+                if (
+                    ! $response->successful()
+                    || ! str_starts_with($contentType, 'image/')
+                    || $response->body() === ''
+                ) {
+                    report(new \RuntimeException(
+                        'Google Static Maps request failed with HTTP '
+                        .$response->status().'.'
+                    ));
+
+                    return null;
+                }
+
+                return [
+                    'body' => $response->body(),
+                    'content_type' => $contentType,
+                ];
+            }
+        );
+
+        if (! is_array($map) || ! isset($map['body'])) {
+            return response(
+                'Google could not generate the satellite plot image.',
+                502
+            )->header('Cache-Control', 'no-store');
+        }
+
+        return response($map['body'], 200, [
+            'Content-Type' => $map['content_type'] ?: 'image/png',
+            'Cache-Control' => 'private, max-age=43200',
+            'X-Content-Type-Options' => 'nosniff',
         ]);
     }
 
@@ -1001,6 +1106,32 @@ private function seededPlotColor(string $seed, string $baseKmlColor = 'ccffffff'
         }
 
         return $out;
+    }
+
+    /**
+     * Keep the Static Maps URL safely below provider URL limits while
+     * retaining the first and last sections of complex parcel boundaries.
+     */
+    private function sampleStaticMapPolygon(
+        array $polygon,
+        int $maximumPoints = 180
+    ): array {
+        $count = count($polygon);
+        if ($count <= $maximumPoints) {
+            return $polygon;
+        }
+
+        $sampled = [];
+        $lastIndex = $count - 1;
+
+        for ($index = 0; $index < $maximumPoints; $index++) {
+            $sourceIndex = (int) round(
+                ($index / ($maximumPoints - 1)) * $lastIndex
+            );
+            $sampled[] = $polygon[$sourceIndex];
+        }
+
+        return $sampled;
     }
 
     private function normalizeHexColor(?string $hex): string

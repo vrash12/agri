@@ -1370,6 +1370,10 @@
   window.__gmapsMapId = window.__gmapsMapId || @json($googleMapsMapId);
   window.__farmersRecordsBaseUrl = window.__farmersRecordsBaseUrl || "/farmers";
   window.__allFarmPlotsUrl = "{{ route('farm-plots.all') }}";
+  window.__farmPlotStaticMapUrlTemplate = @json(route(
+    'farm-plots.static-map',
+    ['plot' => '__PLOT__']
+  ));
   window.__farmerMapCardUrlTemplate = "{{ url('/farmers/__ID__/map-card') }}";
   window.__farmerGeocodeUrl = "{{ route('geocode') }}";
   window.__canManageOperationalData = @json($canManageOperations ?? auth()->user()->canManageOperationalData());

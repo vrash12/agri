@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class FarmersCooperative extends Model
 {
@@ -38,5 +39,13 @@ class FarmersCooperative extends Model
             'farmers_cooperative_id',
             'farmer_id'
         )->withTimestamps();
+    }
+
+    public function machineries(): HasMany
+    {
+        return $this->hasMany(
+            AgriculturalMachinery::class,
+            'farmers_cooperative_id'
+        );
     }
 }

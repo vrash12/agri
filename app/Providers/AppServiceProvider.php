@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\AgriculturalMachinery;
 use App\Models\AntiRabiesVaccination;
 use App\Models\BackupFile;
 use App\Models\Farmer;
@@ -37,6 +38,7 @@ class AppServiceProvider extends ServiceProvider
         Paginator::defaultSimpleView('vendor.pagination.simple-agri');
 
         foreach ([
+            AgriculturalMachinery::class,
             Farmer::class,
             FarmPlot::class,
             RiceSeedDistribution::class,

@@ -122,7 +122,7 @@
     @if($records->isNotEmpty())
       <div class="module-table-scroll">
         <table class="module-table">
-          <thead><tr><th>Cooperative</th><th>Chairperson</th><th>Contact</th><th>Address</th><th>Members</th><th>Description</th><th><span class="sr-only">Actions</span></th></tr></thead>
+          <thead><tr><th>Cooperative</th><th>Chairperson</th><th>Contact</th><th>Address</th><th>Members</th><th>Machinery</th><th>Description</th><th><span class="sr-only">Actions</span></th></tr></thead>
           <tbody>
             @foreach($records as $record)
               @php
@@ -134,6 +134,7 @@
                 <td>{{ $record->contact_number ?: '—' }}</td>
                 <td><span title="{{ $record->address }}">{{ Str::limit($record->address ?: 'Not recorded', 42) }}</span></td>
                 <td><span class="module-badge {{ (int) $record->farmers_count > 0 ? 'module-badge-green' : 'module-badge-amber' }}">{{ number_format((int) $record->farmers_count) }} {{ Str::plural('member', (int) $record->farmers_count) }}</span></td>
+                <td><a class="module-badge {{ (int) $record->machineries_count > 0 ? 'module-badge-blue' : '' }}" style="text-decoration:none" href="{{ route('machinery-inventory.index', ['holder_type' => 'cooperative', 'q' => $record->name]) }}">{{ number_format((int) $record->machineries_count) }} {{ Str::plural('asset', (int) $record->machineries_count) }}</a></td>
                 <td>{{ Str::limit($record->description ?: 'No description', 58) }}</td>
                 <td>
                   <div class="module-row-actions">

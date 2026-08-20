@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AntiRabiesVaccination;
+use App\Models\AgriculturalMachinery;
 use App\Models\BackupFile;
 use App\Models\Farmer;
 use App\Models\FarmersCooperative;
@@ -85,6 +86,11 @@ class DashboardController extends Controller
             $user
         );
 
+        $machineryQuery = $this->scopeByMunicipality(
+            AgriculturalMachinery::query(),
+            $user
+        );
+
         $farmPlotQuery = FarmPlot::query()
             ->whereHas('farmer', function (Builder $query) use ($user) {
                 $this->scopeByMunicipality($query, $user);
@@ -105,7 +111,7 @@ class DashboardController extends Controller
 
         $totalDistributionRecords = (clone $distributionQuery)->count();
 
-        $totalKgsDistributed = (float) (clone $distributionQuery)
+        $totalKgsDistributed = (float) $this->kilogramReleases(clone $distributionQuery)
             ->sum('kgs_received');
 
         $totalVaccinations = (clone $vaccinationQuery)->count();
@@ -115,6 +121,16 @@ class DashboardController extends Controller
             : (clone $backupQuery)->count();
 
         $totalCooperatives = (clone $cooperativeQuery)->count();
+
+        $totalMachineries = (clone $machineryQuery)->count();
+
+        $availableMachineries = (clone $machineryQuery)
+            ->where('availability_status', 'available')
+            ->count();
+
+        $machineriesNeedingAttention = (clone $machineryQuery)
+            ->needsMaintenanceAttention()
+            ->count();
 
         $totalFarmPlots = (clone $farmPlotQuery)->count();
 
@@ -173,7 +189,7 @@ class DashboardController extends Controller
             ->whereBetween('date_received', [$monthStart, $monthEnd])
             ->count();
 
-        $monthlyKgsDistributed = (float) (clone $distributionQuery)
+        $monthlyKgsDistributed = (float) $this->kilogramReleases(clone $distributionQuery)
             ->whereBetween('date_received', [$monthStart, $monthEnd])
             ->sum('kgs_received');
 
@@ -202,7 +218,7 @@ class DashboardController extends Controller
             'Dec',
         ];
 
-        $riceMonthlyRaw = (clone $distributionQuery)
+        $riceMonthlyRaw = $this->kilogramReleases(clone $distributionQuery)
             ->whereYear('date_received', $currentYear)
             ->selectRaw(
                 'MONTH(date_received) as month_number,
@@ -226,7 +242,11 @@ class DashboardController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        $topSeedVarieties = (clone $distributionQuery)
+        $topSeedVarieties = $this->kilogramReleases(clone $distributionQuery)
+            ->where(function (Builder $query) {
+                $query->whereNull('input_category')
+                    ->orWhere('input_category', 'rice_seed');
+            })
             ->whereNotNull('seed_variety_claimed')
             ->where('seed_variety_claimed', '!=', '')
             ->selectRaw(
@@ -268,7 +288,10 @@ class DashboardController extends Controller
                 'ffrs',
                 'last_name',
                 'first_name',
+                'input_category',
+                'seed_variety_claimed',
                 'kgs_received',
+                'quantity_unit',
                 'date_received',
             ]);
 
@@ -321,6 +344,12 @@ class DashboardController extends Controller
             'total_backup_files' => $totalBackupFiles,
 
             'total_cooperatives' => $totalCooperatives,
+
+            'total_machineries' => $totalMachineries,
+
+            'available_machineries' => $availableMachineries,
+
+            'machineries_needing_attention' => $machineriesNeedingAttention,
 
             'total_farm_plots' => $totalFarmPlots,
 
@@ -426,7 +455,9 @@ class DashboardController extends Controller
             ->whereIn('municipality_id', $municipalityIds)
             ->select('municipality_id')
             ->selectRaw('COUNT(*) as distribution_records')
-            ->selectRaw('COALESCE(SUM(kgs_received), 0) as total_kgs')
+            ->selectRaw(
+                "COALESCE(SUM(CASE WHEN quantity_unit IS NULL OR quantity_unit = '' OR quantity_unit = 'kg' THEN kgs_received ELSE 0 END), 0) as total_kgs"
+            )
             ->groupBy('municipality_id')
             ->get()
             ->keyBy('municipality_id');
@@ -443,6 +474,21 @@ class DashboardController extends Controller
             ->whereIn('municipality_id', $municipalityIds)
             ->select('municipality_id')
             ->selectRaw('COUNT(*) as cooperatives')
+            ->groupBy('municipality_id')
+            ->get()
+            ->keyBy('municipality_id');
+
+        $machineryStats = AgriculturalMachinery::query()
+            ->whereIn('municipality_id', $municipalityIds)
+            ->select('municipality_id')
+            ->selectRaw('COUNT(*) as total_machinery')
+            ->selectRaw(
+                "SUM(CASE WHEN availability_status = 'available' THEN 1 ELSE 0 END) as available_machinery"
+            )
+            ->selectRaw(
+                "SUM(CASE WHEN availability_status = 'maintenance' OR condition_status IN ('needs_repair', 'unserviceable') OR (next_maintenance_date IS NOT NULL AND next_maintenance_date <= ?) THEN 1 ELSE 0 END) as machinery_attention",
+                [now()->addDays(30)->toDateString()]
+            )
             ->groupBy('municipality_id')
             ->get()
             ->keyBy('municipality_id');
@@ -472,6 +518,7 @@ class DashboardController extends Controller
             $distributionStats,
             $vaccinationStats,
             $cooperativeStats,
+            $machineryStats,
             $staffStats
         ) {
             $farmers = $farmerStats->get($municipality->id);
@@ -479,6 +526,7 @@ class DashboardController extends Controller
             $distributions = $distributionStats->get($municipality->id);
             $vaccinations = $vaccinationStats->get($municipality->id);
             $cooperatives = $cooperativeStats->get($municipality->id);
+            $machinery = $machineryStats->get($municipality->id);
             $staff = $staffStats->get($municipality->id);
 
             $totalFarmers = (int) ($farmers->total_farmers ?? 0);
@@ -519,6 +567,9 @@ class DashboardController extends Controller
                 'total_kgs' => (float) ($distributions->total_kgs ?? 0),
                 'vaccinations' => (int) ($vaccinations->vaccinations ?? 0),
                 'cooperatives' => (int) ($cooperatives->cooperatives ?? 0),
+                'total_machinery' => (int) ($machinery->total_machinery ?? 0),
+                'available_machinery' => (int) ($machinery->available_machinery ?? 0),
+                'machinery_attention' => (int) ($machinery->machinery_attention ?? 0),
                 'municipal_heads' => $municipalHeads,
                 'municipal_staff' => (int) ($staff->municipal_staff ?? 0),
                 'missing_ffrs' => (int) ($farmers->missing_ffrs ?? 0),
@@ -532,7 +583,8 @@ class DashboardController extends Controller
         $unassignedRecords = Farmer::query()->whereNull('municipality_id')->count()
             + RiceSeedDistribution::query()->whereNull('municipality_id')->count()
             + AntiRabiesVaccination::query()->whereNull('municipality_id')->count()
-            + FarmersCooperative::query()->whereNull('municipality_id')->count();
+            + FarmersCooperative::query()->whereNull('municipality_id')->count()
+            + AgriculturalMachinery::query()->whereNull('municipality_id')->count();
 
         return [$municipalityStats, [
             'active_municipalities' => $municipalityStats->count(),
@@ -574,5 +626,14 @@ class DashboardController extends Controller
             $query->getModel()->qualifyColumn('municipality_id'),
             $user->municipality_id
         );
+    }
+
+    private function kilogramReleases(Builder $query): Builder
+    {
+        return $query->where(function (Builder $query) {
+            $query->whereNull('quantity_unit')
+                ->orWhere('quantity_unit', '')
+                ->orWhere('quantity_unit', 'kg');
+        });
     }
 }

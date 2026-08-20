@@ -53,6 +53,11 @@ class Municipality extends Model
         return $this->hasMany(FarmersCooperative::class);
     }
 
+    public function agriculturalMachineries(): HasMany
+    {
+        return $this->hasMany(AgriculturalMachinery::class);
+    }
+
     public function backupFiles(): HasMany
     {
         return $this->hasMany(BackupFile::class);

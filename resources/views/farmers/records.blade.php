@@ -7,10 +7,10 @@
 @php
   $farmerName = trim(collect([$farmer->first_name, $farmer->middle_name, $farmer->last_name, $farmer->ext_name])->filter()->implode(' '));
   $farmAddress = collect([$farmer->farm_location, $farmer->farm_municipality, $farmer->farm_province])->filter()->implode(' · ');
-  $favoriteLabel = filled($favoriteVariety) && $favoriteVariety !== 'N/A' ? $favoriteVariety : 'No variety recorded';
+  $favoriteLabel = filled($favoriteVariety) && $favoriteVariety !== 'N/A' ? $favoriteVariety : 'No item recorded';
   $firstLabel = $firstReceived ? \Illuminate\Support\Carbon::parse($firstReceived)->format('M d, Y') : '—';
   $lastLabel = $lastReceived ? \Illuminate\Support\Carbon::parse($lastReceived)->format('M d, Y') : '—';
-  $filterCount = collect([request('q'), request('received_from'), request('received_to')])->filter(fn ($value) => filled($value))->count();
+  $filterCount = collect([request('q'), request('input_category'), request('received_from'), request('received_to')])->filter(fn ($value) => filled($value))->count();
   $canManageOperations = auth()->user()->canManageOperationalData();
 @endphp
 
@@ -35,6 +35,7 @@
     </div>
     <div class="module-actions">
       <a class="module-button" href="{{ route('farmers.id-card', $farmer) }}">View ID card</a>
+      <a class="module-button" href="{{ route('machinery-inventory.index', ['holder_type' => 'farmer', 'q' => $farmer->ffrs ?: $farmer->last_name]) }}">{{ number_format((int) ($machineryCount ?? 0)) }} machinery {{ Str::plural('asset', (int) ($machineryCount ?? 0)) }}</a>
       @if($canManageOperations)<a class="module-button" href="{{ route('farmers.edit', $farmer) }}">Edit profile</a>@endif
       <a class="module-button" href="{{ route('farmers.index') }}">Back to registry</a>
       @if($canManageOperations)
@@ -48,16 +49,17 @@
 
   <section class="module-kpis">
     <article class="module-kpi"><div class="module-kpi-top"><span class="module-kpi-label">Distribution records</span><span class="module-kpi-icon"><svg viewBox="0 0 24 24"><path d="M7 3h10v18H7zM10 7h4M10 11h4M10 15h4"/></svg></span></div><strong>{{ number_format($totalRecords) }}</strong><small>Matching this history view</small></article>
-    <article class="module-kpi"><div class="module-kpi-top"><span class="module-kpi-label">Seeds received</span><span class="module-kpi-icon module-kpi-icon-amber"><svg viewBox="0 0 24 24"><path d="M12 22V8M7 13c-3-1-4-4-4-7 3 0 6 1 7 4M17 13c3-1 4-4 4-7-3 0-6 1-7 4"/></svg></span></div><strong>{{ number_format($totalKgs, 2) }}<small> kg</small></strong><small>{{ $totalRecords ? number_format($totalKgs / $totalRecords, 2).' kg average per record' : 'No distributions yet' }}</small></article>
-    <article class="module-kpi"><div class="module-kpi-top"><span class="module-kpi-label">Most received variety</span><span class="module-kpi-icon module-kpi-icon-blue"><svg viewBox="0 0 24 24"><path d="M4 19c5-1 8-4 9-9 4 1 6 4 7 8-5 2-11 2-16 1Z"/><path d="M4 19c4-2 7-4 9-9"/></svg></span></div><strong class="farmer-kpi-text">{{ $favoriteLabel }}</strong><small>Based on the current filtered records</small></article>
+    <article class="module-kpi"><div class="module-kpi-top"><span class="module-kpi-label">Weight-based inputs</span><span class="module-kpi-icon module-kpi-icon-amber"><svg viewBox="0 0 24 24"><path d="M12 22V8M7 13c-3-1-4-4-4-7 3 0 6 1 7 4M17 13c3-1 4-4 4-7-3 0-6 1-7 4"/></svg></span></div><strong>{{ number_format($totalKgs, 2) }}<small> kg</small></strong><small>Only releases measured in kilograms</small></article>
+    <article class="module-kpi"><div class="module-kpi-top"><span class="module-kpi-label">Most received item</span><span class="module-kpi-icon module-kpi-icon-blue"><svg viewBox="0 0 24 24"><path d="M4 19c5-1 8-4 9-9 4 1 6 4 7 8-5 2-11 2-16 1Z"/><path d="M4 19c4-2 7-4 9-9"/></svg></span></div><strong class="farmer-kpi-text">{{ $favoriteLabel }}</strong><small>Based on the current filtered records</small></article>
     <article class="module-kpi"><div class="module-kpi-top"><span class="module-kpi-label">Latest receipt</span><span class="module-kpi-icon"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg></span></div><strong class="farmer-kpi-text">{{ $lastLabel }}</strong><small>First recorded receipt: {{ $firstLabel }}</small></article>
   </section>
 
   <section class="module-panel">
-    <div class="module-panel-head"><div><h2>Search distribution history</h2><p>Filter this farmer's records by variety, lot series, sowing label, or receipt date.</p></div><span class="module-panel-tag">{{ $filterCount ? $filterCount.' active' : 'Complete history' }}</span></div>
+    <div class="module-panel-head"><div><h2>Search distribution history</h2><p>Filter this farmer's records by input category, item, lot or batch, notes, or receipt date.</p></div><span class="module-panel-tag">{{ $filterCount ? $filterCount.' active' : 'Complete history' }}</span></div>
     <form class="module-filter" method="GET">
       <div class="module-filter-grid">
-        <div class="module-field module-field-search"><label for="history_q">Search history</label><div class="module-search-wrap"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="module-input" type="search" id="history_q" name="q" value="{{ request('q') }}" placeholder="Variety, lot, sowing label, planted seed"></div></div>
+        <div class="module-field module-field-search"><label for="history_q">Search history</label><div class="module-search-wrap"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="module-input" type="search" id="history_q" name="q" value="{{ request('q') }}" placeholder="Seed, fertilizer, lot, batch, or notes"></div></div>
+        <div class="module-field"><label for="history_category">Input category</label><select class="module-input" id="history_category" name="input_category"><option value="">All categories</option>@foreach(($inputCategoryOptions ?? []) as $value => $label)<option value="{{ $value }}" @selected(request('input_category') === $value)>{{ $label }}</option>@endforeach</select></div>
         <div class="module-field"><label for="received_from">Received from</label><input class="module-input" type="date" id="received_from" name="received_from" value="{{ request('received_from') }}"></div>
         <div class="module-field"><label for="received_to">Received to</label><input class="module-input" type="date" id="received_to" name="received_to" value="{{ request('received_to') }}"></div>
         <div class="module-field"><label for="history_per_page">Rows per page</label><select class="module-input" id="history_per_page" name="per_page">@foreach([10,25,50,100] as $amount)<option value="{{ $amount }}" @selected((int) $perPage === $amount)>{{ $amount }} rows</option>@endforeach</select></div>
@@ -68,25 +70,25 @@
 
   @if ($totalRecords > 0)
     <section class="module-analytics-grid">
-      <article class="module-chart"><div class="module-chart-head"><h3>Seed volume over time</h3><p>Kilograms received on each recorded date.</p></div><div class="module-chart-body"><canvas id="historyTimelineChart"></canvas></div></article>
-      <article class="module-chart"><div class="module-chart-head"><h3>Volume by variety</h3><p>Total received kilograms grouped by claimed seed variety.</p></div><div class="module-chart-body"><canvas id="historyVarietyChart"></canvas></div></article>
+      <article class="module-chart"><div class="module-chart-head"><h3>Weight-based inputs over time</h3><p>Kilograms received on each recorded date.</p></div><div class="module-chart-body"><canvas id="historyTimelineChart"></canvas></div></article>
+      <article class="module-chart"><div class="module-chart-head"><h3>Weight by item</h3><p>Total kilograms grouped by seed or farm-input name.</p></div><div class="module-chart-body"><canvas id="historyVarietyChart"></canvas></div></article>
     </section>
   @endif
 
   <section class="module-panel">
-    <div class="module-table-tools"><div><strong>Distribution ledger</strong><span>All rice-seed releases linked to {{ $farmerName ?: 'this farmer' }}.</span></div><span>{{ number_format($totalKgs, 2) }} kg in results</span></div>
+    <div class="module-table-tools"><div><strong>Distribution ledger</strong><span>All seed and farm-input releases linked to {{ $farmerName ?: 'this farmer' }}.</span></div><span>{{ number_format($totalKgs, 2) }} kg in weight-based results</span></div>
     <div class="module-table-scroll">
       <table class="module-table farmer-history-table">
-        <thead><tr><th>Date received</th><th>Seed variety</th><th class="module-numeric">Received</th><th class="module-numeric">Claimed area</th><th class="module-numeric">Claimed seeds</th><th>Lot series</th><th style="text-align:right">Actions</th></tr></thead>
+        <thead><tr><th>Date received</th><th>Input issued</th><th class="module-numeric">Received</th><th class="module-numeric">Claimed area</th><th class="module-numeric">Claimed seeds</th><th>Lot / batch</th><th style="text-align:right">Actions</th></tr></thead>
         <tbody>
           @forelse ($records as $record)
             <tr>
               <td><strong>{{ $record->date_received ? \Illuminate\Support\Carbon::parse($record->date_received)->format('M d, Y') : '—' }}</strong><small>{{ $record->date_received ? \Illuminate\Support\Carbon::parse($record->date_received)->diffForHumans() : 'Date not recorded' }}</small></td>
-              <td><span class="module-badge module-badge-green">{{ $record->seed_variety_claimed ?: 'Unspecified' }}</span><small>{{ $record->seed_variety_planted ? 'Planted: '.$record->seed_variety_planted : 'Planted variety not recorded' }}</small></td>
-              <td class="module-numeric"><strong>{{ number_format((float) $record->kgs_received, 2) }} kg</strong></td>
+              <td><strong>{{ $record->seed_variety_claimed ?: 'Unspecified' }}</strong><small><span class="module-badge {{ $record->isSeedInput() ? 'module-badge-green' : ($record->input_category === 'fertilizer' ? 'module-badge-amber' : 'module-badge-blue') }}">{{ $record->inputCategoryLabel() }}</span></small></td>
+              <td class="module-numeric"><strong>{{ number_format((float) $record->kgs_received, 2) }} {{ $record->quantityUnitLabel() }}</strong></td>
               <td class="module-numeric">{{ $record->claimed_area_ha !== null ? number_format((float) $record->claimed_area_ha, 2).' ha' : '—' }}</td>
               <td class="module-numeric">{{ $record->claimed_seeds_kg !== null ? number_format((float) $record->claimed_seeds_kg, 2).' kg' : '—' }}</td>
-              <td><strong class="module-mono">{{ $record->lot_series ?: '—' }}</strong><small>{{ $record->date_of_sowing_label ?: 'No sowing label' }}</small></td>
+              <td><strong class="module-mono">{{ $record->lot_series ?: '—' }}</strong><small>{{ $record->input_notes ?: ($record->date_of_sowing_label ?: 'No additional notes') }}</small></td>
               <td>@if($canManageOperations)<div class="module-row-actions"><a class="module-button module-button-small" href="{{ route('rice-seed-distributions.edit', $record) }}">Edit</a><form method="POST" action="{{ route('rice-seed-distributions.destroy', $record) }}" onsubmit="return confirm('Delete this distribution record?');">@csrf @method('DELETE')<button class="module-button module-button-small module-button-danger" type="submit">Delete</button></form></div>@else<span class="module-badge module-badge-green">Read only</span>@endif</td>
             </tr>
           @empty

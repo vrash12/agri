@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Models\AgriculturalMachinery;
 use App\Models\AntiRabiesVaccination;
 use App\Models\BackupFile;
 use App\Models\Farmer;
@@ -91,6 +92,7 @@ class AuditModelObserver
     private function moduleName(Model $model): string
     {
         return match (true) {
+            $model instanceof AgriculturalMachinery => 'Machinery inventory',
             $model instanceof Farmer => 'Farmers',
             $model instanceof FarmPlot => 'Farm plots',
             $model instanceof RiceSeedDistribution => 'Rice distributions',
@@ -105,6 +107,11 @@ class AuditModelObserver
 
     private function recordLabel(Model $model): string
     {
+        if ($model instanceof AgriculturalMachinery) {
+            return trim($model->asset_code.' · '.$model->name, ' ·')
+                ?: 'Machinery #'.$model->getKey();
+        }
+
         if ($model instanceof Farmer) {
             return trim(collect([
                 $model->first_name,

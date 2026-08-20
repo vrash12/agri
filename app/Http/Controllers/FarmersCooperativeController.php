@@ -73,7 +73,7 @@ class FarmersCooperativeController extends Controller
 
         $records = (clone $query)
             ->with('municipality:id,name,province')
-            ->withCount('farmers')
+            ->withCount(['farmers', 'machineries'])
             ->when($sort === 'members', function ($query) {
                 $query->orderByDesc('farmers_count')->orderBy('name');
             })

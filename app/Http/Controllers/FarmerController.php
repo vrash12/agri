@@ -26,7 +26,7 @@ class FarmerController extends Controller
     }
 
     /**
-     * Display the rice-seed distribution history of one farmer.
+     * Display the seed and farm-input distribution history of one farmer.
      */
     public function records(Request $request, Farmer $farmer)
     {
@@ -52,9 +52,18 @@ class FarmerController extends Controller
             $query->where(function ($sub) use ($q) {
                 $sub->where('seed_variety_claimed', 'like', "%{$q}%")
                     ->orWhere('lot_series', 'like', "%{$q}%")
+                    ->orWhere('input_notes', 'like', "%{$q}%")
                     ->orWhere('date_of_sowing_label', 'like', "%{$q}%")
                     ->orWhere('seed_variety_planted', 'like', "%{$q}%");
             });
+        }
+
+        $inputCategory = (string) $request->query('input_category', '');
+        if (array_key_exists(
+            $inputCategory,
+            RiceSeedDistribution::INPUT_CATEGORY_LABELS
+        )) {
+            $query->where('input_category', $inputCategory);
         }
 
         if ($request->filled('received_from')) {
@@ -74,7 +83,12 @@ class FarmerController extends Controller
         }
 
         $totalRecords = (clone $query)->count();
-        $totalKgs = (float) (clone $query)->sum('kgs_received');
+        $kilogramQuery = (clone $query)->where(function (Builder $query) {
+            $query->whereNull('quantity_unit')
+                ->orWhere('quantity_unit', '')
+                ->orWhere('quantity_unit', 'kg');
+        });
+        $totalKgs = (float) (clone $kilogramQuery)->sum('kgs_received');
 
         $topVarietyRow = (clone $query)
             ->select(
@@ -91,8 +105,9 @@ class FarmerController extends Controller
 
         $firstReceived = (clone $query)->min('date_received');
         $lastReceived = (clone $query)->max('date_received');
+        $machineryCount = $farmer->machineries()->count();
 
-        $kgsOverTime = (clone $query)
+        $kgsOverTime = (clone $kilogramQuery)
             ->selectRaw(
                 'DATE(date_received) as date,
                  SUM(kgs_received) as total_kgs'
@@ -104,7 +119,7 @@ class FarmerController extends Controller
                 return [$item->date => (float) $item->total_kgs];
             });
 
-        $varietyChartData = (clone $query)
+        $varietyChartData = (clone $kilogramQuery)
             ->selectRaw(
                 'COALESCE(seed_variety_claimed, "Unknown") as variety,
                  SUM(kgs_received) as total_kgs'
@@ -131,9 +146,12 @@ class FarmerController extends Controller
             'favoriteVariety',
             'firstReceived',
             'lastReceived',
+            'machineryCount',
             'kgsOverTime',
             'varietyChartData'
-        ));
+        ) + [
+            'inputCategoryOptions' => RiceSeedDistribution::INPUT_CATEGORY_LABELS,
+        ]);
     }
 
     /**
@@ -943,7 +961,7 @@ class FarmerController extends Controller
             ->selectRaw(
                 'farmer_id,
                  COUNT(*) as records_count,
-                 SUM(kgs_received) as total_kgs,
+                 SUM(CASE WHEN quantity_unit IS NULL OR quantity_unit = \'\' OR quantity_unit = \'kg\' THEN kgs_received ELSE 0 END) as total_kgs,
                  MAX(date_received) as last_received'
             );
 
@@ -1084,7 +1102,13 @@ class FarmerController extends Controller
         );
 
         $recordsCount = (int) (clone $distributionQuery)->count();
-        $totalKgs = (float) (clone $distributionQuery)->sum('kgs_received');
+        $totalKgs = (float) (clone $distributionQuery)
+            ->where(function (Builder $query) {
+                $query->whereNull('quantity_unit')
+                    ->orWhere('quantity_unit', '')
+                    ->orWhere('quantity_unit', 'kg');
+            })
+            ->sum('kgs_received');
         $lastReceived = (clone $distributionQuery)->max('date_received');
 
         return response()->json([

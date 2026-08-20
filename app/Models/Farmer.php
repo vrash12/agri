@@ -104,6 +104,11 @@ class Farmer extends Model
         );
     }
 
+    public function machineries(): HasMany
+    {
+        return $this->hasMany(AgriculturalMachinery::class);
+    }
+
     /**
      * Stable, human-readable identifier used on the local farmer card.
      */

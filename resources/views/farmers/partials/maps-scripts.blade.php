@@ -1834,57 +1834,15 @@ function estimateStaticMapZoom(points, widthPx, heightPx, paddingPx) {
 }
 
 function buildStaticPlotMapUrl(plot) {
-  var ring = normalizePolygonRing(plot.polygon_json || plot.polygon || plot.polygonJson);
-  if (!ring || ring.length < 3) throw new Error('Plot has no valid polygon.');
+  if (!plot || !plot.id) throw new Error('Plot ID is missing.');
 
-  var pts = openRing(ring);
-  var colorHex = getEffectivePlotColor(plot);
-  var colorNoHash = colorHex.replace('#', '').toUpperCase();
+  var template = window.__farmPlotStaticMapUrlTemplate
+    || '/farm-plots/__PLOT__/static-map';
 
-  var strokeColor = '0x' + colorNoHash + 'FF';
-  var fillColor   = '0x' + colorNoHash + '66';
-
-  var exportW = 1280;
-  var exportH = 720;
-  var center = ringCentroid(pts);
-
-  // Bigger padding = more surrounding space around the plot
-  var zoom = estimateStaticMapZoom(pts, exportW, exportH, 180);
-
-  // Optional extra zoom-out for safer margin
-  zoom = Math.max(1, zoom - 1);
-
-  var params = [
-    'size=640x360',
-    'scale=2',
-    'format=png',
-    'maptype=hybrid',
-    'center=' + encodeURIComponent(
-      Number(center.lat).toFixed(6) + ',' + Number(center.lng).toFixed(6)
-    ),
-    'zoom=' + encodeURIComponent(String(zoom)),
-    'key=' + encodeURIComponent(GOOGLE_MAPS_API_KEY)
-  ];
-
-  var pathBits = [
-    'fillcolor:' + fillColor,
-    'color:' + strokeColor,
-    'weight:5'
-  ];
-
-  for (var j = 0; j < pts.length; j++) {
-    pathBits.push(
-      Number(pts[j].lat).toFixed(6) + ',' + Number(pts[j].lng).toFixed(6)
-    );
-  }
-
-  pathBits.push(
-    Number(pts[0].lat).toFixed(6) + ',' + Number(pts[0].lng).toFixed(6)
+  return template.replace(
+    '__PLOT__',
+    encodeURIComponent(String(plot.id))
   );
-
-  params.push('path=' + encodeURIComponent(pathBits.join('|')));
-
-  return 'https://maps.googleapis.com/maps/api/staticmap?' + params.join('&');
 }
 var PRINT_LEFT_LOGO  = @json(asset('images/mao-logo.jpg'));
 var PRINT_RIGHT_LOGO = @json(asset('images/ramos-logo.jpg'));
@@ -2855,7 +2813,7 @@ var colorHex = getEffectivePlotColor(plot);
     ctx.fillText(
       mapImg
         ? 'Satellite view focused on the selected land plot.'
-        : 'Coordinate-grid fallback. Enable Google Maps Static API to include satellite imagery.',
+        : 'Coordinate-grid fallback. The server-side satellite image was unavailable.',
       mapX + 28,
       mapY + 74
     );
@@ -2982,6 +2940,10 @@ var colorHex = getEffectivePlotColor(plot);
     return;
   } catch (err) {
     console.warn('Static map export failed, using the offline parcel preview.', err);
+    toast(
+      'Satellite imagery was unavailable, so the plot sheet used the offline boundary preview.',
+      'warn'
+    );
   }
 
   try {

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AgriculturalMachinery;
 use App\Models\AntiRabiesVaccination;
 use App\Models\BackupFile;
 use App\Models\Farmer;
@@ -221,6 +222,45 @@ class MunicipalitySeparationTest extends TestCase
         ]);
     }
 
+    public function test_distribution_accepts_fertilizer_and_custom_farm_inputs(): void
+    {
+        $farmer = Farmer::create([
+            'municipality_id' => $this->firstMunicipality->id,
+            'last_name' => 'Input',
+            'first_name' => 'Recipient',
+        ]);
+
+        $this->actingAs($this->municipalUser)
+            ->post(route('rice-seed-distributions.store'), [
+                'farmer_id' => $farmer->id,
+                'input_category' => 'fertilizer',
+                'seed_variety_claimed' => 'Custom Abono 16-20-0',
+                'kgs_received' => 3,
+                'quantity_unit' => 'sack',
+                'input_notes' => 'For basal application',
+                'date_received' => now()->toDateString(),
+            ])
+            ->assertRedirect(route('rice-seed-distributions.index'));
+
+        $this->assertDatabaseHas('rice_seed_distributions', [
+            'farmer_id' => $farmer->id,
+            'municipality_id' => $this->firstMunicipality->id,
+            'input_category' => 'fertilizer',
+            'seed_variety_claimed' => 'Custom Abono 16-20-0',
+            'kgs_received' => 3,
+            'quantity_unit' => 'sack',
+            'input_notes' => 'For basal application',
+        ]);
+
+        $this->actingAs($this->municipalUser)
+            ->get(route('rice-seed-distributions.index', [
+                'input_category' => 'fertilizer',
+            ]))
+            ->assertOk()
+            ->assertSee('Custom Abono 16-20-0')
+            ->assertSee('Fertilizer / Abono');
+    }
+
     public function test_farm_plots_are_scoped_to_the_farmer_municipality(): void
     {
         $ownFarmer = Farmer::create([
@@ -371,6 +411,103 @@ class MunicipalitySeparationTest extends TestCase
             'name' => 'Provincial Selected Cooperative',
             'municipality_id' => $this->secondMunicipality->id,
         ]);
+    }
+
+    public function test_machinery_inventory_is_scoped_and_assigns_municipal_ownership(): void
+    {
+        $ownFarmer = Farmer::create([
+            'municipality_id' => $this->firstMunicipality->id,
+            'last_name' => 'Machinery',
+            'first_name' => 'Holder',
+        ]);
+        $foreignFarmer = Farmer::create([
+            'municipality_id' => $this->secondMunicipality->id,
+            'last_name' => 'Foreign',
+            'first_name' => 'Holder',
+        ]);
+
+        AgriculturalMachinery::create([
+            'municipality_id' => $this->secondMunicipality->id,
+            'farmer_id' => $foreignFarmer->id,
+            'asset_code' => 'FOREIGN-TRC-001',
+            'name' => 'Foreign Tractor Unique',
+            'category' => 'tractor',
+            'condition_status' => 'good',
+            'availability_status' => 'available',
+        ]);
+
+        $this->actingAs($this->municipalUser)
+            ->post(route('machinery-inventory.store'), [
+                'holder_type' => 'farmer',
+                'holder_id' => $ownFarmer->id,
+                'asset_code' => 'ANAO-TRC-001',
+                'name' => 'Municipal Tractor Unique',
+                'category' => 'tractor',
+                'condition_status' => 'good',
+                'availability_status' => 'available',
+            ])
+            ->assertRedirect(route('machinery-inventory.index'))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('agricultural_machineries', [
+            'municipality_id' => $this->firstMunicipality->id,
+            'farmer_id' => $ownFarmer->id,
+            'farmers_cooperative_id' => null,
+            'asset_code' => 'ANAO-TRC-001',
+        ]);
+
+        $this->actingAs($this->municipalUser)
+            ->get(route('machinery-inventory.index'))
+            ->assertOk()
+            ->assertSee('Municipal Tractor Unique')
+            ->assertDontSee('Foreign Tractor Unique');
+    }
+
+    public function test_machinery_holder_must_belong_to_the_same_municipality(): void
+    {
+        $foreignCooperative = FarmersCooperative::create([
+            'municipality_id' => $this->secondMunicipality->id,
+            'name' => 'Foreign Machinery Cooperative',
+        ]);
+
+        $this->actingAs($this->municipalUser)
+            ->post(route('machinery-inventory.store'), [
+                'holder_type' => 'cooperative',
+                'holder_id' => $foreignCooperative->id,
+                'asset_code' => 'ANAO-HRV-001',
+                'name' => 'Invalid Holder Harvester',
+                'category' => 'combine_harvester',
+                'condition_status' => 'good',
+                'availability_status' => 'available',
+            ])
+            ->assertSessionHasErrors('holder_id');
+
+        $this->assertDatabaseMissing('agricultural_machineries', [
+            'asset_code' => 'ANAO-HRV-001',
+        ]);
+    }
+
+    public function test_super_admin_can_view_but_cannot_write_machinery(): void
+    {
+        $superAdmin = $this->makeUser(
+            User::ROLE_SUPER_ADMIN,
+            null,
+            'super-machinery-'.uniqid().'@example.test'
+        );
+
+        $this->actingAs($superAdmin)
+            ->get(route('machinery-inventory.index'))
+            ->assertOk();
+
+        $this->actingAs($superAdmin)
+            ->get(route('machinery-inventory.create'))
+            ->assertForbidden();
+
+        $this->actingAs($superAdmin)
+            ->post(route('machinery-inventory.store'), [
+                'municipality_id' => $this->firstMunicipality->id,
+            ])
+            ->assertForbidden();
     }
 
     private function makeUser(

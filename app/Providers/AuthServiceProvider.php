@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\AgriculturalMachinery;
 use App\Models\AntiRabiesVaccination;
 use App\Models\BackupFile;
 use App\Models\Farmer;
@@ -9,6 +10,7 @@ use App\Models\FarmersCooperative;
 use App\Models\FarmPlot;
 use App\Models\RiceSeedDistribution;
 use App\Models\User;
+use App\Policies\AgriculturalMachineryPolicy;
 use App\Policies\AntiRabiesVaccinationPolicy;
 use App\Policies\BackupFilePolicy;
 use App\Policies\FarmerPolicy;
@@ -26,6 +28,7 @@ class AuthServiceProvider extends ServiceProvider
      * @var array<class-string, class-string>
      */
     protected $policies = [
+        AgriculturalMachinery::class => AgriculturalMachineryPolicy::class,
         Farmer::class => FarmerPolicy::class,
         FarmPlot::class => FarmPlotPolicy::class,
         RiceSeedDistribution::class => RiceSeedDistributionPolicy::class,
