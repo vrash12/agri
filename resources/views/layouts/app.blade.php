@@ -250,29 +250,6 @@
     /* =========================================================
        NAV LINKS
        ========================================================= */
-    .nav-current{
-      display:flex;align-items:center;justify-content:space-between;gap:10px;
-      margin:4px 2px 10px;padding:9px 10px;border:1px solid #dfe9e2;
-      border-radius:12px;background:linear-gradient(135deg,#f7fbf8,#fffdf2);
-    }
-    .nav-current span{color:#708077;font-size:8px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
-    .nav-current strong{min-width:0;overflow:hidden;color:#17643a;font-size:9px;text-overflow:ellipsis;white-space:nowrap}
-    .nav-finder{position:relative;display:flex;align-items:center;margin:0 2px 12px}
-    .nav-finder-icon{position:absolute;left:10px;width:16px;height:16px;color:#718078;pointer-events:none}
-    .nav-finder-icon svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
-    .nav-finder input{
-      width:100%;height:38px;padding:0 48px 0 34px;border:1px solid #dbe4de;
-      border-radius:11px;outline:none;color:#17211b;background:#f8faf8;
-      font-size:10px;font-weight:750;transition:border-color .15s ease,box-shadow .15s ease,background .15s ease;
-    }
-    .nav-finder input:focus{border-color:#61a779;background:#fff;box-shadow:0 0 0 4px rgba(34,197,94,.12)}
-    .nav-finder kbd,.nav-finder button{
-      position:absolute;right:8px;display:grid;place-items:center;width:24px;height:24px;
-      border:1px solid #d9e2dc;border-radius:7px;color:#647269;background:#fff;
-      font-family:inherit;font-size:10px;font-weight:800;line-height:1;
-    }
-    .nav-finder button{cursor:pointer;font-size:16px}
-    .nav-finder button:hover{color:#17643a;border-color:#94b7a1;background:#f2f8f4}
     .nav-section{ margin-top: 10px; }
     .nav-title{
       display:flex;
@@ -362,9 +339,6 @@
     .nav-badge + .nav-arrow{display:none}
     .link:hover .nav-arrow{color:#17643a;transform:translateX(2px)}
     .nav-tooltip{display:none}
-    .nav-empty{margin:14px 3px;padding:15px 10px;border:1px dashed #ccd9d0;border-radius:12px;text-align:center;background:#fafcfb}
-    .nav-empty strong,.nav-empty span{display:block}.nav-empty strong{font-size:10px}.nav-empty span{margin-top:3px;color:#7a867e;font-size:8px}
-
     .link::before{
       content:"";
       position:absolute;
@@ -429,12 +403,9 @@
       margin-top:8px;
     }
     body.nav-collapsed .nav-title,
-    body.nav-collapsed .nav-current,
-    body.nav-collapsed .nav-finder,
     body.nav-collapsed .nav-copy,
     body.nav-collapsed .nav-badge,
     body.nav-collapsed .nav-arrow,
-    body.nav-collapsed .nav-empty,
     body.nav-collapsed .user-meta,
     body.nav-collapsed .logout-text{
       display:none !important;
@@ -732,8 +703,6 @@
         border:1px solid rgba(2,6,23,.08);
         background:rgba(2,6,23,.03);
       }
-      body.nav-collapsed .nav-current{display:flex!important}
-      body.nav-collapsed .nav-finder{display:flex!important}
       body.nav-collapsed .nav-copy{display:grid!important}
       body.nav-collapsed .nav-description{display:block!important}
       body.nav-collapsed .nav-badge{display:inline-flex!important}
@@ -1108,9 +1077,6 @@
         ];
       }
 
-      $activeNavigationItem = collect($navigationGroups)
-          ->flatMap(fn ($group) => $group['items'])
-          ->first(fn ($item) => request()->routeIs(...$item['patterns']));
     @endphp
   @endauth
 
@@ -1158,22 +1124,8 @@
         @auth
           <div class="sidebar-content">
             <div class="sidebar-nav-scroll">
-              <div class="nav-current" aria-label="Current workspace">
-                <span>Current workspace</span>
-                <strong>{{ $activeNavigationItem['label'] ?? 'Agriculture system' }}</strong>
-              </div>
-
-              <div class="nav-finder">
-                <span class="nav-finder-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
-                </span>
-                <input id="navFinder" type="search" placeholder="Find a module" autocomplete="off" aria-label="Find a navigation module">
-                <kbd id="navFinderShortcut" aria-hidden="true">/</kbd>
-                <button id="navFinderClear" type="button" aria-label="Clear navigation search" hidden>×</button>
-              </div>
-
               @foreach($navigationGroups as $groupKey => $group)
-                <section class="nav-section" data-nav-group="{{ $groupKey }}">
+                <section class="nav-section">
                   <div class="nav-title"><span>{{ $group['label'] }}</span><small>{{ count($group['items']) }}</small></div>
 
                   <nav class="navlinks" aria-label="{{ $group['label'] }} modules">
@@ -1184,8 +1136,6 @@
                         href="{{ route($item['route']) }}"
                         title="{{ $item['label'] }}"
                         data-nav-item
-                        data-label="{{ $item['label'] }}"
-                        data-description="{{ $item['description'] }}"
                         @if($isActiveNavItem) aria-current="page" @endif
                       >
                         <span class="nav-ico" aria-hidden="true">{!! $ico($item['icon']) !!}</span>
@@ -1201,11 +1151,6 @@
                   </nav>
                 </section>
               @endforeach
-
-              <div class="nav-empty" id="navFinderEmpty" hidden>
-                <strong>No module found</strong>
-                <span>Try another name or press Esc to clear.</span>
-              </div>
             </div>
 
             <div class="sidebar-footer">
@@ -1301,71 +1246,20 @@
       }catch(e){}
 
       syncNavBtn();
-      initializeNavigationFinder();
+      initializeNavigationLinks();
     });
 
-    function initializeNavigationFinder(){
-      const input = document.getElementById('navFinder');
-      const clearButton = document.getElementById('navFinderClear');
-      const shortcut = document.getElementById('navFinderShortcut');
-      const empty = document.getElementById('navFinderEmpty');
-      const groups = Array.from(document.querySelectorAll('[data-nav-group]'));
+    function initializeNavigationLinks(){
       const items = Array.from(document.querySelectorAll('[data-nav-item]'));
-      if(!input || !items.length) return;
-
-      const visibleItems = () => items.filter(item => !item.hidden);
-      const normalize = value => String(value || '').trim().toLowerCase();
-
-      function filterNavigation(){
-        const query = normalize(input.value);
-        items.forEach(item => {
-          const haystack = normalize(item.dataset.label + ' ' + item.dataset.description);
-          item.hidden = Boolean(query) && !haystack.includes(query);
-        });
-        groups.forEach(group => {
-          group.hidden = !group.querySelector('[data-nav-item]:not([hidden])');
-        });
-        const hasQuery = Boolean(query);
-        if(clearButton) clearButton.hidden = !hasQuery;
-        if(shortcut) shortcut.hidden = hasQuery;
-        if(empty) empty.hidden = !hasQuery || visibleItems().length > 0;
-      }
-
-      function clearNavigationSearch(keepFocus){
-        input.value = '';
-        filterNavigation();
-        if(keepFocus) input.focus();
-      }
-
-      input.addEventListener('input', filterNavigation);
-      clearButton?.addEventListener('click', () => clearNavigationSearch(true));
-      input.addEventListener('keydown', event => {
-        const visible = visibleItems();
-        if(event.key === 'Escape'){
-          event.preventDefault();
-          event.stopPropagation();
-          if(input.value) clearNavigationSearch(true); else input.blur();
-          return;
-        }
-        if(event.key === 'ArrowDown' && visible.length){
-          event.preventDefault();
-          visible[0].focus();
-          return;
-        }
-        if(event.key === 'Enter' && visible.length && input.value){
-          event.preventDefault();
-          visible[0].click();
-        }
-      });
+      if(!items.length) return;
 
       items.forEach(item => {
         item.addEventListener('keydown', event => {
           if(!['ArrowDown','ArrowUp'].includes(event.key)) return;
           event.preventDefault();
-          const visible = visibleItems();
-          const currentIndex = visible.indexOf(item);
+          const currentIndex = items.indexOf(item);
           const offset = event.key === 'ArrowDown' ? 1 : -1;
-          visible[(currentIndex + offset + visible.length) % visible.length]?.focus();
+          items[(currentIndex + offset + items.length) % items.length]?.focus();
         });
         item.addEventListener('click', () => {
           if(window.innerWidth <= 900) closeSidebar();
@@ -1374,7 +1268,6 @@
 
       document.querySelector('[data-nav-item][aria-current="page"]')
         ?.scrollIntoView({block:'nearest'});
-      filterNavigation();
     }
 
     function setAriaExpanded(isOpen){
@@ -1437,25 +1330,6 @@
 
     document.addEventListener('keydown', function(e){
       if(e.key === 'Escape') closeSidebar();
-
-      const target = e.target;
-      const isTyping = target && /^(input|textarea|select)$/i.test(target.tagName);
-      if(e.key === '/' && !isTyping && !e.ctrlKey && !e.metaKey && !e.altKey){
-        const finder = document.getElementById('navFinder');
-        if(finder){
-          e.preventDefault();
-          if(document.body.classList.contains('nav-collapsed') && window.innerWidth > 900){
-            document.body.classList.remove('nav-collapsed');
-            try{localStorage.setItem('nav_collapsed','0')}catch(error){}
-            syncNavBtn();
-          }
-          if(window.innerWidth <= 900){
-            document.body.classList.add('sidebar-open');
-            setAriaExpanded(true);
-          }
-          setTimeout(() => finder.focus(), 30);
-        }
-      }
 
       // optional shortcut: Ctrl + \
       if((e.ctrlKey || e.metaKey) && e.key === '\\'){
