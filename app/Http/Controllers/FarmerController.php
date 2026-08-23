@@ -6,6 +6,7 @@ use App\Models\Farmer;
 use App\Models\Municipality;
 use App\Models\RiceSeedDistribution;
 use App\Models\User;
+use App\Support\ConcurrentWrite;
 use Endroid\QrCode\ErrorCorrectionLevel\ErrorCorrectionLevelMedium;
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\SvgWriter;
@@ -20,7 +21,9 @@ use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
 class FarmerController extends Controller
 {
-    public function __construct()
+    public function __construct(
+        private ConcurrentWrite $concurrentWrite
+    )
     {
         $this->middleware('auth')->except(['publicLand']);
     }
@@ -375,8 +378,14 @@ class FarmerController extends Controller
         $this->authorize('create', Farmer::class);
         $data = $this->validatedFarmerData($request);
 
-        $farmer = Farmer::create($data);
-        $this->syncProfilePhoto($request, $farmer);
+        $farmer = $this->concurrentWrite->transaction(
+            function () use ($data, $request): Farmer {
+                $farmer = Farmer::create($data);
+                $this->syncProfilePhoto($request, $farmer);
+
+                return $farmer;
+            }
+        );
 
         return redirect()
             ->route('farmers.index')
@@ -410,8 +419,14 @@ class FarmerController extends Controller
 
         $data = $this->validatedFarmerData($request, $farmer);
 
-        $farmer->update($data);
-        $this->syncProfilePhoto($request, $farmer);
+        $this->concurrentWrite->execute(
+            $farmer,
+            $request->input('_record_version'),
+            function (Farmer $current) use ($data, $request): void {
+                $current->update($data);
+                $this->syncProfilePhoto($request, $current);
+            }
+        );
 
         return redirect()
             ->route('farmers.index')
@@ -427,31 +442,34 @@ class FarmerController extends Controller
         $user = $this->authenticatedUser($request);
         $this->ensureFarmerIsAccessible($farmer, $user);
 
-        if ($farmer->riceSeedDistributions()->exists()) {
-            return back()->with(
-                'error',
-                'Cannot delete this farmer because distribution records are linked to them.'
-            );
+        $error = $this->concurrentWrite->locked(
+            $farmer,
+            function (Farmer $current): ?string {
+                if ($current->riceSeedDistributions()->exists()) {
+                    return 'Cannot delete this farmer because distribution records are linked to them.';
+                }
+
+                if ($current->farmPlots()->exists()) {
+                    return 'Cannot delete this farmer because farm plots are linked to them.';
+                }
+
+                $photoPath = $current->profile_photo_path;
+                $current->cooperatives()->detach();
+                $current->delete();
+
+                if ($photoPath) {
+                    $current->getConnection()->afterCommit(
+                        fn () => Storage::disk('local')->delete($photoPath)
+                    );
+                }
+
+                return null;
+            }
+        );
+
+        if ($error) {
+            return back()->with('error', $error);
         }
-
-        if (
-            DB::table('farm_plots')
-                ->where('farmer_id', $farmer->id)
-                ->exists()
-        ) {
-            return back()->with(
-                'error',
-                'Cannot delete this farmer because farm plots are linked to them.'
-            );
-        }
-
-        $farmer->cooperatives()->detach();
-
-        if ($farmer->profile_photo_path) {
-            Storage::disk('local')->delete($farmer->profile_photo_path);
-        }
-
-        $farmer->delete();
 
         return redirect()
             ->route('farmers.index')
@@ -589,7 +607,9 @@ class FarmerController extends Controller
             $farmer->forceFill(['profile_photo_path' => $newPath])->save();
 
             if ($oldPath && $oldPath !== $newPath) {
-                Storage::disk('local')->delete($oldPath);
+                $farmer->getConnection()->afterCommit(
+                    fn () => Storage::disk('local')->delete($oldPath)
+                );
             }
 
             return;
@@ -597,7 +617,9 @@ class FarmerController extends Controller
 
         if ($request->boolean('remove_profile_photo') && $oldPath) {
             $farmer->forceFill(['profile_photo_path' => null])->save();
-            Storage::disk('local')->delete($oldPath);
+            $farmer->getConnection()->afterCommit(
+                fn () => Storage::disk('local')->delete($oldPath)
+            );
 
             return;
         }
@@ -612,8 +634,13 @@ class FarmerController extends Controller
             $newPath = $municipalityFolder.Str::uuid()
                 .($extension ? '.'.$extension : '');
 
-            Storage::disk('local')->move($oldPath, $newPath);
+            if (! Storage::disk('local')->copy($oldPath, $newPath)) {
+                abort(500, 'The farmer photo could not be moved safely.');
+            }
             $farmer->forceFill(['profile_photo_path' => $newPath])->save();
+            $farmer->getConnection()->afterCommit(
+                fn () => Storage::disk('local')->delete($oldPath)
+            );
         }
     }
 

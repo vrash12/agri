@@ -7,6 +7,8 @@
   $petColors = ['Black','White','Brown','Tan','Golden','Cream','Gray','Fawn','Brindle','Spotted','Tabby','Calico','Tricolor','Bicolor','Red','Chocolate','Mixed / Other'];
 @endphp
 
+@include('partials.record-version', ['record' => $record])
+
 @push('styles')
 <style>
   .vaccination-owner-lookup{display:none;margin-top:12px;padding:12px;border:1px solid #b9d8c4;border-radius:9px;background:#f1f8f3}.vaccination-owner-lookup-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.vaccination-owner-lookup h3{margin:0;color:var(--module-green);font-size:11px;font-weight:850}.vaccination-owner-lookup p{margin:3px 0 0;color:var(--module-muted);font-size:9px}.vaccination-owner-actions{display:flex;justify-content:flex-end;gap:7px;margin-top:10px;flex-wrap:wrap}.vaccination-pet-type-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.vaccination-type-option{position:relative}.vaccination-type-option input{position:absolute;opacity:0;pointer-events:none}.vaccination-type-option label{display:flex;align-items:center;gap:9px;margin:0;padding:11px;border:1px solid var(--module-border);border-radius:8px;background:#fff;cursor:pointer}.vaccination-type-option input:checked+label{color:var(--module-green);border-color:#75a587;background:var(--module-green-soft);box-shadow:0 0 0 3px rgba(23,100,58,.07)}.vaccination-type-icon{width:29px;height:29px;display:grid;place-items:center;border-radius:7px;background:#f1f4f2;font-size:15px}.vaccination-type-option label strong{font-size:10px}.vaccination-type-option label small{display:block;margin-top:2px;color:var(--module-muted);font-size:8px}

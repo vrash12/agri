@@ -16,6 +16,8 @@
   );
 @endphp
 
+@include('partials.record-version', ['record' => $r])
+
 @if ($errors->any())
   <div class="module-alert module-alert-error" role="alert">
     <strong>Please review the highlighted information.</strong>

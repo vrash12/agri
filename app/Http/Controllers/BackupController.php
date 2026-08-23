@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\BackupFile;
 use App\Models\User;
+use App\Support\ConcurrentWrite;
 use App\Support\MunicipalityAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,7 +13,8 @@ use Illuminate\Support\Facades\Storage;
 class BackupController extends Controller
 {
     public function __construct(
-        private MunicipalityAccess $municipalityAccess
+        private MunicipalityAccess $municipalityAccess,
+        private ConcurrentWrite $concurrentWrite
     ) {
         $this->middleware('auth');
     }
@@ -253,30 +255,53 @@ class BackupController extends Controller
         $folder = trim($data['folder'] ?? '');
         if ($folder === '') $folder = now()->format('Y/m');
 
-        foreach ($request->file('files') as $file) {
-            $original = $file->getClientOriginalName();
-            $mime = $file->getClientMimeType();
-            $size = $file->getSize();
+        $storedPaths = [];
+        $records = [];
 
-            $dir = 'backups/' . $folder;
-            $storedName = uniqid('bkp_', true) . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $original);
-            $path = $file->storeAs($dir, $storedName, $disk);
+        try {
+            foreach ($request->file('files') as $file) {
+                $original = $file->getClientOriginalName();
+                $storedName = uniqid('bkp_', true).'_'
+                    .preg_replace('/[^a-zA-Z0-9._-]/', '_', $original);
+                $path = $file->storeAs(
+                    'backups/'.$folder,
+                    $storedName,
+                    $disk
+                );
+                if (! $path) {
+                    throw new \RuntimeException(
+                        'One of the backup files could not be stored.'
+                    );
+                }
+                $storedPaths[] = $path;
+                $records[] = [
+                    'municipality_id' => $municipalityId,
+                    'disk' => $disk,
+                    'folder' => $folder,
+                    'original_name' => $original,
+                    'stored_name' => $storedName,
+                    'path' => $path,
+                    'size' => (int) $file->getSize(),
+                    'mime' => $file->getClientMimeType(),
+                    'sha256' => $this->computeSha256($disk, $path),
+                    'notes' => $data['notes'] ?? null,
+                    'uploaded_by' => Auth::id(),
+                ];
+            }
 
-            $sha256 = $this->computeSha256($disk, $path);
+            $this->concurrentWrite->transaction(
+                function () use ($records): void {
+                    foreach ($records as $record) {
+                        BackupFile::create($record);
+                    }
+                }
+            );
+        } catch (\Throwable $exception) {
+            foreach ($storedPaths as $storedPath) {
+                Storage::disk($disk)->delete($storedPath);
+            }
 
-            BackupFile::create([
-                'municipality_id' => $municipalityId,
-                'disk' => $disk,
-                'folder' => $folder,
-                'original_name' => $original,
-                'stored_name' => $storedName,
-                'path' => $path,
-                'size' => (int) $size,
-                'mime' => $mime,
-                'sha256' => $sha256,
-                'notes' => $data['notes'] ?? null,
-                'uploaded_by' => Auth::id(),
-            ]);
+            throw $exception;
         }
 
         return redirect()->route('backups.index')->with('success', 'Backup file(s) uploaded.');
@@ -296,11 +321,19 @@ class BackupController extends Controller
     public function destroy(BackupFile $backup)
     {
         $this->authorize('delete', $backup);
-        $disk = $backup->disk;
-        if (Storage::disk($disk)->exists($backup->path)) {
-            Storage::disk($disk)->delete($backup->path);
-        }
-        $backup->delete();
+
+        $this->concurrentWrite->locked(
+            $backup,
+            function (BackupFile $current): void {
+                $disk = $current->disk;
+                $path = $current->path;
+
+                $current->delete();
+                $current->getConnection()->afterCommit(
+                    fn () => Storage::disk($disk)->delete($path)
+                );
+            }
+        );
 
         return redirect()->route('backups.index')->with('success', 'Backup deleted.');
     }
@@ -383,13 +416,31 @@ class BackupController extends Controller
                 'content' => ['required', 'string', 'max:10000000'],
             ]);
 
-            Storage::disk($disk)->put($backup->path, $data['content']);
+            $this->concurrentWrite->execute(
+                $backup,
+                $request->input('_record_version'),
+                function (BackupFile $current) use ($data, $disk): void {
+                    $stored = Storage::disk($disk)->put(
+                        $current->path,
+                        $data['content']
+                    );
+                    if (! $stored) {
+                        throw new \RuntimeException(
+                            'The edited backup file could not be stored.'
+                        );
+                    }
 
-            // update meta
-            $backup->size = (int) Storage::disk($disk)->size($backup->path);
-            $backup->mime = $backup->mime ?: 'text/plain';
-            $backup->sha256 = $this->computeSha256($disk, $backup->path);
-            $backup->save();
+                    $current->size = (int) Storage::disk($disk)->size(
+                        $current->path
+                    );
+                    $current->mime = $current->mime ?: 'text/plain';
+                    $current->sha256 = $this->computeSha256(
+                        $disk,
+                        $current->path
+                    );
+                    $current->save();
+                }
+            );
 
             return response()->json(['ok' => true]);
         }
@@ -406,17 +457,45 @@ class BackupController extends Controller
 
             $uploaded = $request->file('file');
 
-            // overwrite same storage path
-            $stream = fopen($uploaded->getRealPath(), 'rb');
-            Storage::disk($disk)->put($backup->path, $stream);
-            if (is_resource($stream)) fclose($stream);
+            $this->concurrentWrite->execute(
+                $backup,
+                $request->input('_record_version'),
+                function (BackupFile $current) use ($uploaded, $disk): void {
+                    $stream = fopen($uploaded->getRealPath(), 'rb');
+                    if ($stream === false) {
+                        throw new \RuntimeException(
+                            'The uploaded workbook could not be opened.'
+                        );
+                    }
 
-            // update meta
-            $backup->size = (int) Storage::disk($disk)->size($backup->path);
-            $backup->mime = $uploaded->getClientMimeType()
-                ?: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-            $backup->sha256 = $this->computeSha256($disk, $backup->path);
-            $backup->save();
+                    try {
+                        $stored = Storage::disk($disk)->put(
+                            $current->path,
+                            $stream
+                        );
+                        if (! $stored) {
+                            throw new \RuntimeException(
+                                'The edited workbook could not be stored.'
+                            );
+                        }
+                    } finally {
+                        if (is_resource($stream)) {
+                            fclose($stream);
+                        }
+                    }
+
+                    $current->size = (int) Storage::disk($disk)->size(
+                        $current->path
+                    );
+                    $current->mime = $uploaded->getClientMimeType()
+                        ?: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+                    $current->sha256 = $this->computeSha256(
+                        $disk,
+                        $current->path
+                    );
+                    $current->save();
+                }
+            );
 
             return response()->json(['ok' => true]);
         }

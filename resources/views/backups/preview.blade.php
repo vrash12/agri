@@ -250,6 +250,7 @@
   $streamUrl = route('backups.stream', $file->id);
   $downloadUrl = route('backups.download', $file->id);
   $saveUrl = route('backups.save', $file->id);
+  $recordVersion = \App\Support\ConcurrentWrite::version($file);
 @endphp
 
 <div class="module-page backup-preview-page">
@@ -407,6 +408,7 @@
 (function(){
   const streamUrl = @json($streamUrl);
   const saveUrl   = @json($saveUrl);
+  const recordVersion = @json($recordVersion);
   const mode      = @json($mode);
   const ext       = @json($ext);
   const mime      = @json($mime);
@@ -496,6 +498,7 @@
       const fd = new FormData();
       fd.append('kind', 'text');
       fd.append('content', cm.getValue());
+      fd.append('_record_version', recordVersion);
 
       const res = await fetch(saveUrl, {
         method: 'POST',
@@ -504,7 +507,10 @@
         body: fd
       });
 
-      if(!res.ok) throw new Error('HTTP ' + res.status);
+      if(!res.ok){
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error?.errors?._record_version?.[0] || error?.message || ('HTTP ' + res.status));
+      }
       location.href = location.pathname + '?mode=view';
     }catch(e){
       alert('Save failed: ' + (e.message || e));
@@ -611,6 +617,7 @@
       const fd = new FormData();
       fd.append('kind', 'xlsx');
       fd.append('file', blob, 'edited.xlsx');
+      fd.append('_record_version', recordVersion);
 
       const res = await fetch(saveUrl, {
         method: 'POST',
@@ -619,7 +626,10 @@
         body: fd
       });
 
-      if(!res.ok) throw new Error('HTTP ' + res.status);
+      if(!res.ok){
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error?.errors?._record_version?.[0] || error?.message || ('HTTP ' + res.status));
+      }
       location.href = location.pathname + '?mode=view';
     }catch(e){
       alert('Save failed: ' + (e.message || e));

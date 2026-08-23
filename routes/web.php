@@ -11,6 +11,7 @@ use App\Http\Controllers\FarmerController;
 use App\Http\Controllers\FarmPlotController;
 use App\Http\Controllers\FarmersCooperativeController;
 use App\Http\Controllers\RiceSeedDistributionController;
+use App\Http\Controllers\WeatherAdvisoryController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -63,7 +64,7 @@ Route::get('/land/{token}', [FarmerController::class, 'publicLand'])
 | AUTHENTICATED ROUTES
 |--------------------------------------------------------------------------
 */
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'synchronized'])->group(function () {
     /*
     |--------------------------------------------------------------------------
     | DASHBOARD
@@ -71,6 +72,13 @@ Route::middleware('auth')->group(function () {
     */
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->name('dashboard');
+
+    Route::get('/weather-advisories', [WeatherAdvisoryController::class, 'index'])
+        ->name('weather.index');
+
+    Route::post('/weather-advisories/refresh', [WeatherAdvisoryController::class, 'refresh'])
+        ->middleware('throttle:6,1')
+        ->name('weather.refresh');
 
     /*
     |--------------------------------------------------------------------------

@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Farmer;
 use App\Models\FarmPlot;
+use App\Support\ConcurrentWrite;
 use App\Support\MunicipalityAccess;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -15,7 +17,8 @@ use Illuminate\Support\Facades\Http;
 class FarmPlotController extends Controller
 {
     public function __construct(
-        private MunicipalityAccess $municipalityAccess
+        private MunicipalityAccess $municipalityAccess,
+        private ConcurrentWrite $concurrentWrite
     ) {
         $this->middleware('auth');
     }
@@ -24,11 +27,12 @@ class FarmPlotController extends Controller
     {
         $this->authorize('view', $farmer);
 
-        return response()->json([
-            'plots' => FarmPlot::where('farmer_id', $farmer->id)
+        $plots = FarmPlot::where('farmer_id', $farmer->id)
                 ->orderByDesc('id')
-                ->get(),
-        ]);
+                ->get()
+                ->each(fn (FarmPlot $plot) => $this->attachVersion($plot));
+
+        return response()->json(['plots' => $plots]);
     }
 
     public function all(Request $request)
@@ -45,8 +49,7 @@ class FarmPlotController extends Controller
             });
         }
 
-        return response()->json([
-            'plots' => $query
+        $plots = $query
                 ->orderByDesc('id')
                 ->get([
                     'id',
@@ -58,8 +61,11 @@ class FarmPlotController extends Controller
                     'centroid_lat',
                     'centroid_lng',
                     'created_at',
-                ]),
-        ]);
+                    'updated_at',
+                ])
+                ->each(fn (FarmPlot $plot) => $this->attachVersion($plot));
+
+        return response()->json(['plots' => $plots]);
     }
 
     /**
@@ -107,49 +113,68 @@ class FarmPlotController extends Controller
             .$plot->getKey().':'
             .sha1(json_encode([$points, $color]));
 
-        $map = Cache::remember(
-            $cacheKey,
-            now()->addHours(12),
-            function () use ($apiKey, $path): ?array {
-                $response = Http::withHeaders([
-                    'Accept' => 'image/png,image/*;q=0.9',
-                    'Referer' => rtrim((string) config('app.url'), '/').'/',
-                    'User-Agent' => 'AgriMS-Tarlac/1.0',
-                ])->timeout(20)->get(
-                    'https://maps.googleapis.com/maps/api/staticmap',
-                    [
-                        'size' => '640x360',
-                        'scale' => 2,
-                        'format' => 'png',
-                        'maptype' => 'hybrid',
-                        'path' => implode('|', $path),
-                        'key' => $apiKey,
-                    ]
-                );
+        $map = Cache::get($cacheKey);
 
-                $contentType = strtolower((string) $response->header(
-                    'Content-Type'
-                ));
+        if (! is_array($map)) {
+            try {
+                $map = Cache::lock(
+                    $cacheKey.':refresh-lock',
+                    30
+                )->block(5, function () use (
+                    $cacheKey,
+                    $apiKey,
+                    $path
+                ): ?array {
+                    $cached = Cache::get($cacheKey);
+                    if (is_array($cached)) {
+                        return $cached;
+                    }
 
-                if (
-                    ! $response->successful()
-                    || ! str_starts_with($contentType, 'image/')
-                    || $response->body() === ''
-                ) {
-                    report(new \RuntimeException(
-                        'Google Static Maps request failed with HTTP '
-                        .$response->status().'.'
+                    $response = Http::withHeaders([
+                        'Accept' => 'image/png,image/*;q=0.9',
+                        'Referer' => rtrim((string) config('app.url'), '/').'/',
+                        'User-Agent' => 'AgriMS-Tarlac/1.0',
+                    ])->timeout(20)->get(
+                        'https://maps.googleapis.com/maps/api/staticmap',
+                        [
+                            'size' => '640x360',
+                            'scale' => 2,
+                            'format' => 'png',
+                            'maptype' => 'hybrid',
+                            'path' => implode('|', $path),
+                            'key' => $apiKey,
+                        ]
+                    );
+
+                    $contentType = strtolower((string) $response->header(
+                        'Content-Type'
                     ));
 
-                    return null;
-                }
+                    if (
+                        ! $response->successful()
+                        || ! str_starts_with($contentType, 'image/')
+                        || $response->body() === ''
+                    ) {
+                        report(new \RuntimeException(
+                            'Google Static Maps request failed with HTTP '
+                            .$response->status().'.'
+                        ));
 
-                return [
-                    'body' => $response->body(),
-                    'content_type' => $contentType,
-                ];
+                        return null;
+                    }
+
+                    $map = [
+                        'body' => $response->body(),
+                        'content_type' => $contentType,
+                    ];
+                    Cache::put($cacheKey, $map, now()->addHours(12));
+
+                    return $map;
+                });
+            } catch (LockTimeoutException $exception) {
+                $map = Cache::get($cacheKey);
             }
-        );
+        }
 
         if (! is_array($map) || ! isset($map['body'])) {
             return response(
@@ -187,15 +212,19 @@ class FarmPlotController extends Controller
         [$centroidLat, $centroidLng] = $this->computeCentroid($polygon);
         $areaHa = $this->areaHectaresSpherical($polygon);
 
-        $plot = FarmPlot::create([
-            'farmer_id' => $farmer->id,
-            'name' => $data['name'] ?? null,
-            'color' => $this->normalizeHexColor($data['color'] ?? '#22c55e'),
-            'polygon_json' => $polygon,
-            'area_ha' => $areaHa,
-            'centroid_lat' => $centroidLat,
-            'centroid_lng' => $centroidLng,
-        ]);
+        $plot = $this->concurrentWrite->transaction(
+            fn () => FarmPlot::create([
+                'farmer_id' => $farmer->id,
+                'name' => $data['name'] ?? null,
+                'color' => $this->normalizeHexColor($data['color'] ?? '#22c55e'),
+                'polygon_json' => $polygon,
+                'area_ha' => $areaHa,
+                'centroid_lat' => $centroidLat,
+                'centroid_lng' => $centroidLng,
+            ])
+        );
+
+        $this->attachVersion($plot);
 
         return response()->json(['plot' => $plot], 201);
     }
@@ -222,22 +251,46 @@ class FarmPlotController extends Controller
         [$centroidLat, $centroidLng] = $this->computeCentroid($polygon);
         $areaHa = $this->areaHectaresSpherical($polygon);
 
-        $plot->update([
-            'name' => $data['name'] ?? null,
-            'color' => $this->normalizeHexColor($data['color'] ?? '#22c55e'),
-            'polygon_json' => $polygon,
-            'area_ha' => $areaHa,
-            'centroid_lat' => $centroidLat,
-            'centroid_lng' => $centroidLng,
-        ]);
+        /** @var FarmPlot $plot */
+        $plot = $this->concurrentWrite->execute(
+            $plot,
+            $request->input('_record_version'),
+            function (FarmPlot $current) use (
+                $data,
+                $polygon,
+                $areaHa,
+                $centroidLat,
+                $centroidLng
+            ): FarmPlot {
+                $current->update([
+                    'name' => $data['name'] ?? null,
+                    'color' => $this->normalizeHexColor($data['color'] ?? '#22c55e'),
+                    'polygon_json' => $polygon,
+                    'area_ha' => $areaHa,
+                    'centroid_lat' => $centroidLat,
+                    'centroid_lng' => $centroidLng,
+                ]);
+
+                return $current;
+            }
+        );
+
+        $this->attachVersion($plot);
 
         return response()->json(['plot' => $plot]);
     }
 
-    public function destroy(FarmPlot $plot)
+    public function destroy(Request $request, FarmPlot $plot)
     {
         $this->authorize('delete', $plot);
-        $plot->delete();
+
+        $this->concurrentWrite->execute(
+            $plot,
+            $request->input('_record_version'),
+            function (FarmPlot $current): void {
+                $current->delete();
+            }
+        );
 
         return response()->json(['ok' => true]);
     }
@@ -1106,6 +1159,16 @@ private function seededPlotColor(string $seed, string $baseKmlColor = 'ccffffff'
         }
 
         return $out;
+    }
+
+    private function attachVersion(FarmPlot $plot): FarmPlot
+    {
+        $plot->setAttribute(
+            '_record_version',
+            ConcurrentWrite::version($plot)
+        );
+
+        return $plot;
     }
 
     /**

@@ -831,7 +831,13 @@
         <span class="parcel-mode-badge" id="plotModeBadge" style="display:none;">Boundary drawing active</span>
       </div>
       <h2>Parcel mapping workspace</h2>
-      <p>@if($canManageOperations ?? auth()->user()->canManageOperationalData())Select a farmer, review existing parcels, then draw or import a verified farm boundary.@elseSelect a farmer to review existing parcels and export printable plot information.@endif</p>
+      <p>
+        @if($canManageOperations ?? auth()->user()->canManageOperationalData())
+          Select a farmer, review existing parcels, then draw or import a verified farm boundary.
+        @else
+          Select a farmer to review existing parcels and export printable plot information.
+        @endif
+      </p>
     </div>
 
     <div class="parcel-load-status" aria-live="polite">

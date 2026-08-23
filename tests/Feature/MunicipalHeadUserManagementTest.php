@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Municipality;
 use App\Models\User;
+use App\Support\ConcurrentWrite;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -118,6 +119,7 @@ class MunicipalHeadUserManagementTest extends TestCase
 
         $this->actingAs($this->municipalHead)
             ->put(route('admins.update', $this->ownStaff), [
+                '_record_version' => ConcurrentWrite::version($this->ownStaff),
                 'name' => 'Updated Own Staff',
                 'email' => $updatedEmail,
                 'role' => User::ROLE_MUNICIPAL_STAFF,

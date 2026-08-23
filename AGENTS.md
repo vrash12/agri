@@ -31,6 +31,8 @@ The application is multi-municipality. Operational records belong to one `munici
 - Google Maps Static API through an authorized same-origin server proxy for satellite PNG exports
 - Nominatim/OpenStreetMap for server-side geocoding through `/api/geocode`
 - Leaflet and OpenStreetMap tiles for the public QR-linked parcel map
+- Open-Meteo for cached municipality-level weather forecasts and rule-based agricultural guidance
+- PAGASA website links for official weather, tropical cyclone, flood, and agri-weather bulletins
 - Chart.js for dashboards and module charts
 - DataTables, Tom Select, Handsontable, SheetJS, CodeMirror, JSZip, and docx-preview from CDNs in various views
 
@@ -296,9 +298,36 @@ Audit failures are reported but do not interrupt the user's main operation. Pass
 
 Do not expose the Nominatim proxy anonymously or remove its throttle/cache without reviewing provider usage requirements.
 
+### 5.13 Weather and agricultural advisories
+
+Routes: `GET /weather-advisories` (`weather.index`) and throttled `POST /weather-advisories/refresh` (`weather.refresh`).
+
+Functions:
+
+- retrieve a seven-day municipality forecast from Open-Meteo without exposing a browser API key;
+- cache each municipality forecast for 30 minutes and retain a configurable last-known forecast for provider outages;
+- show current temperature, apparent temperature, humidity, precipitation, wind, seven-day rainfall, daily forecasts, and a 24-hour rain-probability view;
+- generate transparent threshold-based farm guidance for heavy rainfall, high rain probability, strong wind, heat, and irrigation review;
+- let provincial users select any active municipality while locking municipal users to their assigned municipality;
+- when moderate/high thresholds are crossed, build a municipality-scoped follow-up queue of mapped farmers with parcel counts, mapped area, and contact readiness; this queue does not automatically send messages;
+- provide direct links to PAGASA weather, tropical cyclone, flood, and agri-weather pages for official bulletins;
+- expose the module in the shared navigation and as a dashboard quick action.
+
+The municipality coordinates in `config/weather.php` are town-center forecast reference points. They are not surveyed parcel coordinates. Open-Meteo guidance must never be presented as an official typhoon, rainfall, thunderstorm, or flood warning; PAGASA and local disaster-risk authorities remain the official sources. Forecast refreshes use an atomic cache lock and recheck the cache after waiting so simultaneous dashboard requests do not create an outbound-request stampede.
+
+### 5.14 Concurrent-use and write synchronization
+
+All authenticated state-changing routes run through `SynchronizeMutatingRequests`. It serializes mutations from the same account to protect session and flash state, then obtains a shared record lock so two different staff accounts cannot mutate the same route-bound model at the same time. Creates and imports without a bound model are grouped by municipality when possible. Lock timeouts return HTTP 409 for JSON requests and a retry message for normal forms.
+
+Normal edit forms for farmers, input releases, vaccinations, cooperatives, machinery, user accounts, and cooperative membership carry an HMAC record-version token. `App\Support\ConcurrentWrite` reloads the row with `SELECT ... FOR UPDATE` inside a retried database transaction and rejects a stale token instead of silently overwriting another staff member's newer values. Farm-plot JSON updates/deletes and editable Backup Folder files use the same optimistic check. Immediate index-page deletions re-fetch and lock the current row before changing dependencies. Browser forms also suppress rapid duplicate submissions.
+
+Create operations and multi-record mutations use retried transactions where the workflow is database-atomic. Large seed/input and machinery CSV exports use bounded chunks and a stable maximum ID rather than loading the complete result into PHP memory. Exported spreadsheet values are guarded against CSV formula injection.
+
+The lock mechanism requires an atomic shared cache store. The file cache is suitable for one Hostinger server when every PHP worker sees the same filesystem. Use Redis (recommended) or another shared atomic-lock store before running more than one application server; otherwise locks on separate servers cannot coordinate.
+
 ## 6. Route inventory
 
-As of 2026-08-21, `php artisan route:list --json` reports 73 routes protected by Laravel authentication, including the Sanctum endpoint:
+As of 2026-08-24, `php artisan route:list --json` reports 75 routes protected by Laravel authentication, including the Sanctum endpoint:
 
 | Area | Authenticated routes |
 | --- | ---: |
@@ -311,6 +340,7 @@ As of 2026-08-21, `php artisan route:list --json` reports 73 routes protected by
 | User management | 6 |
 | Farm plots | 6 |
 | Audit trail | 3 |
+| Weather and agricultural advisories | 2 |
 | Dashboard/logout/API | 4 |
 
 Regenerate the inventory instead of preserving this number if routes change:
@@ -351,6 +381,8 @@ Distribution records intentionally keep a farmer snapshot in addition to `farmer
 - `app/Policies/Concerns/AuthorizesMunicipalityRecords.php`: shared operational policy behavior
 - `app/Support/MunicipalityAccess.php`: shared tenancy scoping and ownership resolution
 - `app/Support/AuditTrail.php`: safe audit-event creation and secret filtering
+- `app/Support/ConcurrentWrite.php`: record versioning, row locks, retried transactions, and stale-write rejection
+- `app/Http/Middleware/SynchronizeMutatingRequests.php`: per-account and per-record/cache mutexes for state-changing requests
 - `app/Observers/AuditModelObserver.php`: automatic model change logging
 - `app/Providers/AuthServiceProvider.php`: model/policy registration
 - `app/Providers/AppServiceProvider.php`: audit observers and custom pagination views
@@ -407,6 +439,17 @@ DB_PASSWORD=...
 GOOGLE_MAPS_API_KEY=...
 GOOGLE_MAPS_MAP_ID=...
 GOOGLE_MAPS_STATIC_API_KEY=...
+
+WEATHER_CACHE_MINUTES=30
+WEATHER_STALE_HOURS=12
+WEATHER_TIMEOUT_SECONDS=8
+WEATHER_TIMEZONE=Asia/Manila
+WEATHER_REFRESH_LOCK_SECONDS=30
+WEATHER_REFRESH_WAIT_SECONDS=3
+
+CONCURRENCY_LOCK_SECONDS=120
+CONCURRENCY_WAIT_SECONDS=5
+DB_TRANSACTION_ATTEMPTS=3
 ```
 
 Google Maps settings are defined in `config/services.php`. The optional static
@@ -427,6 +470,8 @@ After changing environment configuration, run:
 php artisan optimize:clear
 php artisan config:cache
 ```
+
+The weather module uses Open-Meteo and does not require an API key. Optional provider URL and advisory thresholds are defined in `config/weather.php`. Keep the cache enabled in production to limit outbound requests and improve responsiveness. Atomic cache locks are also part of request and record synchronization; do not set `CACHE_DRIVER=array` outside isolated tests.
 
 Google Cloud must have Maps JavaScript API and Maps Static API enabled as required by the plotting/export UI, billing enabled, and an HTTP referrer restriction matching the deployed domain.
 
@@ -480,6 +525,7 @@ Important feature suites include:
 - `OperationsDashboardTest`
 - `PublicFarmerLandMapTest`
 - `SuperAdminAuditTrailTest`
+- `ConcurrentWriteTest` (uses its own in-memory SQLite connection)
 
 The current `phpunit.xml` does not configure a separate test database, and feature tests use `DatabaseTransactions`. Never run the suite while `.env` points to production. Configure a dedicated disposable test database first. Add a regression test whenever changing permissions, municipality scoping, route-model binding, public-map privacy, imports, exports, file access, or audit redaction.
 
@@ -496,9 +542,10 @@ The current `phpunit.xml` does not configure a separate test database, and featu
 9. Keep public QR responses read-only and privacy-limited; do not expose contact, birth, eligibility, vaccination, distribution, or account data.
 10. Keep secrets and passwords out of audit values and logs.
 11. Use eager loading, grouped aggregates, pagination caps, and chunked exports for multi-user performance.
-12. Preserve CSRF protection, throttling, validation, escaped Blade output, and safe CSV handling.
-13. Use named routes and explicit resource parameter names when controller argument names are camel-cased.
-14. Update navigation, dashboard metrics, audit-module labels, migrations, tests, and this file when adding a module.
+12. Use `ConcurrentWrite` for editable shared records, keep version tokens on every edit surface, and place related database changes in a short transaction; never hold a database transaction open during HTTP calls or long imports.
+13. Preserve CSRF protection, throttling, validation, escaped Blade output, and safe CSV handling.
+14. Use named routes and explicit resource parameter names when controller argument names are camel-cased.
+15. Update navigation, dashboard metrics, audit-module labels, migrations, tests, and this file when adding a module.
 
 ## 14. Definition of done for a municipality-owned feature
 
@@ -512,6 +559,7 @@ A feature is not complete until all of the following are true:
 - view/edit/update/delete/preview/download/stream/assignment actions authorize record ownership;
 - super-admin read/write rules match the permission matrix;
 - relevant changes appear in the audit trail without secrets;
+- simultaneous edits cannot silently overwrite a newer record and retryable multi-row writes are transaction-safe;
 - responsive empty, loading, error, and validation states exist in the UI;
 - feature tests cover own municipality, foreign municipality, provincial access, and super-admin behavior;
 - migrations work against a backed-up copy of the real schema;

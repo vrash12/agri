@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Farmer;
 use App\Models\FarmersCooperative;
 use App\Support\AuditTrail;
+use App\Support\ConcurrentWrite;
 use App\Support\MunicipalityAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -19,7 +20,8 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 class FarmersCooperativeController extends Controller
 {
     public function __construct(
-        private MunicipalityAccess $municipalityAccess
+        private MunicipalityAccess $municipalityAccess,
+        private ConcurrentWrite $concurrentWrite
     ) {
         $this->middleware('auth');
     }
@@ -138,7 +140,9 @@ class FarmersCooperativeController extends Controller
                 $data['municipality_id'] ?? null
             );
 
-        $cooperative = FarmersCooperative::create($data);
+        $cooperative = $this->concurrentWrite->transaction(
+            fn () => FarmersCooperative::create($data)
+        );
 
         return redirect()
             ->route('farmers-cooperatives.assign-farmers', $cooperative)
@@ -180,18 +184,26 @@ class FarmersCooperativeController extends Controller
             $data['municipality_id'] ?? null
         );
 
-        if (
-            $municipalityId !== (int) $farmersCooperative->municipality_id
-            && $farmersCooperative->farmers()->exists()
-        ) {
-            throw ValidationException::withMessages([
-                'municipality_id' => 'Remove assigned farmers before moving this cooperative to another municipality.',
-            ]);
-        }
-
         $data['municipality_id'] = $municipalityId;
+        $this->concurrentWrite->execute(
+            $farmersCooperative,
+            $request->input('_record_version'),
+            function (FarmersCooperative $current) use (
+                $data,
+                $municipalityId
+            ): void {
+                if (
+                    $municipalityId !== (int) $current->municipality_id
+                    && $current->farmers()->exists()
+                ) {
+                    throw ValidationException::withMessages([
+                        'municipality_id' => 'Remove assigned farmers before moving this cooperative to another municipality.',
+                    ]);
+                }
 
-        $farmersCooperative->update($data);
+                $current->update($data);
+            }
+        );
 
         return redirect()
             ->route('farmers-cooperatives.index')
@@ -201,7 +213,10 @@ class FarmersCooperativeController extends Controller
     public function destroy(FarmersCooperative $farmersCooperative)
     {
         $this->authorize('delete', $farmersCooperative);
-        $farmersCooperative->delete();
+        $this->concurrentWrite->locked(
+            $farmersCooperative,
+            fn (FarmersCooperative $current) => $current->delete()
+        );
 
         return redirect()
             ->route('farmers-cooperatives.index')
@@ -262,12 +277,6 @@ class FarmersCooperativeController extends Controller
             ],
         ]);
 
-        $oldFarmerIds = $farmersCooperative->farmers()
-            ->pluck('farmers.id')
-            ->map(fn ($id) => (int) $id)
-            ->sort()
-            ->values()
-            ->all();
         $newFarmerIds = collect($data['farmer_ids'] ?? [])
             ->map(fn ($id) => (int) $id)
             ->unique()
@@ -275,24 +284,38 @@ class FarmersCooperativeController extends Controller
             ->values()
             ->all();
 
-        $farmersCooperative->farmers()->sync($newFarmerIds);
+        $this->concurrentWrite->execute(
+            $farmersCooperative,
+            $request->input('_record_version'),
+            function (FarmersCooperative $current) use ($newFarmerIds): void {
+                $oldFarmerIds = $current->farmers()
+                    ->pluck('farmers.id')
+                    ->map(fn ($id) => (int) $id)
+                    ->sort()
+                    ->values()
+                    ->all();
 
-        if ($oldFarmerIds !== $newFarmerIds) {
-            AuditTrail::record(
-                'membership_updated',
-                'Cooperatives',
-                auth()->user()->name.' updated the membership of “'.$farmersCooperative->name.'”.',
-                [
-                    'auditable' => $farmersCooperative,
-                    'old_values' => ['farmer_ids' => $oldFarmerIds],
-                    'new_values' => ['farmer_ids' => $newFarmerIds],
-                    'metadata' => [
-                        'members_before' => count($oldFarmerIds),
-                        'members_after' => count($newFarmerIds),
-                    ],
-                ]
-            );
-        }
+                $current->farmers()->sync($newFarmerIds);
+
+                if ($oldFarmerIds !== $newFarmerIds) {
+                    $current->touch();
+                    AuditTrail::record(
+                        'membership_updated',
+                        'Cooperatives',
+                        auth()->user()->name.' updated the membership of “'.$current->name.'”.',
+                        [
+                            'auditable' => $current,
+                            'old_values' => ['farmer_ids' => $oldFarmerIds],
+                            'new_values' => ['farmer_ids' => $newFarmerIds],
+                            'metadata' => [
+                                'members_before' => count($oldFarmerIds),
+                                'members_after' => count($newFarmerIds),
+                            ],
+                        ]
+                    );
+                }
+            }
+        );
 
         return redirect()
             ->route('farmers-cooperatives.index')

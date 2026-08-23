@@ -53,6 +53,10 @@
     </div>
 
     <div class="ops-actions" aria-label="Quick actions">
+      <a class="ops-button ops-button-secondary" href="{{ route('weather.index') }}">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18h10a5 5 0 0 0 0-10 7 7 0 0 0-13 3 4 4 0 0 0 3 7Z"></path><path d="M8 21h8M12 3V1"></path></svg>
+        Weather advisories
+      </a>
       <a class="ops-button ops-button-secondary" href="{{ route('farmers.index') }}#farmersMapModule">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z"></path><path d="M9 3v15M15 6v15"></path></svg>
         Open farm map

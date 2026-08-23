@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Farmer;
 use App\Models\RiceSeedDistribution;
+use App\Support\ConcurrentWrite;
 use App\Support\MunicipalityAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -16,7 +17,8 @@ use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 class RiceSeedDistributionController extends Controller
 {
     public function __construct(
-        private MunicipalityAccess $municipalityAccess
+        private MunicipalityAccess $municipalityAccess,
+        private ConcurrentWrite $concurrentWrite
     ) {
         $this->middleware('auth');
     }
@@ -535,7 +537,9 @@ class RiceSeedDistributionController extends Controller
             $municipalityId
         );
 
-        RiceSeedDistribution::create($payload);
+        $this->concurrentWrite->transaction(
+            fn () => RiceSeedDistribution::create($payload)
+        );
 
         return redirect()
             ->route('rice-seed-distributions.index')
@@ -587,7 +591,11 @@ class RiceSeedDistributionController extends Controller
             $municipalityId
         );
 
-        $riceSeedDistribution->update($payload);
+        $this->concurrentWrite->execute(
+            $riceSeedDistribution,
+            $request->input('_record_version'),
+            fn (RiceSeedDistribution $current) => $current->update($payload)
+        );
 
         return redirect()
             ->route('rice-seed-distributions.index')
@@ -597,7 +605,10 @@ class RiceSeedDistributionController extends Controller
     public function destroy(RiceSeedDistribution $riceSeedDistribution)
     {
         $this->authorize('delete', $riceSeedDistribution);
-        $riceSeedDistribution->delete();
+        $this->concurrentWrite->locked(
+            $riceSeedDistribution,
+            fn (RiceSeedDistribution $current) => $current->delete()
+        );
 
         return redirect()->route('rice-seed-distributions.index')
             ->with('success', 'Recipient record deleted.');
@@ -607,9 +618,8 @@ class RiceSeedDistributionController extends Controller
     {
         $this->authorize('export', RiceSeedDistribution::class);
 
-        $query = $this->buildFilteredQuery($request)
-            ->orderBy('last_name')
-            ->orderBy('first_name');
+        $query = $this->buildFilteredQuery($request);
+        $maximumId = (int) ((clone $query)->max('id') ?? 0);
 
         $filename = 'seed_and_input_distribution_' . now()->format('Y-m-d_H-i-s') . '.csv';
 
@@ -637,42 +647,50 @@ class RiceSeedDistributionController extends Controller
             'Date Received',
         ];
 
-        return response()->streamDownload(function () use ($query, $headings) {
+        return response()->streamDownload(function () use (
+            $query,
+            $headings,
+            $maximumId
+        ) {
             $out = fopen('php://output', 'w');
             fputcsv($out, $headings);
 
             $i = 0;
 
-            $query->chunk(1000, function ($rows) use (&$i, $out) {
-                foreach ($rows as $r) {
-                    $i++;
+            if ($maximumId > 0) {
+                (clone $query)
+                    ->where('id', '<=', $maximumId)
+                    ->chunkById(1000, function ($rows) use (&$i, $out) {
+                        foreach ($rows as $r) {
+                            $i++;
 
-                    fputcsv($out, [
-                        $i,
-                        $r->last_name,
-                        $r->first_name,
-                        $r->middle_name,
-                        $r->ffrs,
-                        optional($r->date_of_birth)->format('Y-m-d'),
-                        $r->farm_location,
-                        $r->gender,
-                        $r->is_arb ? 'Y' : 'N',
-                        $r->is_4ps ? 'Y' : 'N',
-                        $r->is_ip ? 'Y' : 'N',
-                        $r->is_pwd ? 'Y' : 'N',
-                        $r->is_sc ? 'Y' : 'N',
-                        $r->is_ofw ? 'Y' : 'N',
-                        $r->farm_area_ha,
-                        $this->inputCategoryOptions[$r->input_category]
-                            ?? ucfirst(str_replace('_', ' ', $r->input_category ?: 'rice_seed')),
-                        $r->seed_variety_claimed,
-                        $r->kgs_received,
-                        $r->quantity_unit ?: 'kg',
-                        $r->input_notes,
-                        optional($r->date_received)->format('Y-m-d'),
-                    ]);
-                }
-            });
+                            fputcsv($out, array_map([$this, 'csvValue'], [
+                                $i,
+                                $r->last_name,
+                                $r->first_name,
+                                $r->middle_name,
+                                $r->ffrs,
+                                optional($r->date_of_birth)->format('Y-m-d'),
+                                $r->farm_location,
+                                $r->gender,
+                                $r->is_arb ? 'Y' : 'N',
+                                $r->is_4ps ? 'Y' : 'N',
+                                $r->is_ip ? 'Y' : 'N',
+                                $r->is_pwd ? 'Y' : 'N',
+                                $r->is_sc ? 'Y' : 'N',
+                                $r->is_ofw ? 'Y' : 'N',
+                                $r->farm_area_ha,
+                                $this->inputCategoryOptions[$r->input_category]
+                                    ?? ucfirst(str_replace('_', ' ', $r->input_category ?: 'rice_seed')),
+                                $r->seed_variety_claimed,
+                                $r->kgs_received,
+                                $r->quantity_unit ?: 'kg',
+                                $r->input_notes,
+                                optional($r->date_received)->format('Y-m-d'),
+                            ]));
+                        }
+                    });
+            }
 
             fclose($out);
         }, $filename, [
@@ -1031,5 +1049,13 @@ class RiceSeedDistributionController extends Controller
             'OTHER', 'O' => 'Other',
             default => null,
         };
+    }
+
+    /** @param mixed $value */
+    private function csvValue($value): string
+    {
+        $value = (string) ($value ?? '');
+
+        return preg_match('/^[=+\-@]/', $value) ? "'".$value : $value;
     }
 }

@@ -8,6 +8,7 @@ use App\Models\BackupFile;
 use App\Models\Farmer;
 use App\Models\FarmersCooperative;
 use App\Models\FarmPlot;
+use App\Support\ConcurrentWrite;
 use App\Models\Municipality;
 use App\Models\RiceSeedDistribution;
 use App\Models\User;
@@ -318,6 +319,7 @@ class MunicipalitySeparationTest extends TestCase
 
         $this->actingAs($this->municipalUser)
             ->put(route('farmers.update', $ownFarmer), [
+                '_record_version' => ConcurrentWrite::version($ownFarmer),
                 'last_name' => $ownFarmer->last_name,
                 'first_name' => $ownFarmer->first_name,
                 'profile_photo' => UploadedFile::fake()

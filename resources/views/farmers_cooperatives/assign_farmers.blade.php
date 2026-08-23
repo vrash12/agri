@@ -33,6 +33,7 @@
   </section>
 
   <form method="POST" action="{{ route('farmers-cooperatives.save-assigned-farmers', $record) }}" id="membershipForm">@csrf @method('PUT')
+    @include('partials.record-version', ['record' => $record])
     <section class="module-panel">
       <div class="module-panel-head"><div><h2>Selected farmers</h2><p>Review the membership list before saving. Removing a card updates the pending selection.</p></div><button class="module-button module-button-small" id="openMemberPickerSecondary" type="button">Add or remove farmers</button></div>
       <div class="member-list" id="selectedMemberList">

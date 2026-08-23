@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AntiRabiesVaccination;
+use App\Support\ConcurrentWrite;
 use App\Support\MunicipalityAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -11,7 +12,8 @@ use Illuminate\Support\Facades\Schema;
 class AntiRabiesVaccinationController extends Controller
 {
     public function __construct(
-        private MunicipalityAccess $municipalityAccess
+        private MunicipalityAccess $municipalityAccess,
+        private ConcurrentWrite $concurrentWrite
     ) {
         $this->middleware('auth');
     }
@@ -329,7 +331,9 @@ class AntiRabiesVaccinationController extends Controller
             $data['vaccination_year'] = (int) date('Y', strtotime($data['vaccination_date']));
         }
 
-        AntiRabiesVaccination::create($data);
+        $this->concurrentWrite->transaction(
+            fn () => AntiRabiesVaccination::create($data)
+        );
 
         return redirect()
             ->route('anti-rabies-vaccinations.index')
@@ -375,7 +379,11 @@ class AntiRabiesVaccinationController extends Controller
             $data['vaccination_year'] = (int) date('Y', strtotime($data['vaccination_date']));
         }
 
-        $antiRabiesVaccination->update($data);
+        $this->concurrentWrite->execute(
+            $antiRabiesVaccination,
+            $request->input('_record_version'),
+            fn (AntiRabiesVaccination $current) => $current->update($data)
+        );
 
         return redirect()
             ->route('anti-rabies-vaccinations.index')
@@ -385,7 +393,10 @@ class AntiRabiesVaccinationController extends Controller
     public function destroy(AntiRabiesVaccination $antiRabiesVaccination)
     {
         $this->authorize('delete', $antiRabiesVaccination);
-        $antiRabiesVaccination->delete();
+        $this->concurrentWrite->locked(
+            $antiRabiesVaccination,
+            fn (AntiRabiesVaccination $current) => $current->delete()
+        );
 
         return back()->with('success', 'Record deleted successfully.');
     }

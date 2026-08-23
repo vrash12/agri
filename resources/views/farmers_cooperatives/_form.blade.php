@@ -3,6 +3,8 @@
   $value = fn ($key, $default = '') => old($key, data_get($record, $key, $default));
 @endphp
 
+@include('partials.record-version', ['record' => $record])
+
 @if($errors->any())
   <div class="module-alert module-alert-error"><strong>Please review the highlighted information.</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
 @endif

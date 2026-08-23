@@ -8,6 +8,8 @@
   $municipalManager = $isMunicipalHeadManager ?? false;
 @endphp
 
+@include('partials.record-version', ['record' => $account])
+
 @if($errors->any())
   <div class="user-form-errors" role="alert">
     <strong>Please correct the following:</strong>

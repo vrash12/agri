@@ -827,6 +827,19 @@ async function importKmzOrKmlToSelectedFarmer(file) {
       return el ? el.getAttribute('content') : '';
     }
 
+    function readJsonResponse(response, fallbackMessage) {
+      return response.json().catch(function () {
+        return {};
+      }).then(function (data) {
+        if (response.ok) return data;
+
+        var validationMessage = data && data.errors && data.errors._record_version
+          ? data.errors._record_version[0]
+          : '';
+        throw new Error(validationMessage || data.message || fallbackMessage);
+      });
+    }
+
     function escapeHtml(str) {
       str = String(str == null ? '' : str);
       return str
@@ -3171,12 +3184,26 @@ window.__handleDownloadAllPlots = handleDownloadAllPlots;
       if (!pid || !selectedFarmerId) return;
       if (!confirm('Delete this plot?')) return;
 
+      var deletingPlot = getPlotById(pid);
+      if (!deletingPlot || !deletingPlot._record_version) {
+        toast('The plot data is out of date. Reload the farmer before deleting.', 'warn');
+        return;
+      }
+
       setStatus('Deleting plot…', '');
       fetch("/farm-plots/" + encodeURIComponent(String(pid)), {
         method: "DELETE",
-        headers: { "Accept": "application/json", "X-CSRF-TOKEN": csrfToken() }
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "X-CSRF-TOKEN": csrfToken()
+        },
+        body: JSON.stringify({
+          _record_version: deletingPlot._record_version
+        })
       }).then(function (r) {
-        if (!r.ok) throw new Error("Delete failed (" + r.status + ")");
+        return readJsonResponse(r, "Delete failed (" + r.status + ")");
+      }).then(function () {
         toast("Plot deleted.", "ok");
 
         plotsCacheByFarmerId.delete(String(selectedFarmerId));
@@ -3916,6 +3943,12 @@ if (btnCancel) {
 
     var isEditing = !!editingPlotId;
     var currentEditingPlotId = editingPlotId;
+    var editingPlot = isEditing ? getPlotById(editingPlotId) : null;
+
+    if (isEditing && (!editingPlot || !editingPlot._record_version)) {
+      toast('The plot data is out of date. Reload the farmer before saving.', 'warn');
+      return;
+    }
 
     var url = isEditing
       ? ("/farm-plots/" + encodeURIComponent(String(editingPlotId)))
@@ -3936,11 +3969,14 @@ if (btnCancel) {
       body: JSON.stringify({
         name: plotName,
         color: plotColor,
-        polygon: plotVertices
+        polygon: plotVertices,
+        _record_version: editingPlot ? editingPlot._record_version : null
       })
     }).then(function (r) {
-      if (!r.ok) throw new Error((isEditing ? "Update" : "Save") + " failed (" + r.status + ")");
-      return r.json();
+      return readJsonResponse(
+        r,
+        (isEditing ? "Update" : "Save") + " failed (" + r.status + ")"
+      );
     }).then(function () {
   plotMode = false;
   editingPlotId = null;

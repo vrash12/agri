@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Municipality;
 use App\Models\User;
+use App\Support\ConcurrentWrite;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -13,7 +14,9 @@ use Illuminate\View\View;
 
 class AdminController extends Controller
 {
-    public function __construct()
+    public function __construct(
+        private ConcurrentWrite $concurrentWrite
+    )
     {
         $this->middleware('auth');
     }
@@ -125,14 +128,16 @@ class AdminController extends Controller
 
         $data = $this->validatedAccountData($request, $manager);
 
-        $user = User::create([
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'password' => Hash::make($data['password']),
-            'role' => $data['role'],
-            'municipality_id' => $this->municipalityIdForRole($data),
-            'is_active' => $request->boolean('is_active'),
-        ]);
+        $user = $this->concurrentWrite->transaction(
+            fn () => User::create([
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'password' => Hash::make($data['password']),
+                'role' => $data['role'],
+                'municipality_id' => $this->municipalityIdForRole($data),
+                'is_active' => $request->boolean('is_active'),
+            ])
+        );
 
         return redirect()
             ->route('admins.index')
@@ -169,20 +174,33 @@ class AdminController extends Controller
             $isProtectedSuperAdmin
         );
 
-        $admin->name = $data['name'];
-        $admin->email = $data['email'];
+        $admin = $this->concurrentWrite->execute(
+            $admin,
+            $request->input('_record_version'),
+            function (User $current) use (
+                $data,
+                $isProtectedSuperAdmin,
+                $isOwnAccount,
+                $request
+            ): User {
+                $current->name = $data['name'];
+                $current->email = $data['email'];
 
-        if (! $isProtectedSuperAdmin && ! $isOwnAccount) {
-            $admin->role = $data['role'];
-            $admin->municipality_id = $this->municipalityIdForRole($data);
-            $admin->is_active = $request->boolean('is_active');
-        }
+                if (! $isProtectedSuperAdmin && ! $isOwnAccount) {
+                    $current->role = $data['role'];
+                    $current->municipality_id = $this->municipalityIdForRole($data);
+                    $current->is_active = $request->boolean('is_active');
+                }
 
-        if (! empty($data['password'])) {
-            $admin->password = Hash::make($data['password']);
-        }
+                if (! empty($data['password'])) {
+                    $current->password = Hash::make($data['password']);
+                }
 
-        $admin->save();
+                $current->save();
+
+                return $current;
+            }
+        );
 
         return redirect()
             ->route('admins.index')
@@ -193,20 +211,36 @@ class AdminController extends Controller
     {
         $manager = $this->authorizedManager($request, 'delete', $admin);
 
-        if ($admin->is($manager)) {
-            return back()->with('error', 'You cannot delete your own account.');
-        }
+        $result = $this->concurrentWrite->locked(
+            $admin,
+            function (User $current) use ($manager): array {
+                if ($current->is($manager)) {
+                    return ['error' => 'You cannot delete your own account.'];
+                }
 
-        if ($admin->isSuperAdmin()) {
-            return back()->with('error', 'A super-admin account cannot be deleted here.');
-        }
+                if ($current->isSuperAdmin()) {
+                    return [
+                        'error' => 'A super-admin account cannot be deleted here.',
+                    ];
+                }
 
-        $name = $admin->name;
-        $admin->delete();
+                $name = $current->name;
+                $current->delete();
+
+                return ['name' => $name];
+            }
+        );
+
+        if (isset($result['error'])) {
+            return back()->with('error', $result['error']);
+        }
 
         return redirect()
             ->route('admins.index')
-            ->with('success', "{$name} was deleted successfully.");
+            ->with(
+                'success',
+                "{$result['name']} was deleted successfully."
+            );
     }
 
     private function validatedAccountData(

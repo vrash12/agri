@@ -6,6 +6,7 @@ use App\Models\AgriculturalMachinery;
 use App\Models\Farmer;
 use App\Models\FarmersCooperative;
 use App\Support\AuditTrail;
+use App\Support\ConcurrentWrite;
 use App\Support\MunicipalityAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -15,7 +16,8 @@ use Illuminate\Validation\Rule;
 class AgriculturalMachineryController extends Controller
 {
     public function __construct(
-        private MunicipalityAccess $municipalityAccess
+        private MunicipalityAccess $municipalityAccess,
+        private ConcurrentWrite $concurrentWrite
     ) {
         $this->middleware('auth');
     }
@@ -125,8 +127,9 @@ class AgriculturalMachineryController extends Controller
     {
         $this->authorize('create', AgriculturalMachinery::class);
 
-        $machinery = AgriculturalMachinery::create(
-            $this->validatedPayload($request)
+        $payload = $this->validatedPayload($request);
+        $machinery = $this->concurrentWrite->transaction(
+            fn () => AgriculturalMachinery::create($payload)
         );
 
         return redirect()
@@ -155,7 +158,16 @@ class AgriculturalMachineryController extends Controller
     ) {
         $this->authorize('update', $machinery);
 
-        $machinery->update($this->validatedPayload($request, $machinery));
+        $payload = $this->validatedPayload($request, $machinery);
+        $machinery = $this->concurrentWrite->execute(
+            $machinery,
+            $request->input('_record_version'),
+            function (AgriculturalMachinery $current) use ($payload): AgriculturalMachinery {
+                $current->update($payload);
+
+                return $current;
+            }
+        );
 
         return redirect()
             ->route('machinery-inventory.index')
@@ -170,7 +182,10 @@ class AgriculturalMachineryController extends Controller
         $this->authorize('delete', $machinery);
 
         $assetCode = $machinery->asset_code;
-        $machinery->delete();
+        $this->concurrentWrite->locked(
+            $machinery,
+            fn (AgriculturalMachinery $current) => $current->delete()
+        );
 
         return redirect()
             ->route('machinery-inventory.index')
@@ -181,14 +196,15 @@ class AgriculturalMachineryController extends Controller
     {
         $this->authorize('export', AgriculturalMachinery::class);
 
-        $records = $this->applySort(
-            $this->filteredQuery($request)->with([
-                'municipality:id,name',
-                'farmer:id,first_name,middle_name,last_name,ext_name,ffrs',
-                'cooperative:id,name',
-            ]),
-            (string) $request->query('sort', 'asset_code')
-        )->get();
+        $query = $this->filteredQuery($request)->with([
+            'municipality:id,name',
+            'farmer:id,first_name,middle_name,last_name,ext_name,ffrs',
+            'cooperative:id,name',
+        ]);
+        $maximumId = (int) ((clone $query)->max('id') ?? 0);
+        $rowCount = $maximumId === 0
+            ? 0
+            : (clone $query)->where('id', '<=', $maximumId)->count();
 
         $filename = 'machinery_inventory_'.now()->format('Ymd_His').'.csv';
 
@@ -198,7 +214,7 @@ class AgriculturalMachineryController extends Controller
             $request->user()->name.' exported the machinery inventory.',
             [
                 'metadata' => [
-                    'row_count' => $records->count(),
+                    'row_count' => $rowCount,
                     'filters' => $request->only([
                         'q',
                         'municipality_id',
@@ -212,7 +228,7 @@ class AgriculturalMachineryController extends Controller
             ]
         );
 
-        return response()->streamDownload(function () use ($records) {
+        return response()->streamDownload(function () use ($query, $maximumId) {
             $stream = fopen('php://output', 'w');
             fwrite($stream, "\xEF\xBB\xBF");
             fputcsv($stream, [
@@ -237,28 +253,34 @@ class AgriculturalMachineryController extends Controller
                 'Notes',
             ]);
 
-            foreach ($records as $record) {
-                fputcsv($stream, [
-                    $record->asset_code,
-                    $record->name,
-                    $record->category_label,
-                    $record->brand,
-                    $record->model,
-                    $record->serial_number,
-                    $record->holder_label,
-                    ucfirst($record->holder_type),
-                    $record->municipality?->name,
-                    $record->condition_label,
-                    $record->availability_label,
-                    $record->location,
-                    $record->acquisition_source_label,
-                    optional($record->acquisition_date)->format('Y-m-d'),
-                    $record->acquisition_cost,
-                    $record->service_hours,
-                    optional($record->last_maintenance_date)->format('Y-m-d'),
-                    optional($record->next_maintenance_date)->format('Y-m-d'),
-                    $record->notes,
-                ]);
+            if ($maximumId > 0) {
+                (clone $query)
+                    ->where('id', '<=', $maximumId)
+                    ->chunkById(500, function ($records) use ($stream): void {
+                        foreach ($records as $record) {
+                            fputcsv($stream, array_map([$this, 'csvValue'], [
+                                $record->asset_code,
+                                $record->name,
+                                $record->category_label,
+                                $record->brand,
+                                $record->model,
+                                $record->serial_number,
+                                $record->holder_label,
+                                ucfirst($record->holder_type),
+                                $record->municipality?->name,
+                                $record->condition_label,
+                                $record->availability_label,
+                                $record->location,
+                                $record->acquisition_source_label,
+                                optional($record->acquisition_date)->format('Y-m-d'),
+                                $record->acquisition_cost,
+                                $record->service_hours,
+                                optional($record->last_maintenance_date)->format('Y-m-d'),
+                                optional($record->next_maintenance_date)->format('Y-m-d'),
+                                $record->notes,
+                            ]));
+                        }
+                    });
             }
 
             fclose($stream);
@@ -425,6 +447,14 @@ class AgriculturalMachineryController extends Controller
                 ->orderBy('asset_code'),
             default => $query->orderBy('asset_code'),
         };
+    }
+
+    /** @param mixed $value */
+    private function csvValue($value): string
+    {
+        $value = (string) ($value ?? '');
+
+        return preg_match('/^[=+\-@]/', $value) ? "'".$value : $value;
     }
 
     private function formData(
