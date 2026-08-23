@@ -18,6 +18,8 @@
   @if (session('success'))<div class="module-alert">{{ session('success') }}</div>@endif
   @if (session('error'))<div class="module-alert module-alert-error">{{ session('error') }}</div>@endif
 
+  @include('farmers.partials.workspace-nav', ['workspaceMunicipality' => $farmer->municipality])
+
   <header class="module-header">
     <div class="farmer-history-heading">
       <span class="farmer-history-avatar">

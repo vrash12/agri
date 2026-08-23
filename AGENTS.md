@@ -105,6 +105,8 @@ The dashboard builds role-scoped operational KPIs and recent activity:
 
 For super admins it also produces a province comparison without per-municipality N+1 queries. Each active municipality includes farmer, mapping, distribution, vaccination, cooperative, machinery, and staffing metrics. Municipalities are classified as operational, missing a head, without farmer records, or behind on mapping. It also counts operational records with no municipality.
 
+Weather and agricultural advisories are intentionally grouped inside the Farmers workspace navigation rather than shown as a separate global-sidebar module. The shared, responsive Farmers command bar links the registry, parcel map, and weather views; preserves the selected municipality; exposes a scope-change control to province-wide users; and keeps the Farmers sidebar entry active while viewing advisories.
+
 ### 5.2 Farmer registry
 
 Primary model/table: `Farmer` / `farmers`

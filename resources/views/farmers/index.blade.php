@@ -69,6 +69,8 @@
     <div class="module-alert module-alert-error">{{ session('error') }}</div>
   @endif
 
+  @include('farmers.partials.workspace-nav', ['workspaceMunicipality' => $selectedMunicipality])
+
   <header class="module-header">
     <div>
       <div class="module-eyebrow">Registry and land management</div>

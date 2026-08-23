@@ -5,6 +5,8 @@
 @section('content')
 @include('partials.operations-ui-styles')
 <div class="module-page">
+  @include('farmers.partials.workspace-nav')
+
   <header class="module-header">
     <div>
       <div class="module-eyebrow">Farmer registry</div>

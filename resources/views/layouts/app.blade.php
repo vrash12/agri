@@ -975,7 +975,6 @@
           'audit' => '<svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"></path><path d="M9 11l2 2 4-4"></path><path d="M9 17h6"></path></svg>',
           'cooperative' => '<svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"></circle><circle cx="17" cy="9" r="2.5"></circle><path d="M2.5 20a5.5 5.5 0 0 1 11 0"></path><path d="M13 19a4.5 4.5 0 0 1 8.5 0"></path></svg>',
           'machinery' => '<svg viewBox="0 0 24 24"><path d="M3 15h18v4H3z"></path><path d="M6 15V9h8l3 6"></path><path d="M9 9V6h4"></path><circle cx="7" cy="19" r="2"></circle><circle cx="18" cy="19" r="2"></circle></svg>',
-          'weather' => '<svg viewBox="0 0 24 24"><path d="M7 18h10a5 5 0 0 0 0-10 7 7 0 0 0-13 3 4 4 0 0 0 3 7Z"></path><path d="M8 21h8"></path><path d="M12 3V1"></path><path d="m4.5 5.5-1.5-1.5"></path><path d="m19.5 5.5 1.5-1.5"></path></svg>',
           'chev-left' => '<svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"></path></svg>',
           'logout' => '<svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path><path d="M14 4h5a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5"></path></svg>',
         ];
@@ -1009,7 +1008,7 @@
               'description' => 'Registry and parcel map',
               'icon' => 'farmers',
               'route' => 'farmers.index',
-              'patterns' => ['farmers.*', 'farm-plots.*'],
+              'patterns' => ['farmers.*', 'farm-plots.*', 'weather.*'],
               'badge' => $operationBadge,
             ],
             [
@@ -1035,14 +1034,6 @@
               'route' => 'machinery-inventory.index',
               'patterns' => ['machinery-inventory.*'],
               'badge' => $operationBadge,
-            ],
-            [
-              'label' => 'Weather & Advisories',
-              'description' => 'Forecast and farm guidance',
-              'icon' => 'weather',
-              'route' => 'weather.index',
-              'patterns' => ['weather.*'],
-              'badge' => null,
             ],
           ],
         ],

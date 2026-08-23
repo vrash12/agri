@@ -48,6 +48,8 @@
 
 @section('content')
 <div class="weather-page">
+  @include('farmers.partials.workspace-nav', ['workspaceMunicipality' => $selectedMunicipality])
+
   <header class="weather-hero">
     <div class="weather-hero-copy">
       <div class="weather-context"><span aria-hidden="true"></span>Agricultural decision support</div>
@@ -67,7 +69,11 @@
             </select>
             <button class="module-button module-button-primary" type="submit">View forecast</button>
           </div>
-          <span class="weather-scope-note">Provincial accounts may compare active municipalities one at a time.</span>
+          <span class="weather-scope-note">
+            {{ auth()->user()->isSuperAdmin()
+                ? 'Super administrators may review every active municipality, one forecast at a time.'
+                : 'Provincial staff may compare active municipalities one forecast at a time.' }}
+          </span>
         </form>
       @else
         <label>Forecast municipality</label>

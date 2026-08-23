@@ -5,6 +5,8 @@
 @section('content')
 @include('partials.operations-ui-styles')
 <div class="module-page">
+  @include('farmers.partials.workspace-nav')
+
   <header class="module-header">
     <div><div class="module-eyebrow">Farmer registry</div><h1>Import farmer workbook</h1><p>Load the Ramos RSBSA / FFRS workbook into one municipality. Existing profiles are updated when their registry identifier matches.</p></div>
     <div class="module-actions"><a class="module-button" href="{{ route('farmers.index') }}">Back to registry</a></div>

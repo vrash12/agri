@@ -58,7 +58,36 @@ class WeatherAdvisoryAccessTest extends TestCase
             ->get(route('weather.index', ['municipality_id' => $selected->id]))
             ->assertOk()
             ->assertSee('Bamban, Tarlac')
-            ->assertSee('Provincial accounts may compare active municipalities');
+            ->assertSee('Provincial staff may compare active municipalities');
+    }
+
+    public function test_a_super_admin_can_choose_any_active_municipality(): void
+    {
+        $first = $this->municipality(51, 'Anao');
+        $selected = $this->municipality(52, 'Capas');
+        $user = $this->user(User::ROLE_SUPER_ADMIN);
+
+        $this->mock(MunicipalityAccess::class, function ($mock) use ($first, $selected) {
+            $mock->shouldReceive('choices')
+                ->once()
+                ->andReturn(new Collection([$first, $selected]));
+        });
+        $this->mock(WeatherForecastService::class, function ($mock) use ($selected) {
+            $mock->shouldReceive('forMunicipality')
+                ->once()
+                ->with($selected)
+                ->andReturn($this->unavailableForecast($selected));
+        });
+
+        $this->actingAs($user)
+            ->get(route('weather.index', ['municipality_id' => $selected->id]))
+            ->assertOk()
+            ->assertSee('Province-wide oversight')
+            ->assertSee('Capas selected')
+            ->assertSee('Farmer registry')
+            ->assertSee('Parcel map')
+            ->assertSee('Weather & advisories', false)
+            ->assertSee('Super administrators may review every active municipality');
     }
 
     private function municipality(int $id, string $name): Municipality

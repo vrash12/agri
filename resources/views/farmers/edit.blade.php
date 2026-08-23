@@ -8,6 +8,8 @@
   $fullName = trim(collect([$record->first_name, $record->middle_name, $record->last_name, $record->ext_name])->filter()->implode(' '));
 @endphp
 <div class="module-page">
+  @include('farmers.partials.workspace-nav', ['workspaceMunicipality' => $record->municipality])
+
   <header class="module-header">
     <div>
       <div class="module-eyebrow">Farmer registry</div>
