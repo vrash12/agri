@@ -430,10 +430,13 @@
       }
     }
 
-    document.getElementById('openFarmerDigitalId')?.addEventListener('click', () => {
+    function openDigitalId(side) {
+      if (!digitalDialog || typeof digitalDialog.showModal !== 'function') return;
       if (!digitalDialog.open) digitalDialog.showModal();
-      showDigitalSide('front');
-    });
+      showDigitalSide(side || 'front');
+    }
+
+    document.getElementById('openFarmerDigitalId')?.addEventListener('click', () => openDigitalId('front'));
     document.querySelectorAll('[data-close-digital-id]').forEach(button => {
       button.addEventListener('click', () => digitalDialog.close());
     });
@@ -475,6 +478,9 @@
       try { downloadCanvas(await renderBack(), 'back'); } finally { button.disabled = false; button.textContent = 'Download back'; }
     });
     window.__renderFarmerIdCard = side => side === 'back' ? renderBack() : renderFront();
+
+    const requestedSide = new URLSearchParams(window.location.search).get('side');
+    requestAnimationFrame(() => openDigitalId(requestedSide === 'back' ? 'back' : 'front'));
   });
 </script>
 @endpush
