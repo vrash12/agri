@@ -8,6 +8,7 @@
   $farmersMapData = collect($farmers->items())->map(function ($farmer) {
     return [
       'id' => $farmer->id,
+      'municipality_id' => $farmer->municipality_id,
       'registry_id' => $farmer->registry_id,
       'profile_photo_url' => $farmer->profile_photo_path ? route('farmers.photo', $farmer) : null,
       'last_name' => $farmer->last_name,

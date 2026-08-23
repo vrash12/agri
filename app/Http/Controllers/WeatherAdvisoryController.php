@@ -2,15 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Farmer;
 use App\Models\Municipality;
 use App\Models\User;
 use App\Services\WeatherForecastService;
 use App\Support\MunicipalityAccess;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
-use Illuminate\View\View;
 
 class WeatherAdvisoryController extends Controller
 {
@@ -21,9 +20,8 @@ class WeatherAdvisoryController extends Controller
 
     public function index(
         Request $request,
-        MunicipalityAccess $municipalityAccess,
-        WeatherForecastService $weather
-    ): View {
+        MunicipalityAccess $municipalityAccess
+    ): RedirectResponse {
         /** @var User $user */
         $user = $request->user();
         $municipalities = $municipalityAccess->choices($user);
@@ -32,20 +30,37 @@ class WeatherAdvisoryController extends Controller
             $user,
             $municipalities
         );
-        $forecast = $weather->forMunicipality($municipality);
-        [$affectedFarmers, $outreachSummary] = $this->outreachQueue(
-            $municipality,
-            $forecast
-        );
 
-        return view('weather.index', [
-            'municipalities' => $municipalities,
-            'selectedMunicipality' => $municipality,
-            'forecast' => $forecast,
-            'affectedFarmers' => $affectedFarmers,
-            'outreachSummary' => $outreachSummary,
-            'pagasaLinks' => (array) config('weather.pagasa', []),
-        ]);
+        return redirect()->to(route('farmers.index', [
+            'municipality_id' => $municipality->id,
+            'show_weather' => 1,
+        ]).'#farmersMapModule');
+    }
+
+    public function summary(
+        Request $request,
+        MunicipalityAccess $municipalityAccess,
+        WeatherForecastService $weather
+    ): JsonResponse {
+        return $this->summaryResponse(
+            $request,
+            $municipalityAccess,
+            $weather,
+            false
+        );
+    }
+
+    public function refreshSummary(
+        Request $request,
+        MunicipalityAccess $municipalityAccess,
+        WeatherForecastService $weather
+    ): JsonResponse {
+        return $this->summaryResponse(
+            $request,
+            $municipalityAccess,
+            $weather,
+            true
+        );
     }
 
     public function refresh(
@@ -64,14 +79,49 @@ class WeatherAdvisoryController extends Controller
 
         $forecast = $weather->forMunicipality($municipality, true);
 
-        return redirect()
-            ->route('weather.index', ['municipality_id' => $municipality->id])
-            ->with(
+        return redirect()->to(route('farmers.index', [
+            'municipality_id' => $municipality->id,
+            'show_weather' => 1,
+        ]).'#farmersMapModule')->with(
                 $forecast['available'] ? 'success' : 'error',
                 $forecast['available']
                     ? 'Weather forecast refreshed.'
                     : (string) $forecast['status_message']
             );
+    }
+
+    private function summaryResponse(
+        Request $request,
+        MunicipalityAccess $municipalityAccess,
+        WeatherForecastService $weather,
+        bool $forceRefresh
+    ): JsonResponse {
+        /** @var User $user */
+        $user = $request->user();
+        $municipalities = $municipalityAccess->choices($user);
+        $municipality = $this->selectedMunicipality(
+            $request,
+            $user,
+            $municipalities
+        );
+        $forecast = $weather->forMunicipality($municipality, $forceRefresh);
+
+        return response()->json([
+            'selected_municipality' => [
+                'id' => $municipality->id,
+                'name' => $municipality->name,
+                'province' => $municipality->province ?: 'Tarlac',
+            ],
+            'can_choose_municipality' => $user->canAccessAllMunicipalities(),
+            'municipalities' => $municipalities
+                ->map(fn (Municipality $choice) => [
+                    'id' => $choice->id,
+                    'name' => $choice->name,
+                ])
+                ->values(),
+            'forecast' => $forecast,
+            'official_links' => (array) config('weather.pagasa', []),
+        ])->header('Cache-Control', 'private, no-store');
     }
 
     /**
@@ -117,75 +167,4 @@ class WeatherAdvisoryController extends Controller
         return $municipality;
     }
 
-    /**
-     * Build a municipality-scoped follow-up queue when the forecast crosses a
-     * moderate or high operational threshold. This does not send messages.
-     *
-     * @param  array<string, mixed>  $forecast
-     * @return array{0: \Illuminate\Support\Collection, 1: array<string, mixed>}
-     */
-    private function outreachQueue(
-        Municipality $municipality,
-        array $forecast
-    ): array {
-        $riskAdvisories = collect($forecast['advisories'] ?? [])
-            ->filter(fn (array $advisory) => in_array(
-                $advisory['severity'] ?? null,
-                ['high', 'moderate'],
-                true
-            ));
-
-        if ($riskAdvisories->isEmpty()) {
-            return [collect(), [
-                'active' => false,
-                'total_mapped_farmers' => 0,
-                'contactable_farmers' => 0,
-                'missing_contact' => 0,
-                'risk_categories' => [],
-            ]];
-        }
-
-        $baseQuery = Farmer::query()
-            ->where('municipality_id', $municipality->id)
-            ->whereHas('farmPlots');
-        $totalMappedFarmers = (clone $baseQuery)->count();
-        $contactableFarmers = (clone $baseQuery)
-            ->whereNotNull('contact_number')
-            ->where('contact_number', '!=', '')
-            ->count();
-        $affectedFarmers = (clone $baseQuery)
-            ->select([
-                'farmers.id',
-                'farmers.municipality_id',
-                'farmers.first_name',
-                'farmers.middle_name',
-                'farmers.last_name',
-                'farmers.ext_name',
-                'farmers.contact_number',
-                'farmers.farm_location',
-                'farmers.ffrs',
-            ])
-            ->withCount('farmPlots')
-            ->withSum('farmPlots as mapped_area_ha', 'area_ha')
-            ->orderByRaw(
-                "CASE WHEN contact_number IS NULL OR contact_number = '' THEN 1 ELSE 0 END"
-            )
-            ->orderBy('last_name')
-            ->orderBy('first_name')
-            ->limit(12)
-            ->get();
-
-        return [$affectedFarmers, [
-            'active' => true,
-            'total_mapped_farmers' => $totalMappedFarmers,
-            'contactable_farmers' => $contactableFarmers,
-            'missing_contact' => max($totalMappedFarmers - $contactableFarmers, 0),
-            'risk_categories' => $riskAdvisories
-                ->pluck('category')
-                ->filter()
-                ->unique()
-                ->values()
-                ->all(),
-        ]];
-    }
 }

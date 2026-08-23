@@ -1713,6 +1713,9 @@ function syncSelectedPanel(f) {
   var avatarEl = document.getElementById('selAvatar');
 
   if (!f) {
+    window.dispatchEvent(new CustomEvent('farmers:selection-changed', {
+      detail: { farmer: null }
+    }));
     window.__mapUiSetText('selName', 'No farmer selected');
     window.__mapUiSetText('selFfrs', 'Choose a farmer to load their record');
     window.__mapUiSetText('selLocation', 'Use the finder, a map marker, or a directory row');
@@ -1736,6 +1739,9 @@ function syncSelectedPanel(f) {
   }
 
   var fullName = formatName(f);
+  window.dispatchEvent(new CustomEvent('farmers:selection-changed', {
+    detail: { farmer: f }
+  }));
   var farmLocation = (f.farm_location || f.location || '').trim();
   var farmMunicipality = (f.farm_municipality || '').trim();
   var farmProvince = (f.farm_province || '').trim();

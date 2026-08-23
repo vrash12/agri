@@ -105,7 +105,7 @@ The dashboard builds role-scoped operational KPIs and recent activity:
 
 For super admins it also produces a province comparison without per-municipality N+1 queries. Each active municipality includes farmer, mapping, distribution, vaccination, cooperative, machinery, and staffing metrics. Municipalities are classified as operational, missing a head, without farmer records, or behind on mapping. It also counts operational records with no municipality.
 
-Weather and agricultural advisories are intentionally grouped inside the Farmers workspace navigation rather than shown as a separate global-sidebar module. The shared, responsive Farmers command bar links the registry, parcel map, and weather views; preserves the selected municipality; exposes a scope-change control to province-wide users; and keeps the Farmers sidebar entry active while viewing advisories.
+Weather and agricultural advisories are intentionally embedded in the Parcel Map instead of being shown as a separate page or global-sidebar module. The map's Weather button lazy-loads a municipality-scoped drawer with current conditions, rainfall/wind indicators, advisories, a three-day outlook, refresh controls, and PAGASA links. Selecting a farmer switches the drawer to that farmer's municipality; municipal accounts remain locked to their assignment, while provincial staff and super admins may choose any active municipality.
 
 ### 5.2 Farmer registry
 
@@ -302,18 +302,17 @@ Do not expose the Nominatim proxy anonymously or remove its throttle/cache witho
 
 ### 5.13 Weather and agricultural advisories
 
-Routes: `GET /weather-advisories` (`weather.index`) and throttled `POST /weather-advisories/refresh` (`weather.refresh`).
+Primary routes: authenticated `GET /farmers/weather-summary` (`farmers.weather-summary`) and throttled `POST /farmers/weather-summary/refresh` (`farmers.weather-refresh`). The legacy `/weather-advisories` route now redirects into the Parcel Map with its embedded drawer open.
 
 Functions:
 
 - retrieve a seven-day municipality forecast from Open-Meteo without exposing a browser API key;
 - cache each municipality forecast for 30 minutes and retain a configurable last-known forecast for provider outages;
-- show current temperature, apparent temperature, humidity, precipitation, wind, seven-day rainfall, daily forecasts, and a 24-hour rain-probability view;
+- lazy-load an in-map drawer with current temperature, apparent temperature, humidity, wind, seven-day rainfall, peak rain probability, peak wind gust, advisories, and a three-day outlook;
 - generate transparent threshold-based farm guidance for heavy rainfall, high rain probability, strong wind, heat, and irrigation review;
 - let provincial users select any active municipality while locking municipal users to their assigned municipality;
-- when moderate/high thresholds are crossed, build a municipality-scoped follow-up queue of mapped farmers with parcel counts, mapped area, and contact readiness; this queue does not automatically send messages;
 - provide direct links to PAGASA weather, tropical cyclone, flood, and agri-weather pages for official bulletins;
-- expose the module in the shared navigation and as a dashboard quick action.
+- follow the municipality of the currently selected map farmer and expose the drawer through the Parcel Map and dashboard quick action without navigating to another page.
 
 The municipality coordinates in `config/weather.php` are town-center forecast reference points. They are not surveyed parcel coordinates. Open-Meteo guidance must never be presented as an official typhoon, rainfall, thunderstorm, or flood warning; PAGASA and local disaster-risk authorities remain the official sources. Forecast refreshes use an atomic cache lock and recheck the cache after waiting so simultaneous dashboard requests do not create an outbound-request stampede.
 
@@ -329,7 +328,7 @@ The lock mechanism requires an atomic shared cache store. The file cache is suit
 
 ## 6. Route inventory
 
-As of 2026-08-24, `php artisan route:list --json` reports 75 routes protected by Laravel authentication, including the Sanctum endpoint:
+As of 2026-08-24, `php artisan route:list --json` reports 77 routes protected by Laravel authentication, including the Sanctum endpoint:
 
 | Area | Authenticated routes |
 | --- | ---: |
@@ -342,7 +341,7 @@ As of 2026-08-24, `php artisan route:list --json` reports 75 routes protected by
 | User management | 6 |
 | Farm plots | 6 |
 | Audit trail | 3 |
-| Weather and agricultural advisories | 2 |
+| Weather and agricultural advisories | 4 |
 | Dashboard/logout/API | 4 |
 
 Regenerate the inventory instead of preserving this number if routes change:

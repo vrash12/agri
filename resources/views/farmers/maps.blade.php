@@ -887,6 +887,10 @@
       <div class="parcel-tool-actions">
         <button type="button" class="btn btn-soft btn-sm" id="recenterMapBtn" title="Fit the camera to visible farmers">Fit results</button>
         <button type="button" class="btn btn-soft btn-sm" id="resetMapBtn" title="Return to the province view">Reset view</button>
+        <button type="button" class="btn btn-sm map-weather-trigger" id="mapWeatherBtn" aria-controls="mapWeatherDrawer" aria-expanded="false" title="Show municipality weather and agricultural advisories">
+          <svg viewBox="0 0 24 24"><path d="M7 18h10a5 5 0 0 0 0-10 7 7 0 0 0-13 3 4 4 0 0 0 3 7Z"></path><path d="m8 21-1 2m5-2-1 2m5-2-1 2"></path></svg>
+          <span id="mapWeatherButtonLabel">Weather</span>
+        </button>
         <label class="map-toggle"><input type="checkbox" id="toggleMarkers" checked><span>Farmers</span></label>
         <label class="map-toggle"><input type="checkbox" id="togglePlots" checked><span>Parcels</span></label>
       </div>
@@ -913,6 +917,7 @@
   <div class="farmers-map-main">
     <div class="farmers-map-stage">
       <div id="farmersMap" class="farmers-map"></div>
+      @include('farmers.partials.map-weather-drawer')
       <div id="plotCursor" class="plot-cursor" aria-hidden="true"></div>
       
       <div class="map-hint" id="mapHint">

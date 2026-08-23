@@ -25,15 +25,16 @@ class WeatherAdvisoryAccessTest extends TestCase
         $this->mock(WeatherForecastService::class, function ($mock) use ($own) {
             $mock->shouldReceive('forMunicipality')
                 ->once()
-                ->with($own)
+                ->with($own, false)
                 ->andReturn($this->unavailableForecast($own));
         });
 
         $this->actingAs($user)
-            ->get(route('weather.index', ['municipality_id' => $foreign->id]))
+            ->getJson(route('farmers.weather-summary', ['municipality_id' => $foreign->id]))
             ->assertOk()
-            ->assertSee('Anao, Tarlac')
-            ->assertDontSee('Bamban, Tarlac');
+            ->assertJsonPath('selected_municipality.id', $own->id)
+            ->assertJsonPath('selected_municipality.name', 'Anao')
+            ->assertJsonPath('can_choose_municipality', false);
     }
 
     public function test_a_provincial_user_can_choose_an_active_municipality(): void
@@ -50,15 +51,17 @@ class WeatherAdvisoryAccessTest extends TestCase
         $this->mock(WeatherForecastService::class, function ($mock) use ($selected) {
             $mock->shouldReceive('forMunicipality')
                 ->once()
-                ->with($selected)
+                ->with($selected, false)
                 ->andReturn($this->unavailableForecast($selected));
         });
 
         $this->actingAs($user)
-            ->get(route('weather.index', ['municipality_id' => $selected->id]))
+            ->getJson(route('farmers.weather-summary', ['municipality_id' => $selected->id]))
             ->assertOk()
-            ->assertSee('Bamban, Tarlac')
-            ->assertSee('Provincial staff may compare active municipalities');
+            ->assertJsonPath('selected_municipality.id', $selected->id)
+            ->assertJsonPath('selected_municipality.name', 'Bamban')
+            ->assertJsonPath('can_choose_municipality', true)
+            ->assertJsonCount(2, 'municipalities');
     }
 
     public function test_a_super_admin_can_choose_any_active_municipality(): void
@@ -75,19 +78,38 @@ class WeatherAdvisoryAccessTest extends TestCase
         $this->mock(WeatherForecastService::class, function ($mock) use ($selected) {
             $mock->shouldReceive('forMunicipality')
                 ->once()
-                ->with($selected)
+                ->with($selected, false)
                 ->andReturn($this->unavailableForecast($selected));
         });
 
         $this->actingAs($user)
-            ->get(route('weather.index', ['municipality_id' => $selected->id]))
+            ->getJson(route('farmers.weather-summary', ['municipality_id' => $selected->id]))
             ->assertOk()
-            ->assertSee('Province-wide oversight')
-            ->assertSee('Capas selected')
-            ->assertSee('Farmer registry')
-            ->assertSee('Parcel map')
-            ->assertSee('Weather & advisories', false)
-            ->assertSee('Super administrators may review every active municipality');
+            ->assertJsonPath('selected_municipality.id', $selected->id)
+            ->assertJsonPath('selected_municipality.name', 'Capas')
+            ->assertJsonPath('can_choose_municipality', true)
+            ->assertJsonCount(2, 'municipalities');
+    }
+
+    public function test_the_legacy_weather_page_opens_the_embedded_map_drawer(): void
+    {
+        $municipality = $this->municipality(61, 'Concepcion');
+        $user = $this->user(User::ROLE_MUNICIPAL_STAFF, $municipality);
+
+        $this->mock(MunicipalityAccess::class, function ($mock) use ($municipality) {
+            $mock->shouldReceive('choices')
+                ->once()
+                ->andReturn(new Collection([$municipality]));
+        });
+
+        $response = $this->actingAs($user)->get(route('weather.index'));
+
+        $response->assertRedirect(
+            route('farmers.index', [
+                'municipality_id' => $municipality->id,
+                'show_weather' => 1,
+            ]).'#farmersMapModule'
+        );
     }
 
     private function municipality(int $id, string $name): Municipality

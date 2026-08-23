@@ -80,6 +80,14 @@ Route::middleware(['auth', 'synchronized'])->group(function () {
         ->middleware('throttle:6,1')
         ->name('weather.refresh');
 
+    Route::get('/farmers/weather-summary', [WeatherAdvisoryController::class, 'summary'])
+        ->middleware('throttle:30,1')
+        ->name('farmers.weather-summary');
+
+    Route::post('/farmers/weather-summary/refresh', [WeatherAdvisoryController::class, 'refreshSummary'])
+        ->middleware('throttle:6,1')
+        ->name('farmers.weather-refresh');
+
     /*
     |--------------------------------------------------------------------------
     | GEOCODING API
