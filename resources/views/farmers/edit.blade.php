@@ -15,7 +15,7 @@
       <p>Update {{ $fullName ?: 'this farmer' }}'s registry, contact, and farm details. Existing distributions and plotted boundaries remain linked.</p>
     </div>
     <div class="module-actions">
-      <a class="module-button" href="{{ route('farmers.id-card', $record) }}">View ID card</a>
+      <a class="module-button" href="{{ route('farmers.id-card', $record) }}">View digital ID</a>
       <a class="module-button" href="{{ route('farmers.records', $record) }}">View history</a>
       <a class="module-button" href="{{ route('farmers.index') }}">
         <svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>

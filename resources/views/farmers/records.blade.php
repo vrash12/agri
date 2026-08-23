@@ -34,7 +34,7 @@
       </div>
     </div>
     <div class="module-actions">
-      <a class="module-button" href="{{ route('farmers.id-card', $farmer) }}">View ID card</a>
+      <a class="module-button" href="{{ route('farmers.id-card', $farmer) }}">View digital ID</a>
       <a class="module-button" href="{{ route('machinery-inventory.index', ['holder_type' => 'farmer', 'q' => $farmer->ffrs ?: $farmer->last_name]) }}">{{ number_format((int) ($machineryCount ?? 0)) }} machinery {{ Str::plural('asset', (int) ($machineryCount ?? 0)) }}</a>
       @if($canManageOperations)<a class="module-button" href="{{ route('farmers.edit', $farmer) }}">Edit profile</a>@endif
       <a class="module-button" href="{{ route('farmers.index') }}">Back to registry</a>

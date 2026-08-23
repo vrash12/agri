@@ -41,22 +41,30 @@
   <header class="module-header farmer-card-screen-only">
     <div>
       <div class="module-eyebrow">Farmer registry</div>
-      <h1>Farmer ID card</h1>
-      <p>Preview, print, or download both sides of {{ $fullName ?: 'this farmer' }}'s QR-enabled agriculture registry card.</p>
+      <h1>Farmer digital ID</h1>
+      <p>Present, print, or download {{ $fullName ?: 'this farmer' }}'s QR-enabled agriculture registry card.</p>
     </div>
     <div class="module-actions">
       @if(auth()->user()->canManageOperationalData())<a class="module-button" href="{{ route('farmers.edit', $farmer) }}">Edit profile</a>@endif
       <a class="module-button" href="{{ route('farmers.index') }}">Back to registry</a>
+      <button class="module-button module-button-primary" type="button" id="openFarmerDigitalId">Open digital ID</button>
       <button class="module-button" type="button" id="printFarmerCard">Print cards</button>
-      <button class="module-button module-button-primary" type="button" id="downloadFarmerCardFront">Download front</button>
-      <button class="module-button module-button-primary" type="button" id="downloadFarmerCardBack">Download back</button>
+      <button class="module-button" type="button" id="downloadFarmerCardFront">Download front</button>
+      <button class="module-button" type="button" id="downloadFarmerCardBack">Download back</button>
     </div>
   </header>
 
   @unless($photoUrl)
     <div class="farmer-card-notice farmer-card-screen-only">
       <span>Photo needed</span>
-      <p>This card currently uses the farmer's initials. @if(auth()->user()->canManageOperationalData())Upload a clear profile picture from <a href="{{ route('farmers.edit', $farmer) }}">Edit profile</a> before final printing.@elseAn authorized agriculture staff member can upload the profile picture.@endif</p>
+      <p>
+        This card currently uses the farmer's initials.
+        @if(auth()->user()->canManageOperationalData())
+          Upload a clear profile picture from <a href="{{ route('farmers.edit', $farmer) }}">Edit profile</a> before final printing.
+        @else
+          An authorized agriculture staff member can upload the profile picture.
+        @endif
+      </p>
     </div>
   @endunless
 
@@ -140,6 +148,63 @@
       </article>
     </div>
   </section>
+
+  <dialog class="farmer-digital-dialog farmer-card-screen-only" id="farmerDigitalIdDialog" aria-labelledby="farmerDigitalIdTitle">
+    <div class="farmer-digital-shell">
+      <header class="farmer-digital-header">
+        <div>
+          <span class="farmer-digital-kicker">Verified registry card</span>
+          <h2 id="farmerDigitalIdTitle">{{ $fullName ?: 'Farmer' }}'s digital ID</h2>
+        </div>
+        <button class="farmer-digital-icon-button" type="button" data-close-digital-id aria-label="Close digital ID">&times;</button>
+      </header>
+
+      <div class="farmer-digital-stage">
+        <div class="farmer-digital-status">
+          <span></span>
+          <strong id="farmerDigitalSideStatus" aria-live="polite">Front of ID</strong>
+        </div>
+        <div class="farmer-digital-card-frame" id="farmerDigitalCardFrame">
+          <div class="farmer-digital-loading" id="farmerDigitalLoading">Preparing digital card…</div>
+          <img id="farmerDigitalCardImage" alt="Front of {{ $fullName }}'s farmer registry card">
+        </div>
+        <p class="farmer-digital-hint">Present this screen for local registry verification. Use the back of the card to scan the interactive land map.</p>
+      </div>
+
+      <div class="farmer-digital-side-switch" aria-label="Choose ID side">
+        <button type="button" class="is-active" data-digital-side="front" aria-pressed="true">Front</button>
+        <button type="button" data-digital-side="back" aria-pressed="false">Back &amp; QR</button>
+      </div>
+
+      <footer class="farmer-digital-actions">
+        <button class="module-button" type="button" id="farmerDigitalFlip">Show back</button>
+        <button class="module-button" type="button" id="farmerDigitalEnlargeQr">Enlarge QR</button>
+        <button class="module-button" type="button" id="farmerDigitalDownload">Download front</button>
+        <button class="module-button module-button-primary" type="button" data-close-digital-id>Done</button>
+      </footer>
+    </div>
+  </dialog>
+
+  <dialog class="farmer-qr-dialog farmer-card-screen-only" id="farmerQrDialog" aria-labelledby="farmerQrTitle">
+    <div class="farmer-qr-shell">
+      <header>
+        <div>
+          <span>Interactive parcel verification</span>
+          <h2 id="farmerQrTitle">Scan land map</h2>
+        </div>
+        <button class="farmer-digital-icon-button" type="button" data-close-qr aria-label="Close enlarged QR code">&times;</button>
+      </header>
+      <div class="farmer-qr-image-wrap">
+        <img src="{{ $qrDataUri }}" alt="Enlarged QR code for {{ $fullName }}'s interactive land map">
+      </div>
+      <strong>{{ $farmer->registry_id }}</strong>
+      <p>Scanning opens a read-only map with {{ $plotCount }} mapped {{ Str::plural('parcel', $plotCount) }}. Personal and assistance records remain private.</p>
+      <div class="farmer-qr-actions">
+        <button class="module-button" type="button" data-close-qr>Back to ID</button>
+        <a class="module-button module-button-primary" href="{{ $scanUrl }}" target="_blank" rel="noopener">Open land map</a>
+      </div>
+    </div>
+  </dialog>
 </div>
 @endsection
 
@@ -158,10 +223,14 @@
   .farmer-card-back-body{display:grid;grid-template-columns:1.18fr .82fr;gap:3cqw;padding:3cqw 4cqw 2cqw}.farmer-card-back-column{display:grid;gap:1.5cqw}.farmer-card-back-column section>span{display:block;color:#68766d;font-size:1.45cqw;font-weight:750}.farmer-card-back-column section>strong{display:block;margin-top:.35cqw;overflow:hidden;font-size:2.05cqw;line-height:1.15;text-overflow:ellipsis;white-space:nowrap}.farmer-card-back-column section>small{display:block;margin-top:.25cqw;color:#6c786f;font-size:1.4cqw}.farmer-card-sector-list{display:flex;gap:.55cqw;flex-wrap:wrap;margin-top:.75cqw}.farmer-card-sector-list b{padding:.45cqw .7cqw;border-radius:999px;color:#0b6334;background:#e3f2e8;font-size:1.15cqw}.farmer-card-sector-list small{font-size:1.35cqw}.farmer-card-signature{margin-top:1.5cqw;text-align:center}.farmer-card-signature i{display:block;border-top:.18cqw solid #34473b}.farmer-card-signature strong{display:block;margin-top:.6cqw;font-size:1.25cqw}
   .farmer-card-qr-card{display:grid;grid-template-columns:20.5cqw 1fr;align-items:center;gap:1.2cqw;margin-top:.2cqw;padding:1cqw;border:.16cqw solid #cbd9cf;border-radius:1.4cqw;background:#fff;box-shadow:0 .8cqw 2.2cqw rgba(18,69,36,.08)}.farmer-card-qr-card a{display:block;border-radius:.7cqw}.farmer-card-qr-card a:focus-visible{outline:.35cqw solid rgba(22,131,75,.3)}.farmer-card-qr-card img{display:block;width:20.5cqw;height:20.5cqw;object-fit:contain;background:#fff}.farmer-card-qr-card strong,.farmer-card-qr-card small{display:block}.farmer-card-qr-card strong{color:#086032;font-size:1.45cqw;line-height:1.1;letter-spacing:.05em}.farmer-card-qr-card small{margin-top:.7cqw;color:#627168;font-size:1.1cqw;line-height:1.3}
   .farmer-id-card-back>footer{position:absolute;left:4%;right:4%;bottom:3.4%;display:flex;align-items:flex-end;justify-content:space-between;gap:3cqw;padding-top:1.4cqw;border-top:.15cqw solid #d2dcd5}.farmer-id-card-back>footer p{max-width:72%;margin:0;color:#68756d;font-size:1.2cqw;line-height:1.35}.farmer-id-card-back>footer span{font-size:1.25cqw;font-weight:800;white-space:nowrap}
+  .farmer-digital-dialog,.farmer-qr-dialog{width:min(880px,calc(100vw - 28px));max-width:none;max-height:calc(100dvh - 28px);padding:0;overflow:hidden;border:0;border-radius:22px;background:transparent;box-shadow:0 32px 90px rgba(8,29,17,.28)}.farmer-digital-dialog::backdrop,.farmer-qr-dialog::backdrop{background:rgba(9,24,15,.72);backdrop-filter:blur(6px)}
+  .farmer-digital-shell{display:grid;max-height:calc(100dvh - 28px);overflow:auto;background:#f8fbf8}.farmer-digital-header{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px 20px;border-bottom:1px solid #d9e4dc;background:#fff}.farmer-digital-header h2,.farmer-qr-shell h2{margin:3px 0 0;color:#102219;font-size:22px;line-height:1.1}.farmer-digital-kicker,.farmer-qr-shell header span{color:#14743f;font-size:10px;font-weight:900;letter-spacing:.09em;text-transform:uppercase}.farmer-digital-icon-button{display:grid;flex:0 0 38px;width:38px;height:38px;place-items:center;border:1px solid #d5dfd8;border-radius:50%;color:#425248;background:#fff;font-size:24px;line-height:1;cursor:pointer}.farmer-digital-icon-button:hover{color:#0b6736;background:#edf7f0}.farmer-digital-icon-button:focus-visible{outline:3px solid rgba(22,131,75,.24);outline-offset:2px}
+  .farmer-digital-stage{display:grid;justify-items:center;padding:18px 20px 12px;background:radial-gradient(circle at 50% 0,#eff8f1 0,#e2eee6 48%,#dbe8df 100%)}.farmer-digital-status{display:flex;align-items:center;gap:7px;margin-bottom:10px;padding:6px 10px;border:1px solid rgba(23,119,65,.16);border-radius:999px;color:#135f35;background:rgba(255,255,255,.82);font-size:10px}.farmer-digital-status span{width:7px;height:7px;border-radius:50%;background:#24b865;box-shadow:0 0 0 4px rgba(36,184,101,.12)}.farmer-digital-card-frame{position:relative;width:min(650px,100%);aspect-ratio:1.585;display:grid;place-items:center;overflow:hidden;border-radius:22px;background:#fff;box-shadow:0 24px 62px rgba(15,54,31,.2)}.farmer-digital-card-frame img{display:block;width:100%;height:100%;object-fit:contain;opacity:0;transform:scale(.985);transition:opacity .22s ease,transform .22s ease}.farmer-digital-card-frame img.is-ready{opacity:1;transform:scale(1)}.farmer-digital-card-frame.is-changing img{opacity:.15;transform:scale(.975)}.farmer-digital-loading{position:absolute;color:#65746a;font-size:12px;font-weight:800}.farmer-digital-hint{max-width:660px;margin:10px 0 0;color:#607067;font-size:11px;line-height:1.45;text-align:center}.farmer-digital-side-switch{display:flex;justify-content:center;gap:4px;padding:10px 20px 3px;background:#f8fbf8}.farmer-digital-side-switch button{min-width:120px;padding:9px 14px;border:0;border-radius:999px;color:#637168;background:transparent;font-size:11px;font-weight:850;cursor:pointer}.farmer-digital-side-switch button.is-active{color:#fff;background:#146f3c;box-shadow:0 6px 16px rgba(20,111,60,.2)}.farmer-digital-side-switch button:focus-visible{outline:3px solid rgba(22,131,75,.22);outline-offset:2px}.farmer-digital-actions{display:flex;align-items:center;justify-content:center;gap:8px;padding:9px 20px 14px;background:#f8fbf8}
+  .farmer-qr-dialog{width:min(440px,calc(100vw - 28px))}.farmer-qr-shell{padding:20px;background:#fff;text-align:center}.farmer-qr-shell>header{display:flex;align-items:center;justify-content:space-between;gap:14px;text-align:left}.farmer-qr-image-wrap{width:min(330px,100%);margin:20px auto 12px;padding:16px;border:1px solid #d8e3db;border-radius:20px;background:#fff;box-shadow:0 16px 40px rgba(16,62,34,.1)}.farmer-qr-image-wrap img{display:block;width:100%;aspect-ratio:1;object-fit:contain}.farmer-qr-shell>strong{display:block;color:#155f36;font:900 14px ui-monospace,monospace;letter-spacing:.04em}.farmer-qr-shell>p{margin:8px auto 18px;color:#607067;font-size:11px;line-height:1.55}.farmer-qr-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.farmer-qr-actions .module-button{justify-content:center;text-align:center}
   @media(max-width:1180px){.farmer-card-grid{grid-template-columns:1fr}.farmer-card-grid>article{width:min(856px,100%);margin:auto}}
-  @media(max-width:560px){.farmer-card-grid{padding:10px;gap:16px}.farmer-card-workspace-head{align-items:flex-start;flex-direction:column}.farmer-card-notice{align-items:flex-start;flex-direction:column}}
+  @media(max-width:560px){.farmer-card-grid{padding:10px;gap:16px}.farmer-card-workspace-head{align-items:flex-start;flex-direction:column}.farmer-card-notice{align-items:flex-start;flex-direction:column}.farmer-digital-dialog{width:calc(100vw - 12px);max-height:calc(100dvh - 12px);border-radius:18px}.farmer-digital-shell{max-height:calc(100dvh - 12px)}.farmer-digital-header{padding:14px 15px}.farmer-digital-header h2{font-size:17px}.farmer-digital-stage{padding:16px 10px 12px}.farmer-digital-card-frame{border-radius:14px}.farmer-digital-hint{font-size:10px}.farmer-digital-side-switch{padding:11px 10px 3px}.farmer-digital-side-switch button{min-width:105px;padding:8px 12px}.farmer-digital-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:10px 12px 14px}.farmer-digital-actions .module-button{justify-content:center;padding-inline:8px}.farmer-qr-shell{padding:16px}.farmer-qr-image-wrap{margin-top:16px}}
   @media print{
-    @page{size:A4 portrait;margin:12mm}.sidebar,.topbar,.farmer-card-screen-only{display:none!important}.main,.content{margin:0!important;padding:0!important;width:100%!important}.farmer-card-page,.farmer-card-workspace,.farmer-card-grid{display:block!important;border:0!important;background:#fff!important;padding:0!important}.farmer-card-grid>article{width:85.6mm!important;margin:0 auto 12mm!important;break-inside:avoid;page-break-inside:avoid}.farmer-id-card{width:85.6mm!important;height:54mm!important;border-radius:2.5mm!important;box-shadow:none!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    @page{size:A4 portrait;margin:12mm}.sidebar,.topbar,.farmer-card-screen-only,.farmer-digital-dialog,.farmer-qr-dialog{display:none!important}.main,.content{margin:0!important;padding:0!important;width:100%!important}.farmer-card-page,.farmer-card-workspace,.farmer-card-grid{display:block!important;border:0!important;background:#fff!important;padding:0!important}.farmer-card-grid>article{width:85.6mm!important;margin:0 auto 12mm!important;break-inside:avoid;page-break-inside:avoid}.farmer-id-card{width:85.6mm!important;height:54mm!important;border-radius:2.5mm!important;box-shadow:none!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   }
 </style>
 @endpush
@@ -307,6 +376,94 @@
         setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
       }, 'image/png', 1);
     }
+
+    const digitalDialog = document.getElementById('farmerDigitalIdDialog');
+    const qrDialog = document.getElementById('farmerQrDialog');
+    const digitalImage = document.getElementById('farmerDigitalCardImage');
+    const digitalFrame = document.getElementById('farmerDigitalCardFrame');
+    const digitalLoading = document.getElementById('farmerDigitalLoading');
+    const digitalStatus = document.getElementById('farmerDigitalSideStatus');
+    const digitalFlipButton = document.getElementById('farmerDigitalFlip');
+    const digitalDownloadButton = document.getElementById('farmerDigitalDownload');
+    const digitalPreviewCache = {};
+    let digitalSide = 'front';
+
+    async function digitalPreview(side) {
+      if (!digitalPreviewCache[side]) {
+        const canvas = side === 'back' ? await renderBack() : await renderFront();
+        digitalPreviewCache[side] = canvas.toDataURL('image/png', 1);
+      }
+      return digitalPreviewCache[side];
+    }
+
+    function updateDigitalControls(side) {
+      document.querySelectorAll('[data-digital-side]').forEach(button => {
+        const isActive = button.dataset.digitalSide === side;
+        button.classList.toggle('is-active', isActive);
+        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      });
+      digitalStatus.textContent = side === 'front' ? 'Front of ID' : 'Back of ID · QR ready';
+      digitalFlipButton.textContent = side === 'front' ? 'Show back' : 'Show front';
+      digitalDownloadButton.textContent = side === 'front' ? 'Download front' : 'Download back';
+      digitalImage.alt = `${side === 'front' ? 'Front' : 'Back'} of ${cardData.fullName}'s farmer registry card`;
+    }
+
+    async function showDigitalSide(side) {
+      digitalSide = side === 'back' ? 'back' : 'front';
+      updateDigitalControls(digitalSide);
+      digitalFrame.classList.add('is-changing');
+      digitalImage.classList.remove('is-ready');
+      digitalLoading.hidden = false;
+
+      try {
+        digitalImage.src = await digitalPreview(digitalSide);
+        digitalLoading.hidden = true;
+        requestAnimationFrame(() => {
+          digitalFrame.classList.remove('is-changing');
+          digitalImage.classList.add('is-ready');
+        });
+      } catch (error) {
+        digitalLoading.hidden = false;
+        digitalLoading.textContent = 'The digital card could not be prepared.';
+        digitalFrame.classList.remove('is-changing');
+        console.error('Digital farmer ID preview failed.', error);
+      }
+    }
+
+    document.getElementById('openFarmerDigitalId')?.addEventListener('click', () => {
+      if (!digitalDialog.open) digitalDialog.showModal();
+      showDigitalSide('front');
+    });
+    document.querySelectorAll('[data-close-digital-id]').forEach(button => {
+      button.addEventListener('click', () => digitalDialog.close());
+    });
+    document.querySelectorAll('[data-digital-side]').forEach(button => {
+      button.addEventListener('click', () => showDigitalSide(button.dataset.digitalSide));
+    });
+    digitalFlipButton?.addEventListener('click', () => showDigitalSide(digitalSide === 'front' ? 'back' : 'front'));
+    digitalDownloadButton?.addEventListener('click', async event => {
+      const button = event.currentTarget;
+      const originalLabel = button.textContent;
+      button.disabled = true;
+      button.textContent = 'Preparing…';
+      try {
+        downloadCanvas(digitalSide === 'back' ? await renderBack() : await renderFront(), digitalSide);
+      } finally {
+        button.disabled = false;
+        button.textContent = originalLabel;
+      }
+    });
+    document.getElementById('farmerDigitalEnlargeQr')?.addEventListener('click', () => {
+      if (!qrDialog.open) qrDialog.showModal();
+    });
+    document.querySelectorAll('[data-close-qr]').forEach(button => {
+      button.addEventListener('click', () => qrDialog.close());
+    });
+    [digitalDialog, qrDialog].forEach(dialog => {
+      dialog?.addEventListener('click', event => {
+        if (event.target === dialog) dialog.close();
+      });
+    });
 
     document.getElementById('printFarmerCard')?.addEventListener('click', () => window.print());
     document.getElementById('downloadFarmerCardFront')?.addEventListener('click', async event => {

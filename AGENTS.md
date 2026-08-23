@@ -121,6 +121,7 @@ Functions:
 - show each farmer's distribution history, weighted totals, date range, top item/variety, machinery count, and charts;
 - generate the display-only registry identifier `PAIS-FRM-######` from the database ID;
 - generate a printable/downloadable two-sided local farmer registry card;
+- present the same card in a responsive digital-ID dialog with front/back switching, current-side download, and an enlarged QR scanning view;
 - place a QR code on the ID that points to the farmer's public interactive land page;
 - import the `PARCEL LISTING` and `OUTSIDE LGU` sheets from an `.xlsx` or `.xls` workbook;
 - aggregate repeated parcel rows into one farmer and update/create farmers within the selected municipality.

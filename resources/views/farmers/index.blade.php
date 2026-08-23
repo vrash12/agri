@@ -291,7 +291,7 @@
                     <summary aria-label="More actions">⋯</summary>
                     <div class="module-action-menu-list">
                       <button type="button" class="js-map-farmer" data-farmer-id="{{ $farmer->id }}">Open on map</button>
-                      <a href="{{ route('farmers.id-card', $farmer) }}">View ID card</a>
+                      <a href="{{ route('farmers.id-card', $farmer) }}">Digital ID</a>
                       @if($canManageOperations)
                         <a href="{{ route('farmers.edit', $farmer) }}">Edit profile</a>
                         <a href="{{ route('rice-seed-distributions.create', ['farmer_id' => $farmer->id]) }}">Add distribution</a>
