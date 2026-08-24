@@ -61,6 +61,17 @@ class OperationsDashboardTest extends TestCase
             'seed_variety_claimed' => 'Dashboard Variety',
         ]);
         RiceSeedDistribution::create([
+            'municipality_id' => $ownMunicipality->id,
+            'farmer_id' => $mappedFarmer->id,
+            'last_name' => 'DashboardOwnFisheries'.$suffix,
+            'first_name' => 'Operator',
+            'input_category' => 'fish_fingerlings',
+            'seed_variety_claimed' => 'Dashboard Tilapia Fingerlings',
+            'kgs_received' => 1500,
+            'quantity_unit' => 'piece',
+            'date_received' => now()->toDateString(),
+        ]);
+        RiceSeedDistribution::create([
             'municipality_id' => $foreignMunicipality->id,
             'farmer_id' => $foreignFarmer->id,
             'last_name' => 'DashboardForeignRecipient'.$suffix,
@@ -85,6 +96,8 @@ class OperationsDashboardTest extends TestCase
             ->assertSee('Parcel mapping coverage')
             ->assertSee('50.0%')
             ->assertSee('DashboardOwnRecipient'.$suffix)
+            ->assertSee('DashboardOwnFisheries'.$suffix)
+            ->assertSee('1,500 fingerlings issued')
             ->assertSee('Dashboard Own Parcel '.$suffix)
             ->assertSee('Dashboard Own Pet '.$suffix)
             ->assertDontSee('Municipality performance')

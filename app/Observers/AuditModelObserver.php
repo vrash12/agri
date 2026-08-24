@@ -95,7 +95,7 @@ class AuditModelObserver
             $model instanceof AgriculturalMachinery => 'Machinery inventory',
             $model instanceof Farmer => 'Farmers',
             $model instanceof FarmPlot => 'Farm plots',
-            $model instanceof RiceSeedDistribution => 'Rice distributions',
+            $model instanceof RiceSeedDistribution => 'Assistance distributions',
             $model instanceof AntiRabiesVaccination => 'Vaccinations',
             $model instanceof FarmersCooperative => 'Cooperatives',
             $model instanceof BackupFile => 'Backup files',

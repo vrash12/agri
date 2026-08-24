@@ -996,8 +996,8 @@
               'badge' => null,
             ],
             [
-              'label' => 'Seeds & Farm Inputs',
-              'description' => 'Seed, fertilizer, and releases',
+              'label' => 'Agriculture & Fisheries',
+              'description' => 'Inputs, fingerlings, and gear',
               'icon' => 'seed',
               'route' => 'rice-seed-distributions.index',
               'patterns' => ['rice-seed-distributions.*'],

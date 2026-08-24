@@ -114,6 +114,18 @@ class DashboardController extends Controller
         $totalKgsDistributed = (float) $this->kilogramReleases(clone $distributionQuery)
             ->sum('kgs_received');
 
+        $totalFisheriesReleases = (clone $distributionQuery)
+            ->whereIn(
+                'input_category',
+                RiceSeedDistribution::FISHERIES_INPUT_CATEGORIES
+            )
+            ->count();
+
+        $totalFingerlingsReleased = (float) (clone $distributionQuery)
+            ->where('input_category', 'fish_fingerlings')
+            ->where('quantity_unit', 'piece')
+            ->sum('kgs_received');
+
         $totalVaccinations = (clone $vaccinationQuery)->count();
 
         $totalBackupFiles = $user->isSuperAdmin()
@@ -192,6 +204,14 @@ class DashboardController extends Controller
         $monthlyKgsDistributed = (float) $this->kilogramReleases(clone $distributionQuery)
             ->whereBetween('date_received', [$monthStart, $monthEnd])
             ->sum('kgs_received');
+
+        $monthlyFisheriesReleases = (clone $distributionQuery)
+            ->whereIn(
+                'input_category',
+                RiceSeedDistribution::FISHERIES_INPUT_CATEGORIES
+            )
+            ->whereBetween('date_received', [$monthStart, $monthEnd])
+            ->count();
 
         $monthlyVaccinations = (clone $vaccinationQuery)
             ->whereBetween('vaccination_date', [$monthStart, $monthEnd])
@@ -339,6 +359,10 @@ class DashboardController extends Controller
 
             'total_kgs_distributed' => $totalKgsDistributed,
 
+            'total_fisheries_releases' => $totalFisheriesReleases,
+
+            'total_fingerlings_released' => $totalFingerlingsReleased,
+
             'total_vaccinations' => $totalVaccinations,
 
             'total_backup_files' => $totalBackupFiles,
@@ -368,6 +392,8 @@ class DashboardController extends Controller
             'monthly_distribution_records' => $monthlyDistributionRecords,
 
             'monthly_kgs_distributed' => $monthlyKgsDistributed,
+
+            'monthly_fisheries_releases' => $monthlyFisheriesReleases,
 
             'monthly_vaccinations' => $monthlyVaccinations,
 
@@ -457,6 +483,13 @@ class DashboardController extends Controller
             ->selectRaw('COUNT(*) as distribution_records')
             ->selectRaw(
                 "COALESCE(SUM(CASE WHEN quantity_unit IS NULL OR quantity_unit = '' OR quantity_unit = 'kg' THEN kgs_received ELSE 0 END), 0) as total_kgs"
+            )
+            ->selectRaw(
+                'COALESCE(SUM(CASE WHEN input_category IN ('.implode(',', array_fill(0, count(RiceSeedDistribution::FISHERIES_INPUT_CATEGORIES), '?')).') THEN 1 ELSE 0 END), 0) as fisheries_records',
+                RiceSeedDistribution::FISHERIES_INPUT_CATEGORIES
+            )
+            ->selectRaw(
+                "COALESCE(SUM(CASE WHEN input_category = 'fish_fingerlings' AND quantity_unit = 'piece' THEN kgs_received ELSE 0 END), 0) as fingerlings_released"
             )
             ->groupBy('municipality_id')
             ->get()
@@ -565,6 +598,8 @@ class DashboardController extends Controller
                 'mapped_area' => (float) ($plots->mapped_area ?? 0),
                 'distribution_records' => (int) ($distributions->distribution_records ?? 0),
                 'total_kgs' => (float) ($distributions->total_kgs ?? 0),
+                'fisheries_records' => (int) ($distributions->fisheries_records ?? 0),
+                'fingerlings_released' => (float) ($distributions->fingerlings_released ?? 0),
                 'vaccinations' => (int) ($vaccinations->vaccinations ?? 0),
                 'cooperatives' => (int) ($cooperatives->cooperatives ?? 0),
                 'total_machinery' => (int) ($machinery->total_machinery ?? 0),

@@ -10,6 +10,19 @@ class RiceSeedDistribution extends Model
 {
     use HasFactory;
 
+    public const FISHERIES_INPUT_CATEGORIES = [
+        'fish_fingerlings',
+        'fish_feed',
+        'fishing_gear',
+        'aquaculture_input',
+        'other_fisheries',
+    ];
+
+    public const ASSISTANCE_SECTOR_LABELS = [
+        'agriculture' => 'Crops & farm inputs',
+        'fisheries' => 'Fisheries assistance',
+    ];
+
     public const INPUT_CATEGORY_LABELS = [
         'rice_seed' => 'Rice seed',
         'corn_seed' => 'Corn seed',
@@ -17,6 +30,11 @@ class RiceSeedDistribution extends Model
         'fertilizer' => 'Fertilizer / Abono',
         'soil_amendment' => 'Soil amendment',
         'other_input' => 'Other farm input',
+        'fish_fingerlings' => 'Fish fingerlings',
+        'fish_feed' => 'Fish feed',
+        'fishing_gear' => 'Fishing gear',
+        'aquaculture_input' => 'Aquaculture input',
+        'other_fisheries' => 'Other fisheries assistance',
     ];
 
     public const QUANTITY_UNIT_LABELS = [
@@ -28,6 +46,10 @@ class RiceSeedDistribution extends Model
         'ml' => 'mL',
         'bottle' => 'bottles',
         'piece' => 'pieces',
+        'set' => 'sets',
+        'roll' => 'rolls',
+        'box' => 'boxes',
+        'bundle' => 'bundles',
     ];
 
     protected $table = 'rice_seed_distributions';
@@ -152,5 +174,21 @@ class RiceSeedDistribution extends Model
             $this->input_category ?: 'rice_seed',
             '_seed'
         );
+    }
+
+    public function isFisheriesInput(): bool
+    {
+        return in_array(
+            $this->input_category,
+            self::FISHERIES_INPUT_CATEGORIES,
+            true
+        );
+    }
+
+    public function assistanceSectorLabel(): string
+    {
+        return self::ASSISTANCE_SECTOR_LABELS[
+            $this->isFisheriesInput() ? 'fisheries' : 'agriculture'
+        ];
     }
 }

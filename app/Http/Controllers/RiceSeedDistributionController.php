@@ -49,6 +49,11 @@ class RiceSeedDistributionController extends Controller
         'fertilizer' => 'Fertilizer / Abono',
         'soil_amendment' => 'Soil amendment',
         'other_input' => 'Other farm input',
+        'fish_fingerlings' => 'Fish fingerlings',
+        'fish_feed' => 'Fish feed',
+        'fishing_gear' => 'Fishing gear',
+        'aquaculture_input' => 'Aquaculture input',
+        'other_fisheries' => 'Other fisheries assistance',
     ];
 
     private array $inputSuggestions = [
@@ -87,6 +92,37 @@ class RiceSeedDistributionController extends Controller
             'Inoculant',
             'Plant growth supplement',
         ],
+        'fish_fingerlings' => [
+            'Tilapia fingerlings',
+            'Hito (catfish) fingerlings',
+            'Bangus fingerlings',
+            'Carp fingerlings',
+        ],
+        'fish_feed' => [
+            'Tilapia starter feed',
+            'Tilapia grower feed',
+            'Catfish starter feed',
+            'Floating fish feed',
+        ],
+        'fishing_gear' => [
+            'Fishing net',
+            'Hapa net',
+            'Gill net',
+            'Nylon fishing line',
+            'Fishing hooks',
+            'Fish cage materials',
+        ],
+        'aquaculture_input' => [
+            'Agricultural lime for fishpond',
+            'Pond probiotic',
+            'Water quality test kit',
+            'Fishpond disinfectant',
+        ],
+        'other_fisheries' => [
+            'Fish container',
+            'Harvesting basket',
+            'Aeration equipment',
+        ],
     ];
 
     private array $quantityUnitOptions = [
@@ -98,6 +134,24 @@ class RiceSeedDistributionController extends Controller
         'ml' => 'Milliliter (mL)',
         'bottle' => 'Bottle',
         'piece' => 'Piece',
+        'set' => 'Set',
+        'roll' => 'Roll',
+        'box' => 'Box',
+        'bundle' => 'Bundle',
+    ];
+
+    private array $preferredUnitsByCategory = [
+        'rice_seed' => 'kg',
+        'corn_seed' => 'kg',
+        'vegetable_seed' => 'pack',
+        'fertilizer' => 'sack',
+        'soil_amendment' => 'kg',
+        'other_input' => 'piece',
+        'fish_fingerlings' => 'piece',
+        'fish_feed' => 'kg',
+        'fishing_gear' => 'piece',
+        'aquaculture_input' => 'kg',
+        'other_fisheries' => 'piece',
     ];
 
     private array $cropEstablishmentOptions = [
@@ -129,6 +183,16 @@ class RiceSeedDistributionController extends Controller
             ->whereNotNull('farmer_id')
             ->distinct()
             ->count('farmer_id');
+        $fisheriesRecords = (clone $baseQuery)
+            ->whereIn(
+                'input_category',
+                RiceSeedDistribution::FISHERIES_INPUT_CATEGORIES
+            )
+            ->count();
+        $fingerlingsReleased = (float) (clone $baseQuery)
+            ->where('input_category', 'fish_fingerlings')
+            ->where('quantity_unit', 'piece')
+            ->sum('kgs_received');
 
         // Stats
         $latestReceived = (clone $baseQuery)->max('date_received');
@@ -326,6 +390,9 @@ class RiceSeedDistributionController extends Controller
             'selectedMunicipalityId' => $request->query('municipality_id'),
             'inputCategoryOptions' => $this->inputCategoryOptions,
             'quantityUnitOptions' => $this->quantityUnitOptions,
+            'assistanceSectorOptions' => RiceSeedDistribution::ASSISTANCE_SECTOR_LABELS,
+            'fisheriesRecords' => $fisheriesRecords,
+            'fingerlingsReleased' => $fingerlingsReleased,
         ]);
     }
 
@@ -507,6 +574,7 @@ class RiceSeedDistributionController extends Controller
             'inputCategoryOptions'      => $this->inputCategoryOptions,
             'inputSuggestions'          => $this->inputSuggestions,
             'quantityUnitOptions'       => $this->quantityUnitOptions,
+            'preferredUnitsByCategory'  => $this->preferredUnitsByCategory,
             'farmer_id'                 => $selectedFarmerId,
             'municipalities' => $this->municipalityAccess->choices(
                 $request->user()
@@ -516,6 +584,9 @@ class RiceSeedDistributionController extends Controller
             'selectedMunicipalityId' => $selectedFarmer?->municipality_id
                 ?? $request->query('municipality_id')
                 ?? $request->user()->municipality_id,
+            'defaultInputCategory' => $request->query('assistance_sector') === 'fisheries'
+                ? 'fish_fingerlings'
+                : 'rice_seed',
         ]);
     }
 
@@ -543,7 +614,7 @@ class RiceSeedDistributionController extends Controller
 
         return redirect()
             ->route('rice-seed-distributions.index')
-            ->with('success', 'Seed or farm-input release added successfully.');
+            ->with('success', 'Agriculture or fisheries assistance release added successfully.');
     }
 
     public function edit(
@@ -563,6 +634,7 @@ class RiceSeedDistributionController extends Controller
             'inputCategoryOptions'      => $this->inputCategoryOptions,
             'inputSuggestions'          => $this->inputSuggestions,
             'quantityUnitOptions'       => $this->quantityUnitOptions,
+            'preferredUnitsByCategory'  => $this->preferredUnitsByCategory,
             'farmer_id'                 => $riceSeedDistribution->farmer_id,
             'municipalities' => $this->municipalityAccess->choices(
                 $request->user()
@@ -599,7 +671,7 @@ class RiceSeedDistributionController extends Controller
 
         return redirect()
             ->route('rice-seed-distributions.index')
-            ->with('success', 'Seed or farm-input release updated successfully.');
+            ->with('success', 'Agriculture or fisheries assistance release updated successfully.');
     }
 
     public function destroy(RiceSeedDistribution $riceSeedDistribution)
@@ -611,7 +683,7 @@ class RiceSeedDistributionController extends Controller
         );
 
         return redirect()->route('rice-seed-distributions.index')
-            ->with('success', 'Recipient record deleted.');
+            ->with('success', 'Assistance release deleted successfully.');
     }
 
     public function export(Request $request)
@@ -621,7 +693,7 @@ class RiceSeedDistributionController extends Controller
         $query = $this->buildFilteredQuery($request);
         $maximumId = (int) ((clone $query)->max('id') ?? 0);
 
-        $filename = 'seed_and_input_distribution_' . now()->format('Y-m-d_H-i-s') . '.csv';
+        $filename = 'agriculture_fisheries_assistance_' . now()->format('Y-m-d_H-i-s') . '.csv';
 
         $headings = [
             'No.',
@@ -639,6 +711,7 @@ class RiceSeedDistributionController extends Controller
             'SC',
             'OFW',
             'Farm Area (ha)',
+            'Assistance Sector',
             'Input Category',
             'Item / Variety',
             'Quantity Released',
@@ -680,6 +753,7 @@ class RiceSeedDistributionController extends Controller
                                 $r->is_sc ? 'Y' : 'N',
                                 $r->is_ofw ? 'Y' : 'N',
                                 $r->farm_area_ha,
+                                $r->assistanceSectorLabel(),
                                 $this->inputCategoryOptions[$r->input_category]
                                     ?? ucfirst(str_replace('_', ' ', $r->input_category ?: 'rice_seed')),
                                 $r->seed_variety_claimed,
@@ -744,6 +818,22 @@ class RiceSeedDistributionController extends Controller
         $inputCategory = $request->query('input_category');
         if (array_key_exists((string) $inputCategory, $this->inputCategoryOptions)) {
             $query->where('input_category', $inputCategory);
+        }
+
+        $assistanceSector = (string) $request->query('assistance_sector', '');
+        if ($assistanceSector === 'fisheries') {
+            $query->whereIn(
+                'input_category',
+                RiceSeedDistribution::FISHERIES_INPUT_CATEGORIES
+            );
+        } elseif ($assistanceSector === 'agriculture') {
+            $query->where(function (Builder $query) {
+                $query->whereNull('input_category')
+                    ->orWhereNotIn(
+                        'input_category',
+                        RiceSeedDistribution::FISHERIES_INPUT_CATEGORIES
+                    );
+            });
         }
 
         foreach (['is_arb', 'is_4ps', 'is_ip', 'is_pwd', 'is_sc', 'is_ofw'] as $col) {
@@ -833,7 +923,7 @@ class RiceSeedDistributionController extends Controller
             'quantity_unit' => $request->input('quantity_unit', 'kg'),
         ]);
 
-        return $request->validate([
+        $validated = $request->validate([
             'municipality_id' => ['nullable', 'integer'],
             'farmer_id' => ['required', 'exists:farmers,id'],
 
@@ -856,6 +946,17 @@ class RiceSeedDistributionController extends Controller
             'kgs_received'  => ['required', 'numeric', 'min:0'],
             'date_received' => ['required', 'date'],
         ]);
+
+        if (
+            $validated['input_category'] === 'fish_fingerlings'
+            && $validated['quantity_unit'] !== 'piece'
+        ) {
+            throw ValidationException::withMessages([
+                'quantity_unit' => 'Fish fingerlings must be recorded by piece so the dashboard can report an accurate fingerling count.',
+            ]);
+        }
+
+        return $validated;
     }
 
     private function buildDistributionPayload(
@@ -901,7 +1002,7 @@ class RiceSeedDistributionController extends Controller
 
         if ((int) $farmer->municipality_id !== $municipalityId) {
             throw ValidationException::withMessages([
-                'farmer_id' => 'The selected farmer does not belong to the selected municipality.',
+                'farmer_id' => 'The selected beneficiary does not belong to the selected municipality.',
             ]);
         }
 

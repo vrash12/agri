@@ -120,6 +120,20 @@
 
     <article class="ops-kpi">
       <div class="ops-kpi-top">
+        <span class="ops-kpi-label">Fisheries assistance</span>
+        <span class="ops-icon ops-icon-blue">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12c4-5 10-6 15-2l3-2v8l-3-2c-5 4-11 3-15-2Z"></path><circle cx="15" cy="11" r=".6"></circle></svg>
+        </span>
+      </div>
+      <strong class="ops-kpi-value">{{ number_format((int) ($stats['total_fisheries_releases'] ?? 0)) }}</strong>
+      <div class="ops-kpi-foot">
+        <span>{{ number_format((float) ($stats['total_fingerlings_released'] ?? 0), 0) }} fingerlings issued</span>
+        <a href="{{ route('rice-seed-distributions.index', ['assistance_sector' => 'fisheries']) }}">Open fisheries</a>
+      </div>
+    </article>
+
+    <article class="ops-kpi">
+      <div class="ops-kpi-top">
         <span class="ops-kpi-label">Weight-based inputs</span>
         <span class="ops-icon ops-icon-amber">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21V9M8 13c-3 0-5-2-5-5 3 0 5 2 5 5ZM16 11c3 0 5-2 5-5-3 0-5 2-5 5Z"></path></svg>
@@ -165,6 +179,7 @@
     <div class="ops-month-label"><span>This month</span><strong>{{ $localNow->format('F Y') }}</strong></div>
     <div class="ops-month-stat"><span>Input releases</span><strong>{{ number_format((int) ($stats['monthly_distribution_records'] ?? 0)) }}</strong></div>
     <div class="ops-month-stat"><span>Weight-based volume</span><strong>{{ number_format((float) ($stats['monthly_kgs_distributed'] ?? 0), 2) }} kg</strong></div>
+    <div class="ops-month-stat"><span>Fisheries releases</span><strong>{{ number_format((int) ($stats['monthly_fisheries_releases'] ?? 0)) }}</strong></div>
     <div class="ops-month-stat"><span>Vaccinations</span><strong>{{ number_format((int) ($stats['monthly_vaccinations'] ?? 0)) }}</strong></div>
     <div class="ops-month-stat"><span>Cooperatives</span><strong>{{ number_format((int) ($stats['total_cooperatives'] ?? 0)) }}</strong></div>
     @unless($user->isSuperAdmin())<div class="ops-month-stat"><span>Backup files</span><strong>{{ number_format((int) ($stats['total_backup_files'] ?? 0)) }}</strong></div>@endunless
@@ -237,7 +252,7 @@
             <option value="name">Municipality</option>
             <option value="farmers">Most farmers</option>
             <option value="coverage">Highest mapping</option>
-            <option value="seed">Most seed released</option>
+            <option value="seed">Most kilograms released</option>
             <option value="machinery">Most machinery</option>
           </select>
         </label>
@@ -252,7 +267,7 @@
                 <th>Municipality</th>
                 <th>Farmers</th>
                 <th>Parcel mapping</th>
-                <th>Rice program</th>
+                <th>Assistance</th>
                 <th>Machinery</th>
                 <th>Animal health</th>
                 <th>Office access</th>
@@ -300,7 +315,8 @@
                   </td>
                   <td>
                     <strong class="ops-cell-value">{{ number_format($municipality['total_kgs'], 2) }} kg</strong>
-                    <small class="ops-cell-note">{{ number_format($municipality['distribution_records']) }} release records</small>
+                    <small class="ops-cell-note">{{ number_format($municipality['distribution_records']) }} releases · {{ number_format($municipality['fisheries_records']) }} fisheries</small>
+                    <a class="ops-cell-link" href="{{ route('rice-seed-distributions.index', ['municipality_id' => $municipality['id']]) }}">Open assistance</a>
                   </td>
                   <td>
                     <strong class="ops-cell-value">{{ number_format($municipality['total_machinery']) }} assets</strong>
@@ -343,7 +359,7 @@
     <main class="ops-main-column">
       <section class="ops-panel">
         <div class="ops-panel-header">
-          <div><span class="ops-panel-kicker">Program monitoring</span><h2>Weight-based distribution trend</h2><p>Seeds and farm inputs released in kilograms during {{ $currentYear }}.</p></div>
+          <div><span class="ops-panel-kicker">Program monitoring</span><h2>Weight-based distribution trend</h2><p>Agriculture and fisheries inputs released in kilograms during {{ $currentYear }}.</p></div>
           <span class="ops-period">Jan–Dec {{ $currentYear }}</span>
         </div>
         <div class="ops-chart-wrap">
@@ -356,7 +372,7 @@
 
       <section class="ops-panel">
         <div class="ops-panel-header">
-          <div><span class="ops-panel-kicker">Latest transactions</span><h2>Recent seed &amp; input distributions</h2><p>The five most recently recorded releases in your access scope.</p></div>
+          <div><span class="ops-panel-kicker">Latest transactions</span><h2>Recent assistance distributions</h2><p>The five latest agriculture or fisheries releases in your access scope.</p></div>
           <a class="ops-text-link" href="{{ route('rice-seed-distributions.index') }}">View all</a>
         </div>
         @if($recentRecipients->isNotEmpty())
@@ -377,7 +393,7 @@
             </table>
           </div>
         @else
-          <div class="ops-empty"><strong>No distribution activity</strong><span>New seed and farm-input releases will appear here.</span></div>
+          <div class="ops-empty"><strong>No distribution activity</strong><span>New agriculture and fisheries assistance releases will appear here.</span></div>
         @endif
       </section>
 
@@ -475,8 +491,8 @@
   .ops-dashboard{display:flex;flex-direction:column;gap:18px;color:var(--ops-ink)}
   .ops-header{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;padding:4px 2px 2px}.ops-context{display:flex;align-items:center;gap:8px;color:var(--ops-green);font-size:12px;font-weight:800;letter-spacing:.03em;text-transform:uppercase}.ops-live-dot{width:8px;height:8px;border-radius:50%;background:#2d8a50;box-shadow:0 0 0 4px rgba(45,138,80,.12)}.ops-header h1{margin:8px 0 4px;font-size:clamp(27px,3vw,36px);line-height:1.08;letter-spacing:-.035em;font-weight:800}.ops-header p{margin:0;color:var(--ops-muted);font-size:13px}.ops-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
   .ops-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:39px;padding:9px 13px;border:1px solid var(--ops-border);border-radius:8px;text-decoration:none;font-size:12px;font-weight:800;transition:border-color .15s ease,background .15s ease}.ops-button svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.ops-button-secondary{color:#33443a;background:#fff}.ops-button-secondary:hover{color:var(--ops-green);border-color:#a8bcb0;background:#f8faf8}.ops-button-primary{color:#fff;border-color:var(--ops-green);background:var(--ops-green)}.ops-button-primary:hover{color:#fff;background:#10532f}
-  .ops-kpi-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}.ops-kpi{min-width:0;padding:17px;border:1px solid var(--ops-border);border-radius:11px;background:var(--ops-surface);box-shadow:0 2px 8px rgba(20,40,27,.035)}.ops-kpi-top,.ops-kpi-value-row,.ops-kpi-foot{display:flex;align-items:center;justify-content:space-between;gap:12px}.ops-kpi-label{color:var(--ops-muted);font-size:11px;font-weight:800;letter-spacing:.045em;text-transform:uppercase}.ops-icon{width:32px;height:32px;display:grid;place-items:center;flex:0 0 auto;border-radius:8px}.ops-icon svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.ops-icon-green{color:var(--ops-green);background:var(--ops-green-soft)}.ops-icon-blue{color:var(--ops-blue);background:var(--ops-blue-soft)}.ops-icon-amber{color:var(--ops-amber);background:var(--ops-amber-soft)}.ops-icon-red{color:var(--ops-red);background:var(--ops-red-soft)}.ops-kpi-value{display:block;margin:17px 0 15px;color:var(--ops-ink);font-size:30px;line-height:1;font-weight:800;letter-spacing:-.035em}.ops-kpi-value small{color:var(--ops-muted);font-size:13px;letter-spacing:0}.ops-kpi-value-row .ops-kpi-value{margin-bottom:10px}.ops-kpi-value-row>span{color:var(--ops-muted);font-size:11px;font-weight:700;text-align:right}.ops-kpi-foot{padding-top:12px;border-top:1px solid #edf1ee;color:var(--ops-muted);font-size:11px}.ops-kpi-foot a,.ops-text-link,.ops-row-link{color:var(--ops-green);font-weight:800;text-decoration:none}.ops-kpi-foot a:hover,.ops-text-link:hover,.ops-row-link:hover{text-decoration:underline}.ops-progress{height:6px;margin:0 0 11px;overflow:hidden;border-radius:999px;background:#edf1ee}.ops-progress span{display:block;height:100%;border-radius:inherit;background:var(--ops-green)}
-  .ops-month-strip{display:grid;grid-template-columns:1.15fr repeat(5,1fr);overflow:hidden;border:1px solid var(--ops-border);border-radius:10px;background:#fff}.ops-month-label,.ops-month-stat{min-width:0;padding:13px 16px;border-right:1px solid var(--ops-border)}.ops-month-label{background:#1d2c23;color:#fff}.ops-month-label span,.ops-month-stat span{display:block;margin-bottom:3px;color:#849087;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}.ops-month-label span{color:#b6c2ba}.ops-month-label strong,.ops-month-stat strong{display:block;overflow:hidden;font-size:13px;font-weight:800;text-overflow:ellipsis;white-space:nowrap}.ops-month-stat:last-child{border-right:0}
+  .ops-kpi-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.ops-kpi{min-width:0;padding:17px;border:1px solid var(--ops-border);border-radius:11px;background:var(--ops-surface);box-shadow:0 2px 8px rgba(20,40,27,.035)}.ops-kpi-top,.ops-kpi-value-row,.ops-kpi-foot{display:flex;align-items:center;justify-content:space-between;gap:12px}.ops-kpi-label{color:var(--ops-muted);font-size:11px;font-weight:800;letter-spacing:.045em;text-transform:uppercase}.ops-icon{width:32px;height:32px;display:grid;place-items:center;flex:0 0 auto;border-radius:8px}.ops-icon svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.ops-icon-green{color:var(--ops-green);background:var(--ops-green-soft)}.ops-icon-blue{color:var(--ops-blue);background:var(--ops-blue-soft)}.ops-icon-amber{color:var(--ops-amber);background:var(--ops-amber-soft)}.ops-icon-red{color:var(--ops-red);background:var(--ops-red-soft)}.ops-kpi-value{display:block;margin:17px 0 15px;color:var(--ops-ink);font-size:30px;line-height:1;font-weight:800;letter-spacing:-.035em}.ops-kpi-value small{color:var(--ops-muted);font-size:13px;letter-spacing:0}.ops-kpi-value-row .ops-kpi-value{margin-bottom:10px}.ops-kpi-value-row>span{color:var(--ops-muted);font-size:11px;font-weight:700;text-align:right}.ops-kpi-foot{padding-top:12px;border-top:1px solid #edf1ee;color:var(--ops-muted);font-size:11px}.ops-kpi-foot a,.ops-text-link,.ops-row-link{color:var(--ops-green);font-weight:800;text-decoration:none}.ops-kpi-foot a:hover,.ops-text-link:hover,.ops-row-link:hover{text-decoration:underline}.ops-progress{height:6px;margin:0 0 11px;overflow:hidden;border-radius:999px;background:#edf1ee}.ops-progress span{display:block;height:100%;border-radius:inherit;background:var(--ops-green)}
+  .ops-month-strip{display:grid;grid-template-columns:1.15fr repeat(6,1fr);overflow:hidden;border:1px solid var(--ops-border);border-radius:10px;background:#fff}.ops-month-label,.ops-month-stat{min-width:0;padding:13px 16px;border-right:1px solid var(--ops-border)}.ops-month-label{background:#1d2c23;color:#fff}.ops-month-label span,.ops-month-stat span{display:block;margin-bottom:3px;color:#849087;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}.ops-month-label span{color:#b6c2ba}.ops-month-label strong,.ops-month-stat strong{display:block;overflow:hidden;font-size:13px;font-weight:800;text-overflow:ellipsis;white-space:nowrap}.ops-month-stat:last-child{border-right:0}
   .ops-layout{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(310px,.75fr);gap:16px;align-items:start}.ops-main-column,.ops-side-column{display:flex;flex-direction:column;gap:16px;min-width:0}.ops-panel{overflow:hidden;border:1px solid var(--ops-border);border-radius:11px;background:#fff;box-shadow:0 2px 8px rgba(20,40,27,.03)}.ops-panel-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:16px 18px;border-bottom:1px solid var(--ops-border)}.ops-panel-header-compact{padding-top:14px;padding-bottom:14px}.ops-panel-kicker{display:block;margin-bottom:4px;color:var(--ops-green);font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}.ops-panel-header h2{margin:0;color:var(--ops-ink);font-size:16px;font-weight:800;letter-spacing:-.015em}.ops-panel-header p{margin:4px 0 0;color:var(--ops-muted);font-size:12px;line-height:1.45}.ops-period{padding:5px 8px;border-radius:6px;color:#506057;background:var(--ops-subtle);font-size:10px;font-weight:800;white-space:nowrap}.ops-text-link{align-self:center;font-size:11px;white-space:nowrap}.ops-chart-wrap{position:relative;height:305px;padding:18px}.ops-chart-empty{position:absolute;inset:18px;display:grid;place-items:center;border:1px dashed #ccd6cf;border-radius:8px;color:var(--ops-muted);background:rgba(255,255,255,.9);font-size:12px;text-align:center}
   .ops-table-wrap{overflow-x:auto}.ops-table{width:100%;border-collapse:collapse}.ops-table th{padding:10px 14px;color:var(--ops-muted);background:#f8faf8;border-bottom:1px solid var(--ops-border);font-size:10px;font-weight:800;letter-spacing:.045em;text-align:left;text-transform:uppercase;white-space:nowrap}.ops-table td{padding:13px 14px;border-bottom:1px solid #edf1ee;color:#435047;font-size:12px;white-space:nowrap}.ops-table tbody tr:last-child td{border-bottom:0}.ops-table tbody tr:hover td{background:#fbfcfb}.ops-table td strong{color:var(--ops-ink);font-weight:750}.ops-numeric{text-align:right!important}.ops-mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px!important}
   .ops-record-list{display:flex;flex-direction:column}.ops-record-row{display:grid;grid-template-columns:32px minmax(0,1fr) auto;align-items:center;gap:11px;padding:12px 16px;border-bottom:1px solid #edf1ee;color:inherit;text-decoration:none}.ops-record-row:last-child{border-bottom:0}.ops-record-row:hover{background:#f9fbf9}.ops-record-mark{width:32px;height:32px;display:grid;place-items:center;border-radius:7px;color:var(--ops-green);background:var(--ops-green-soft);font-size:10px;font-weight:900}.ops-record-mark-red{color:var(--ops-red);background:var(--ops-red-soft)}.ops-record-body{min-width:0}.ops-record-body strong,.ops-record-body small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ops-record-body strong{color:var(--ops-ink);font-size:12px;font-weight:800}.ops-record-body small{margin-top:3px;color:var(--ops-muted);font-size:10px}.ops-record-row time{color:var(--ops-muted);font-size:10px;font-weight:750}

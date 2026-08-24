@@ -262,6 +262,46 @@ class MunicipalitySeparationTest extends TestCase
             ->assertSee('Fertilizer / Abono');
     }
 
+    public function test_distribution_accepts_fingerlings_and_scopes_fisheries_to_the_municipality(): void
+    {
+        $farmer = Farmer::create([
+            'municipality_id' => $this->firstMunicipality->id,
+            'last_name' => 'Fisheries',
+            'first_name' => 'Beneficiary',
+        ]);
+
+        $this->actingAs($this->municipalUser)
+            ->post(route('rice-seed-distributions.store'), [
+                'farmer_id' => $farmer->id,
+                'input_category' => 'fish_fingerlings',
+                'seed_variety_claimed' => 'Tilapia fingerlings',
+                'kgs_received' => 2500,
+                'quantity_unit' => 'piece',
+                'input_notes' => 'From the municipal hatchery',
+                'date_received' => now()->toDateString(),
+            ])
+            ->assertRedirect(route('rice-seed-distributions.index'));
+
+        $this->assertDatabaseHas('rice_seed_distributions', [
+            'farmer_id' => $farmer->id,
+            'municipality_id' => $this->firstMunicipality->id,
+            'input_category' => 'fish_fingerlings',
+            'seed_variety_claimed' => 'Tilapia fingerlings',
+            'kgs_received' => 2500,
+            'quantity_unit' => 'piece',
+        ]);
+
+        $this->actingAs($this->municipalUser)
+            ->get(route('rice-seed-distributions.index', [
+                'assistance_sector' => 'fisheries',
+            ]))
+            ->assertOk()
+            ->assertSee('Tilapia fingerlings')
+            ->assertSee('Fish fingerlings')
+            ->assertSee('2,500')
+            ->assertSee('Fisheries assistance');
+    }
+
     public function test_farm_plots_are_scoped_to_the_farmer_municipality(): void
     {
         $ownFarmer = Farmer::create([

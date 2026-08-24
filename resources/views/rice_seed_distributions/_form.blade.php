@@ -4,16 +4,25 @@
   $selectedFarmerId = old('farmer_id', $record->farmer_id ?? ($farmer_id ?? ''));
   $fallbackName = trim(($record->last_name ?? '').', '.($record->first_name ?? '').' '.($record->middle_name ?? '').' '.($record->ext_name ?? ''), ', ');
   $fallbackTags = collect(['ARB' => $record?->is_arb, '4Ps' => $record?->is_4ps, 'IP' => $record?->is_ip, 'PWD' => $record?->is_pwd, 'SC' => $record?->is_sc, 'OFW' => $record?->is_ofw])->filter()->keys()->implode(', ');
-  $selectedInputCategory = old('input_category', $record->input_category ?? 'rice_seed');
-  $selectedQuantityUnit = old('quantity_unit', $record->quantity_unit ?? 'kg');
+  $selectedInputCategory = old('input_category', $record->input_category ?? ($defaultInputCategory ?? 'rice_seed'));
+  $selectedQuantityUnit = old('quantity_unit', $record->quantity_unit ?? (($preferredUnitsByCategory ?? [])[$selectedInputCategory] ?? 'kg'));
   $categoryMeta = [
-    'rice_seed' => ['code' => 'RS', 'description' => 'Palay varieties and certified seed'],
-    'corn_seed' => ['code' => 'CS', 'description' => 'Yellow, white, or hybrid corn'],
-    'vegetable_seed' => ['code' => 'VS', 'description' => 'Vegetable seed and planting packs'],
-    'fertilizer' => ['code' => 'AB', 'description' => 'Fertilizer, abono, and formulations'],
-    'soil_amendment' => ['code' => 'SA', 'description' => 'Lime, compost, and soil treatment'],
-    'other_input' => ['code' => 'OT', 'description' => 'Other agricultural assistance'],
+    'rice_seed' => ['code' => 'RS', 'description' => 'Palay varieties and certified seed', 'sector' => 'agriculture'],
+    'corn_seed' => ['code' => 'CS', 'description' => 'Yellow, white, or hybrid corn', 'sector' => 'agriculture'],
+    'vegetable_seed' => ['code' => 'VS', 'description' => 'Vegetable seed and planting packs', 'sector' => 'agriculture'],
+    'fertilizer' => ['code' => 'AB', 'description' => 'Fertilizer, abono, and formulations', 'sector' => 'agriculture'],
+    'soil_amendment' => ['code' => 'SA', 'description' => 'Lime, compost, and soil treatment', 'sector' => 'agriculture'],
+    'other_input' => ['code' => 'OT', 'description' => 'Other agricultural assistance', 'sector' => 'agriculture'],
+    'fish_fingerlings' => ['code' => 'FI', 'description' => 'Tilapia, hito, bangus, and other fingerlings', 'sector' => 'fisheries'],
+    'fish_feed' => ['code' => 'FF', 'description' => 'Starter, grower, and floating fish feeds', 'sector' => 'fisheries'],
+    'fishing_gear' => ['code' => 'FG', 'description' => 'Nets, line, hooks, cages, and fishing tools', 'sector' => 'fisheries'],
+    'aquaculture_input' => ['code' => 'AQ', 'description' => 'Fishpond and water-management supplies', 'sector' => 'fisheries'],
+    'other_fisheries' => ['code' => 'OF', 'description' => 'Other capture or aquaculture assistance', 'sector' => 'fisheries'],
   ];
+  $categoryGroups = collect($inputCategoryOptions ?? [])->groupBy(
+      fn ($label, $key) => ($categoryMeta[$key]['sector'] ?? 'agriculture'),
+      true
+  );
 @endphp
 
 @include('partials.record-version', ['record' => $record])
@@ -22,7 +31,7 @@
 <style>
   .rice-progress{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin-bottom:13px;overflow:hidden;border:1px solid var(--module-border);border-radius:11px;background:#fff}.rice-progress button{position:relative;display:flex;align-items:center;gap:10px;min-width:0;padding:12px 14px;border:0;border-right:1px solid var(--module-border);color:#647168;background:#fff;text-align:left;cursor:pointer}.rice-progress button:last-child{border-right:0}.rice-progress button:hover{background:#f8fbf9}.rice-progress button.is-complete{color:#17643a;background:#f4faf6}.rice-progress-index{width:24px;height:24px;display:grid;place-items:center;flex:0 0 auto;border-radius:7px;color:#516159;background:#edf2ef;font-size:9px;font-weight:900}.rice-progress button.is-complete .rice-progress-index{color:#fff;background:#268253}.rice-progress-copy{min-width:0}.rice-progress-copy strong,.rice-progress-copy small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rice-progress-copy strong{font-size:10px}.rice-progress-copy small{margin-top:2px;color:var(--module-muted);font-size:8px}.rice-progress-check{margin-left:auto;color:#268253;font-size:13px;font-weight:900;opacity:0}.rice-progress button.is-complete .rice-progress-check{opacity:1}
   .rice-farmer-preview{display:none;margin-top:13px}.rice-farmer-preview.is-visible{display:block}.rice-preview-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}.rice-preview-heading strong{font-size:11px}.rice-preview-heading span{color:var(--module-green);font-size:9px;font-weight:850}.rice-form-summary-value{display:block;margin-top:4px;color:var(--module-ink);font-size:16px;font-weight:850;line-height:1.25;overflow-wrap:anywhere}.rice-monitoring>summary{border-bottom:0}.rice-monitoring[open]>summary{border-bottom:1px solid var(--module-border)}.rice-monitoring .module-more-content{padding:15px}.rice-input-callout{display:flex;gap:10px;align-items:flex-start;margin-bottom:15px;padding:12px 13px;border:1px solid #cce7d5;border-radius:10px;background:#f2faf5;color:#28523a}.rice-input-callout svg{width:18px;height:18px;flex:0 0 auto;fill:none;stroke:currentColor;stroke-width:1.8}.rice-input-callout strong{display:block;margin-bottom:2px;color:#18442b;font-size:10px}.rice-input-callout span{display:block;font-size:9px;line-height:1.45}
-  .rice-category-fieldset{grid-column:1/-1;min-width:0;margin:0;padding:0;border:0}.rice-category-fieldset legend{margin-bottom:8px;color:#45534a;font-size:10px;font-weight:850}.rice-category-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.rice-category-fieldset.is-invalid .rice-category-grid{padding:5px;border:1px solid #cb625d;border-radius:10px;background:#fffafa}.rice-category-option{position:relative;min-width:0}.rice-category-option input{position:absolute;opacity:0;pointer-events:none}.rice-category-card{display:grid;grid-template-columns:34px minmax(0,1fr) 18px;align-items:center;gap:9px;min-height:64px;padding:9px 10px;border:1px solid #dce5df;border-radius:9px;background:#fff;cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease,background .15s ease,transform .15s ease}.rice-category-card:hover{border-color:#9ab8a5;background:#fafdfb;transform:translateY(-1px)}.rice-category-option input:focus-visible+.rice-category-card{outline:3px solid rgba(38,130,83,.16);outline-offset:1px}.rice-category-option input:checked+.rice-category-card{border-color:#5b9c73;background:#f1f9f4;box-shadow:0 0 0 2px rgba(38,130,83,.08)}.rice-category-code{width:34px;height:34px;display:grid;place-items:center;border-radius:8px;color:#17643a;background:#e7f4eb;font-size:9px;font-weight:950}.rice-category-copy{min-width:0}.rice-category-copy strong,.rice-category-copy small{display:block}.rice-category-copy strong{color:var(--module-ink);font-size:10px}.rice-category-copy small{margin-top:3px;color:var(--module-muted);font-size:8px;line-height:1.3}.rice-category-mark{width:16px;height:16px;display:grid;place-items:center;border:1px solid #bccbc1;border-radius:50%;color:#fff;font-size:9px}.rice-category-option input:checked+.rice-category-card .rice-category-mark{border-color:#268253;background:#268253}.rice-category-option input:checked+.rice-category-card .rice-category-mark:after{content:'✓'}
+  .rice-category-fieldset{grid-column:1/-1;min-width:0;margin:0;padding:0;border:0}.rice-category-fieldset legend{margin-bottom:8px;color:#45534a;font-size:10px;font-weight:850}.rice-category-groups{display:grid;gap:12px}.rice-category-group{padding:10px;border:1px solid #e2e9e4;border-radius:11px;background:#fbfcfb}.rice-category-group[data-sector="fisheries"]{border-color:#cfe3eb;background:#f7fbfd}.rice-category-group-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}.rice-category-group-head strong{color:var(--module-ink);font-size:10px}.rice-category-group-head span{color:var(--module-muted);font-size:8px}.rice-category-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.rice-category-fieldset.is-invalid .rice-category-groups{padding:5px;border:1px solid #cb625d;border-radius:10px;background:#fffafa}.rice-category-option{position:relative;min-width:0}.rice-category-option input{position:absolute;opacity:0;pointer-events:none}.rice-category-card{display:grid;grid-template-columns:34px minmax(0,1fr) 18px;align-items:center;gap:9px;min-height:64px;padding:9px 10px;border:1px solid #dce5df;border-radius:9px;background:#fff;cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease,background .15s ease,transform .15s ease}.rice-category-card:hover{border-color:#9ab8a5;background:#fafdfb;transform:translateY(-1px)}.rice-category-option input:focus-visible+.rice-category-card{outline:3px solid rgba(38,130,83,.16);outline-offset:1px}.rice-category-option input:checked+.rice-category-card{border-color:#5b9c73;background:#f1f9f4;box-shadow:0 0 0 2px rgba(38,130,83,.08)}.rice-category-group[data-sector="fisheries"] .rice-category-option input:checked+.rice-category-card{border-color:#4b8ca4;background:#eef8fb;box-shadow:0 0 0 2px rgba(75,140,164,.09)}.rice-category-code{width:34px;height:34px;display:grid;place-items:center;border-radius:8px;color:#17643a;background:#e7f4eb;font-size:9px;font-weight:950}.rice-category-group[data-sector="fisheries"] .rice-category-code{color:#236b85;background:#e7f4f8}.rice-category-copy{min-width:0}.rice-category-copy strong,.rice-category-copy small{display:block}.rice-category-copy strong{color:var(--module-ink);font-size:10px}.rice-category-copy small{margin-top:3px;color:var(--module-muted);font-size:8px;line-height:1.3}.rice-category-mark{width:16px;height:16px;display:grid;place-items:center;border:1px solid #bccbc1;border-radius:50%;color:#fff;font-size:9px}.rice-category-option input:checked+.rice-category-card .rice-category-mark{border-color:#268253;background:#268253}.rice-category-group[data-sector="fisheries"] .rice-category-option input:checked+.rice-category-card .rice-category-mark{border-color:#347e99;background:#347e99}.rice-category-option input:checked+.rice-category-card .rice-category-mark:after{content:'✓'}
   .rice-field-label-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}.rice-field-label-row label{margin:0}.rice-inline-action{padding:0;border:0;color:var(--module-green);background:transparent;font:inherit;font-size:8px;font-weight:850;cursor:pointer}.rice-inline-action:hover{text-decoration:underline}.rice-inline-note{display:flex;align-items:flex-start;gap:6px;margin-top:6px;color:var(--module-muted);font-size:8px;line-height:1.4}.rice-inline-note:before{content:'i';width:14px;height:14px;display:grid;place-items:center;flex:0 0 auto;border-radius:50%;color:#17643a;background:#e8f5ec;font-size:8px;font-weight:900}.module-input.is-invalid{border-color:#cb625d;background:#fffafa;box-shadow:0 0 0 3px rgba(203,98,93,.08)}.rice-field-error{display:block;margin-top:5px;color:#a43d38;font-size:8px;font-weight:750}
   .rice-subsection{grid-column:1/-1;padding:13px;border:1px solid var(--module-border);border-radius:10px;background:#fafcfb}.rice-subsection-head{display:flex;justify-content:space-between;gap:10px;margin-bottom:11px}.rice-subsection-head strong{font-size:10px}.rice-subsection-head span{color:var(--module-muted);font-size:9px}.rice-subsection[hidden]{display:none}.rice-subsection .module-form-grid{margin:0}.rice-category-preview{display:inline-flex;align-items:center;margin-top:6px;padding:4px 7px;border-radius:999px;background:#eaf7ee;color:#17643a;font-size:8px;font-weight:850;text-transform:uppercase;letter-spacing:.04em}
   .rice-readiness{margin-top:12px;padding-top:12px;border-top:1px solid var(--module-border)}.rice-readiness-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.rice-readiness-head strong{font-size:9px}.rice-readiness-head span{color:var(--module-muted);font-size:8px}.rice-readiness-track{height:5px;margin-top:7px;overflow:hidden;border-radius:999px;background:#e9eeeb}.rice-readiness-track i{display:block;width:0;height:100%;border-radius:inherit;background:#268253;transition:width .2s ease}.rice-readiness-list{display:grid;gap:6px;margin-top:10px}.rice-readiness-item{display:flex;align-items:center;gap:7px;color:#7b877f;font-size:8px}.rice-readiness-item i{width:15px;height:15px;display:grid;place-items:center;border:1px solid #ced8d1;border-radius:50%;font-style:normal}.rice-readiness-item.is-complete{color:#245d39;font-weight:800}.rice-readiness-item.is-complete i{color:#fff;border-color:#268253;background:#268253}.rice-readiness-item.is-complete i:after{content:'✓'}.rice-submit-button{min-width:130px}.rice-submit-button.is-saving{pointer-events:none;opacity:.72}.rice-submit-button.is-saving .rice-submit-idle{display:none}.rice-submit-saving{display:none}.rice-submit-button.is-saving .rice-submit-saving{display:inline}.rice-form-actions-copy{margin-right:auto}.rice-form-actions-copy strong,.rice-form-actions-copy span{display:block}.rice-form-actions-copy strong{font-size:10px}.rice-form-actions-copy span{margin-top:2px;color:var(--module-muted);font-size:8px}
@@ -36,7 +45,7 @@
 @endif
 
 <nav class="rice-progress" aria-label="Release form progress">
-  <button type="button" data-rice-progress="recipient" data-rice-target="riceRecipientSection"><span class="rice-progress-index">1</span><span class="rice-progress-copy"><strong>Recipient</strong><small>Select the correct farmer</small></span><span class="rice-progress-check" aria-hidden="true">✓</span></button>
+  <button type="button" data-rice-progress="recipient" data-rice-target="riceRecipientSection"><span class="rice-progress-index">1</span><span class="rice-progress-copy"><strong>Recipient</strong><small>Select the correct beneficiary</small></span><span class="rice-progress-check" aria-hidden="true">✓</span></button>
   <button type="button" data-rice-progress="release" data-rice-target="riceReleaseSection"><span class="rice-progress-index">2</span><span class="rice-progress-copy"><strong>Release details</strong><small>Item, quantity, and date</small></span><span class="rice-progress-check" aria-hidden="true">✓</span></button>
   <button type="button" data-rice-progress="review" data-rice-target="riceReviewSection"><span class="rice-progress-index">3</span><span class="rice-progress-copy"><strong>Review</strong><small>Confirm before saving</small></span><span class="rice-progress-check" aria-hidden="true">✓</span></button>
 </nav>
@@ -44,7 +53,7 @@
 <div class="module-form-shell">
   <div class="module-form-main">
     <section class="module-form-section" id="riceRecipientSection">
-      <div class="module-form-section-head"><span class="module-step">1</span><div><h2>Select the recipient</h2><p>The farmer profile supplies identity, farm location, and eligibility information automatically.</p></div></div>
+      <div class="module-form-section-head"><span class="module-step">1</span><div><h2>Select the recipient</h2><p>The registered farmer or fisherfolk profile supplies identity, location, and eligibility information automatically.</p></div></div>
       <div class="module-form-body">
         <div class="module-form-grid">
           @if($canChooseMunicipality ?? false)
@@ -60,7 +69,7 @@
               @error('municipality_id')<span class="rice-field-error" id="municipalityError">{{ $message }}</span>@enderror
             </div>
           @endif
-          <div class="module-form-field module-form-field-full"><label for="farmer_id">Farmer <span class="module-required">*</span></label><select class="module-input js-select @error('farmer_id') is-invalid @enderror" id="farmer_id" name="farmer_id" required aria-describedby="farmerHelp @error('farmer_id') farmerError @enderror"><option value="">Search and select farmer</option>
+          <div class="module-form-field module-form-field-full"><label for="farmer_id">Registered beneficiary <span class="module-required">*</span></label><select class="module-input js-select @error('farmer_id') is-invalid @enderror" id="farmer_id" name="farmer_id" required aria-describedby="farmerHelp @error('farmer_id') farmerError @enderror"><option value="">Search and select beneficiary</option>
             @foreach($farmers as $farmer)
               @php
                 $fullName = trim($farmer->last_name.', '.$farmer->first_name.' '.($farmer->middle_name ?? '').' '.($farmer->ext_name ?? ''));
@@ -68,7 +77,7 @@
               @endphp
               <option value="{{ $farmer->id }}" data-municipality-id="{{ $farmer->municipality_id }}" data-name="{{ $fullName }}" data-ffrs="{{ $farmer->ffrs ?: ($farmer->rsbsa_no ?: 'Not assigned') }}" data-location="{{ $farmer->farm_location ?: 'Not recorded' }}" data-municipality="{{ $farmer->farm_municipality ?: 'Not recorded' }}" data-province="{{ $farmer->farm_province ?: 'Not recorded' }}" data-area="{{ $farmer->farm_area_ha !== null ? number_format((float) $farmer->farm_area_ha, 2).' ha' : 'Not recorded' }}" data-contact="{{ $farmer->contact_number ?: 'Not recorded' }}" data-tags="{{ $tags ?: 'None' }}" @selected((string) $selectedFarmerId === (string) $farmer->id)>{{ $fullName }}{{ $farmer->ffrs ? ' — '.$farmer->ffrs : '' }}</option>
             @endforeach
-          </select><div class="module-hint" id="farmerHelp">Search by farmer name or FFRS/RSBSA number, then verify the profile preview below.</div>@error('farmer_id')<span class="rice-field-error" id="farmerError">{{ $message }}</span>@enderror</div>
+          </select><div class="module-hint" id="farmerHelp">Search by beneficiary name or FFRS/RSBSA number, then verify the profile preview below.</div>@error('farmer_id')<span class="rice-field-error" id="farmerError">{{ $message }}</span>@enderror</div>
         </div>
 
         <div id="farmerPreviewFallback" data-name="{{ $fallbackName ?: 'No farmer selected' }}" data-ffrs="{{ $record->ffrs ?? 'Not assigned' }}" data-location="{{ $record->farm_location ?? 'Not recorded' }}" data-municipality="{{ $record->farm_municipality ?? 'Not recorded' }}" data-province="{{ $record->farm_province ?? 'Not recorded' }}" data-area="{{ isset($record->farm_area_ha) ? number_format((float) $record->farm_area_ha, 2).' ha' : 'Not recorded' }}" data-contact="{{ $record->contact_number ?? 'Not recorded' }}" data-tags="{{ $fallbackTags ?: 'None' }}" hidden></div>
@@ -86,23 +95,32 @@
     </section>
 
     <section class="module-form-section" id="riceReleaseSection">
-      <div class="module-form-section-head"><span class="module-step">2</span><div><h2>Choose the seed or farm input</h2><p>Record rice and other seeds, fertilizer (abono), soil amendments, or another agricultural input.</p></div></div>
+      <div class="module-form-section-head"><span class="module-step">2</span><div><h2>Choose the assistance issued</h2><p>Record crop inputs or fisheries assistance such as tilapia/hito fingerlings, fish feed, nets, and aquaculture supplies.</p></div></div>
       <div class="module-form-body">
-        <div class="rice-input-callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6M12 7h.01"></path></svg><div><strong>Choose a category first</strong><span>The item suggestions and additional fields will adapt automatically. You can still type a seed variety, fertilizer brand, or custom farm input that is not in the suggestions.</span></div></div>
+        <div class="rice-input-callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6M12 7h.01"></path></svg><div><strong>Choose agriculture or fisheries first</strong><span>The item suggestions, recommended unit, and optional fields adapt automatically. Custom product, species, or equipment names are still accepted.</span></div></div>
         <div class="module-form-grid">
           <fieldset class="rice-category-fieldset @error('input_category') is-invalid @enderror">
             <legend>Input category <span class="module-required">*</span></legend>
-            <div class="rice-category-grid">
-              @foreach(($inputCategoryOptions ?? []) as $valueKey => $label)
-                @php($meta = $categoryMeta[$valueKey] ?? ['code' => strtoupper(substr($label, 0, 2)), 'description' => 'Agricultural input'])
-                <div class="rice-category-option">
-                  <input id="input_category_{{ $valueKey }}" type="radio" name="input_category" value="{{ $valueKey }}" @checked($selectedInputCategory === $valueKey) required>
-                  <label class="rice-category-card" for="input_category_{{ $valueKey }}">
-                    <span class="rice-category-code">{{ $meta['code'] }}</span>
-                    <span class="rice-category-copy"><strong>{{ $label }}</strong><small>{{ $meta['description'] }}</small></span>
-                    <span class="rice-category-mark" aria-hidden="true"></span>
-                  </label>
-                </div>
+            <div class="rice-category-groups">
+              @foreach(['agriculture' => ['Crops & farm inputs', 'Seed, fertilizer, soil, and crop support'], 'fisheries' => ['Fisheries assistance', 'Fingerlings, feeds, fishing gear, and aquaculture']] as $sector => [$sectorLabel, $sectorDescription])
+                @if(($categoryGroups[$sector] ?? collect())->isNotEmpty())
+                  <section class="rice-category-group" data-sector="{{ $sector }}">
+                    <div class="rice-category-group-head"><strong>{{ $sectorLabel }}</strong><span>{{ $sectorDescription }}</span></div>
+                    <div class="rice-category-grid">
+                      @foreach($categoryGroups[$sector] as $valueKey => $label)
+                        @php($meta = $categoryMeta[$valueKey] ?? ['code' => strtoupper(substr($label, 0, 2)), 'description' => 'Assistance item'])
+                        <div class="rice-category-option">
+                          <input id="input_category_{{ $valueKey }}" type="radio" name="input_category" value="{{ $valueKey }}" @checked($selectedInputCategory === $valueKey) required>
+                          <label class="rice-category-card" for="input_category_{{ $valueKey }}">
+                            <span class="rice-category-code">{{ $meta['code'] }}</span>
+                            <span class="rice-category-copy"><strong>{{ $label }}</strong><small>{{ $meta['description'] }}</small></span>
+                            <span class="rice-category-mark" aria-hidden="true"></span>
+                          </label>
+                        </div>
+                      @endforeach
+                    </div>
+                  </section>
+                @endif
               @endforeach
             </div>
             @error('input_category')<span class="rice-field-error">{{ $message }}</span>@enderror
@@ -130,13 +148,13 @@
           </div>
           <div class="module-form-field module-form-field-third">
             <div class="rice-field-label-row"><label for="date_received">Date received <span class="module-required">*</span></label><button class="rice-inline-action" id="riceSetToday" type="button">Use today</button></div>
-            <input class="module-input @error('date_received') is-invalid @enderror" id="date_received" type="date" name="date_received" value="{{ $value('date_received', now()->toDateString()) }}" max="{{ now()->toDateString() }}" required>
+            <input class="module-input @error('date_received') is-invalid @enderror" id="date_received" type="date" name="date_received" value="{{ $value('date_received', \App\Support\LocalTime::now()->toDateString()) }}" max="{{ \App\Support\LocalTime::now()->toDateString() }}" required>
             @error('date_received')<span class="rice-field-error">{{ $message }}</span>@enderror
           </div>
-          <div class="module-form-field module-form-field-full"><label for="lot_series">Lot or batch reference</label><textarea class="module-input @error('lot_series') is-invalid @enderror" id="lot_series" name="lot_series" rows="2" placeholder="Enter a seed lot, fertilizer batch, voucher, or reference number">{{ $value('lot_series') }}</textarea>@error('lot_series')<span class="rice-field-error">{{ $message }}</span>@enderror</div>
+          <div class="module-form-field module-form-field-full"><label for="lot_series">Lot or batch reference</label><textarea class="module-input @error('lot_series') is-invalid @enderror" id="lot_series" name="lot_series" rows="2" placeholder="Seed lot, fingerling batch, feed batch, voucher, or delivery reference">{{ $value('lot_series') }}</textarea>@error('lot_series')<span class="rice-field-error">{{ $message }}</span>@enderror</div>
           <div class="module-form-field module-form-field-full">
             <div class="rice-field-label-row"><label for="input_notes">Release notes</label><span class="module-hint" id="riceNotesCounter" style="margin:0">0 / 1,000</span></div>
-            <textarea class="module-input @error('input_notes') is-invalid @enderror" id="input_notes" name="input_notes" rows="3" maxlength="1000" placeholder="Add the brand, formulation, intended use, instructions, or other useful release details">{{ $value('input_notes') }}</textarea>
+            <textarea class="module-input @error('input_notes') is-invalid @enderror" id="input_notes" name="input_notes" rows="3" maxlength="1000" placeholder="Brand, species, size, source hatchery, intended use, pond/site, instructions, or other release details">{{ $value('input_notes') }}</textarea>
             @error('input_notes')<span class="rice-field-error">{{ $message }}</span>@enderror
           </div>
 
@@ -169,7 +187,7 @@
 
   <aside class="module-form-aside">
     <section class="module-aside-card" id="riceReviewSummary"><h3>Release summary</h3><p>Recipient</p><span class="rice-form-summary-value" id="riceSummaryFarmer">Not selected</span><span class="rice-category-preview" id="riceSummaryCategory">Rice seed</span><p style="margin-top:12px">Item and quantity</p><span class="rice-form-summary-value" id="riceSummaryRelease">Not entered</span><p style="margin-top:12px">Date</p><span class="rice-form-summary-value" id="riceSummaryDate">Not entered</span><div class="rice-readiness"><div class="rice-readiness-head"><strong>Required information</strong><span id="riceReadinessText">0 of 4 ready</span></div><div class="rice-readiness-track" aria-hidden="true"><i id="riceReadinessBar"></i></div><div class="rice-readiness-list"><span class="rice-readiness-item" data-ready-item="farmer"><i></i>Recipient selected</span><span class="rice-readiness-item" data-ready-item="item"><i></i>Item identified</span><span class="rice-readiness-item" data-ready-item="quantity"><i></i>Quantity and unit entered</span><span class="rice-readiness-item" data-ready-item="date"><i></i>Release date confirmed</span></div></div></section>
-    <section class="module-aside-card"><h3>Before saving</h3><ol><li>Confirm the correct farmer profile.</li><li>Choose the correct input category.</li><li>Verify the item, quantity, unit, and date.</li><li>Add a lot, batch, or note when available.</li></ol></section>
+    <section class="module-aside-card"><h3>Before saving</h3><ol><li>Confirm the correct beneficiary profile.</li><li>Choose agriculture or fisheries and the correct category.</li><li>Verify the item/species, quantity, unit, and date.</li><li>Add a lot, hatchery/batch, or note when available.</li></ol></section>
     <section class="module-aside-card"><h3>Municipality ownership</h3><p>
       @if($canChooseMunicipality ?? false)
         The farmer and distribution must belong to the selected municipality.
@@ -206,6 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const inputSuggestions = @json($inputSuggestions ?? []);
   const inputCategoryLabels = @json($inputCategoryOptions ?? []);
   const quantityUnitLabels = @json($quantityUnitOptions ?? []);
+  const preferredUnitsByCategory = @json($preferredUnitsByCategory ?? []);
   const farmerChoices = farmer ? Array.from(farmer.options).filter(option => option.value).map(option => ({
     value: option.value,
     text: option.textContent.trim(),
@@ -254,8 +273,15 @@ document.addEventListener('DOMContentLoaded', () => {
       suggestions.appendChild(option);
     });
   };
-  const refreshCategoryFields = () => {
+  const refreshCategoryFields = (applyPreferredUnit = false) => {
     const showSeedFields = isSeedCategory();
+    if (applyPreferredUnit && quantityUnit) {
+      const preferredUnit = preferredUnitsByCategory[selectedCategory()];
+      if (preferredUnit) {
+        if (quantityUnit.tomselect) quantityUnit.tomselect.setValue(preferredUnit, true);
+        else quantityUnit.value = preferredUnit;
+      }
+    }
     if (seedFields) {
       seedFields.hidden = !showSeedFields;
       seedFields.querySelectorAll('input,select,textarea').forEach(field => { field.disabled = !showSeedFields; });
@@ -317,7 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
   quantityUnit?.addEventListener('change', refreshRelease);
   receivedDate?.addEventListener('change', refreshRelease);
   notes?.addEventListener('input', refreshNotesCounter);
-  categoryInputs.forEach(input => input.addEventListener('change', () => { refreshCategoryFields(); refreshRelease(); }));
+  categoryInputs.forEach(input => input.addEventListener('change', () => { refreshCategoryFields(true); refreshRelease(); }));
   municipality?.addEventListener('change',() => { filterFarmers(); refreshFarmerAndProgress(); });
   setToday?.addEventListener('click', () => {
     if (!receivedDate) return;

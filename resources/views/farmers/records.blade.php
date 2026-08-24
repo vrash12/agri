@@ -30,7 +30,7 @@
         @endif
       </span>
       <div>
-        <div class="module-eyebrow">Farmer assistance history</div>
+        <div class="module-eyebrow">Beneficiary assistance history</div>
         <h1>{{ $farmerName ?: 'Farmer profile' }}</h1>
         <p>{{ $farmer->registry_id }} · {{ $farmAddress ?: 'Farm location not yet recorded' }}{{ $farmer->ffrs ? ' · FFRS '.$farmer->ffrs : '' }}</p>
       </div>
@@ -45,6 +45,7 @@
         <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
         Add distribution
       </a>
+      <a class="module-button" href="{{ route('rice-seed-distributions.create', ['farmer_id' => $farmer->id, 'assistance_sector' => 'fisheries']) }}">Add fisheries</a>
       @endif
     </div>
   </header>
@@ -57,10 +58,10 @@
   </section>
 
   <section class="module-panel">
-    <div class="module-panel-head"><div><h2>Search distribution history</h2><p>Filter this farmer's records by input category, item, lot or batch, notes, or receipt date.</p></div><span class="module-panel-tag">{{ $filterCount ? $filterCount.' active' : 'Complete history' }}</span></div>
+    <div class="module-panel-head"><div><h2>Search distribution history</h2><p>Filter this beneficiary's agriculture and fisheries records by category, item, lot/batch, notes, or receipt date.</p></div><span class="module-panel-tag">{{ $filterCount ? $filterCount.' active' : 'Complete history' }}</span></div>
     <form class="module-filter" method="GET">
       <div class="module-filter-grid">
-        <div class="module-field module-field-search"><label for="history_q">Search history</label><div class="module-search-wrap"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="module-input" type="search" id="history_q" name="q" value="{{ request('q') }}" placeholder="Seed, fertilizer, lot, batch, or notes"></div></div>
+        <div class="module-field module-field-search"><label for="history_q">Search history</label><div class="module-search-wrap"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="module-input" type="search" id="history_q" name="q" value="{{ request('q') }}" placeholder="Seed, fertilizer, fingerlings, gear, batch, or notes"></div></div>
         <div class="module-field"><label for="history_category">Input category</label><select class="module-input" id="history_category" name="input_category"><option value="">All categories</option>@foreach(($inputCategoryOptions ?? []) as $value => $label)<option value="{{ $value }}" @selected(request('input_category') === $value)>{{ $label }}</option>@endforeach</select></div>
         <div class="module-field"><label for="received_from">Received from</label><input class="module-input" type="date" id="received_from" name="received_from" value="{{ request('received_from') }}"></div>
         <div class="module-field"><label for="received_to">Received to</label><input class="module-input" type="date" id="received_to" name="received_to" value="{{ request('received_to') }}"></div>
@@ -78,7 +79,7 @@
   @endif
 
   <section class="module-panel">
-    <div class="module-table-tools"><div><strong>Distribution ledger</strong><span>All seed and farm-input releases linked to {{ $farmerName ?: 'this farmer' }}.</span></div><span>{{ number_format($totalKgs, 2) }} kg in weight-based results</span></div>
+    <div class="module-table-tools"><div><strong>Distribution ledger</strong><span>All agriculture and fisheries assistance linked to {{ $farmerName ?: 'this beneficiary' }}.</span></div><span>{{ number_format($totalKgs, 2) }} kg in weight-based results</span></div>
     <div class="module-table-scroll">
       <table class="module-table farmer-history-table">
         <thead><tr><th>Date received</th><th>Input issued</th><th class="module-numeric">Received</th><th class="module-numeric">Claimed area</th><th class="module-numeric">Claimed seeds</th><th>Lot / batch</th><th style="text-align:right">Actions</th></tr></thead>
@@ -86,7 +87,7 @@
           @forelse ($records as $record)
             <tr>
               <td><strong>{{ $record->date_received ? \Illuminate\Support\Carbon::parse($record->date_received)->format('M d, Y') : '—' }}</strong><small>{{ $record->date_received ? \Illuminate\Support\Carbon::parse($record->date_received)->diffForHumans() : 'Date not recorded' }}</small></td>
-              <td><strong>{{ $record->seed_variety_claimed ?: 'Unspecified' }}</strong><small><span class="module-badge {{ $record->isSeedInput() ? 'module-badge-green' : ($record->input_category === 'fertilizer' ? 'module-badge-amber' : 'module-badge-blue') }}">{{ $record->inputCategoryLabel() }}</span></small></td>
+              <td><strong>{{ $record->seed_variety_claimed ?: 'Unspecified' }}</strong><small><span class="module-badge {{ $record->isSeedInput() ? 'module-badge-green' : ($record->input_category === 'fertilizer' ? 'module-badge-amber' : 'module-badge-blue') }}">{{ $record->inputCategoryLabel() }}</span> · {{ $record->assistanceSectorLabel() }}</small></td>
               <td class="module-numeric"><strong>{{ number_format((float) $record->kgs_received, 2) }} {{ $record->quantityUnitLabel() }}</strong></td>
               <td class="module-numeric">{{ $record->claimed_area_ha !== null ? number_format((float) $record->claimed_area_ha, 2).' ha' : '—' }}</td>
               <td class="module-numeric">{{ $record->claimed_seeds_kg !== null ? number_format((float) $record->claimed_seeds_kg, 2).' kg' : '—' }}</td>

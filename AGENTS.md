@@ -8,7 +8,7 @@ This is a Laravel-based Agriculture Information System for the Provincial Agricu
 
 - farmer registry and farmer identification cards;
 - GIS farm-parcel mapping;
-- seed, fertilizer, and other farm-input releases;
+- agriculture and fisheries assistance releases, including seed, fertilizer, fingerlings, feed, and fishing gear;
 - anti-rabies vaccination records;
 - farmers' cooperatives and membership;
 - agricultural machinery inventory and maintenance monitoring;
@@ -94,7 +94,7 @@ Route: `GET /dashboard` (`dashboard`)
 
 The dashboard builds role-scoped operational KPIs and recent activity:
 
-- farmers, distributions, kilograms released, vaccinations, cooperatives, and machinery;
+- farmers, agriculture/fisheries distributions, kilograms and fingerlings released, vaccinations, cooperatives, and machinery;
 - total plots, mapped area, mapped/unmapped farmers, and mapping coverage;
 - farmers missing FFRS or farm location;
 - machinery availability and maintenance attention;
@@ -171,26 +171,28 @@ The public page uses Google Maps JavaScript API with hybrid satellite imagery an
 
 Changing or exposing this page requires a privacy review. Do not replace the token with a sequential farmer ID.
 
-### 5.5 Seeds and farm inputs
+### 5.5 Agriculture and fisheries assistance
 
 Primary model/table: `RiceSeedDistribution` / `rice_seed_distributions`
 
-The historical table name remains `rice_seed_distributions`, but the module now represents broader agricultural inputs.
+The historical table name remains `rice_seed_distributions`, but the module now represents both agricultural and fisheries assistance. The assistance sector is derived from `input_category`; do not create a second uncoordinated distribution table merely to separate fisheries records.
 
 Functions:
 
 - create, edit, delete, search, filter, paginate, import, and CSV-export releases;
 - link each release to a farmer and copy a farmer identity/location snapshot into the distribution record;
-- support rice seed, corn seed, vegetable seed, fertilizer/abono, soil amendment, and other farm input categories;
-- support quantities in kg, sacks, packs, grams, liters, milliliters, bottles, or pieces;
-- allow a custom item/variety name and notes;
+- support rice seed, corn seed, vegetable seed, fertilizer/abono, soil amendment, and other farm-input categories;
+- support fish fingerlings, fish feed, fishing gear, aquaculture inputs, and other fisheries-assistance categories;
+- support quantities in kg, sacks, packs, grams, liters, milliliters, bottles, pieces, sets, rolls, boxes, or bundles;
+- suggest tilapia, hito/catfish, bangus, and carp fingerlings plus common feeds and fishing equipment while allowing a custom item/species/variety name;
+- require fingerling releases to use the `piece` unit so provincial and municipal fingerling counts remain valid;
 - retain NRP fields such as claimed area/seed, lot series, crop establishment, sowing label, harvested area, production bags, planted variety, and seed class;
-- filter by text, identity fields, municipality, gender, category, eligibility flags, numeric ranges, and date ranges;
-- display filtered KPIs and charts for monthly releases, item/category mix, locations, gender, age, eligibility, establishment method, yield variety, seed class, and area by municipality;
+- filter by text, identity fields, municipality, assistance sector, category, gender, eligibility flags, numeric ranges, and date ranges;
+- display filtered KPIs and charts for monthly releases, item/category mix, fisheries records, fingerlings issued, locations, gender, age, eligibility, establishment method, yield variety, seed class, and area by municipality;
 - import an `NRP DISTRIBUTION` Excel sheet, match farmers by FFRS/RSBSA inside the selected municipality, and update/create release rows;
 - stream filtered CSV exports in chunks.
 
-Only rows whose `quantity_unit` is empty or `kg` are included in kilogram totals. Do not add sacks, bottles, or liters directly to kilogram aggregates.
+Only rows whose `quantity_unit` is empty or `kg` are included in kilogram totals. Do not add fingerlings, pieces, sacks, bottles, or liters directly to kilogram aggregates. Fisheries KPIs count `fish_fingerlings` only when the unit is `piece`.
 
 ### 5.6 Anti-rabies vaccinations
 

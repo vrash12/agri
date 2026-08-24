@@ -1,9 +1,12 @@
 @extends('layouts.app')
 
-@section('title', 'Seeds & Farm Input Distribution')
+@section('title', 'Agriculture & Fisheries Assistance')
 
 @push('styles')
   @include('partials.operations-ui-styles')
+  <style>
+    .assistance-sector-switch{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--module-border);border-radius:10px;background:#fff}.assistance-sector-switch>span{margin-right:3px;color:var(--module-muted);font-size:8px;font-weight:900;letter-spacing:.05em;text-transform:uppercase}.assistance-sector-link{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid #dce5df;border-radius:8px;color:#4f5e55;background:#fafcfb;font-size:9px;font-weight:850;text-decoration:none}.assistance-sector-link:hover{border-color:#9eb6a7;color:var(--module-green)}.assistance-sector-link.is-active{color:#fff;border-color:#17643a;background:#17643a}.assistance-sector-link.is-fisheries.is-active{border-color:#2f7891;background:#2f7891}.assistance-sector-dot{width:7px;height:7px;border-radius:50%;background:#8ea097}.assistance-sector-link.is-fisheries .assistance-sector-dot{background:#4b91aa}.assistance-sector-link.is-active .assistance-sector-dot{background:#fff}.module-badge-fisheries{color:#236b85;background:#e8f5f9}.module-page>.module-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}@media(max-width:900px){.module-page>.module-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.module-page>.module-kpis{grid-template-columns:1fr}}
+  </style>
 @endpush
 
 @php
@@ -11,7 +14,7 @@
   $latestReceived = $stats['latestReceived'] ?? null;
   $trendYear = $stats['trendYear'] ?? now()->year;
   $hasFilters = collect([
-      'q', 'municipality_id', 'input_category', 'seed_variety_claimed', 'received_from',
+      'q', 'municipality_id', 'assistance_sector', 'input_category', 'seed_variety_claimed', 'received_from',
       'received_to', 'gender', 'kgs_min', 'kgs_max'
   ])->contains(fn ($key) => filled(request($key))) || (int) ($perPage ?? 10) !== 10;
   $fmtDate = function ($value, $format = 'M d, Y') {
@@ -20,28 +23,37 @@
       catch (\Throwable $e) { return 'Not recorded'; }
   };
   $canManageOperations = auth()->user()->canManageOperationalData();
-  $unitShortLabels = ['kg' => 'kg', 'sack' => 'sacks', 'pack' => 'packs', 'g' => 'g', 'l' => 'L', 'ml' => 'mL', 'bottle' => 'bottles', 'piece' => 'pieces'];
+  $unitShortLabels = ['kg' => 'kg', 'sack' => 'sacks', 'pack' => 'packs', 'g' => 'g', 'l' => 'L', 'ml' => 'mL', 'bottle' => 'bottles', 'piece' => 'pieces', 'set' => 'sets', 'roll' => 'rolls', 'box' => 'boxes', 'bundle' => 'bundles'];
+  $selectedSector = in_array(request('assistance_sector'), ['agriculture', 'fisheries'], true) ? request('assistance_sector') : '';
+  $sectorQuery = collect(request()->query())->except(['page', 'input_category'])->all();
 @endphp
 
 @section('content')
 <div class="module-page">
   <header class="module-header">
     <div>
-      <div class="module-eyebrow">Agricultural assistance operations</div>
-      <h1>Seeds &amp; farm input distribution</h1>
-      <p>Record rice and other seeds, fertilizer (abono), soil amendments, and other agricultural inputs released to farmers.</p>
+      <div class="module-eyebrow">Agriculture and fisheries operations</div>
+      <h1>Assistance distribution</h1>
+      <p>Track crop inputs plus tilapia/hito fingerlings, fish feed, fishing gear, and aquaculture supplies released by each municipality.</p>
     </div>
     <div class="module-actions">
-      @if($canManageOperations)<a class="module-button" href="{{ route('rice-seed-distributions.import.form') }}"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"></path></svg>Import workbook</a>@endif
+      @if($canManageOperations)<a class="module-button" href="{{ route('rice-seed-distributions.import.form') }}"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"></path></svg>Import NRP workbook</a>@endif
       <a class="module-button" href="{{ route('rice-seed-distributions.export', request()->query()) }}"><svg viewBox="0 0 24 24"><path d="M12 15V3M7 10l5 5 5-5M5 21h14"></path></svg>Export CSV</a>
-      @if($canManageOperations)<a class="module-button module-button-primary" href="{{ route('rice-seed-distributions.create', ['municipality_id' => $selectedMunicipalityId ?? null]) }}"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>Record release</a>@else<span class="module-badge module-badge-green">Read-only oversight</span>@endif
+      @if($canManageOperations)<a class="module-button module-button-primary" href="{{ route('rice-seed-distributions.create', ['municipality_id' => $selectedMunicipalityId ?? null, 'assistance_sector' => $selectedSector ?: null]) }}"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>Record release</a>@else<span class="module-badge module-badge-green">Read-only oversight</span>@endif
     </div>
   </header>
 
   @if(session('success'))<div class="module-alert">{{ session('success') }}</div>@endif
   @if(session('error'))<div class="module-alert module-alert-error">{{ session('error') }}</div>@endif
 
-  <section class="module-kpis" aria-label="Seeds and farm input distribution summary">
+  <nav class="assistance-sector-switch" aria-label="Assistance sector">
+    <span>Workspace</span>
+    <a class="assistance-sector-link {{ $selectedSector === '' ? 'is-active' : '' }}" href="{{ route('rice-seed-distributions.index', collect($sectorQuery)->except('assistance_sector')->all()) }}"><i class="assistance-sector-dot"></i>All assistance</a>
+    <a class="assistance-sector-link {{ $selectedSector === 'agriculture' ? 'is-active' : '' }}" href="{{ route('rice-seed-distributions.index', array_merge($sectorQuery, ['assistance_sector' => 'agriculture'])) }}"><i class="assistance-sector-dot"></i>Crops &amp; farm inputs</a>
+    <a class="assistance-sector-link is-fisheries {{ $selectedSector === 'fisheries' ? 'is-active' : '' }}" href="{{ route('rice-seed-distributions.index', array_merge($sectorQuery, ['assistance_sector' => 'fisheries'])) }}"><i class="assistance-sector-dot"></i>Fisheries assistance</a>
+  </nav>
+
+  <section class="module-kpis" aria-label="Agriculture and fisheries assistance summary">
     <article class="module-kpi">
       <div class="module-kpi-top"><span class="module-kpi-label">Release records</span><span class="module-kpi-icon"><svg viewBox="0 0 24 24"><path d="M7 3h10v18H7zM10 7h4M10 11h4M10 15h4"></path></svg></span></div>
       <strong>{{ number_format((int) ($totalRecords ?? 0)) }}</strong>
@@ -62,21 +74,32 @@
       <strong>{{ number_format((float) ($averageKgs ?? 0), 2) }} <small>kg</small></strong>
       <small>Latest release: {{ $fmtDate($latestReceived) }}</small>
     </article>
+    <article class="module-kpi">
+      <div class="module-kpi-top"><span class="module-kpi-label">Fisheries releases</span><span class="module-kpi-icon module-kpi-icon-blue"><svg viewBox="0 0 24 24"><path d="M4 12c3-4 7-6 12-4l4-3v6l-4-3c-5 2-9 0-12 4Z"></path><circle cx="14" cy="7.5" r=".5"></circle><path d="M4 12c3 4 7 6 12 4l4 3v-6l-4 3"></path></svg></span></div>
+      <strong>{{ number_format((int) ($fisheriesRecords ?? 0)) }}</strong>
+      <small>Fisheries records matching this view</small>
+    </article>
+    <article class="module-kpi">
+      <div class="module-kpi-top"><span class="module-kpi-label">Fingerlings issued</span><span class="module-kpi-icon module-kpi-icon-blue"><svg viewBox="0 0 24 24"><path d="M3 12c4-5 10-6 15-2l3-2v8l-3-2c-5 4-11 3-15-2Z"></path><circle cx="15" cy="11" r=".6"></circle></svg></span></div>
+      <strong>{{ number_format((float) ($fingerlingsReleased ?? 0), 0) }} <small>pcs</small></strong>
+      <small>Tilapia, hito, and other fingerlings by piece</small>
+    </article>
   </section>
 
   <section class="module-panel">
-    <div class="module-panel-head"><div><h2>Find distribution records</h2><p>Search recipients or items, then narrow by municipality, input category, date, gender, and quantity.</p></div>@if($hasFilters)<span class="module-panel-tag">Filtered view</span>@endif</div>
+    <div class="module-panel-head"><div><h2>Find distribution records</h2><p>Search beneficiaries or items, then narrow by municipality, sector, category, date, gender, and quantity.</p></div>@if($hasFilters)<span class="module-panel-tag">Filtered view</span>@endif</div>
     <form class="module-filter" method="GET" action="{{ route('rice-seed-distributions.index') }}">
       <div class="module-filter-grid">
         <div class="module-field module-field-search">
           <label for="riceSearch">Search recipient or item</label>
-          <div class="module-search-wrap"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg><input class="module-input" id="riceSearch" type="search" name="q" value="{{ request('q') }}" placeholder="Name, FFRS, farm, seed, or fertilizer"></div>
+          <div class="module-search-wrap"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg><input class="module-input" id="riceSearch" type="search" name="q" value="{{ request('q') }}" placeholder="Name, FFRS, seed, fingerlings, feed, or gear"></div>
         </div>
         @if($canChooseMunicipality ?? false)
           <div class="module-field"><label for="riceMunicipality">Municipality</label><select class="module-input" id="riceMunicipality" name="municipality_id"><option value="">All municipalities</option>@foreach(($municipalities ?? []) as $municipality)<option value="{{ $municipality->id }}" @selected((string) ($selectedMunicipalityId ?? '') === (string) $municipality->id)>{{ $municipality->name }}</option>@endforeach</select></div>
         @endif
-        <div class="module-field"><label for="riceInputCategory">Input category</label><select class="module-input" id="riceInputCategory" name="input_category"><option value="">All categories</option>@foreach(($inputCategoryOptions ?? []) as $value => $label)<option value="{{ $value }}" @selected(request('input_category') === $value)>{{ $label }}</option>@endforeach</select></div>
-        <div class="module-field"><label for="riceVariety">Item or variety</label><input class="module-input" id="riceVariety" name="seed_variety_claimed" value="{{ request('seed_variety_claimed') }}" placeholder="Any seed or farm input"></div>
+        <div class="module-field"><label for="riceAssistanceSector">Assistance sector</label><select class="module-input" id="riceAssistanceSector" name="assistance_sector"><option value="">All sectors</option>@foreach(($assistanceSectorOptions ?? []) as $value => $label)<option value="{{ $value }}" @selected($selectedSector === $value)>{{ $label }}</option>@endforeach</select></div>
+        <div class="module-field"><label for="riceInputCategory">Assistance category</label><select class="module-input" id="riceInputCategory" name="input_category"><option value="">All categories</option>@foreach(($inputCategoryOptions ?? []) as $value => $label)<option value="{{ $value }}" @selected(request('input_category') === $value)>{{ $label }}</option>@endforeach</select></div>
+        <div class="module-field"><label for="riceVariety">Item, species, or variety</label><input class="module-input" id="riceVariety" name="seed_variety_claimed" value="{{ request('seed_variety_claimed') }}" placeholder="Any agriculture or fisheries item"></div>
         <div class="module-field"><label for="riceFrom">Received from</label><input class="module-input" id="riceFrom" type="date" name="received_from" value="{{ request('received_from') }}"></div>
         <div class="module-field"><label for="riceTo">Received to</label><input class="module-input" id="riceTo" type="date" name="received_to" value="{{ request('received_to') }}"></div>
         <div class="module-field"><label for="riceGender">Gender</label><select class="module-input" id="riceGender" name="gender"><option value="">All genders</option>@foreach(['Male','Female','Other'] as $gender)<option value="{{ $gender }}" @selected(request('gender') === $gender)>{{ $gender }}</option>@endforeach</select></div>
@@ -88,7 +111,7 @@
     </form>
   </section>
 
-  <section class="module-analytics-grid" aria-label="Seeds and farm input analytics">
+  <section class="module-analytics-grid" aria-label="Agriculture and fisheries assistance analytics">
     <article class="module-chart">
       <div class="module-chart-head"><h3>Monthly weight-based trend</h3><p>Kilograms distributed during {{ $trendYear }}</p></div>
       <div class="module-chart-body"><canvas id="riceMonthlyChart"></canvas>@if(collect($charts['monthly_values'] ?? [])->sum() <= 0)<div class="module-chart-empty">No releases recorded for {{ $trendYear }}.</div>@endif</div>
@@ -104,7 +127,7 @@
     <div class="module-more-content">
       <div class="module-analytics-grid">
         @foreach([
-          ['riceInputCategoryChart','Input category mix','Release records by assistance type'],
+          ['riceInputCategoryChart','Assistance category mix','Release records by assistance type'],
           ['riceLocationChart','Top farm locations','Kilograms by farm location'],
           ['riceAreaChart','Farm area by municipality','Total recorded hectares'],
           ['riceGenderChart','Recipient gender','Distribution record count'],
@@ -134,7 +157,8 @@
                 $eligibility = collect(['ARB' => $record->is_arb, '4Ps' => $record->is_4ps, 'IP' => $record->is_ip, 'PWD' => $record->is_pwd, 'SC' => $record->is_sc, 'OFW' => $record->is_ofw])->filter()->keys();
                 $category = $record->input_category ?: 'rice_seed';
                 $categoryLabel = $inputCategoryOptions[$category] ?? Str::headline($category);
-                $categoryBadge = str_contains($category, 'seed') ? 'module-badge-green' : ($category === 'fertilizer' ? 'module-badge-amber' : 'module-badge-blue');
+                $isFisheries = $record->isFisheriesInput();
+                $categoryBadge = $isFisheries ? 'module-badge-fisheries' : (str_contains($category, 'seed') ? 'module-badge-green' : ($category === 'fertilizer' ? 'module-badge-amber' : 'module-badge-blue'));
                 $unit = $record->quantity_unit ?: 'kg';
                 $unitLabel = $unitShortLabels[$unit] ?? $unit;
               @endphp
@@ -142,7 +166,7 @@
                 <td><div class="module-person"><span class="module-avatar">{{ $initials ?: 'FR' }}</span><span class="module-person-copy"><strong>{{ $name ?: 'Unnamed recipient' }}</strong><small>{{ $record->gender ?: 'Gender not recorded' }}</small></span></div></td>
                 <td class="module-mono"><strong>{{ $record->ffrs ?: 'Not assigned' }}</strong></td>
                 <td><strong>{{ $record->farm_municipality ?: 'Municipality not recorded' }}</strong><small>{{ $record->farm_location ?: 'Farm location not recorded' }}</small></td>
-                <td><strong>{{ $record->seed_variety_claimed ?: 'Not recorded' }}</strong><small><span class="module-badge {{ $categoryBadge }}">{{ $categoryLabel }}</span>@if(str_contains($category, 'seed')) · {{ $record->seed_class ?: 'Class not recorded' }}@endif</small></td>
+                <td><strong>{{ $record->seed_variety_claimed ?: 'Not recorded' }}</strong><small><span class="module-badge {{ $categoryBadge }}">{{ $categoryLabel }}</span> · {{ $record->assistanceSectorLabel() }}@if(str_contains($category, 'seed')) · {{ $record->seed_class ?: 'Class not recorded' }}@endif</small></td>
                 <td class="module-numeric"><strong>{{ number_format((float) $record->kgs_received, 2) }} {{ $unitLabel }}</strong><small>{{ $fmtDate($record->date_received) }}</small></td>
                 <td><strong>{{ $record->claimed_area_ha !== null ? number_format((float) $record->claimed_area_ha, 2).' ha' : '—' }}</strong><small>{{ $record->claimed_seeds_kg !== null ? number_format((float) $record->claimed_seeds_kg, 2).' kg claimed' : 'Claimed seeds not recorded' }}</small></td>
                 <td><div class="module-badges">@forelse($eligibility as $tag)<span class="module-badge module-badge-green">{{ $tag }}</span>@empty<span class="module-badge">None</span>@endforelse</div></td>
@@ -151,7 +175,7 @@
               <tr class="module-detail-row" id="rice-detail-{{ $record->id }}" hidden>
                 <td colspan="8"><dl class="module-detail-grid">
                   <div><dt>Contact</dt><dd>{{ $record->contact_number ?: '—' }}</dd></div><div><dt>Date of birth</dt><dd>{{ $fmtDate($record->date_of_birth) }}</dd></div><div><dt>Farm area</dt><dd>{{ $record->farm_area_ha !== null ? number_format((float) $record->farm_area_ha, 2).' ha' : '—' }}</dd></div><div><dt>Ecosystem</dt><dd>{{ $record->ecosystem ?: '—' }}</dd></div><div><dt>Ecosystem source</dt><dd>{{ $record->ecosystem_source ?: '—' }}</dd></div>
-                  <div><dt>Lot / batch</dt><dd>{{ $record->lot_series ?: '—' }}</dd></div><div><dt>Release notes</dt><dd>{{ $record->input_notes ?: '—' }}</dd></div><div><dt>Sowing schedule</dt><dd>{{ $record->date_of_sowing_label ?: '—' }}</dd></div><div><dt>Average bag weight</dt><dd>{{ $record->avg_weight_per_bag_kg !== null ? $record->avg_weight_per_bag_kg.' kg' : '—' }}</dd></div><div><dt>Production</dt><dd>{{ $record->total_production_bags !== null ? number_format($record->total_production_bags).' bags' : '—' }}</dd></div><div><dt>Harvested area</dt><dd>{{ $record->avg_area_harvested_ha !== null ? number_format((float) $record->avg_area_harvested_ha, 2).' ha' : '—' }}</dd></div>
+                  <div><dt>Assistance sector</dt><dd>{{ $record->assistanceSectorLabel() }}</dd></div><div><dt>Lot / batch</dt><dd>{{ $record->lot_series ?: '—' }}</dd></div><div><dt>Release notes</dt><dd>{{ $record->input_notes ?: '—' }}</dd></div><div><dt>Sowing schedule</dt><dd>{{ $record->date_of_sowing_label ?: 'Not applicable / not recorded' }}</dd></div><div><dt>Average bag weight</dt><dd>{{ $record->avg_weight_per_bag_kg !== null ? $record->avg_weight_per_bag_kg.' kg' : '—' }}</dd></div><div><dt>Production</dt><dd>{{ $record->total_production_bags !== null ? number_format($record->total_production_bags).' bags' : '—' }}</dd></div><div><dt>Harvested area</dt><dd>{{ $record->avg_area_harvested_ha !== null ? number_format((float) $record->avg_area_harvested_ha, 2).' ha' : '—' }}</dd></div>
                   <div><dt>Variety planted</dt><dd>{{ $record->seed_variety_planted ?: '—' }}</dd></div><div><dt>Province</dt><dd>{{ $record->farm_province ?: '—' }}</dd></div>
                 </dl></td>
               </tr>
@@ -160,7 +184,7 @@
         </table>
       </div>
     @else
-      <div class="module-empty"><span class="module-empty-icon"><svg viewBox="0 0 24 24"><path d="M12 21V9M8 13c-3 0-5-2-5-5 3 0 5 2 5 5M16 11c3 0 5-2 5-5-3 0-5 2-5 5"></path></svg></span><strong>No distribution records found</strong><span>{{ $hasFilters ? 'Clear or adjust the current filters to find other releases.' : 'No seed or farm-input releases have been recorded yet.' }}</span>@if(!$hasFilters && $canManageOperations)<a class="module-button module-button-primary" href="{{ route('rice-seed-distributions.create') }}">Record release</a>@endif</div>
+      <div class="module-empty"><span class="module-empty-icon"><svg viewBox="0 0 24 24"><path d="M12 21V9M8 13c-3 0-5-2-5-5 3 0 5 2 5 5M16 11c3 0 5-2 5-5-3 0-5 2-5 5"></path></svg></span><strong>No distribution records found</strong><span>{{ $hasFilters ? 'Clear or adjust the current filters to find other releases.' : 'No agriculture or fisheries assistance has been recorded yet.' }}</span>@if(!$hasFilters && $canManageOperations)<a class="module-button module-button-primary" href="{{ route('rice-seed-distributions.create') }}">Record release</a>@endif</div>
     @endif
     @include('partials.pagination', ['paginator' => $records, 'label' => 'distribution record'])
   </section>
@@ -193,7 +217,7 @@
   };
   create('riceMonthlyChart','line',charts.monthly_labels,charts.monthly_values);
   create('riceVarietyChart','bar',charts.seed_variety_labels,charts.seed_variety_values,{ ...baseOptions, indexAxis:'y' },'#3f8659');
-  create('riceInputCategoryChart','doughnut',charts.input_category_labels,charts.input_category_values,{ responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:9}}}} },['#17643a','#d5a034','#3575b5','#7b68a6','#8d9690','#9c6549']);
+  create('riceInputCategoryChart','doughnut',charts.input_category_labels,charts.input_category_values,{ responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:9}}}} },['#17643a','#d5a034','#3575b5','#7b68a6','#8d9690','#9c6549','#2f7891','#4b91aa','#5c7f91','#70a5ae','#5c8795']);
   create('riceLocationChart','bar',charts.toploc_labels,charts.toploc_values,{ ...baseOptions, indexAxis:'y' },'#b47a19');
   create('riceAreaChart','bar',charts.area_mun_labels,charts.area_mun_values,{ ...baseOptions, indexAxis:'y' },'#3575b5');
   create('riceGenderChart','doughnut',charts.gender_labels,charts.gender_values,{ responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:9}}}} },['#3575b5','#d5a034','#85928a']);
