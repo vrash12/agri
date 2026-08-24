@@ -143,8 +143,9 @@ Authenticated functions:
 - draw and save polygon boundaries for the selected farmer;
 - rename, recolor, reshape, and delete saved polygons;
 - calculate centroid and approximate spherical area in hectares on the server;
-- show farmer markers, saved parcels, mapping totals, fit/reset controls, and farmer details in the Google Maps workspace;
-- for provincial and super-admin users, pass the selected municipality to the all-plots endpoint so the map never mixes parcel boundaries from other municipalities; mapped-farmer markers use saved parcel centroids and require no extra geocoding request;
+- show saved parcels, mapping totals, fit/reset controls, and farmer details in the Google Maps workspace without placing centroid pins over parcel boundaries;
+- identify a parcel's farmer, FFRS, location, name, and area in a compact hover card; clicking a polygon isolates that farmer's parcels until the user chooses the in-map All Parcels reset;
+- for provincial and super-admin users, pass the selected municipality to the all-plots endpoint so the map never mixes parcel boundaries from other municipalities;
 - import KML/KMZ in the browser for a selected farmer and save each parsed polygon through the authorized plot endpoint;
 - bulk-import server-side KML/XML placemarks for one selected municipality;
 - match server-side imports only against farmers in that municipality using parcel codes and progressively looser name/location strategies;

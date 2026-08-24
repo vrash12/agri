@@ -904,7 +904,6 @@
           <svg viewBox="0 0 24 24"><path d="M7 18h10a5 5 0 0 0 0-10 7 7 0 0 0-13 3 4 4 0 0 0 3 7Z"></path><path d="m8 21-1 2m5-2-1 2m5-2-1 2"></path></svg>
           <span id="mapWeatherButtonLabel">Weather</span>
         </button>
-        <label class="map-toggle"><input type="checkbox" id="toggleMarkers" checked><span>Farmer markers</span></label>
         <label class="map-toggle"><input type="checkbox" id="togglePlots" checked><span>Parcels</span></label>
       </div>
     </div>
@@ -932,14 +931,20 @@
       <div id="farmersMap" class="farmers-map"></div>
       @include('farmers.partials.map-weather-drawer')
       <div id="plotCursor" class="plot-cursor" aria-hidden="true"></div>
+
+      <button type="button" class="parcel-focus-reset" id="parcelFocusResetBtn" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
+        <span>All parcels</span>
+      </button>
+
+      <div class="parcel-hover-card" id="parcelHoverCard" role="tooltip" aria-hidden="true"></div>
       
       <div class="map-hint" id="mapHint">
         <div class="map-hint-title">{{ $mapWorkspaceShortName }} land view</div>
-        <div class="map-hint-text">All saved parcel boundaries are visible. Use the finder, click a farmer marker or boundary, or select a registry row.</div>
+        <div class="map-hint-text">Hover a parcel to identify its farmer. Click a boundary to focus on that farmer's land.</div>
       </div>
 
       <div class="parcel-map-legend" aria-label="Map legend">
-        <span><i class="parcel-legend-dot"></i> Farmer</span>
         <span><i class="parcel-legend-line"></i> Saved parcel</span>
         <span><i class="parcel-legend-line parcel-legend-draft"></i> Draft</span>
       </div>
@@ -1032,7 +1037,7 @@
               class="fd-location-value"
               id="selLocation"
             >
-              Select a map marker or farmer row
+              Select a parcel boundary or farmer row
             </div>
           </div>
         </div>
@@ -1761,6 +1766,114 @@
     font-weight: 600;
   }
 
+  #farmersMapModule .parcel-focus-reset {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 42;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 34px;
+    padding: 7px 11px;
+    border: 1px solid rgba(23, 100, 58, .22);
+    border-radius: 8px;
+    color: #14532d;
+    background: rgba(255, 255, 255, .96);
+    box-shadow: 0 6px 20px rgba(14, 40, 24, .15);
+    backdrop-filter: blur(8px);
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 850;
+  }
+
+  #farmersMapModule .parcel-focus-reset[hidden] {
+    display: none !important;
+  }
+
+  #farmersMapModule.is-plot-mode .parcel-focus-reset {
+    display: none !important;
+  }
+
+  #farmersMapModule .parcel-focus-reset:hover {
+    border-color: rgba(23, 100, 58, .42);
+    background: #f0fdf4;
+  }
+
+  #farmersMapModule .parcel-focus-reset svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  #farmersMapModule .parcel-hover-card {
+    position: absolute;
+    z-index: 44;
+    width: min(250px, calc(100% - 28px));
+    padding: 11px 12px;
+    border: 1px solid rgba(22, 101, 52, .18);
+    border-radius: 9px;
+    color: #14251b;
+    background: rgba(255, 255, 255, .97);
+    box-shadow: 0 12px 30px rgba(12, 36, 21, .22);
+    backdrop-filter: blur(10px);
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(5px);
+    transition: opacity .12s ease, transform .12s ease;
+  }
+
+  #farmersMapModule .parcel-hover-card.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  #farmersMapModule .parcel-hover-card-label {
+    display: block;
+    margin-bottom: 3px;
+    color: #15803d;
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+
+  #farmersMapModule .parcel-hover-card strong {
+    display: block;
+    overflow: hidden;
+    color: #14251b;
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 1.3;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #farmersMapModule .parcel-hover-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    margin-top: 5px;
+    color: #526259;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1.35;
+  }
+
+  #farmersMapModule .parcel-hover-card-action {
+    display: block;
+    margin-top: 7px;
+    padding-top: 7px;
+    border-top: 1px solid #e3e9e5;
+    color: #17643a;
+    font-size: 9px;
+    font-weight: 850;
+  }
+
   #farmersMapModule .parcel-map-legend {
     position: absolute;
     right: 14px;
@@ -1784,14 +1897,6 @@
     display: inline-flex;
     align-items: center;
     gap: 5px;
-  }
-
-  #farmersMapModule .parcel-legend-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #2563eb;
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, .16);
   }
 
   #farmersMapModule .parcel-legend-line {
@@ -1942,7 +2047,7 @@
       }
 
       input.value = matches[0].label;
-      window.__openFarmer3d(matches[0].id, { showMarker: false });
+      window.__openFarmer3d(matches[0].id);
       syncLocateState();
     }
 

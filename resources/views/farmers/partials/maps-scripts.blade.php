@@ -105,7 +105,7 @@
           if (!id) return;
 
           if (typeof window.__openFarmer3d === 'function') {
-window.__openFarmer3d(String(id), { showMarker: false });
+window.__openFarmer3d(String(id));
           } else if (typeof window.__mapToast === 'function') {
             window.__mapToast('Map is still loading… try again in a moment.', 'warn');
           }
@@ -116,8 +116,8 @@ window.__openFarmer3d(String(id), { showMarker: false });
 function bindButtons() {
   var btnFit = document.getElementById('recenterMapBtn');
   if (btnFit) btnFit.addEventListener('click', function () {
-    if (typeof window.__fit3dToVisibleMarkers === "function") {
-      window.__fit3dToVisibleMarkers();
+    if (typeof window.__fit3dToAllPlots === "function") {
+      window.__fit3dToAllPlots();
     }
   });
 
@@ -151,12 +151,12 @@ if (btnDownloadAll) {
       window.__mapToast('Map is still loading… try again in a moment.', 'warn');
     }
   });
-}
+  }
 
-  var tMarkers = document.getElementById('toggleMarkers');
-  if (tMarkers) tMarkers.addEventListener('change', function () {
-    if (typeof window.__applyMarkerVisibility === "function") {
-      window.__applyMarkerVisibility();
+  var btnAllParcels = document.getElementById('parcelFocusResetBtn');
+  if (btnAllParcels) btnAllParcels.addEventListener('click', function () {
+    if (typeof window.__showAllMunicipalParcels === "function") {
+      window.__showAllMunicipalParcels();
     }
   });
 
@@ -880,14 +880,6 @@ function formatName(f) {
   return full || (f.last_name || 'Farmer');
 }
 
-    function getFarmerGlyph(f) {
-      var fn = String(f && f.first_name ? f.first_name : '').trim();
-      var ln = String(f && f.last_name ? f.last_name : '').trim();
-      var a = fn ? fn.charAt(0).toUpperCase() : '';
-      var b = ln ? ln.charAt(0).toUpperCase() : '';
-      return (a + b) || 'F';
-    }
-
     function updateGeocodedPill(geocoded, total) {
       if (!mapGeocodedPillEl) return;
       mapGeocodedPillEl.textContent = geocoded + ' / ' + total + ' geocoded';
@@ -1202,18 +1194,14 @@ function getEffectivePlotColor(plot) {
     }
 
     var maps3d = await google.maps.importLibrary("maps3d");
-    var markerLib = await google.maps.importLibrary("marker");
-
 var Map3DElement = maps3d.Map3DElement;
 var MapMode = maps3d.MapMode;
 var AltitudeMode = maps3d.AltitudeMode;
-var Marker3DInteractiveElement = maps3d.Marker3DInteractiveElement;
 var Marker3DElement = maps3d.Marker3DElement;
 var PopoverElement = maps3d.PopoverElement;
     var Polyline3DInteractiveElement = maps3d.Polyline3DInteractiveElement;
     var Polygon3DElement = maps3d.Polygon3DElement;
     var Polygon3DInteractiveElement = maps3d.Polygon3DInteractiveElement;
-    var PinElement = markerLib.PinElement;
 
     var host = document.getElementById("farmersMap");
     if (!host) return;
@@ -1230,16 +1218,14 @@ var PopoverElement = maps3d.PopoverElement;
     });
     host.appendChild(map3d);
 
-    var markersById = new Map();
     var dataById = new Map();
-    var geocodePromisesById = new Map();
 
     var popover = new PopoverElement({ open: false });
     map3d.append(popover);
 
     var selectedFarmerId = null;
     var selectedVertexIndex = -1;
-    var selectedMarkerVisible = true;
+    var focusedParcelFarmerId = null;
 
     var plotsCacheByFarmerId = new Map();
     var plotFetchPromisesByFarmerId = new Map();
@@ -1250,55 +1236,6 @@ var PopoverElement = maps3d.PopoverElement;
     var plotQueueSet = new Set();
     var plotInFlight = 0;
     bindKmzImport();
-
-    function buildMarkerPin(f, isSelected) {
-      return new PinElement({
-        scale: isSelected ? 1.15 : 1.0,
-        background: isSelected ? '#1d4ed8' : '#3b82f6',
-        borderColor: isSelected ? '#0f172a' : '#1d4ed8',
-        glyphColor: '#ffffff',
-        glyphText: getFarmerGlyph(f)
-      });
-    }
-
-    function applyMarkerPin(marker, f, isSelected) {
-      if (!marker || !PinElement) return;
-      marker.replaceChildren(buildMarkerPin(f, !!isSelected));
-      marker.zIndex = isSelected ? 999 : 1;
-    }
-
-    function farmerHasSavedPlots(farmerId) {
-      var plots = plotsCacheByFarmerId.get(String(farmerId));
-      return Array.isArray(plots) && plots.length > 0;
-    }
-
-    function refreshAllMarkerPins() {
-      var t = document.getElementById('toggleMarkers');
-      var on = !t || t.checked;
-
-      markersById.forEach(function (marker, id) {
-        var isSelected = String(id) === String(selectedFarmerId || '');
-        var farmer = dataById.get(String(id)) || farmersById.get(String(id));
-
-        applyMarkerPin(marker, farmer, isSelected);
-
-        // Municipality mode keeps every mapped farmer visible. The selected
-        // farmer receives the stronger pin styling but does not hide others.
-        var shouldShow = on && farmerHasSavedPlots(id);
-
-        try {
-          if (shouldShow) {
-            if (!marker.isConnected) map3d.append(marker);
-          } else {
-            if (marker.isConnected) map3d.removeChild(marker);
-          }
-        } catch (e3) {}
-      });
-    }
-
-    window.__applyMarkerVisibility = function () {
-      refreshAllMarkerPins();
-    };
 
     window.__setPlotsLoadingEnabled = function (on) {
       plotsLoadingEnabled = !!on;
@@ -1487,6 +1424,103 @@ function reloadSelectedFarmerPlots(autoZoom) {
     autoZoom: !!autoZoom
   });
 }
+    var parcelHoverCardEl = document.getElementById('parcelHoverCard');
+    var parcelFocusResetBtnEl = document.getElementById('parcelFocusResetBtn');
+    var parcelHoverHideTimer = null;
+    var lastParcelPointer = null;
+
+    function rememberParcelPointer(event) {
+      var pointerEvent = event && event.domEvent ? event.domEvent : event;
+      if (!pointerEvent || !Number.isFinite(Number(pointerEvent.clientX)) || !Number.isFinite(Number(pointerEvent.clientY))) {
+        return;
+      }
+
+      lastParcelPointer = {
+        clientX: Number(pointerEvent.clientX),
+        clientY: Number(pointerEvent.clientY)
+      };
+    }
+
+    function positionParcelHoverCard(event) {
+      if (!parcelHoverCardEl) return;
+
+      rememberParcelPointer(event);
+      var stage = stageEl || document.querySelector('#farmersMapModule .farmers-map-stage');
+      if (!stage) return;
+
+      var rect = stage.getBoundingClientRect();
+      var pointer = lastParcelPointer || {
+        clientX: rect.left + Math.min(310, rect.width * 0.35),
+        clientY: rect.top + Math.min(250, rect.height * 0.40)
+      };
+      var cardWidth = parcelHoverCardEl.offsetWidth || 250;
+      var cardHeight = parcelHoverCardEl.offsetHeight || 110;
+      var left = pointer.clientX - rect.left + 16;
+      var top = pointer.clientY - rect.top + 16;
+
+      if (left + cardWidth > rect.width - 12) {
+        left = pointer.clientX - rect.left - cardWidth - 16;
+      }
+      if (top + cardHeight > rect.height - 12) {
+        top = pointer.clientY - rect.top - cardHeight - 16;
+      }
+
+      parcelHoverCardEl.style.left = Math.max(12, left) + 'px';
+      parcelHoverCardEl.style.top = Math.max(12, top) + 'px';
+    }
+
+    function showParcelHoverCard(farmerId, plot, event) {
+      if (!parcelHoverCardEl || plotMode) return;
+      if (parcelHoverHideTimer) clearTimeout(parcelHoverHideTimer);
+
+      var farmer = farmersById.get(String(farmerId)) || dataById.get(String(farmerId));
+      var ring = normalizePolygonRing(plot && (plot.polygon_json || plot.polygon || plot.polygonJson));
+      var area = plot && (plot.area_ha != null ? plot.area_ha : plot.areaHa);
+      if (area == null && ring.length) area = estimateAreaHa(ring);
+
+      var location = farmer
+        ? String(farmer.farm_location || farmer.location || farmer.farm_municipality || '').trim()
+        : '';
+      var ffrs = farmer ? String(farmer.ffrs || '').trim() : '';
+      var plotName = String(plot && plot.name ? plot.name : 'Saved parcel').trim();
+
+      parcelHoverCardEl.innerHTML =
+        '<span class="parcel-hover-card-label">Parcel owner</span>' +
+        '<strong>' + escapeHtml(formatName(farmer)) + '</strong>' +
+        '<span class="parcel-hover-card-meta">' +
+          '<span>' + escapeHtml(plotName) + '</span>' +
+          (Number.isFinite(Number(area)) ? '<span>' + Number(area).toFixed(2) + ' ha</span>' : '') +
+          (ffrs ? '<span>FFRS ' + escapeHtml(ffrs) + '</span>' : '') +
+          (location ? '<span>' + escapeHtml(location) + '</span>' : '') +
+        '</span>' +
+        '<span class="parcel-hover-card-action">Click to view only this farmer\'s land</span>';
+      parcelHoverCardEl.setAttribute('aria-hidden', 'false');
+      parcelHoverCardEl.classList.add('is-visible');
+      positionParcelHoverCard(event);
+    }
+
+    function hideParcelHoverCard() {
+      if (!parcelHoverCardEl) return;
+      if (parcelHoverHideTimer) clearTimeout(parcelHoverHideTimer);
+      parcelHoverHideTimer = setTimeout(function () {
+        parcelHoverCardEl.classList.remove('is-visible');
+        parcelHoverCardEl.setAttribute('aria-hidden', 'true');
+      }, 45);
+    }
+
+    function syncParcelFocusUi() {
+      if (!parcelFocusResetBtnEl) return;
+      parcelFocusResetBtnEl.hidden = !focusedParcelFarmerId;
+
+      if (focusedParcelFarmerId) {
+        var farmer = farmersById.get(String(focusedParcelFarmerId)) || dataById.get(String(focusedParcelFarmerId));
+        parcelFocusResetBtnEl.title = 'Return to every parcel in this municipality' +
+          (farmer ? ' from ' + formatName(farmer) : '');
+      } else {
+        parcelFocusResetBtnEl.removeAttribute('title');
+      }
+    }
+
     function setPlotHoverCursor(on) {
       if (moduleEl && moduleEl.classList.contains('is-plot-mode')) return;
       var cursor = on ? 'pointer' : '';
@@ -1494,10 +1528,10 @@ function reloadSelectedFarmerPlots(autoZoom) {
       if (host) host.style.cursor = cursor;
     }
 
-    function bindClickablePlotOverlay(outline, poly, farmerId, plotLabel, styleOpts) {
+    function bindClickablePlotOverlay(outline, poly, farmerId, plot, styleOpts) {
       styleOpts = styleOpts || {};
 
-      function applyHoverState() {
+      function applyHoverState(event) {
         if (plotMode) return;
 
         if (poly) {
@@ -1513,7 +1547,8 @@ function reloadSelectedFarmerPlots(autoZoom) {
         }
 
         setPlotHoverCursor(true);
-        setStatus('Plot ready', 'Click this plot to select ' + (plotLabel || 'farmer'));
+        showParcelHoverCard(farmerId, plot, event);
+        setStatus('Parcel identified', 'Click to focus on ' + formatName(farmersById.get(String(farmerId))));
       }
 
     function resetHoverState() {
@@ -1532,9 +1567,12 @@ function reloadSelectedFarmerPlots(autoZoom) {
   }
 
   setPlotHoverCursor(false);
+  hideParcelHoverCard();
 
   if (!plotMode) {
-    if (selectedFarmerId) setStatus('Selected plot owner', 'Click the map or another plot to change selection.');
+    if (focusedParcelFarmerId) {
+      setStatus('Focused parcel owner', 'Only this farmer\'s land is visible. Use All parcels to return.');
+    } else if (selectedFarmerId) setStatus('Selected plot owner', 'Click another parcel to focus its farmer.');
     else setStatus('Ready', 'Hover a plot or row, then click to select a farmer.');
   }
 }
@@ -1542,7 +1580,9 @@ function reloadSelectedFarmerPlots(autoZoom) {
       function handlePlotOverlayClick(ev) {
         if (ev && ev.stopPropagation) ev.stopPropagation();
         if (plotMode) return;
-        window.__openFarmer3d(String(farmerId), { showMarker: false });
+        hideParcelHoverCard();
+        setPlotHoverCursor(false);
+        window.__openFarmer3d(String(farmerId), { focusParcels: true });
       }
 
       var targets = [outline, poly];
@@ -1552,12 +1592,16 @@ function reloadSelectedFarmerPlots(autoZoom) {
 
         target.addEventListener('gmp-click', handlePlotOverlayClick);
         target.addEventListener('click', handlePlotOverlayClick);
-        target.addEventListener('mouseenter', applyHoverState);
-        target.addEventListener('mouseleave', resetHoverState);
-        target.addEventListener('mouseover', applyHoverState);
-        target.addEventListener('mouseout', resetHoverState);
-        target.addEventListener('gmp-mouseenter', applyHoverState);
-        target.addEventListener('gmp-mouseleave', resetHoverState);
+        if (target === poly) {
+          target.addEventListener('mouseenter', applyHoverState);
+          target.addEventListener('mouseleave', resetHoverState);
+          target.addEventListener('mouseover', applyHoverState);
+          target.addEventListener('mouseout', resetHoverState);
+          target.addEventListener('mousemove', positionParcelHoverCard);
+          target.addEventListener('gmp-mouseenter', applyHoverState);
+          target.addEventListener('gmp-mouseleave', resetHoverState);
+          target.addEventListener('gmp-mousemove', positionParcelHoverCard);
+        }
       }
     }
 
@@ -1610,7 +1654,7 @@ function renderPlotsForFarmer(farmerId, plots) {
     });
     if (show) map3d.append(poly);
 
-    bindClickablePlotOverlay(outline, poly, farmerId, (pl.name || ('Plot #' + pl.id)), {
+    bindClickablePlotOverlay(outline, poly, farmerId, pl, {
       strokeStrong: visibleBorder,
       strokeHover: hexAlpha(fillHex, 'B0'),
       fillSoft: fillSoft,
@@ -1669,62 +1713,11 @@ function renderPlotsForFarmer(farmerId, plots) {
   grouped.forEach(function (items, fid) {
     plotsCacheByFarmerId.set(String(fid), items);
     renderPlotsForFarmer(String(fid), items);
-
-    var farmer = farmersById.get(String(fid));
-    if (!farmer || markersById.has(String(fid))) return;
-
-    var markerPosition = null;
-    for (var markerIndex = 0; markerIndex < items.length; markerIndex++) {
-      var markerPlot = items[markerIndex] || {};
-      var markerLat = Number(markerPlot.centroid_lat);
-      var markerLng = Number(markerPlot.centroid_lng);
-      if (
-        markerPlot.centroid_lat !== null
-        && markerPlot.centroid_lat !== ''
-        && markerPlot.centroid_lng !== null
-        && markerPlot.centroid_lng !== ''
-        && Number.isFinite(markerLat)
-        && Number.isFinite(markerLng)
-      ) {
-        markerPosition = { lat: markerLat, lng: markerLng };
-        break;
-      }
-
-      var markerRing = normalizePolygonRing(
-        markerPlot.polygon_json || markerPlot.polygon || markerPlot.polygonJson
-      );
-      if (!markerRing || !markerRing.length) continue;
-
-      var latTotal = 0;
-      var lngTotal = 0;
-      for (var pointIndex = 0; pointIndex < markerRing.length; pointIndex++) {
-        latTotal += Number(markerRing[pointIndex].lat || 0);
-        lngTotal += Number(markerRing[pointIndex].lng || 0);
-      }
-      markerPosition = {
-        lat: latTotal / markerRing.length,
-        lng: lngTotal / markerRing.length
-      };
-      break;
-    }
-
-    if (markerPosition) {
-      createFarmerMarker(
-        farmer,
-        markerPosition.lat,
-        markerPosition.lng,
-        { deferVisibility: true }
-      );
-    }
   });
 
   if (typeof window.__applyPlotVisibility === 'function') {
     window.__applyPlotVisibility();
   }
-  if (typeof window.__applyMarkerVisibility === 'function') {
-    window.__applyMarkerVisibility();
-  }
-
   setProgress(100);
 
   if (mapGeocodedPillEl) {
@@ -1770,7 +1763,7 @@ function syncSelectedPanel(f) {
     }));
     window.__mapUiSetText('selName', 'No farmer selected');
     window.__mapUiSetText('selFfrs', 'Choose a farmer to load their record');
-    window.__mapUiSetText('selLocation', 'Use the finder, a map marker, or a directory row');
+    window.__mapUiSetText('selLocation', 'Use the finder, a parcel boundary, or a directory row');
     window.__mapUiSetText('selRecords', '0');
     window.__mapUiSetText('selKgs', '0.00');
 
@@ -3319,36 +3312,13 @@ window.__handleDownloadAllPlots = handleDownloadAllPlots;
   updateDeleteCornerButtonState();
 }
 
-    function fitToMarkers(onlyVisible) {
-      var minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
-      var count = 0;
-
-      markersById.forEach(function (marker) {
-        if (onlyVisible && !marker.isConnected) return;
-        if (!marker.position) return;
-
-        var ll = toLatLng(marker.position);
-        minLat = Math.min(minLat, ll.lat);
-        maxLat = Math.max(maxLat, ll.lat);
-        minLng = Math.min(minLng, ll.lng);
-        maxLng = Math.max(maxLng, ll.lng);
-        count++;
-      });
-
-      if (count <= 0) return;
-
-      var centerLat = (minLat + maxLat) / 2;
-      var centerLng = (minLng + maxLng) / 2;
-      var diag = haversineMeters(
-        { lat: minLat, lng: minLng },
-        { lat: maxLat, lng: maxLng }
-      );
-      var range = clamp(diag * 2.0, 2500, 1200000);
-      flyTo(centerLat, centerLng, range, 1100);
-    }
-
-    window.__fit3dToVisibleMarkers = function () {
-      fitToMarkers(false);
+    window.__fit3dToAllPlots = function () {
+      focusedParcelFarmerId = null;
+      syncParcelFocusUi();
+      if (typeof window.__applyPlotVisibility === 'function') {
+        window.__applyPlotVisibility();
+      }
+      zoomToAllLoadedPlots();
     };
 
 window.__applyPlotVisibility = function () {
@@ -3360,7 +3330,9 @@ window.__applyPlotVisibility = function () {
     if (!it || !it.poly) continue;
     var isPlotBeingEdited = editingPlotId
       && String(it.plotId) === String(editingPlotId);
-    var shouldShow = on && !isPlotBeingEdited;
+    var isInFocusedFarmer = !focusedParcelFarmerId
+      || String(it.farmerId) === String(focusedParcelFarmerId);
+    var shouldShow = on && isInFocusedFarmer && !isPlotBeingEdited;
 
     try {
       if (shouldShow) {
@@ -3377,12 +3349,19 @@ window.__applyPlotVisibility = function () {
   window.__reset3dMap = function () {
   popover.open = false;
   selectedFarmerId = null;
-  selectedMarkerVisible = false;
+  focusedParcelFarmerId = null;
   plotMode = false;
 
   setPlotModeUi(false);
   showPlotButtons(false);
   clearDraftPlot();
+  hideParcelHoverCard();
+  syncParcelFocusUi();
+  highlightRow(null);
+  syncSelectedPanel(null);
+  updatePlotCount(0);
+  updatePlotTotalArea(0);
+  updatePlotList([]);
 
   if (hintEl) hintEl.style.display = "";
   if (savedPlotOverlays.length) {
@@ -3392,7 +3371,6 @@ window.__applyPlotVisibility = function () {
   }
 
   setStatus("Municipality view", "Showing every saved parcel in this workspace.");
-  refreshAllMarkerPins();
 
   if (typeof window.__applyPlotVisibility === "function") {
     window.__applyPlotVisibility();
@@ -3407,23 +3385,44 @@ window.__applyPlotVisibility = function () {
         return;
       }
 
-      var marker = markersById.get(String(selectedFarmerId));
-      if (!marker || !marker.position) return;
-
-      var ll = toLatLng(marker.position);
-      flyTo(ll.lat, ll.lng, 9000, 700);
+      var plots = plotsCacheByFarmerId.get(String(selectedFarmerId)) || [];
+      if (plots.length) zoomToPlots(plots);
     };
+
+ window.__showAllMunicipalParcels = function () {
+  popover.open = false;
+  focusedParcelFarmerId = null;
+  selectedFarmerId = null;
+  hideParcelHoverCard();
+  syncParcelFocusUi();
+  highlightRow(null);
+  syncSelectedPanel(null);
+  updatePlotCount(0);
+  updatePlotTotalArea(0);
+  updatePlotList([]);
+
+  if (typeof window.__applyPlotVisibility === 'function') {
+    window.__applyPlotVisibility();
+  }
+
+  if (hintEl) hintEl.style.display = '';
+  zoomToAllLoadedPlots();
+  setStatus('Municipality view', 'Showing every saved parcel in this workspace.');
+  toast('All municipality parcels are visible again.', 'ok');
+ };
 
  window.__clearFarmerSelection = function () {
   popover.open = false;
   selectedFarmerId = null;
-  selectedMarkerVisible = false;
+  focusedParcelFarmerId = null;
   plotMode = false;
 
   setPlotModeUi(false);
   showPlotButtons(false);
   clearDraftPlot();
-  refreshAllMarkerPins();
+  hideParcelHoverCard();
+  syncParcelFocusUi();
+  highlightRow(null);
 
   if (typeof window.__applyPlotVisibility === "function") {
     window.__applyPlotVisibility();
@@ -3922,10 +3921,12 @@ function nudgeSelectedVertex(latStep, lngStep) {
     }
 
     if (stageEl) {
+      stageEl.addEventListener('pointermove', rememberParcelPointer, true);
       stageEl.addEventListener('pointermove', updateFakeCursor, true);
       stageEl.addEventListener('mousemove', updateFakeCursor, true);
       stageEl.addEventListener('mouseenter', function (e) { updateFakeCursor(e); }, true);
       stageEl.addEventListener('mouseleave', function () {
+        hideParcelHoverCard();
         if (!cursorEl) return;
         cursorEl.style.left = "-9999px";
         cursorEl.style.top = "-9999px";
@@ -4145,89 +4146,9 @@ if (selectedVertexIndex < 0) return;
   popover.open = false;
 });
 
-    function createFarmerMarker(f, lat, lng, opts) {
-      opts = opts || {};
-      dataById.set(String(f.id), f);
-
-      var marker = new Marker3DInteractiveElement({
-        altitudeMode: AltitudeMode.CLAMP_TO_GROUND,
-        position: { lat: lat, lng: lng },
-        title: formatName(f),
-        sizePreserved: true,
-        drawsWhenOccluded: true
-      });
-
-      applyMarkerPin(marker, f, false);
-
-    marker.addEventListener("gmp-click", function (event) {
-  if (event && event.stopPropagation) event.stopPropagation();
-  window.__openFarmer3d(String(f.id), { showMarker: false });
-});
-
-      markersById.set(String(f.id), marker);
-      queuePlotFetch(String(f.id));
-
-      if (!opts.deferVisibility && typeof window.__applyMarkerVisibility === "function") {
-        window.__applyMarkerVisibility();
-      }
-
-      return marker;
-    }
-
-  function ensureMarkerForFarmer(id) {
-  id = String(id);
-
-  if (markersById.has(id)) {
-    return Promise.resolve(markersById.get(id));
-  }
-
-  if (geocodePromisesById.has(id)) {
-    return geocodePromisesById.get(id);
-  }
-
-  var p = ensureFarmerData(id).then(function (f) {
-    var loc = (f.location || '').trim();
-
-    if (!loc || loc === '—') {
-      return null;
-    }
-
-    var endpoint = window.__farmerGeocodeUrl || '/api/geocode';
-    var separator = endpoint.indexOf('?') >= 0 ? '&' : '?';
-
-    return fetch(
-      endpoint + separator + 'q=' + encodeURIComponent(loc + ', Philippines'),
-      { headers: { 'Accept': 'application/json' } }
-    )
-      .then(function (response) {
-        if (!response.ok) return null;
-        return response.json();
-      })
-      .then(function (result) {
-        if (!result || result.lat == null || result.lng == null) return null;
-        return createFarmerMarker(f, Number(result.lat), Number(result.lng));
-      })
-      .catch(function () {
-        return null;
-      });
-  });
-
-  geocodePromisesById.set(id, p);
-  p.finally(function () {
-    geocodePromisesById.delete(id);
-  });
-
-  return p;
-}
-
 window.__openFarmer3d = function (id, opts) {
   opts = opts || {};
   id = String(id);
-
-  var showMarker = opts.showMarker !== false;
-  var markerPromise = ensureMarkerForFarmer(id).catch(function () {
-    return null;
-  });
 
   return ensureFarmerData(id).then(function (f) {
     if (!f) {
@@ -4236,10 +4157,11 @@ window.__openFarmer3d = function (id, opts) {
 
     selectedFarmerId = id;
     selectedVertexIndex = -1;
-    selectedMarkerVisible = showMarker;
+    focusedParcelFarmerId = opts.focusParcels === true ? id : null;
 
     highlightRow(f.id);
     syncSelectedPanel(f);
+    syncParcelFocusUi();
 
     if (typeof window.__applyPlotVisibility === 'function') {
       window.__applyPlotVisibility();
@@ -4247,58 +4169,32 @@ window.__openFarmer3d = function (id, opts) {
 
     if (hintEl) hintEl.style.display = 'none';
 
-    return Promise.all([
-      loadPlotsForSelectedFarmer(selectedFarmerId, { autoZoom: false }),
-      markerPromise
-    ]).then(function (results) {
-      var plots = Array.isArray(results[0]) ? results[0] : [];
-      var marker = results[1];
-      refreshAllMarkerPins();
+    return loadPlotsForSelectedFarmer(selectedFarmerId, { autoZoom: false }).then(function (plots) {
+      plots = Array.isArray(plots) ? plots : [];
 
       if (!plots.length) {
         popover.open = false;
+        focusedParcelFarmerId = null;
+        syncParcelFocusUi();
+        if (typeof window.__applyPlotVisibility === 'function') {
+          window.__applyPlotVisibility();
+        }
         setStatus('No saved plot', 'This farmer has not been plotted yet.');
         toast(formatName(f) + ' has no saved plot yet.', 'warn');
         syncSuggestedPlotName([], false);
         return;
       }
 
-    if (marker && marker.position) {
-  var ll = toLatLng(marker.position);
-  flyTo(ll.lat, ll.lng, 9000, 900);
-
-  if (showMarker) {
-    popover.positionAnchor = marker;
-    popover.open = true;
-
-    var html = document.createElement('div');
-    html.style.minWidth = '260px';
-    html.style.fontFamily = 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
-    html.innerHTML =
-      '<div style="font-weight:900; font-size:14px; margin-bottom:6px;">' +
-        escapeHtml(formatName(f)) +
-      '</div>' +
-      '<div style="font-size:12px; line-height:1.35; color:#0b1220;">' +
-        '<div><strong>FFRS:</strong> ' + escapeHtml(f.ffrs || '—') + '</div>' +
-        '<div><strong>DOB:</strong> ' + escapeHtml(f.date_of_birth || '—') + '</div>' +
-        '<div><strong>Gender:</strong> ' + escapeHtml(f.gender || '—') + '</div>' +
-        '<div style="margin-top:6px;"><strong>Location:</strong> ' + escapeHtml((f.location || '').trim()) + '</div>' +
-        '<div style="margin-top:6px;"><strong>Records:</strong> ' + Number(f.records_count || 0) + '</div>' +
-        '<div><strong>Total Kgs:</strong> ' + (Number(f.total_kgs || 0)).toFixed(2) + '</div>' +
-        '<div><strong>Last Received:</strong> ' + escapeHtml(f.last_received || '—') + '</div>' +
-      '</div>';
-
-    popover.replaceChildren(html);
-  } else {
-    popover.open = false;
-  }
-} else {
-  popover.open = false;
-}
-
+      popover.open = false;
+      if (typeof window.__applyPlotVisibility === 'function') {
+        window.__applyPlotVisibility();
+      }
       zoomToPlots(plots);
 
-      setStatus('Selected: ' + (f.last_name || 'Farmer'), 'Plot owner loaded');
+      setStatus(
+        focusedParcelFarmerId ? 'Focused parcel owner' : 'Selected: ' + (f.last_name || 'Farmer'),
+        focusedParcelFarmerId ? 'Only this farmer\'s land is visible. Use All parcels to return.' : 'Farmer land loaded'
+      );
       toast('Selected ' + formatName(f) + '.', 'ok');
       syncSuggestedPlotName(plots, false);
     });
