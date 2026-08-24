@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\Municipality;
 use App\Models\User;
 use App\Support\AuditTrail;
+use App\Support\LocalTime;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -31,10 +32,10 @@ class AuditLogController extends Controller
         $stats = [
             'total' => (clone $query)->count(),
             'today' => (clone $query)
-                ->where('created_at', '>=', now()->startOfDay())
+                ->where('created_at', '>=', LocalTime::utcStartOfLocalDay())
                 ->count(),
             'seven_days' => (clone $query)
-                ->where('created_at', '>=', now()->subDays(6)->startOfDay())
+                ->where('created_at', '>=', LocalTime::utcStartOfLocalDay(LocalTime::now()->subDays(6)))
                 ->count(),
             'alerts' => (clone $query)
                 ->whereIn('event', ['deleted', 'login_failed', 'login_blocked'])
@@ -121,7 +122,7 @@ class AuditLogController extends Controller
             ]
         );
 
-        $fileName = 'audit-trail-'.now()->format('Y-m-d-His').'.csv';
+        $fileName = 'audit-trail-'.LocalTime::now()->format('Y-m-d-His').'.csv';
 
         return response()->streamDownload(function () use ($query, $maxId): void {
             $output = fopen('php://output', 'w');
@@ -153,7 +154,7 @@ class AuditLogController extends Controller
                         foreach ($logs as $log) {
                             fputcsv($output, array_map([$this, 'csvValue'], [
                                 $log->id,
-                                $log->created_at?->format('Y-m-d H:i:s'),
+                                LocalTime::fromUtc($log->created_at)?->format('Y-m-d H:i:s P'),
                                 $log->event_label,
                                 $log->module,
                                 $log->description,
@@ -216,11 +217,11 @@ class AuditLogController extends Controller
         }
 
         if ($date = $this->parseDate($request->query('date_from'))) {
-            $query->where('created_at', '>=', $date->startOfDay());
+            $query->where('created_at', '>=', LocalTime::utcStartOfLocalDay($date));
         }
 
         if ($date = $this->parseDate($request->query('date_to'))) {
-            $query->where('created_at', '<=', $date->endOfDay());
+            $query->where('created_at', '<=', LocalTime::utcEndOfLocalDay($date));
         }
 
         return $query;
@@ -234,7 +235,7 @@ class AuditLogController extends Controller
         }
 
         try {
-            return Carbon::createFromFormat('Y-m-d', $value);
+            return Carbon::createFromFormat('Y-m-d', $value, LocalTime::timezone());
         } catch (\Throwable $exception) {
             return null;
         }

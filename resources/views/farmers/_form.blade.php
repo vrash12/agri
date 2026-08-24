@@ -220,7 +220,7 @@
       <section class="module-aside-card">
         <h3>Profile record</h3>
         <div class="farmer-registry-id"><span>Farmer ID</span><strong>{{ $r->registry_id }}</strong></div>
-        <p>Last updated {{ optional(data_get($r, 'updated_at'))->format('M d, Y · h:i A') ?: '—' }}.</p>
+        <p>Last updated {{ \App\Support\LocalTime::fromUtc(data_get($r, 'updated_at'))?->format('M d, Y · h:i A') ?: '—' }} PHT.</p>
         <a class="farmer-card-link" href="{{ route('farmers.id-card', $r) }}">Open digital ID card</a>
       </section>
     @endif

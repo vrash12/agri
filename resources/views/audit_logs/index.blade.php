@@ -29,6 +29,7 @@
   ];
   $eventOrder = ['login_failed', 'login_blocked', 'deleted', 'updated', 'created', 'login', 'logout', 'membership_updated', 'exported'];
   $exportQuery = collect(request()->query())->except(['page'])->all();
+  $localNow = \App\Support\LocalTime::now();
 @endphp
 
 @section('content')
@@ -59,7 +60,7 @@
     <article class="module-kpi">
       <div class="module-kpi-top"><span class="module-kpi-label">Activity today</span><span class="module-kpi-icon module-kpi-icon-blue"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg></span></div>
       <strong>{{ number_format((int) $stats['today']) }}</strong>
-      <small>{{ now()->format('F d, Y') }} in system time</small>
+      <small>{{ $localNow->format('F d, Y') }} · Philippine time</small>
     </article>
     <article class="module-kpi">
       <div class="module-kpi-top"><span class="module-kpi-label">Last seven days</span><span class="module-kpi-icon module-kpi-icon-amber"><svg viewBox="0 0 24 24"><path d="M4 5h16v16H4zM8 3v4M16 3v4M4 10h16"></path></svg></span></div>
@@ -184,9 +185,10 @@
               @php
                 $initials = collect(preg_split('/\s+/', trim($record->actor_name ?: 'System')))->filter()->take(2)->map(fn ($word) => mb_strtoupper(mb_substr($word, 0, 1)))->implode('');
                 $roleLabel = $roleLabels[$record->actor_role] ?? ($record->actor_role ? Str::headline($record->actor_role) : 'Unattributed event');
+                $localCreatedAt = \App\Support\LocalTime::fromUtc($record->created_at);
               @endphp
               <tr>
-                <td class="audit-time"><strong>{{ $record->created_at?->format('M d, Y') }}</strong><small>{{ $record->created_at?->format('h:i:s A') }} · {{ $record->created_at?->diffForHumans() }}</small></td>
+                <td class="audit-time"><strong>{{ $localCreatedAt?->format('M d, Y') }}</strong><small>{{ $localCreatedAt?->format('h:i:s A') }} · {{ $localCreatedAt?->diffForHumans() }}</small></td>
                 <td><div class="audit-event"><span class="audit-event-dot audit-event-dot-{{ $record->event_tone }}"></span><span class="module-badge module-badge-{{ $record->event_tone === 'neutral' ? 'neutral' : $record->event_tone }}">{{ $record->event_label }}</span></div></td>
                 <td class="audit-module-copy"><strong>{{ $record->module }}</strong><small>{{ $record->description }}</small></td>
                 <td><div class="module-person"><span class="module-avatar">{{ $initials ?: 'SY' }}</span><span class="module-person-copy"><strong>{{ $record->actor_name ?: 'System / unknown' }}</strong><small>{{ $record->actor_email ?: $roleLabel }}</small></span></div></td>

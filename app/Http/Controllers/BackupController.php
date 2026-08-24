@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\BackupFile;
 use App\Models\User;
 use App\Support\ConcurrentWrite;
+use App\Support\LocalTime;
 use App\Support\MunicipalityAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -253,7 +254,7 @@ class BackupController extends Controller
 
         $disk = 'local';
         $folder = trim($data['folder'] ?? '');
-        if ($folder === '') $folder = now()->format('Y/m');
+        if ($folder === '') $folder = LocalTime::now()->format('Y/m');
 
         $storedPaths = [];
         $records = [];

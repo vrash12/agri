@@ -34,6 +34,7 @@
       return (string) $value;
   };
   $metadata = collect($auditLog->metadata ?? []);
+  $localCreatedAt = \App\Support\LocalTime::fromUtc($auditLog->created_at);
 @endphp
 
 @section('content')
@@ -55,7 +56,7 @@
       <section class="module-panel">
         <div class="module-panel-head"><div><h2>Event summary</h2><p>The identity, scope, and source captured at the time of the activity.</p></div></div>
         <dl class="audit-summary">
-          <div><dt>Date and time</dt><dd>{{ $auditLog->created_at?->format('F d, Y · h:i:s A') }}<br>{{ $auditLog->created_at?->diffForHumans() }}</dd></div>
+          <div><dt>Date and time</dt><dd>{{ $localCreatedAt?->format('F d, Y · h:i:s A') }} PHT<br>{{ $localCreatedAt?->diffForHumans() }}</dd></div>
           <div><dt>Actor</dt><dd>{{ $auditLog->actor_name ?: 'System / unknown' }}<br>{{ $auditLog->actor_email ?: 'No account email' }}</dd></div>
           <div><dt>Role at the time</dt><dd>{{ $roleLabels[$auditLog->actor_role] ?? ($auditLog->actor_role ? Str::headline($auditLog->actor_role) : 'Unattributed event') }}</dd></div>
           <div><dt>Municipality</dt><dd>{{ $auditLog->municipality?->name ?? 'Province-wide / unassigned' }}</dd></div>

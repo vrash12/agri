@@ -292,6 +292,8 @@ Super-admin-only functions:
 - inspect request context and before/after values;
 - export the same filtered scope to CSV using a stable maximum audit ID.
 
+Audit timestamps are stored in UTC and displayed in `APP_DISPLAY_TIMEZONE` through `App\Support\LocalTime`. Audit date filters are interpreted as local Philippine calendar days and converted to UTC query boundaries. Keep `config('app.timezone')` set to UTC; changing the storage timezone would reinterpret existing records and mix timestamp conventions.
+
 `AuditModelObserver` records created, updated, and deleted events for machinery, farmers, plots, distributions, vaccinations, cooperatives, backups, users, and municipalities. Authentication, exports, and cooperative membership changes add explicit events through `App\Support\AuditTrail`.
 
 Audit failures are reported but do not interrupt the user's main operation. Passwords, tokens, secrets, remember tokens, farmer public tokens, profile-photo paths, and other protected fields are removed from persisted before/after values. Preserve this behavior.
@@ -432,6 +434,7 @@ APP_NAME="Agriculture Information System"
 APP_ENV=production
 APP_DEBUG=false
 APP_URL=https://your-domain.example
+APP_DISPLAY_TIMEZONE=Asia/Manila
 
 DB_CONNECTION=mysql
 DB_HOST=...

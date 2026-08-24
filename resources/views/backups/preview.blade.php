@@ -359,7 +359,7 @@
           <div class="kv"><div class="k">Type</div><div class="v">{{ strtoupper($ext ?: 'file') }}</div></div>
           <div class="kv"><div class="k">MIME</div><div class="v">{{ $mime ?: '—' }}</div></div>
           <div class="kv"><div class="k">Size</div><div class="v">{{ number_format($mb, 2) }} MB</div></div>
-          <div class="kv"><div class="k">Uploaded</div><div class="v">{{ optional($file->created_at)->format('Y-m-d H:i') ?? '—' }}</div></div>
+          <div class="kv"><div class="k">Uploaded</div><div class="v">{{ \App\Support\LocalTime::fromUtc($file->created_at)?->format('Y-m-d H:i') ?? '—' }} PHT</div></div>
           <div class="kv"><div class="k">Uploader</div><div class="v">{{ optional($file->uploader)->name ?? '—' }}</div></div>
           <div class="kv"><div class="k">Municipality</div><div class="v">{{ optional($file->municipality)->name ?? 'Provincial / unassigned' }}</div></div>
           <div class="kv"><div class="k">SHA-256</div><div class="v mono" title="{{ $file->sha256 }}">{{ $file->sha256 ? substr($file->sha256, 0, 20).'…' : 'Unavailable' }}</div></div>

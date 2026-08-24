@@ -229,11 +229,12 @@
               </td>
 
               <td data-label="Last login">
+                @php($localLastLogin = \App\Support\LocalTime::fromUtc($account->last_login_at))
                 <div class="user-date-main">
-                  {{ $account->last_login_at?->format('M d, Y') ?? 'Never' }}
+                  {{ $localLastLogin?->format('M d, Y') ?? 'Never' }}
                 </div>
-                @if($account->last_login_at)
-                  <div class="user-date-sub">{{ $account->last_login_at->format('h:i A') }}</div>
+                @if($localLastLogin)
+                  <div class="user-date-sub">{{ $localLastLogin->format('h:i A') }} PHT</div>
                 @endif
               </td>
 

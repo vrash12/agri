@@ -10,7 +10,8 @@
   $recentPlots = $recentPlots ?? collect();
   $municipalityStats = collect($municipalityStats ?? []);
   $provinceOverview = $provinceOverview ?? [];
-  $currentYear = $currentYear ?? now()->year;
+  $localNow = \App\Support\LocalTime::now();
+  $currentYear = $currentYear ?? $localNow->year;
 
   $user = auth()->user();
   $isProvincialUser = $user->isProvincialUser();
@@ -33,7 +34,7 @@
       if (blank($value)) return 'No activity yet';
 
       try {
-          return \Illuminate\Support\Carbon::parse($value)->format($format);
+          return \App\Support\LocalTime::fromUtc($value)?->format($format) ?? 'No activity yet';
       } catch (\Throwable $e) {
           return 'No activity yet';
       }
@@ -49,7 +50,7 @@
         {{ $officeLabel }}
       </div>
       <h1>Operations dashboard</h1>
-      <p>{{ $scopeLabel }} · Updated {{ now()->format('M d, Y · h:i A') }}</p>
+      <p>{{ $scopeLabel }} · Updated {{ $localNow->format('M d, Y · h:i A') }} PHT</p>
     </div>
 
     <div class="ops-actions" aria-label="Quick actions">
@@ -161,7 +162,7 @@
   </section>
 
   <section class="ops-month-strip" aria-label="Current month summary">
-    <div class="ops-month-label"><span>This month</span><strong>{{ now()->format('F Y') }}</strong></div>
+    <div class="ops-month-label"><span>This month</span><strong>{{ $localNow->format('F Y') }}</strong></div>
     <div class="ops-month-stat"><span>Input releases</span><strong>{{ number_format((int) ($stats['monthly_distribution_records'] ?? 0)) }}</strong></div>
     <div class="ops-month-stat"><span>Weight-based volume</span><strong>{{ number_format((float) ($stats['monthly_kgs_distributed'] ?? 0), 2) }} kg</strong></div>
     <div class="ops-month-stat"><span>Vaccinations</span><strong>{{ number_format((int) ($stats['monthly_vaccinations'] ?? 0)) }}</strong></div>
