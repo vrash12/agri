@@ -4,12 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex,nofollow,noarchive">
-  <meta name="referrer" content="no-referrer">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>{{ $farmer->registry_id }} · Interactive land map</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
     :root{--ink:#14231a;--muted:#64736a;--green:#0f6b38;--green-2:#17864a;--soft:#edf7f0;--line:#dbe6de;--gold:#efbb22;--white:#fff;--shadow:0 18px 45px rgba(11,45,25,.12)}
     *{box-sizing:border-box}
@@ -33,7 +32,7 @@
     .parcel-list{display:grid;align-content:start;gap:8px;min-height:0;padding:12px;overflow:auto}.parcel-button{width:100%;display:grid;grid-template-columns:36px 1fr auto;align-items:center;gap:10px;padding:10px;border:1px solid var(--line);border-radius:12px;color:var(--ink);background:#fff;text-align:left;cursor:pointer;transition:.15s ease}.parcel-button:hover,.parcel-button:focus-visible,.parcel-button.is-active{border-color:#7eb692;background:#eef8f1;outline:none;box-shadow:0 7px 18px rgba(18,92,50,.09);transform:translateY(-1px)}.parcel-swatch{display:grid;place-items:center;width:36px;height:36px;border-radius:11px;color:#fff;background:var(--plot-color);font-size:10px;font-weight:900}.parcel-copy{min-width:0}.parcel-copy strong,.parcel-copy span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.parcel-copy strong{font-size:11px}.parcel-copy span{margin-top:3px;color:var(--muted);font-size:9px}.parcel-arrow{color:#799085;font-size:20px}
     .empty-parcels{margin:10px;padding:20px 13px;border:1px dashed #c8d9ce;border-radius:13px;text-align:center;background:#fff}.empty-parcels strong,.empty-parcels span{display:block}.empty-parcels strong{font-size:12px}.empty-parcels span{margin-top:6px;color:var(--muted);font-size:10px;line-height:1.5}
     .map-card{position:relative;min-height:620px;background:#e9eee9}.map-toolbar{position:absolute;z-index:500;top:13px;left:50%;display:flex;gap:7px;transform:translateX(-50%)}.map-action{display:flex;align-items:center;gap:6px;min-height:36px;padding:0 11px;border:1px solid rgba(24,65,39,.16);border-radius:10px;color:#173e27;background:rgba(255,255,255,.96);box-shadow:0 7px 20px rgba(4,24,11,.13);font-size:9px;font-weight:900;cursor:pointer}.map-action:hover{background:#f0f8f2}.map-action svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-    #landMap{width:100%;height:620px}.leaflet-container{font-family:Roboto,system-ui,sans-serif}.leaflet-control-layers,.leaflet-bar{border:0!important;box-shadow:0 8px 22px rgba(4,30,13,.16)!important}.leaflet-control-layers{border-radius:12px!important;font-size:10px}.leaflet-popup-content-wrapper{border-radius:13px;box-shadow:0 12px 32px rgba(4,31,13,.18)}.map-popup strong,.map-popup span{display:block}.map-popup strong{font-size:12px}.map-popup span{margin-top:4px;color:#66766c;font-size:10px}.map-legend{position:absolute;z-index:500;right:12px;bottom:22px;max-width:190px;padding:9px 11px;border:1px solid rgba(24,65,39,.13);border-radius:11px;background:rgba(255,255,255,.95);box-shadow:0 7px 20px rgba(4,24,11,.12);font-size:9px}.map-legend strong{display:block}.map-legend span{display:block;margin-top:3px;color:var(--muted);line-height:1.35}.map-error{position:absolute;z-index:600;inset:50% auto auto 50%;display:none;width:min(360px,calc(100% - 30px));padding:18px;transform:translate(-50%,-50%);border:1px solid #e5c8a1;border-radius:14px;background:#fffaf2;text-align:center}.map-error strong,.map-error span{display:block}.map-error span{margin-top:6px;color:#755f43;font-size:10px;line-height:1.45}
+    #landMap{width:100%;height:620px}.gm-style{font-family:Roboto,system-ui,sans-serif}.map-popup strong,.map-popup span{display:block}.map-popup strong{font-size:12px}.map-popup span{margin-top:4px;color:#66766c;font-size:10px}.map-legend{position:absolute;z-index:5;right:12px;bottom:22px;max-width:210px;padding:9px 11px;border:1px solid rgba(24,65,39,.13);border-radius:11px;background:rgba(255,255,255,.95);box-shadow:0 7px 20px rgba(4,24,11,.12);font-size:9px;pointer-events:none}.map-legend strong{display:block}.map-legend span{display:block;margin-top:3px;color:var(--muted);line-height:1.35}.map-error{position:absolute;z-index:600;inset:50% auto auto 50%;display:none;width:min(380px,calc(100% - 30px));padding:18px;transform:translate(-50%,-50%);border:1px solid #e5c8a1;border-radius:14px;background:#fffaf2;text-align:center;box-shadow:0 14px 35px rgba(69,45,14,.15)}.map-error strong,.map-error span{display:block}.map-error span{margin-top:6px;color:#755f43;font-size:10px;line-height:1.45}
     .footer{display:flex;justify-content:space-between;gap:15px;padding:17px 3px 0;color:#718078;font-size:9px}.footer strong{color:#385443}
     @media(max-width:900px){.hero{grid-template-columns:1fr}.workspace{grid-template-columns:1fr}.parcel-panel{max-height:none;border-right:0;border-bottom:1px solid var(--line)}.parcel-list{grid-template-columns:repeat(2,minmax(0,1fr));max-height:230px}.map-card,#landMap{min-height:58vh;height:58vh}.privacy-note{margin-top:15px}}
     @media(max-width:560px){.shell{padding:10px 10px 25px}.masthead{padding:10px 11px;border-radius:14px}.brand img{width:40px;height:40px}.brand strong{font-size:11px}.brand span{font-size:9px}.verified{padding:7px;font-size:0}.verified i{font-size:10px}.hero-main,.registry-card,.workspace{border-radius:15px}.hero-main{padding:22px 18px}.hero-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.hero-stat{min-width:0}.parcel-list{grid-template-columns:1fr;max-height:210px}.map-toolbar{top:10px;left:10px;right:10px;justify-content:center;transform:none}.map-action{padding:0 9px}.map-action span{display:none}.map-legend{right:9px;bottom:18px}.footer{flex-direction:column}}
@@ -106,95 +105,226 @@
           <button class="map-action" type="button" id="fullscreenMap"><svg viewBox="0 0 24 24"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"></path></svg><span>Fullscreen</span></button>
         </div>
         <div id="landMap" role="application" aria-label="Interactive map showing the farmer's plotted land"></div>
-        <div class="map-legend"><strong>Interactive parcel map</strong><span>Pinch or scroll to zoom. Drag to move. Tap a boundary for details.</span></div>
-        <div class="map-error" id="mapError"><strong>Map could not load</strong><span>Check your internet connection and refresh this page. The parcel list remains available.</span></div>
+        <div class="map-legend"><strong>Google Maps parcel view</strong><span>Satellite imagery is enabled. Pinch or scroll to zoom, drag to move, and tap a boundary for details.</span></div>
+        <div class="map-error" id="mapError"><strong>Google Maps could not load</strong><span id="mapErrorMessage">Check the Maps JavaScript API key, its website restrictions, billing, and your internet connection. The parcel list remains available.</span></div>
       </div>
     </section>
 
     <footer class="footer"><span><strong>Read-only public view.</strong> Parcel changes can only be made by authorized agriculture personnel.</span><span>Generated from the live registry record.</span></footer>
   </main>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     (function () {
       const plots = @json($plots);
-      const fallbackCenter = [15.4755, 120.5963];
+      const mapId = @json($googleMapsMapId ?? '');
+      const fallbackCenter = { lat: 15.4755, lng: 120.5963 };
       const mapError = document.getElementById('mapError');
-      if (typeof window.L === 'undefined') {
-        if (mapError) mapError.style.display = 'block';
-        return;
-      }
-
-      const map = L.map('landMap', { zoomControl: false, preferCanvas: true }).setView(fallbackCenter, 10);
-      L.control.zoom({ position: 'bottomleft' }).addTo(map);
-
-      const street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 20,
-        attribution: '&copy; OpenStreetMap contributors'
-      }).addTo(map);
-      const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        maxZoom: 20,
-        attribution: 'Tiles &copy; Esri'
-      });
-      L.control.layers({ 'Street map': street, 'Satellite': satellite }, null, { position: 'topright' }).addTo(map);
-      L.control.scale({ imperial: false, position: 'bottomright' }).addTo(map);
-
-      const group = L.featureGroup().addTo(map);
-      const layers = [];
       const buttons = Array.from(document.querySelectorAll('[data-plot-index]'));
+
+      function showMapError(message) {
+        const messageElement = document.getElementById('mapErrorMessage');
+        if (messageElement && message) messageElement.textContent = message;
+        if (mapError) mapError.style.display = 'block';
+      }
 
       function escapeHtml(value) {
         return String(value ?? '').replace(/[&<>'"]/g, character => ({
           '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;'
         })[character]);
       }
+
       function normalizePoint(point) {
-        if (Array.isArray(point) && point.length >= 2) return [Number(point[0]), Number(point[1])];
-        if (point && typeof point === 'object') return [Number(point.lat ?? point.latitude), Number(point.lng ?? point.lon ?? point.longitude)];
+        if (Array.isArray(point) && point.length >= 2) {
+          return { lat: Number(point[0]), lng: Number(point[1]) };
+        }
+        if (point && typeof point === 'object') {
+          return {
+            lat: Number(point.lat ?? point.latitude),
+            lng: Number(point.lng ?? point.lon ?? point.longitude)
+          };
+        }
         return null;
       }
-      function selectPlot(index, openPopup) {
-        const layer = layers[index];
-        if (!layer) return;
-        buttons.forEach((button, buttonIndex) => button.classList.toggle('is-active', buttonIndex === index));
-        map.fitBounds(layer.getBounds(), { padding: [45, 45], maxZoom: 19 });
-        if (openPopup !== false) layer.openPopup();
+
+      function safeColor(value) {
+        return /^#[0-9a-f]{6}$/i.test(value || '') ? value : '#16834b';
       }
 
-      plots.forEach((plot, index) => {
-        const ring = (Array.isArray(plot.polygon) ? plot.polygon : [])
-          .map(normalizePoint)
-          .filter(point => point && Number.isFinite(point[0]) && Number.isFinite(point[1]));
-        if (ring.length < 3) return;
-        const color = /^#[0-9a-f]{6}$/i.test(plot.color || '') ? plot.color : '#16834b';
-        const polygon = L.polygon(ring, { color, fillColor: color, weight: 3, opacity: .95, fillOpacity: .24 });
-        const area = plot.area_ha === null ? 'Area not recorded' : Number(plot.area_ha).toFixed(2) + ' hectares';
-        polygon.bindPopup('<div class="map-popup"><strong>' + escapeHtml(plot.name) + '</strong><span>' + escapeHtml(area) + ' · ' + ring.length + ' corner points</span></div>');
-        polygon.on('click', () => buttons.forEach((button, buttonIndex) => button.classList.toggle('is-active', buttonIndex === index)));
-        polygon.addTo(group);
-        layers[index] = polygon;
-      });
+      window.gm_authFailure = function () {
+        showMapError('Google Maps rejected this website key. Confirm billing, enable Maps JavaScript API, and allow https://agritarlac.online/* in the key website restrictions.');
+      };
 
-      function showAllPlots() {
-        buttons.forEach(button => button.classList.remove('is-active'));
-        if (group.getLayers().length) map.fitBounds(group.getBounds(), { padding: [35, 35], maxZoom: 18 });
-        else map.setView(fallbackCenter, 10);
-      }
-      buttons.forEach(button => button.addEventListener('click', () => selectPlot(Number(button.dataset.plotIndex))));
-      document.getElementById('resetMap')?.addEventListener('click', showAllPlots);
-      document.getElementById('locateMe')?.addEventListener('click', () => {
-        if (!navigator.geolocation) return;
-        navigator.geolocation.getCurrentPosition(position => {
-          const point = [position.coords.latitude, position.coords.longitude];
-          L.circleMarker(point, { radius: 8, color: '#155eef', fillColor: '#fff', fillOpacity: 1, weight: 4 }).addTo(map).bindPopup('Your current location').openPopup();
-          map.setView(point, Math.max(map.getZoom(), 15));
+      window.initPublicLandMap = function () {
+        if (!window.google?.maps) {
+          showMapError('Google Maps JavaScript did not become available. Refresh the page or check the API configuration.');
+          return;
+        }
+
+        const mapOptions = {
+          center: fallbackCenter,
+          zoom: 10,
+          mapTypeId: 'hybrid',
+          mapTypeControl: true,
+          mapTypeControlOptions: {
+            mapTypeIds: ['roadmap', 'satellite', 'hybrid'],
+            position: google.maps.ControlPosition.TOP_RIGHT,
+            style: google.maps.MapTypeControlStyle.DROPDOWN_MENU
+          },
+          zoomControl: true,
+          zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_CENTER },
+          streetViewControl: false,
+          fullscreenControl: false,
+          gestureHandling: 'greedy',
+          clickableIcons: false
+        };
+        if (mapId) mapOptions.mapId = mapId;
+
+        const map = new google.maps.Map(document.getElementById('landMap'), mapOptions);
+        const allBounds = new google.maps.LatLngBounds();
+        const infoWindow = new google.maps.InfoWindow();
+        const layers = [];
+        let locationMarker = null;
+
+        function setActiveButton(index) {
+          buttons.forEach((button, buttonIndex) => {
+            button.classList.toggle('is-active', buttonIndex === index);
+          });
+        }
+
+        function limitZoom(maxZoom) {
+          google.maps.event.addListenerOnce(map, 'idle', function () {
+            if ((map.getZoom() || 0) > maxZoom) map.setZoom(maxZoom);
+          });
+        }
+
+        function focusLayer(index, openInfo) {
+          const layer = layers[index];
+          if (!layer) return;
+          setActiveButton(index);
+          map.fitBounds(layer.bounds, 55);
+          limitZoom(19);
+
+          if (openInfo !== false) {
+            infoWindow.setContent(layer.content);
+            infoWindow.setPosition(layer.center);
+            infoWindow.open({ map });
+          }
+        }
+
+        plots.forEach((plot, index) => {
+          const ring = (Array.isArray(plot.polygon) ? plot.polygon : [])
+            .map(normalizePoint)
+            .filter(point => point && Number.isFinite(point.lat) && Number.isFinite(point.lng));
+          if (ring.length < 3) return;
+
+          const color = safeColor(plot.color);
+          const bounds = new google.maps.LatLngBounds();
+          ring.forEach(point => {
+            bounds.extend(point);
+            allBounds.extend(point);
+          });
+
+          const polygon = new google.maps.Polygon({
+            paths: ring,
+            strokeColor: color,
+            strokeOpacity: .96,
+            strokeWeight: 3,
+            fillColor: color,
+            fillOpacity: .25,
+            map,
+            zIndex: index + 1
+          });
+          const area = plot.area_ha === null
+            ? 'Area not recorded'
+            : Number(plot.area_ha).toFixed(2) + ' hectares';
+          const content = '<div class="map-popup"><strong>' + escapeHtml(plot.name) + '</strong><span>' +
+            escapeHtml(area) + ' · ' + ring.length + ' corner points</span></div>';
+
+          polygon.addListener('mouseover', function () {
+            polygon.setOptions({ fillOpacity: .38, strokeWeight: 4 });
+          });
+          polygon.addListener('mouseout', function () {
+            polygon.setOptions({ fillOpacity: .25, strokeWeight: 3 });
+          });
+          polygon.addListener('click', function (event) {
+            setActiveButton(index);
+            infoWindow.setContent(content);
+            infoWindow.setPosition(event.latLng || bounds.getCenter());
+            infoWindow.open({ map });
+          });
+
+          layers[index] = {
+            polygon,
+            bounds,
+            center: bounds.getCenter(),
+            content
+          };
         });
-      });
-      document.getElementById('fullscreenMap')?.addEventListener('click', () => document.getElementById('mapCard')?.requestFullscreen?.());
-      document.addEventListener('fullscreenchange', () => setTimeout(() => map.invalidateSize(), 120));
-      showAllPlots();
-      setTimeout(() => map.invalidateSize(), 100);
+
+        function showAllPlots() {
+          setActiveButton(-1);
+          infoWindow.close();
+          if (!allBounds.isEmpty()) {
+            map.fitBounds(allBounds, 45);
+            limitZoom(18);
+          } else {
+            map.setCenter(fallbackCenter);
+            map.setZoom(10);
+          }
+        }
+
+        buttons.forEach(button => {
+          button.addEventListener('click', () => focusLayer(Number(button.dataset.plotIndex), true));
+        });
+        document.getElementById('resetMap')?.addEventListener('click', showAllPlots);
+        document.getElementById('locateMe')?.addEventListener('click', () => {
+          if (!navigator.geolocation) {
+            showMapError('Location access is not available in this browser.');
+            return;
+          }
+
+          navigator.geolocation.getCurrentPosition(position => {
+            const point = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            };
+            if (locationMarker) locationMarker.setMap(null);
+            locationMarker = new google.maps.Marker({
+              map,
+              position: point,
+              title: 'Your current location'
+            });
+            infoWindow.setContent('<div class="map-popup"><strong>Your current location</strong><span>Reported by this device</span></div>');
+            infoWindow.open({ map, anchor: locationMarker });
+            map.setCenter(point);
+            map.setZoom(Math.max(map.getZoom() || 0, 15));
+          }, () => {
+            showMapError('Location permission was denied or the device could not determine your position.');
+          }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
+        });
+        document.getElementById('fullscreenMap')?.addEventListener('click', () => {
+          document.getElementById('mapCard')?.requestFullscreen?.();
+        });
+        document.addEventListener('fullscreenchange', () => {
+          setTimeout(() => google.maps.event.trigger(map, 'resize'), 120);
+        });
+
+        showAllPlots();
+      };
     })();
   </script>
+  @if(filled($googleMapsApiKey ?? null))
+    <script
+      src="https://maps.googleapis.com/maps/api/js?key={{ urlencode($googleMapsApiKey) }}&callback=initPublicLandMap&v=weekly&loading=async"
+      async
+      defer
+      onerror="document.getElementById('mapError').style.display='block'"
+    ></script>
+  @else
+    <script>
+      document.getElementById('mapError').style.display = 'block';
+      document.getElementById('mapErrorMessage').textContent = 'The Google Maps browser API key is not configured on this server.';
+    </script>
+  @endif
 </body>
 </html>

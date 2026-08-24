@@ -368,10 +368,18 @@ class FarmerController extends Controller
             })
             ->values();
 
+        $googleMapsApiKey = trim((string) config('services.google_maps.key'));
+        $googleMapsMapId = trim((string) config('services.google_maps.map_id'));
+
         return response()
-            ->view('farmers.public-land', compact('farmer', 'plots'))
+            ->view('farmers.public-land', compact(
+                'farmer',
+                'plots',
+                'googleMapsApiKey',
+                'googleMapsMapId'
+            ))
             ->header('Cache-Control', 'private, no-store, max-age=0')
-            ->header('Referrer-Policy', 'no-referrer')
+            ->header('Referrer-Policy', 'strict-origin-when-cross-origin')
             ->header('X-Robots-Tag', 'noindex, nofollow, noarchive')
             ->header('X-Content-Type-Options', 'nosniff');
     }

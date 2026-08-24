@@ -68,6 +68,11 @@ class PublicFarmerLandMapTest extends TestCase
 
     public function test_qr_land_map_is_public_interactive_and_privacy_limited(): void
     {
+        config([
+            'services.google_maps.key' => 'test-browser-key',
+            'services.google_maps.map_id' => 'test-map-id',
+        ]);
+
         $this->assertSame(40, strlen($this->farmer->public_map_token));
         $this->assertArrayNotHasKey(
             'public_map_token',
@@ -79,10 +84,14 @@ class PublicFarmerLandMapTest extends TestCase
         ]))
             ->assertOk()
             ->assertHeader('X-Robots-Tag', 'noindex, nofollow, noarchive')
+            ->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
             ->assertSee('Interactive parcel map')
             ->assertSee('North Rice Parcel')
             ->assertSee('id="landMap"', false)
-            ->assertSee('Satellite')
+            ->assertSee('Google Maps parcel view')
+            ->assertSee('maps.googleapis.com/maps/api/js', false)
+            ->assertSee('test-browser-key', false)
+            ->assertDontSee('unpkg.com/leaflet', false)
             ->assertDontSee('09171234567')
             ->assertDontSee($this->farmer->ffrs);
     }

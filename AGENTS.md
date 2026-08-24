@@ -30,7 +30,7 @@ The application is multi-municipality. Operational records belong to one `munici
 - Google Maps JavaScript API and a Google Map ID for the authenticated plotting workspace
 - Google Maps Static API through an authorized same-origin server proxy for satellite PNG exports
 - Nominatim/OpenStreetMap for server-side geocoding through `/api/geocode`
-- Leaflet and OpenStreetMap tiles for the public QR-linked parcel map
+- Google Maps JavaScript API for the public QR-linked parcel map
 - Open-Meteo for cached municipality-level weather forecasts and rule-based agricultural guidance
 - PAGASA website links for official weather, tropical cyclone, flood, and agri-weather bulletins
 - Chart.js for dashboards and module charts
@@ -167,7 +167,7 @@ Route: `GET /land/{40-character-token}` (`farmers.public-land`), throttled to 60
 
 Each farmer receives a random `public_map_token` on creation; the migration backfills existing farmers. The token is hidden from normal model serialization and is embedded only in the generated QR URL.
 
-The public page uses Leaflet/OpenStreetMap and provides a read-only interactive map with pan, zoom, layer switching, parcel selection, parcel area, declared area, registry ID, farmer name, and location. It deliberately excludes contact details, birth date, account data, distribution records, and other internal data. Responses disable indexing, referrers, caching, and MIME sniffing.
+The public page uses Google Maps JavaScript API with hybrid satellite imagery and provides a read-only interactive map with pan, zoom, map-type switching, parcel selection, parcel area, declared area, registry ID, farmer name, and location. It deliberately excludes contact details, birth date, account data, distribution records, and other internal data. Responses disable indexing, caching, and MIME sniffing. The referrer policy is `strict-origin-when-cross-origin` so Google receives only the application origin needed to validate the website-restricted browser key; the random public token and path are not sent cross-origin.
 
 Changing or exposing this page requires a privacy review. Do not replace the token with a sequential farmer ID.
 
@@ -477,7 +477,7 @@ php artisan config:cache
 
 The weather module uses Open-Meteo and does not require an API key. Optional provider URL and advisory thresholds are defined in `config/weather.php`. Keep the cache enabled in production to limit outbound requests and improve responsiveness. Atomic cache locks are also part of request and record synchronization; do not set `CACHE_DRIVER=array` outside isolated tests.
 
-Google Cloud must have Maps JavaScript API and Maps Static API enabled as required by the plotting/export UI, billing enabled, and an HTTP referrer restriction matching the deployed domain.
+Google Cloud must have Maps JavaScript API and Maps Static API enabled as required by the authenticated plotting, public QR map, and export UI, billing enabled, and an HTTP referrer restriction matching the deployed domain (for production, include `https://agritarlac.online/*`). The browser key is necessarily visible to public-map visitors, so it must be restricted to approved websites and only the required browser APIs.
 
 Farmer photos and backup files live on the private `local` disk under `storage/app`; they are delivered through authorized controller routes. They must not be moved directly into `public/`. Ensure `storage` and `bootstrap/cache` are writable. The normal `public/storage` symlink is not required for these protected files.
 
