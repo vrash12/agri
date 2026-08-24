@@ -16,7 +16,10 @@
       try { return \Illuminate\Support\Carbon::parse($value)->format($format); }
       catch (\Throwable $e) { return 'Not recorded'; }
   };
-  $canManageOperations = auth()->user()->canManageOperationalData();
+  $canManageOperations = auth()->user()->can(
+      'create',
+      \App\Models\AntiRabiesVaccination::class
+  );
 @endphp
 
 @section('content')
@@ -33,6 +36,7 @@
   </header>
 
   @if(session('success'))<div class="module-alert">{{ session('success') }}</div>@endif
+  @if(session('error'))<div class="module-alert module-alert-error">{{ session('error') }}</div>@endif
 
   <section class="module-kpis animal-health-kpis" aria-label="Animal health summary">
     <article class="module-kpi">

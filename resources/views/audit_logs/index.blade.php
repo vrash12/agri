@@ -24,6 +24,7 @@
   $roleLabels = [
       'super_admin' => 'Super Admin',
       'provincial_staff' => 'Provincial Staff',
+      'provincial_vet' => 'Provincial Veterinary Office',
       'municipal_head' => 'Head Agriculturist',
       'municipal_staff' => 'Municipal Staff',
   ];

@@ -65,6 +65,7 @@ class Kernel extends HttpKernel
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'head_admin' => \App\Http\Middleware\EnsureHeadAdmin::class,
         'idle' => \App\Http\Middleware\EnforceIdleSession::class,
+        'provincial-vet-scope' => \App\Http\Middleware\RestrictProvincialVeterinaryAccess::class,
         'synchronized' => \App\Http\Middleware\SynchronizeMutatingRequests::class,
 
     ];

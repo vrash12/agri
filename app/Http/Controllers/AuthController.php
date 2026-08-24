@@ -213,9 +213,8 @@ class AuthController extends Controller
         | Redirect based on role
         |--------------------------------------------------------------------------
         |
-        | All users currently use the same dashboard route. The dashboard
-        | controller should filter its statistics and records based on the
-        | logged-in user's municipality and role.
+        | Agriculture roles use the dashboard. Provincial Veterinary Office
+        | accounts enter the only module authorized for that role.
         |
         */
 
@@ -226,6 +225,10 @@ class AuthController extends Controller
 
             User::ROLE_PROVINCIAL_STAFF => redirect()->intended(
                 route('dashboard')
+            ),
+
+            User::ROLE_PROVINCIAL_VET => redirect()->route(
+                'anti-rabies-vaccinations.index'
             ),
 
             User::ROLE_MUNICIPAL_HEAD => redirect()->intended(

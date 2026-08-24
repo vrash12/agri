@@ -13,6 +13,13 @@ trait AuthorizesMunicipalityRecords
             return false;
         }
 
+        if (
+            $user->isProvincialVeterinaryOffice()
+            && ! $this->allowsProvincialVeterinaryOffice()
+        ) {
+            return false;
+        }
+
         return null;
     }
 
@@ -23,13 +30,13 @@ trait AuthorizesMunicipalityRecords
 
     public function create(User $user): bool
     {
-        return $user->canManageOperationalData()
+        return $this->canManageModule($user)
             && $this->hasUsableScope($user);
     }
 
     public function import(User $user): bool
     {
-        return $user->canManageOperationalData()
+        return $this->canManageModule($user)
             && $this->hasUsableScope($user);
     }
 
@@ -49,13 +56,13 @@ trait AuthorizesMunicipalityRecords
 
     public function update(User $user, Model $record): bool
     {
-        return $user->canManageOperationalData()
+        return $this->canManageModule($user)
             && $this->view($user, $record);
     }
 
     public function delete(User $user, Model $record): bool
     {
-        return $user->canManageOperationalData()
+        return $this->canManageModule($user)
             && $this->view($user, $record);
     }
 
@@ -70,5 +77,17 @@ trait AuthorizesMunicipalityRecords
     {
         return $user->canAccessAllMunicipalities()
             || $user->municipality_id !== null;
+    }
+
+    private function canManageModule(User $user): bool
+    {
+        return $user->canManageOperationalData()
+            || ($user->isProvincialVeterinaryOffice()
+                && $this->allowsProvincialVeterinaryOffice());
+    }
+
+    protected function allowsProvincialVeterinaryOffice(): bool
+    {
+        return false;
     }
 }

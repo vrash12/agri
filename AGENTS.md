@@ -16,7 +16,7 @@ This is a Laravel-based Agriculture Information System for the Provincial Agricu
 - user and role management;
 - province-wide dashboards and audit trails.
 
-The application is multi-municipality. Operational records belong to one `municipality_id`, and municipal users must never see or mutate another municipality's records. Provincial users can work across municipalities, while the super administrator has province-wide read-only operational oversight and manages accounts/security.
+The application is multi-municipality. Operational records belong to one `municipality_id`, and municipal users must never see or mutate another municipality's records. Provincial agriculture staff can work across municipalities, Provincial Veterinary Office accounts can work across municipalities only inside Animal Health, and the super administrator has province-wide read-only operational oversight and manages accounts/security.
 
 ## 2. Technology and important dependencies
 
@@ -46,6 +46,7 @@ The only supported roles are constants in `App\Models\User`:
 | --- | --- | --- | --- | --- | --- |
 | `super_admin` | All municipalities | No; read-only oversight | All non-protected account operations; own/super-admin protections apply | No access | Full access and CSV export |
 | `provincial_staff` | All municipalities | Yes; must choose the municipality for new records | No | All municipalities, subject to policy | No |
+| `provincial_vet` | All municipalities, Animal Health only | Yes, Animal Health only; must choose the municipality for new records | No | No access | No |
 | `municipal_head` | Assigned municipality only | Yes | May manage only `municipal_staff` in the same municipality | Assigned municipality only | No |
 | `municipal_staff` | Assigned municipality only | Yes | No | Assigned municipality only | No |
 
@@ -57,7 +58,7 @@ All accounts must be active. Municipal roles also require an existing, active mu
 2. Laravel attempts session authentication and regenerates the session ID after success.
 3. The controller rejects unknown roles, inactive users, municipal users without a municipality, and users assigned to a missing/inactive municipality.
 4. Successful and failed/blocked sign-ins are written to the audit trail when the `audit_logs` table is available.
-5. `last_login_at` is updated, and every role is redirected to the municipality-aware dashboard.
+5. `last_login_at` is updated. Agriculture roles are redirected to the municipality-aware dashboard, while `provincial_vet` goes directly to Animal Health.
 6. Logout is audited, the session is invalidated, and the CSRF token is regenerated.
 7. Authenticated sessions have a 15-minute idle limit. Browser activity is shared across tabs and sends a throttled heartbeat only while the user is active.
 8. The interface warns during the final minute, then automatically signs the account out. The server independently rejects stale requests, invalidates the session, and records a `session_timeout` audit event.
@@ -76,6 +77,7 @@ The primary tenancy boundary is the numeric foreign key `municipality_id`, not t
 - Route-model-bound records must be authorized before view, edit, update, delete, download, preview, stream, save, assign, or export.
 - Farm plots inherit municipality ownership through `farm_plots.farmer_id -> farmers.municipality_id`.
 - Super admins may view operational records across the province but `User::canManageOperationalData()` deliberately prevents operational creates, imports, updates, and deletes.
+- Provincial Veterinary Office accounts have province-wide municipality scope only for `AntiRabiesVaccination`. `RestrictProvincialVeterinaryAccess` blocks every other authenticated application module, while the shared policy concern denies the role for all other municipality-owned models.
 - Super admins must not regain Backup Folder access. `BackupFilePolicy` explicitly blocks it even though super admins have province-wide scope elsewhere.
 - Never rely on hidden buttons or navigation checks to enforce any of these rules.
 
@@ -213,7 +215,7 @@ Functions:
 - filter by municipality, service type, species, owner/animal/product/diagnosis text, barangay, and optional year;
 - report total services, animals served, owners, animal profiles/groups, service mix, species coverage, latest service, monthly/year activity, barangays, breeds, and owner-age charts.
 
-The owner lookup uses write-scope resolution because it populates an entry form; provincial staff must select a municipality before using it. All records retain the same municipality policies, optimistic record-version checks, and mutation locks as the original anti-rabies module.
+The owner lookup uses write-scope resolution because it populates an entry form; province-wide agriculture and veterinary users must select a municipality before using it. `provincial_vet` accounts can list, create, update, and delete Animal Health records across all municipalities but cannot open any other authenticated module. All records retain the same municipality policies, optimistic record-version checks, and mutation locks as the original anti-rabies module.
 
 ### 5.7 Farmers' cooperatives
 
@@ -282,6 +284,7 @@ Functions:
 - hash every new or changed password with Laravel `Hash`;
 - require at least eight characters and confirmation in account forms;
 - require an active municipality for municipal roles and clear `municipality_id` for provincial roles;
+- let super admins create `provincial_vet` accounts without a municipality; these accounts are restricted to province-wide Animal Health routes and policies;
 - permit only one active municipal head per municipality;
 - prevent self-deletion and deletion of a super-admin account through the controller;
 - let municipal heads manage only municipal-staff accounts in their municipality;
@@ -398,6 +401,7 @@ Distribution records intentionally keep a farmer snapshot in addition to `farmer
 - `app/Support/ConcurrentWrite.php`: record versioning, row locks, retried transactions, and stale-write rejection
 - `app/Http/Middleware/SynchronizeMutatingRequests.php`: per-account and per-record/cache mutexes for state-changing requests
 - `app/Http/Middleware/EnforceIdleSession.php`: server-side 15-minute inactivity enforcement and timeout auditing
+- `app/Http/Middleware/RestrictProvincialVeterinaryAccess.php`: route-level Animal Health-only boundary for `provincial_vet`
 - `app/Observers/AuditModelObserver.php`: automatic model change logging
 - `app/Providers/AuthServiceProvider.php`: model/policy registration
 - `app/Providers/AppServiceProvider.php`: audit observers and custom pagination views
@@ -410,7 +414,7 @@ Distribution records intentionally keep a farmer snapshot in addition to `farmer
 
 `app/Models/FarmerPlot.php` is a duplicate legacy model for the same table. Active code uses `App\Models\FarmPlot`. Do not introduce new references to `FarmerPlot`; remove it only after confirming no external code depends on it.
 
-`App\Http\Middleware\EnsureHeadAdmin` checks the obsolete `head_admin` role and is not used by current routes. Current authorization must go through policies and the four supported `User` role constants.
+`App\Http\Middleware\EnsureHeadAdmin` checks the obsolete `head_admin` role and is not used by current routes. Current authorization must go through policies and the five supported `User` role constants.
 
 ## 9. Database and migration warning
 
@@ -546,6 +550,7 @@ Important feature suites include:
 - `OperationsDashboardTest`
 - `PublicFarmerLandMapTest`
 - `SuperAdminAuditTrailTest`
+- `ProvincialVeterinaryAccessTest`
 - `ConcurrentWriteTest` (uses its own in-memory SQLite connection)
 
 The current `phpunit.xml` does not configure a separate test database, and feature tests use `DatabaseTransactions`. Never run the suite while `.env` points to production. Configure a dedicated disposable test database first. Add a regression test whenever changing permissions, municipality scoping, route-model binding, public-map privacy, imports, exports, file access, or audit redaction.

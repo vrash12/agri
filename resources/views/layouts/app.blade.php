@@ -970,6 +970,7 @@
       $roleLabels = [
         'super_admin' => 'Super Admin',
         'provincial_staff' => 'Provincial Staff',
+        'provincial_vet' => 'Provincial Veterinary Office',
         'municipal_head' => 'Head Agriculturist',
         'municipal_staff' => 'Municipal Staff',
         'head_admin' => 'Head Admin',
@@ -977,12 +978,14 @@
       ];
 
       $roleLabel = $roleLabels[$role] ?? ucwords(str_replace('_', ' ', $role));
-      $isProvincialUser = in_array($role, ['super_admin', 'provincial_staff'], true);
+      $isProvincialUser = $user->isProvincialUser();
       $canManageUsers = $user->canManageMunicipalStaff();
       $municipalityName = optional($user->municipality)->name;
-      $officeLabel = $isProvincialUser
-          ? 'Provincial Agriculture Office'
-          : (($municipalityName ?: 'Municipality not assigned') . ', Tarlac');
+      $officeLabel = $user->isProvincialVeterinaryOffice()
+          ? 'Provincial Veterinary Office'
+          : ($isProvincialUser
+              ? 'Provincial Agriculture Office'
+              : (($municipalityName ?: 'Municipality not assigned') . ', Tarlac'));
 
       $initials = collect(explode(' ', trim($user->name ?? 'User')))
           ->filter()
@@ -1065,7 +1068,17 @@
         ],
       ];
 
-      if (! $user->isSuperAdmin()) {
+      if ($user->isProvincialVeterinaryOffice()) {
+        $navigationGroups['operations']['label'] = 'Veterinary Operations';
+        $navigationGroups['operations']['items'] = collect(
+          $navigationGroups['operations']['items']
+        )->where('route', 'anti-rabies-vaccinations.index')->values()->all();
+      }
+
+      if (
+        ! $user->isSuperAdmin()
+        && ! $user->isProvincialVeterinaryOffice()
+      ) {
         $navigationGroups['operations']['items'][] = [
           'label' => 'Backup Folder',
           'description' => 'Protected files and exports',

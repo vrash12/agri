@@ -7,6 +7,7 @@
   $roleLabels = [
     \App\Models\User::ROLE_SUPER_ADMIN => 'Super Admin',
     \App\Models\User::ROLE_PROVINCIAL_STAFF => 'Provincial Staff',
+    \App\Models\User::ROLE_PROVINCIAL_VET => 'Provincial Veterinary Office',
     \App\Models\User::ROLE_MUNICIPAL_HEAD => 'Head Agriculturist',
     \App\Models\User::ROLE_MUNICIPAL_STAFF => 'Municipal Staff',
   ];
@@ -14,6 +15,7 @@
   $roleClasses = [
     \App\Models\User::ROLE_SUPER_ADMIN => 'is-purple',
     \App\Models\User::ROLE_PROVINCIAL_STAFF => 'is-blue',
+    \App\Models\User::ROLE_PROVINCIAL_VET => 'is-green',
     \App\Models\User::ROLE_MUNICIPAL_HEAD => 'is-yellow',
     \App\Models\User::ROLE_MUNICIPAL_STAFF => 'is-green',
   ];
@@ -31,8 +33,9 @@
         @if($isMunicipalHeadManager)
           Manage municipal-staff accounts assigned to your municipality, including account status and login access.
         @else
-          Manage provincial accounts, head agriculturists, municipal staff,
-          municipality assignments, account status, and login access.
+          Manage provincial agriculture and veterinary accounts, head
+          agriculturists, municipal staff, municipality assignments, account
+          status, and login access.
         @endif
       </p>
     </div>
@@ -60,7 +63,7 @@
       <article class="user-stat-card is-blue">
         <span>Provincial Users</span>
         <strong>{{ number_format($stats['provincial'] ?? 0) }}</strong>
-        <small>Province-wide system access</small>
+        <small>Provincial accounts, including module-limited offices</small>
       </article>
 
       <article class="user-stat-card is-yellow">
@@ -213,8 +216,10 @@
 
               <td data-label="Office assignment">
                 @if($account->isProvincialUser())
-                  <div class="user-office-name">Provincial Agriculture Office</div>
-                  <div class="user-office-sub">All municipalities</div>
+                  <div class="user-office-name">{{ $account->office_label }}</div>
+                  <div class="user-office-sub">
+                    {{ $account->isProvincialVeterinaryOffice() ? 'Animal Health only · All municipalities' : 'All municipalities' }}
+                  </div>
                 @else
                   <div class="user-office-name">{{ $account->municipality?->name ?? 'Not assigned' }}</div>
                   <div class="user-office-sub">Municipal Agriculture Office</div>

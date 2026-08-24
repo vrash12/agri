@@ -13,7 +13,7 @@
       <p>
         {{ $isMunicipalHeadManager
             ? 'Add a municipal-staff account for your municipality.'
-            : 'Add provincial staff, a municipal head agriculturist, or municipal staff and assign the correct office scope.' }}
+            : 'Add provincial agriculture or veterinary staff, a municipal head agriculturist, or municipal staff and assign the correct office scope.' }}
       </p>
     </div>
     <a class="btn btn-soft" href="{{ route('admins.index') }}">Back to Users</a>

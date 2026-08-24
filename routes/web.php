@@ -23,9 +23,13 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 Route::get('/', function () {
-    return auth()->check()
-        ? redirect()->route('dashboard')
-        : redirect()->route('login');
+    if (! auth()->check()) {
+        return redirect()->route('login');
+    }
+
+    return auth()->user()->isProvincialVeterinaryOffice()
+        ? redirect()->route('anti-rabies-vaccinations.index')
+        : redirect()->route('dashboard');
 });
 
 /*
@@ -74,7 +78,12 @@ Route::get('/land/{token}', [FarmerController::class, 'publicLand'])
 | AUTHENTICATED ROUTES
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'idle', 'synchronized'])->group(function () {
+Route::middleware([
+    'auth',
+    'idle',
+    'provincial-vet-scope',
+    'synchronized',
+])->group(function () {
     /*
     |--------------------------------------------------------------------------
     | DASHBOARD

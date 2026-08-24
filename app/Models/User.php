@@ -23,6 +23,8 @@ class User extends Authenticatable
 
     public const ROLE_PROVINCIAL_STAFF = 'provincial_staff';
 
+    public const ROLE_PROVINCIAL_VET = 'provincial_vet';
+
     public const ROLE_MUNICIPAL_HEAD = 'municipal_head';
 
     public const ROLE_MUNICIPAL_STAFF = 'municipal_staff';
@@ -33,6 +35,7 @@ class User extends Authenticatable
     public const ROLES = [
         self::ROLE_SUPER_ADMIN,
         self::ROLE_PROVINCIAL_STAFF,
+        self::ROLE_PROVINCIAL_VET,
         self::ROLE_MUNICIPAL_HEAD,
         self::ROLE_MUNICIPAL_STAFF,
     ];
@@ -45,6 +48,7 @@ class User extends Authenticatable
     public const PROVINCIAL_ROLES = [
         self::ROLE_SUPER_ADMIN,
         self::ROLE_PROVINCIAL_STAFF,
+        self::ROLE_PROVINCIAL_VET,
     ];
 
     /**
@@ -169,7 +173,15 @@ class User extends Authenticatable
     }
 
     /**
-     * Determine whether the user belongs to the Provincial Agriculture Office.
+     * Determine whether the user belongs to the Provincial Veterinary Office.
+     */
+    public function isProvincialVeterinaryOffice(): bool
+    {
+        return $this->hasRole(self::ROLE_PROVINCIAL_VET);
+    }
+
+    /**
+     * Determine whether the user has a province-wide office assignment.
      */
     public function isProvincialUser(): bool
     {
@@ -259,8 +271,11 @@ class User extends Authenticatable
     public function canManageOperationalData(): bool
     {
         return $this->isActive()
-            && $this->hasAnyRole(self::ROLES)
-            && ! $this->isSuperAdmin();
+            && $this->hasAnyRole([
+                self::ROLE_PROVINCIAL_STAFF,
+                self::ROLE_MUNICIPAL_HEAD,
+                self::ROLE_MUNICIPAL_STAFF,
+            ]);
     }
 
     /**
@@ -287,6 +302,7 @@ class User extends Authenticatable
         return match ($this->role) {
             self::ROLE_SUPER_ADMIN => 'Super Admin',
             self::ROLE_PROVINCIAL_STAFF => 'Provincial Staff',
+            self::ROLE_PROVINCIAL_VET => 'Provincial Veterinary Office',
             self::ROLE_MUNICIPAL_HEAD => 'Head Agriculturist',
             self::ROLE_MUNICIPAL_STAFF => 'Municipal Staff',
             default => 'Unknown Role',
@@ -298,6 +314,10 @@ class User extends Authenticatable
      */
     public function getOfficeLabelAttribute(): string
     {
+        if ($this->isProvincialVeterinaryOffice()) {
+            return 'Provincial Veterinary Office';
+        }
+
         if ($this->isProvincialUser()) {
             return 'Provincial Agriculture Office';
         }

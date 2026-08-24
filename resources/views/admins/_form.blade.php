@@ -120,7 +120,7 @@
               </option>
             @endforeach
           </select>
-          <small>Required for head agriculturists and municipal staff.</small>
+          <small>Required for head agriculturists and municipal staff. Provincial Veterinary Office accounts use province-wide Animal Health access.</small>
         @endif
       </div>
 

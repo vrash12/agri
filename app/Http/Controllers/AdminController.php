@@ -67,9 +67,10 @@ class AdminController extends Controller
             ->orderByRaw("CASE role
                 WHEN 'super_admin' THEN 1
                 WHEN 'provincial_staff' THEN 2
-                WHEN 'municipal_head' THEN 3
-                WHEN 'municipal_staff' THEN 4
-                ELSE 5
+                WHEN 'provincial_vet' THEN 3
+                WHEN 'municipal_head' THEN 4
+                WHEN 'municipal_staff' THEN 5
+                ELSE 6
             END")
             ->orderBy('name')
             ->paginate($perPage)
@@ -257,6 +258,7 @@ class AdminController extends Controller
             ? [User::ROLE_SUPER_ADMIN]
             : [
                 User::ROLE_PROVINCIAL_STAFF,
+                User::ROLE_PROVINCIAL_VET,
                 User::ROLE_MUNICIPAL_HEAD,
                 User::ROLE_MUNICIPAL_STAFF,
             ]);
@@ -364,6 +366,7 @@ class AdminController extends Controller
 
         $roles = [
             User::ROLE_PROVINCIAL_STAFF => 'Provincial Staff',
+            User::ROLE_PROVINCIAL_VET => 'Provincial Veterinary Office',
             User::ROLE_MUNICIPAL_HEAD => 'Head Agriculturist',
             User::ROLE_MUNICIPAL_STAFF => 'Municipal Staff',
         ];
