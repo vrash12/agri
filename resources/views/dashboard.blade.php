@@ -148,14 +148,14 @@
 
     <article class="ops-kpi">
       <div class="ops-kpi-top">
-        <span class="ops-kpi-label">Anti-rabies vaccinations</span>
+        <span class="ops-kpi-label">Animal health services</span>
         <span class="ops-icon ops-icon-red">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8l2 4v10a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V8l2-4Z"></path><path d="M9 4V2h6v2M9 11h6M12 8v6"></path></svg>
         </span>
       </div>
       <strong class="ops-kpi-value">{{ number_format((int) ($stats['total_vaccinations'] ?? 0)) }}</strong>
       <div class="ops-kpi-foot">
-        <span>{{ number_format((int) ($stats['monthly_vaccinations'] ?? 0)) }} this month</span>
+        <span>{{ number_format((int) ($stats['total_animals_served'] ?? 0)) }} animals served</span>
         <a href="{{ route('anti-rabies-vaccinations.index') }}">View records</a>
       </div>
     </article>
@@ -180,7 +180,7 @@
     <div class="ops-month-stat"><span>Input releases</span><strong>{{ number_format((int) ($stats['monthly_distribution_records'] ?? 0)) }}</strong></div>
     <div class="ops-month-stat"><span>Weight-based volume</span><strong>{{ number_format((float) ($stats['monthly_kgs_distributed'] ?? 0), 2) }} kg</strong></div>
     <div class="ops-month-stat"><span>Fisheries releases</span><strong>{{ number_format((int) ($stats['monthly_fisheries_releases'] ?? 0)) }}</strong></div>
-    <div class="ops-month-stat"><span>Vaccinations</span><strong>{{ number_format((int) ($stats['monthly_vaccinations'] ?? 0)) }}</strong></div>
+    <div class="ops-month-stat"><span>Animal health</span><strong>{{ number_format((int) ($stats['monthly_vaccinations'] ?? 0)) }}</strong></div>
     <div class="ops-month-stat"><span>Cooperatives</span><strong>{{ number_format((int) ($stats['total_cooperatives'] ?? 0)) }}</strong></div>
     @unless($user->isSuperAdmin())<div class="ops-month-stat"><span>Backup files</span><strong>{{ number_format((int) ($stats['total_backup_files'] ?? 0)) }}</strong></div>@endunless
   </section>
@@ -324,8 +324,8 @@
                     <a class="ops-cell-link" href="{{ route('machinery-inventory.index', ['municipality_id' => $municipality['id']]) }}">Open inventory</a>
                   </td>
                   <td>
-                    <strong class="ops-cell-value">{{ number_format($municipality['vaccinations']) }}</strong>
-                    <small class="ops-cell-note">Vaccinations recorded</small>
+                    <strong class="ops-cell-value">{{ number_format($municipality['animals_served']) }} animals</strong>
+                    <small class="ops-cell-note">{{ number_format($municipality['vaccinations']) }} health services</small>
                   </td>
                   <td>
                     <strong class="ops-cell-value">{{ number_format($municipality['municipal_heads']) }} head · {{ number_format($municipality['municipal_staff']) }} staff</strong>
@@ -399,21 +399,21 @@
 
       <section class="ops-panel">
         <div class="ops-panel-header">
-          <div><span class="ops-panel-kicker">Animal health</span><h2>Latest vaccination records</h2><p>Recent anti-rabies services recorded by the office.</p></div>
+          <div><span class="ops-panel-kicker">Animal health</span><h2>Latest animal-health services</h2><p>Recent vaccination, deworming, vitamins, and treatment records.</p></div>
           <a class="ops-text-link" href="{{ route('anti-rabies-vaccinations.index') }}">View all</a>
         </div>
         @if($recentVaccinations->isNotEmpty())
           <div class="ops-record-list">
             @foreach($recentVaccinations as $item)
               <{{ $canManageOperations ? 'a' : 'div' }} class="ops-record-row" @if($canManageOperations) href="{{ route('anti-rabies-vaccinations.edit', $item) }}" @endif>
-                <span class="ops-record-mark ops-record-mark-red">AR</span>
-                <span class="ops-record-body"><strong>{{ $item->pet_name ?: 'Unnamed pet' }}</strong><small>{{ $item->owner_name }} · {{ $item->barangay ?: 'Barangay not recorded' }}</small></span>
+                <span class="ops-record-mark ops-record-mark-red">AH</span>
+                <span class="ops-record-body"><strong>{{ $item->service_name ?: 'Anti-rabies vaccination' }}</strong><small>{{ number_format($item->animalsServed()) }} {{ $item->animalTypeLabel() }} · {{ $item->pet_name ?: 'Group not named' }} · {{ $item->owner_name ?: 'Owner not recorded' }}</small></span>
                 <time>{{ $fmtDate($item->vaccination_date, 'M d') }}</time>
               </{{ $canManageOperations ? 'a' : 'div' }}>
             @endforeach
           </div>
         @else
-          <div class="ops-empty"><strong>No vaccination activity</strong><span>Recorded vaccinations will appear here.</span></div>
+          <div class="ops-empty"><strong>No animal-health activity</strong><span>Vaccination, deworming, vitamins, and treatment services will appear here.</span></div>
         @endif
       </section>
     </main>

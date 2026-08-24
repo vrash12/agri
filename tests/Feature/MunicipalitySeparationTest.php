@@ -262,6 +262,46 @@ class MunicipalitySeparationTest extends TestCase
             ->assertSee('Fertilizer / Abono');
     }
 
+    public function test_animal_health_accepts_deworming_for_a_farm_animal_group(): void
+    {
+        $this->actingAs($this->municipalUser)
+            ->post(route('anti-rabies-vaccinations.store'), [
+                'owner_name' => 'Goat Raiser',
+                'barangay' => 'Balite',
+                'pet_type' => 'Goat',
+                'pet_breed' => 'Native goat',
+                'pet_name' => 'Herd A',
+                'service_type' => 'deworming',
+                'service_name' => 'Ivermectin',
+                'animal_count' => 24,
+                'dosage' => '1 mL per head',
+                'administration_route' => 'Injectable - subcutaneous',
+                'diagnosis' => 'Routine parasite control',
+                'vaccination_date' => now()->toDateString(),
+                'next_service_date' => now()->addMonths(3)->toDateString(),
+            ])
+            ->assertRedirect(route('anti-rabies-vaccinations.index'));
+
+        $this->assertDatabaseHas('anti_rabies_vaccinations', [
+            'municipality_id' => $this->firstMunicipality->id,
+            'owner_name' => 'Goat Raiser',
+            'pet_type' => 'Goat',
+            'service_type' => 'deworming',
+            'service_name' => 'Ivermectin',
+            'animal_count' => 24,
+        ]);
+
+        $this->actingAs($this->municipalUser)
+            ->get(route('anti-rabies-vaccinations.index', [
+                'service_type' => 'deworming',
+                'pet_type' => 'Goat',
+            ]))
+            ->assertOk()
+            ->assertSee('Ivermectin')
+            ->assertSee('24 Goat')
+            ->assertSee('Deworming');
+    }
+
     public function test_distribution_accepts_fingerlings_and_scopes_fisheries_to_the_municipality(): void
     {
         $farmer = Farmer::create([

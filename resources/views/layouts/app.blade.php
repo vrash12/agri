@@ -1012,8 +1012,8 @@
               'badge' => $operationBadge,
             ],
             [
-              'label' => 'Vaccination',
-              'description' => 'Animal health records',
+              'label' => 'Animal Health',
+              'description' => 'Vaccines, deworming, and care',
               'icon' => 'vax',
               'route' => 'anti-rabies-vaccinations.index',
               'patterns' => ['anti-rabies-vaccinations.*'],

@@ -128,6 +128,9 @@ class DashboardController extends Controller
 
         $totalVaccinations = (clone $vaccinationQuery)->count();
 
+        $totalAnimalsServed = (int) (clone $vaccinationQuery)
+            ->sum('animal_count');
+
         $totalBackupFiles = $user->isSuperAdmin()
             ? 0
             : (clone $backupQuery)->count();
@@ -330,6 +333,10 @@ class DashboardController extends Controller
                 'municipality_id',
                 'owner_name',
                 'pet_name',
+                'pet_type',
+                'service_type',
+                'service_name',
+                'animal_count',
                 'barangay',
                 'vaccination_date',
             ]);
@@ -364,6 +371,8 @@ class DashboardController extends Controller
             'total_fingerlings_released' => $totalFingerlingsReleased,
 
             'total_vaccinations' => $totalVaccinations,
+
+            'total_animals_served' => $totalAnimalsServed,
 
             'total_backup_files' => $totalBackupFiles,
 
@@ -499,6 +508,7 @@ class DashboardController extends Controller
             ->whereIn('municipality_id', $municipalityIds)
             ->select('municipality_id')
             ->selectRaw('COUNT(*) as vaccinations')
+            ->selectRaw('COALESCE(SUM(animal_count), 0) as animals_served')
             ->groupBy('municipality_id')
             ->get()
             ->keyBy('municipality_id');
@@ -601,6 +611,7 @@ class DashboardController extends Controller
                 'fisheries_records' => (int) ($distributions->fisheries_records ?? 0),
                 'fingerlings_released' => (float) ($distributions->fingerlings_released ?? 0),
                 'vaccinations' => (int) ($vaccinations->vaccinations ?? 0),
+                'animals_served' => (int) ($vaccinations->animals_served ?? 0),
                 'cooperatives' => (int) ($cooperatives->cooperatives ?? 0),
                 'total_machinery' => (int) ($machinery->total_machinery ?? 0),
                 'available_machinery' => (int) ($machinery->available_machinery ?? 0),

@@ -9,7 +9,7 @@ This is a Laravel-based Agriculture Information System for the Provincial Agricu
 - farmer registry and farmer identification cards;
 - GIS farm-parcel mapping;
 - agriculture and fisheries assistance releases, including seed, fertilizer, fingerlings, feed, and fishing gear;
-- anti-rabies vaccination records;
+- animal-health services covering vaccination, deworming, vitamins, and treatment;
 - farmers' cooperatives and membership;
 - agricultural machinery inventory and maintenance monitoring;
 - municipality-owned backup files;
@@ -94,13 +94,13 @@ Route: `GET /dashboard` (`dashboard`)
 
 The dashboard builds role-scoped operational KPIs and recent activity:
 
-- farmers, agriculture/fisheries distributions, kilograms and fingerlings released, vaccinations, cooperatives, and machinery;
+- farmers, agriculture/fisheries distributions, kilograms and fingerlings released, animal-health services and animals served, cooperatives, and machinery;
 - total plots, mapped area, mapped/unmapped farmers, and mapping coverage;
 - farmers missing FFRS or farm location;
 - machinery availability and maintenance attention;
-- current-month distributions and vaccinations;
+- current-month distributions and animal-health services;
 - monthly kilogram release and top seed-variety charts;
-- recent recipients, vaccinations, and parcel activity;
+- recent recipients, animal-health services, and parcel activity;
 - backup totals/latest upload for non-super-admin users.
 
 For super admins it also produces a province comparison without per-municipality N+1 queries. Each active municipality includes farmer, mapping, distribution, vaccination, cooperative, machinery, and staffing metrics. Municipalities are classified as operational, missing a head, without farmer records, or behind on mapping. It also counts operational records with no municipality.
@@ -194,20 +194,24 @@ Functions:
 
 Only rows whose `quantity_unit` is empty or `kg` are included in kilogram totals. Do not add fingerlings, pieces, sacks, bottles, or liters directly to kilogram aggregates. Fisheries KPIs count `fish_fingerlings` only when the unit is `piece`.
 
-### 5.6 Anti-rabies vaccinations
+### 5.6 Animal-health services
 
 Primary model/table: `AntiRabiesVaccination` / `anti_rabies_vaccinations`
 
+The historical model, table, route names, and `vaccination_date` column remain for compatibility, but the module now covers municipal animal-health work across pets, livestock, poultry, and other farm animals.
+
 Functions:
 
-- create, edit, delete, search, filter, and paginate vaccination records;
-- store owner name, barangay, birthday, pet type, breed, name, color, and vaccination date/year;
-- validate `pet_type` as `Dog` or `Cat` and persist it through the model's fillable fields;
-- look up an existing owner within one municipality and return owner details plus distinct prior pets;
-- filter by municipality, owner/pet/breed text, barangay, pet type, and optional year;
-- report total vaccinations, unique owners/pets, latest vaccination, current-month activity, and year/month/pet/barangay/breed/owner-age charts.
+- create, edit, delete, search, filter, and paginate vaccination, deworming, vitamins/supplementation, and treatment records;
+- store owner/raiser name, barangay, optional birthday, animal species, optional breed/name/color, and the number of animals served;
+- support dogs, cats, cattle, carabao, goats, sheep, swine, chickens, ducks, turkeys, horses, rabbits, and other farm animals;
+- record the product/medicine/treatment, dosage, administration route, diagnosis/reason, service notes, administering staff, service date, and next follow-up date;
+- preserve legacy anti-rabies submissions by defaulting missing generalized fields to vaccination, Anti-rabies vaccine, and one animal;
+- look up an existing owner within one municipality and return owner details plus distinct prior animals or groups;
+- filter by municipality, service type, species, owner/animal/product/diagnosis text, barangay, and optional year;
+- report total services, animals served, owners, animal profiles/groups, service mix, species coverage, latest service, monthly/year activity, barangays, breeds, and owner-age charts.
 
-The owner lookup uses write-scope resolution because it populates an entry form; provincial staff must select a municipality before using it.
+The owner lookup uses write-scope resolution because it populates an entry form; provincial staff must select a municipality before using it. All records retain the same municipality policies, optimistic record-version checks, and mutation locks as the original anti-rabies module.
 
 ### 5.7 Farmers' cooperatives
 
@@ -296,7 +300,7 @@ Super-admin-only functions:
 
 Audit timestamps are stored in UTC and displayed in `APP_DISPLAY_TIMEZONE` through `App\Support\LocalTime`. Audit date filters are interpreted as local Philippine calendar days and converted to UTC query boundaries. Keep `config('app.timezone')` set to UTC; changing the storage timezone would reinterpret existing records and mix timestamp conventions.
 
-`AuditModelObserver` records created, updated, and deleted events for machinery, farmers, plots, distributions, vaccinations, cooperatives, backups, users, and municipalities. Authentication, exports, and cooperative membership changes add explicit events through `App\Support\AuditTrail`.
+`AuditModelObserver` records created, updated, and deleted events for machinery, farmers, plots, distributions, animal-health services, cooperatives, backups, users, and municipalities. Authentication, exports, and cooperative membership changes add explicit events through `App\Support\AuditTrail`.
 
 Audit failures are reported but do not interrupt the user's main operation. Passwords, tokens, secrets, remember tokens, farmer public tokens, profile-photo paths, and other protected fields are removed from persisted before/after values. Preserve this behavior.
 
@@ -343,7 +347,7 @@ As of 2026-08-24, `php artisan route:list --json` reports 77 routes protected by
 | Farmers' cooperatives | 9 |
 | Seed and farm-input distribution | 9 |
 | Machinery inventory | 8 |
-| Vaccinations | 7 |
+| Animal health | 7 |
 | Backup Folder | 7 |
 | User management | 6 |
 | Farm plots | 6 |
@@ -420,6 +424,8 @@ At the time this file was written, the local database had not yet applied:
 
 - `2026_08_20_000100_add_input_details_to_rice_seed_distributions.php`, which adds `input_category`, `quantity_unit`, and `input_notes`;
 - `2026_08_20_000200_create_agricultural_machineries_table.php`.
+
+The migration `2026_08_24_000100_extend_vaccinations_for_animal_health_services.php` widens the legacy Dog/Cat enum and adds the generalized animal-health service fields. It must be applied before deploying code that queries `service_type` or `animal_count`.
 
 The code already queries those fields/tables. Apply the migrations to the intended environment after taking a database backup. A missing `quantity_unit` produces `SQLSTATE[42S22]`, and a missing machinery table prevents the dashboard and machinery module from loading.
 

@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\AntiRabiesVaccination;
 use App\Support\ConcurrentWrite;
+use App\Support\LocalTime;
 use App\Support\MunicipalityAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\Rule;
 
 class AntiRabiesVaccinationController extends Controller
 {
@@ -24,7 +26,8 @@ class AntiRabiesVaccinationController extends Controller
 
         $q        = trim((string) $request->query('q', ''));
         $barangay = trim((string) $request->query('barangay', ''));
-        $petType  = trim((string) $request->query('pet_type', '')); // Dog/Cat
+        $petType  = trim((string) $request->query('pet_type', ''));
+        $serviceType = trim((string) $request->query('service_type', ''));
         $perPage  = (int) $request->query('per_page', 20);
 
         // Optional (even if you removed Year filter from the view, this doesn't hurt)
@@ -41,7 +44,10 @@ class AntiRabiesVaccinationController extends Controller
             $base->where(function ($w) use ($q) {
                 $w->where('owner_name', 'like', "%{$q}%")
                   ->orWhere('pet_name', 'like', "%{$q}%")
-                  ->orWhere('pet_breed', 'like', "%{$q}%");
+                  ->orWhere('pet_breed', 'like', "%{$q}%")
+                  ->orWhere('service_name', 'like', "%{$q}%")
+                  ->orWhere('diagnosis', 'like', "%{$q}%")
+                  ->orWhere('treatment_notes', 'like', "%{$q}%");
             });
         }
 
@@ -49,8 +55,12 @@ class AntiRabiesVaccinationController extends Controller
             $base->where('barangay', $barangay);
         }
 
-        if ($petType !== '' && in_array($petType, ['Dog', 'Cat'], true)) {
+        if ($petType !== '' && array_key_exists($petType, AntiRabiesVaccination::ANIMAL_TYPE_LABELS)) {
             $base->where('pet_type', $petType);
+        }
+
+        if ($serviceType !== '' && array_key_exists($serviceType, AntiRabiesVaccination::SERVICE_TYPE_LABELS)) {
+            $base->where('service_type', $serviceType);
         }
 
         // If you ever add Year filter back, it filters by vaccination_date year
@@ -70,7 +80,8 @@ class AntiRabiesVaccinationController extends Controller
         // -----------------------------
         // FILTER DROPDOWN OPTIONS
         // -----------------------------
-        $petTypeOptions = ['Dog', 'Cat'];
+        $petTypeOptions = AntiRabiesVaccination::ANIMAL_TYPE_LABELS;
+        $serviceTypeOptions = AntiRabiesVaccination::SERVICE_TYPE_LABELS;
 
         $barangayOptions = $this->scopedQuery(
             $request,
@@ -108,21 +119,24 @@ class AntiRabiesVaccinationController extends Controller
         // -----------------------------
         // KPIs (FILTERED)
         // -----------------------------
-        $totalVaccinations = (clone $base)->count();
+        $totalServices = (clone $base)->count();
+
+        $animalsServed = (int) (clone $base)
+            ->sum('animal_count');
 
         $uniqueOwners = (clone $base)
             ->distinct()
             ->count('owner_name');
 
         $uniquePets = (int) (clone $base)
-            ->selectRaw("COUNT(DISTINCT CONCAT(owner_name,'|',pet_type,'|',pet_name,'|',pet_breed,'|',IFNULL(pet_color,''))) AS c")
+            ->selectRaw("COUNT(DISTINCT CONCAT(owner_name,'|',pet_type,'|',IFNULL(pet_name,''),'|',IFNULL(pet_breed,''),'|',IFNULL(pet_color,''))) AS c")
             ->value('c');
 
-        $latestVaccinationDate = (clone $base)->max('vaccination_date');
+        $latestServiceDate = (clone $base)->max('vaccination_date');
 
-        $currentMonthVaccinations = (clone $base)
-            ->whereYear('vaccination_date', now()->year)
-            ->whereMonth('vaccination_date', now()->month)
+        $currentMonthServices = (clone $base)
+            ->whereYear('vaccination_date', LocalTime::now()->year)
+            ->whereMonth('vaccination_date', LocalTime::now()->month)
             ->count();
 
         // -----------------------------
@@ -131,9 +145,9 @@ class AntiRabiesVaccinationController extends Controller
         if ($yearInt !== null) {
             $chartYear = $yearInt;
         } else {
-            $chartYear = $latestVaccinationDate
-                ? (int) date('Y', strtotime($latestVaccinationDate))
-                : (int) now()->year;
+            $chartYear = $latestServiceDate
+                ? (int) date('Y', strtotime($latestServiceDate))
+                : (int) LocalTime::now()->year;
         }
 
         // -----------------------------
@@ -150,19 +164,38 @@ class AntiRabiesVaccinationController extends Controller
         $yearChartLabels = $byYear->pluck('y')->map(fn ($v) => (string) $v)->all();
         $yearChartData   = $byYear->pluck('c')->map(fn ($v) => (int) $v)->all();
 
-        // 2) Pet Type Breakdown (Dog vs Cat)
+        // 2) Animal species breakdown
         $byPetType = (clone $base)
-            ->selectRaw('pet_type AS t, COUNT(*) AS c')
+            ->selectRaw('pet_type AS t, SUM(animal_count) AS c')
             ->groupBy('t')
-            ->orderBy('t')
+            ->orderByDesc('c')
             ->get()
             ->keyBy('t');
 
-        $petTypeChartLabels = ['Dog', 'Cat'];
-        $petTypeChartData   = [
-            (int) ($byPetType['Dog']->c ?? 0),
-            (int) ($byPetType['Cat']->c ?? 0),
-        ];
+        $petTypeChartLabels = collect(AntiRabiesVaccination::ANIMAL_TYPE_LABELS)
+            ->filter(fn ($label, $type) => isset($byPetType[$type]))
+            ->values()
+            ->all();
+        $petTypeChartData = collect(AntiRabiesVaccination::ANIMAL_TYPE_LABELS)
+            ->filter(fn ($label, $type) => isset($byPetType[$type]))
+            ->keys()
+            ->map(fn ($type) => (int) ($byPetType[$type]->c ?? 0))
+            ->all();
+
+        $byServiceType = (clone $base)
+            ->selectRaw("COALESCE(NULLIF(service_type,''),'vaccination') AS service, COUNT(*) AS c")
+            ->groupBy('service')
+            ->orderByDesc('c')
+            ->get()
+            ->keyBy('service');
+
+        $serviceTypeChartLabels = collect(AntiRabiesVaccination::SERVICE_TYPE_LABELS)
+            ->values()
+            ->all();
+        $serviceTypeChartData = collect(AntiRabiesVaccination::SERVICE_TYPE_LABELS)
+            ->keys()
+            ->map(fn ($type) => (int) ($byServiceType[$type]->c ?? 0))
+            ->all();
 
         // 3) Top 10 Barangays
         $byBarangay = (clone $base)
@@ -203,6 +236,7 @@ class AntiRabiesVaccinationController extends Controller
 
         // 6) Owner Age Groups
         $ageGroups = (clone $base)
+            ->whereNotNull('birthday')
             ->selectRaw("
                 CASE
                     WHEN TIMESTAMPDIFF(YEAR, birthday, CURDATE()) < 18 THEN '0-17'
@@ -228,6 +262,7 @@ class AntiRabiesVaccinationController extends Controller
             'q',
             'barangay',
             'petType',
+            'serviceType',
             'perPage',
 
             // (keep available; harmless even if you removed Year filter from view)
@@ -236,17 +271,20 @@ class AntiRabiesVaccinationController extends Controller
             'chartYear',
 
             // KPIs
-            'totalVaccinations',
+            'totalServices',
+            'animalsServed',
             'uniqueOwners',
             'uniquePets',
-            'latestVaccinationDate',
-            'currentMonthVaccinations',
+            'latestServiceDate',
+            'currentMonthServices',
 
             // charts
             'yearChartLabels',
             'yearChartData',
             'petTypeChartLabels',
             'petTypeChartData',
+            'serviceTypeChartLabels',
+            'serviceTypeChartData',
             'barangayChartLabels',
             'barangayChartData',
             'breedChartLabels',
@@ -262,6 +300,7 @@ class AntiRabiesVaccinationController extends Controller
             'canChooseMunicipality' => $request->user()
                 ->canAccessAllMunicipalities(),
             'selectedMunicipalityId' => $request->query('municipality_id'),
+            'serviceTypeOptions' => $serviceTypeOptions,
         ]);
     }
 
@@ -285,6 +324,12 @@ class AntiRabiesVaccinationController extends Controller
             'canChooseMunicipality' => $request->user()
                 ->canAccessAllMunicipalities(),
             'selectedMunicipalityId' => $selectedMunicipalityId,
+            'serviceTypeOptions' => AntiRabiesVaccination::SERVICE_TYPE_LABELS,
+            'animalTypeOptions' => AntiRabiesVaccination::ANIMAL_TYPE_LABELS,
+            'defaultServiceType' => array_key_exists(
+                (string) $request->query('service_type'),
+                AntiRabiesVaccination::SERVICE_TYPE_LABELS
+            ) ? $request->query('service_type') : 'vaccination',
         ]);
     }
 
@@ -326,7 +371,7 @@ class AntiRabiesVaccinationController extends Controller
                 $data['municipality_id'] ?? null
             );
 
-        // ✅ If the column still exists in DB, auto-fill it from vaccination_date
+        // The legacy column name remains the canonical service date for compatibility.
         if (Schema::hasColumn('anti_rabies_vaccinations', 'vaccination_year')) {
             $data['vaccination_year'] = (int) date('Y', strtotime($data['vaccination_date']));
         }
@@ -337,7 +382,7 @@ class AntiRabiesVaccinationController extends Controller
 
         return redirect()
             ->route('anti-rabies-vaccinations.index')
-            ->with('success', 'Anti-rabies vaccination record added successfully.');
+            ->with('success', 'Animal-health service recorded successfully.');
     }
 
     public function edit(
@@ -361,6 +406,9 @@ class AntiRabiesVaccinationController extends Controller
                 ->canAccessAllMunicipalities(),
             'selectedMunicipalityId' => $antiRabiesVaccination
                 ->municipality_id,
+            'serviceTypeOptions' => AntiRabiesVaccination::SERVICE_TYPE_LABELS,
+            'animalTypeOptions' => AntiRabiesVaccination::ANIMAL_TYPE_LABELS,
+            'defaultServiceType' => $antiRabiesVaccination->service_type ?: 'vaccination',
         ]);
     }
 
@@ -374,7 +422,7 @@ class AntiRabiesVaccinationController extends Controller
                 $data['municipality_id'] ?? null
             );
 
-        // ✅ If the column still exists in DB, auto-fill it from vaccination_date
+        // The legacy column name remains the canonical service date for compatibility.
         if (Schema::hasColumn('anti_rabies_vaccinations', 'vaccination_year')) {
             $data['vaccination_year'] = (int) date('Y', strtotime($data['vaccination_date']));
         }
@@ -387,7 +435,7 @@ class AntiRabiesVaccinationController extends Controller
 
         return redirect()
             ->route('anti-rabies-vaccinations.index')
-            ->with('success', 'Anti-rabies vaccination record updated successfully.');
+            ->with('success', 'Animal-health service updated successfully.');
     }
 
     public function destroy(AntiRabiesVaccination $antiRabiesVaccination)
@@ -398,26 +446,45 @@ class AntiRabiesVaccinationController extends Controller
             fn (AntiRabiesVaccination $current) => $current->delete()
         );
 
-        return back()->with('success', 'Record deleted successfully.');
+        return back()->with('success', 'Animal-health service deleted successfully.');
     }
 
     private function validateData(Request $request): array
     {
+        // Preserve compatibility with the original anti-rabies form and any
+        // existing integrations that predate generalized animal-health fields.
+        $request->merge([
+            'service_type' => $request->input('service_type', 'vaccination'),
+            'service_name' => $request->input('service_name', 'Anti-rabies vaccine'),
+            'animal_count' => $request->input('animal_count', 1),
+        ]);
+
         return $request->validate([
             'municipality_id' => ['nullable', 'integer'],
             // Owner
             'owner_name' => ['required', 'string', 'max:120'],
             'barangay'   => ['required', 'string', 'max:120'],
-            'birthday'   => ['required', 'date'],
+            'birthday'   => ['nullable', 'date', 'before_or_equal:today'],
 
-            // Pet
-            'pet_type'   => ['required', 'in:Dog,Cat'],
-            'pet_breed'  => ['required', 'string', 'max:120'],
-            'pet_name'   => ['required', 'string', 'max:120'],
+            // Animal or livestock group
+            'pet_type'   => ['required', Rule::in(array_keys(AntiRabiesVaccination::ANIMAL_TYPE_LABELS))],
+            'pet_breed'  => ['nullable', 'string', 'max:120'],
+            'pet_name'   => ['nullable', 'string', 'max:120'],
             'pet_color'  => ['nullable', 'string', 'max:80'],
 
-            // Vaccination
-            'vaccination_date' => ['required', 'date'],
+            // Service details
+            'service_type' => ['required', Rule::in(array_keys(AntiRabiesVaccination::SERVICE_TYPE_LABELS))],
+            'service_name' => ['required', 'string', 'max:150'],
+            'animal_count' => ['required', 'integer', 'min:1', 'max:1000000'],
+            'dosage' => ['nullable', 'string', 'max:120'],
+            'administration_route' => ['nullable', 'string', 'max:60'],
+            'diagnosis' => ['nullable', 'string', 'max:255'],
+            'treatment_notes' => ['nullable', 'string', 'max:3000'],
+            'administered_by' => ['nullable', 'string', 'max:120'],
+
+            // Historical date column used for every service type
+            'vaccination_date' => ['required', 'date', 'before_or_equal:today'],
+            'next_service_date' => ['nullable', 'date', 'after_or_equal:vaccination_date'],
         ]);
     }
 
@@ -457,8 +524,9 @@ class AntiRabiesVaccinationController extends Controller
                     'pet_name' => $r->pet_name,
                     'pet_breed' => $r->pet_breed,
                     'pet_color' => $r->pet_color,
-                    'last_vaccination_date' => $lastDate,
-                    'last_vaccination_year' => $lastYear,
+                    'last_service_date' => $lastDate,
+                    'last_service_year' => $lastYear,
+                    'last_service_type' => $r->serviceTypeLabel(),
                 ];
             })
             ->unique(function ($p) {

@@ -138,7 +138,7 @@ class SuperAdminOperationalReadOnlyTest extends TestCase
             ->get(route('anti-rabies-vaccinations.index'))
             ->assertOk()
             ->assertSee('Read-only oversight')
-            ->assertDontSee('Record vaccination');
+            ->assertDontSee('Record service');
 
         $this->actingAs($this->superAdmin)
             ->get(route('farmers-cooperatives.index'))

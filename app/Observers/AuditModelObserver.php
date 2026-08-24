@@ -96,7 +96,7 @@ class AuditModelObserver
             $model instanceof Farmer => 'Farmers',
             $model instanceof FarmPlot => 'Farm plots',
             $model instanceof RiceSeedDistribution => 'Assistance distributions',
-            $model instanceof AntiRabiesVaccination => 'Vaccinations',
+            $model instanceof AntiRabiesVaccination => 'Animal health services',
             $model instanceof FarmersCooperative => 'Cooperatives',
             $model instanceof BackupFile => 'Backup files',
             $model instanceof User => 'User management',
@@ -132,9 +132,10 @@ class AuditModelObserver
         }
 
         if ($model instanceof AntiRabiesVaccination) {
-            return $model->pet_name
-                ? $model->pet_name.' — '.$model->owner_name
-                : ($model->owner_name ?: 'Vaccination #'.$model->getKey());
+            $animal = $model->pet_name ?: $model->animalTypeLabel();
+
+            return trim($model->serviceTypeLabel().' · '.$animal.' · '.$model->owner_name, ' ·')
+                ?: 'Animal-health service #'.$model->getKey();
         }
 
         if ($model instanceof BackupFile) {
