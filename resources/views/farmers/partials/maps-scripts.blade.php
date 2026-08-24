@@ -1282,7 +1282,9 @@ var PopoverElement = maps3d.PopoverElement;
 
         applyMarkerPin(marker, farmer, isSelected);
 
-        var shouldShow = on && selectedMarkerVisible && isSelected && farmerHasSavedPlots(id);
+        // Municipality mode keeps every mapped farmer visible. The selected
+        // farmer receives the stronger pin styling but does not hide others.
+        var shouldShow = on && farmerHasSavedPlots(id);
 
         try {
           if (shouldShow) {
@@ -1667,10 +1669,60 @@ function renderPlotsForFarmer(farmerId, plots) {
   grouped.forEach(function (items, fid) {
     plotsCacheByFarmerId.set(String(fid), items);
     renderPlotsForFarmer(String(fid), items);
+
+    var farmer = farmersById.get(String(fid));
+    if (!farmer || markersById.has(String(fid))) return;
+
+    var markerPosition = null;
+    for (var markerIndex = 0; markerIndex < items.length; markerIndex++) {
+      var markerPlot = items[markerIndex] || {};
+      var markerLat = Number(markerPlot.centroid_lat);
+      var markerLng = Number(markerPlot.centroid_lng);
+      if (
+        markerPlot.centroid_lat !== null
+        && markerPlot.centroid_lat !== ''
+        && markerPlot.centroid_lng !== null
+        && markerPlot.centroid_lng !== ''
+        && Number.isFinite(markerLat)
+        && Number.isFinite(markerLng)
+      ) {
+        markerPosition = { lat: markerLat, lng: markerLng };
+        break;
+      }
+
+      var markerRing = normalizePolygonRing(
+        markerPlot.polygon_json || markerPlot.polygon || markerPlot.polygonJson
+      );
+      if (!markerRing || !markerRing.length) continue;
+
+      var latTotal = 0;
+      var lngTotal = 0;
+      for (var pointIndex = 0; pointIndex < markerRing.length; pointIndex++) {
+        latTotal += Number(markerRing[pointIndex].lat || 0);
+        lngTotal += Number(markerRing[pointIndex].lng || 0);
+      }
+      markerPosition = {
+        lat: latTotal / markerRing.length,
+        lng: lngTotal / markerRing.length
+      };
+      break;
+    }
+
+    if (markerPosition) {
+      createFarmerMarker(
+        farmer,
+        markerPosition.lat,
+        markerPosition.lng,
+        { deferVisibility: true }
+      );
+    }
   });
 
   if (typeof window.__applyPlotVisibility === 'function') {
     window.__applyPlotVisibility();
+  }
+  if (typeof window.__applyMarkerVisibility === 'function') {
+    window.__applyMarkerVisibility();
   }
 
   setProgress(100);
@@ -3302,23 +3354,13 @@ window.__handleDownloadAllPlots = handleDownloadAllPlots;
 window.__applyPlotVisibility = function () {
   var t = document.getElementById('togglePlots');
   var on = !t || t.checked;
-  var selectedId = selectedFarmerId ? String(selectedFarmerId) : null;
-
-  // show all saved plots while creating a new plot
-  var showAllPlots = !!plotMode && !editingPlotId;
 
   for (var i13 = 0; i13 < savedPlotOverlays.length; i13++) {
     var it = savedPlotOverlays[i13];
     if (!it || !it.poly) continue;
-
-var belongsToSelected = selectedId && String(it.farmerId) === selectedId;
-var shouldShow = on && (!selectedId || belongsToSelected);
-
-    var shouldShow = on && (
-      showAllPlots ||       // while plotting a new land, show every farmer plot
-      !selectedId ||        // if no selected farmer, show all
-      belongsToSelected     // otherwise keep current selected-only behavior
-    );
+    var isPlotBeingEdited = editingPlotId
+      && String(it.plotId) === String(editingPlotId);
+    var shouldShow = on && !isPlotBeingEdited;
 
     try {
       if (shouldShow) {
@@ -3343,16 +3385,20 @@ var shouldShow = on && (!selectedId || belongsToSelected);
   clearDraftPlot();
 
   if (hintEl) hintEl.style.display = "";
-  flyTo(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng, DEFAULT_RANGE, 900);
+  if (savedPlotOverlays.length) {
+    zoomToAllLoadedPlots();
+  } else {
+    flyTo(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng, DEFAULT_RANGE, 900);
+  }
 
-  setStatus("Ready", "Reset camera.");
+  setStatus("Municipality view", "Showing every saved parcel in this workspace.");
   refreshAllMarkerPins();
 
   if (typeof window.__applyPlotVisibility === "function") {
     window.__applyPlotVisibility();
   }
 
-  toast('Map reset.', 'ok');
+  toast('Municipality map restored.', 'ok');
 };
 
     window.__focusSelectedFarmer = function () {
@@ -4099,7 +4145,8 @@ if (selectedVertexIndex < 0) return;
   popover.open = false;
 });
 
-    function createFarmerMarker(f, lat, lng) {
+    function createFarmerMarker(f, lat, lng, opts) {
+      opts = opts || {};
       dataById.set(String(f.id), f);
 
       var marker = new Marker3DInteractiveElement({
@@ -4120,7 +4167,7 @@ if (selectedVertexIndex < 0) return;
       markersById.set(String(f.id), marker);
       queuePlotFetch(String(f.id));
 
-      if (typeof window.__applyMarkerVisibility === "function") {
+      if (!opts.deferVisibility && typeof window.__applyMarkerVisibility === "function") {
         window.__applyMarkerVisibility();
       }
 

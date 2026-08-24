@@ -5,7 +5,7 @@
 @section('content')
 @include('partials.operations-ui-styles')
 @php
-  $farmersMapData = collect($farmers->items())->map(function ($farmer) {
+  $farmersMapData = collect($mapFarmers ?? $farmers->items())->map(function ($farmer) {
     return [
       'id' => $farmer->id,
       'municipality_id' => $farmer->municipality_id,
@@ -17,8 +17,10 @@
       'ext_name' => $farmer->ext_name,
       'owner_name' => $farmer->owner_name,
       'ffrs' => $farmer->ffrs,
+      'rsbsa_no' => $farmer->rsbsa_no,
       'date_of_birth' => $farmer->date_of_birth,
       'gender' => $farmer->gender,
+      'contact_number' => $farmer->contact_number,
       'location' => $farmer->farm_location,
       'farm_location' => $farmer->farm_location,
       'farm_municipality' => $farmer->farm_municipality,
@@ -31,23 +33,16 @@
   })->values();
 
   $activeFilterCount = collect([
-    request('q'), request('municipality_id'), request('gender'),
+    request('q'), request('gender'),
     request('mapping'), request('quality'),
   ])->filter(fn ($value) => filled($value))->count();
   $advancedFilterCount = collect([
-    request('municipality_id'), request('gender'), request('mapping'),
+    request('gender'), request('mapping'),
     request('quality'),
   ])->filter(fn ($value) => filled($value))->count();
-  $selectedMunicipality = collect($municipalities ?? [])->firstWhere(
-      'id',
-      (int) request('municipality_id')
-  );
   $activeFilters = collect();
   if (filled(request('q'))) {
       $activeFilters->push(['key' => 'q', 'label' => 'Search', 'value' => '“'.request('q').'”']);
-  }
-  if (filled(request('municipality_id'))) {
-      $activeFilters->push(['key' => 'municipality_id', 'label' => 'Municipality', 'value' => $selectedMunicipality?->name ?? 'Selected']);
   }
   if (filled(request('gender'))) {
       $activeFilters->push(['key' => 'gender', 'label' => 'Gender', 'value' => request('gender')]);
@@ -58,7 +53,15 @@
   if (filled(request('quality'))) {
       $activeFilters->push(['key' => 'quality', 'label' => 'Follow-up', 'value' => request('quality') === 'missing_ffrs' ? 'Missing FFRS' : 'Missing location']);
   }
-  $directoryUrl = fn (array $parameters = []) => route('farmers.index', $parameters).'#farmerDirectory';
+  $workspaceParameters = ($canChooseMunicipality ?? false) && $selectedMunicipality
+      ? ['municipality_id' => $selectedMunicipality->id]
+      : [];
+  $directoryUrl = fn (array $parameters = []) => route(
+      'farmers.index',
+      array_merge($workspaceParameters, $parameters)
+  ).'#farmerDirectory';
+  $workspaceName = $selectedMunicipality?->name ?? 'All Tarlac municipalities';
+  $workspaceShortName = $selectedMunicipality?->name ?? 'Province overview';
   $canManageOperations = auth()->user()->canManageOperationalData();
 @endphp
 
@@ -70,13 +73,18 @@
     <div class="module-alert module-alert-error">{{ session('error') }}</div>
   @endif
 
-  @include('farmers.partials.workspace-nav', ['workspaceMunicipality' => $selectedMunicipality])
+  @include('farmers.partials.workspace-nav', [
+    'workspaceMunicipality' => $selectedMunicipality,
+    'workspaceFarmerCount' => $mapFarmerCount,
+    'workspaceMappedFarmerCount' => $mapMappedFarmerCount,
+    'workspacePlotCount' => $mapPlotCount,
+  ])
 
   <header class="module-header">
     <div>
-      <div class="module-eyebrow">Registry and land management</div>
-      <h1>Farmer registry</h1>
-      <p>Manage verified farmer profiles, monitor assistance history, and maintain parcel boundaries from one operational workspace.</p>
+      <div class="module-eyebrow">{{ $workspaceShortName }} · Registry and land management</div>
+      <h1>Farmers workspace</h1>
+      <p>The registry and parcel map are synchronized to <strong>{{ $workspaceName }}</strong>. Change the municipality above to move the entire workspace.</p>
     </div>
     <div class="module-actions">
       @if($canManageOperations)
@@ -87,7 +95,7 @@
       @endif
       <a class="module-button" href="#farmersMapModule">
         <svg viewBox="0 0 24 24"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z"/><path d="M9 3v15M15 6v15"/></svg>
-        Mapping workspace
+        Open parcel map
       </a>
       @if($canManageOperations)
         <a class="module-button module-button-primary" href="{{ route('farmers.create') }}">
@@ -103,7 +111,7 @@
   @if($activeFilterCount)
     <div class="farmer-scope-banner" role="status">
       <span class="farmer-scope-icon"><svg viewBox="0 0 24 24"><path d="M4 5h16l-6 7v6l-4 2v-8L4 5Z"></path></svg></span>
-      <div><strong>Filtered registry view</strong><span>The summary cards, directory, insights, and map currently reflect {{ $activeFilterCount }} active {{ Str::plural('filter', $activeFilterCount) }}.</span></div>
+      <div><strong>Registry filters applied</strong><span>{{ $activeFilterCount }} {{ Str::plural('filter', $activeFilterCount) }} refine the directory and registry insights. The parcel map continues to show all farmers and boundaries in {{ $workspaceName }}.</span></div>
       <a href="{{ $directoryUrl(request()->except('page')) }}">Review filters</a>
       <a href="{{ $directoryUrl() }}" data-clear-all>Clear all</a>
     </div>
@@ -111,9 +119,9 @@
 
   <section class="module-kpis" aria-label="Farmer registry summary">
     <article class="module-kpi">
-      <div class="module-kpi-top"><span class="module-kpi-label">Matching profiles</span><span class="module-kpi-icon"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8M22 21v-2a4 4 0 0 0-3-3.87"/></svg></span></div>
+      <div class="module-kpi-top"><span class="module-kpi-label">{{ $activeFilterCount ? 'Matching profiles' : 'Farmers in scope' }}</span><span class="module-kpi-icon"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8M22 21v-2a4 4 0 0 0-3-3.87"/></svg></span></div>
       <strong>{{ number_format($totalFarmers) }}</strong>
-      <small>{{ number_format($locationCount) }} recorded farm locations</small>
+      <small>{{ $workspaceShortName }} · {{ number_format($locationCount) }} recorded locations</small>
     </article>
     <article class="module-kpi">
       <div class="module-kpi-top"><span class="module-kpi-label">Mapping coverage</span><span class="module-kpi-icon module-kpi-icon-blue"><svg viewBox="0 0 24 24"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z"/><path d="M9 3v15M15 6v15"/></svg></span></div>
@@ -134,7 +142,7 @@
 
   <section class="module-panel" id="farmerDirectory">
     <div class="module-panel-head farmer-directory-head">
-      <div><h2>Farmer directory</h2><p>Search the registry first, then open a farmer on the map to review or plot their land.</p></div>
+      <div><h2>{{ $workspaceShortName }} farmer registry</h2><p>Search and refine farmer records here. Municipality scope is controlled by the workspace selector above.</p></div>
       <span class="module-panel-tag">{{ number_format($farmers->total()) }} {{ Str::plural('farmer', $farmers->total()) }}</span>
     </div>
 
@@ -159,22 +167,14 @@
       <details class="farmer-filter-drawer" @if($advancedFilterCount) open @endif>
         <summary>
           <span class="farmer-filter-summary-icon"><svg viewBox="0 0 24 24"><path d="M4 5h16l-6 7v6l-4 2v-8L4 5Z"></path></svg></span>
-          <span><strong>More filters</strong><small>Municipality, gender, parcel status, and records needing follow-up</small></span>
+          <span><strong>More registry filters</strong><small>Gender, parcel status, and records needing follow-up</small></span>
           @if($advancedFilterCount)<b>{{ $advancedFilterCount }} active</b>@endif
           <i aria-hidden="true"></i>
         </summary>
         <div class="farmer-filter-drawer-body">
           <div class="module-filter-grid">
-            @if ($canChooseMunicipality)
-              <div class="module-field">
-                <label for="farmer_municipality">Municipality</label>
-                <select class="module-input" id="farmer_municipality" name="municipality_id">
-                  <option value="">All municipalities</option>
-                  @foreach ($municipalities as $municipality)
-                    <option value="{{ $municipality->id }}" @selected((string) request('municipality_id') === (string) $municipality->id)>{{ $municipality->name }}</option>
-                  @endforeach
-                </select>
-              </div>
+            @if($selectedMunicipality && $canChooseMunicipality)
+              <input type="hidden" name="municipality_id" value="{{ $selectedMunicipality->id }}">
             @endif
             <div class="module-field">
               <label for="farmer_gender">Gender</label>
@@ -211,9 +211,9 @@
             </div>
           </div>
           <div class="farmer-filter-actions">
-            <span>These filters update the summary, directory, map, and insights together.</span>
+            <span>These options refine the registry only. The map remains complete for {{ $workspaceName }}.</span>
             <div>
-              @if($advancedFilterCount)<a class="module-button" href="{{ $directoryUrl(request()->except(['municipality_id', 'gender', 'mapping', 'quality', 'page'])) }}">Reset more filters</a>@endif
+              @if($advancedFilterCount)<a class="module-button" href="{{ $directoryUrl(request()->except(['gender', 'mapping', 'quality', 'page'])) }}">Reset more filters</a>@endif
               <button class="module-button module-button-primary" type="submit">Show matching farmers</button>
             </div>
           </div>
@@ -233,7 +233,7 @@
     @endif
 
     <div class="module-table-tools farmer-results-tools">
-      <div><strong>{{ $activeFilterCount ? 'Matching farmers' : 'All accessible farmers' }}</strong><span>Showing {{ $farmers->firstItem() ?? 0 }}–{{ $farmers->lastItem() ?? 0 }} of {{ number_format($farmers->total()) }} · Select a row to open that farmer in the mapping workspace.</span></div>
+      <div><strong>{{ $activeFilterCount ? 'Matching farmers' : 'All farmers in '.$workspaceShortName }}</strong><span>Showing {{ $farmers->firstItem() ?? 0 }}–{{ $farmers->lastItem() ?? 0 }} of {{ number_format($farmers->total()) }} · Select a row to open that farmer in the parcel map.</span></div>
       <span class="farmer-map-hint"><i></i>{{ number_format($mappedFarmers) }} mapped in these results</span>
     </div>
     <div class="module-table-scroll">
@@ -317,8 +317,17 @@
     @include('partials.pagination', ['paginator' => $farmers, 'label' => 'farmer', 'fragment' => 'farmerDirectory'])
   </section>
 
-  <section aria-label="Parcel mapping workspace">
-    @include('farmers.maps', ['farmersMapData' => $farmersMapData])
+  <section aria-label="Parcel mapping workspace" class="farmer-map-section">
+    @include('farmers.maps', [
+      'farmersMapData' => $farmersMapData,
+      'mapWorkspaceMunicipality' => $selectedMunicipality,
+      'mapWorkspaceName' => $workspaceName,
+      'mapWorkspaceShortName' => $workspaceShortName,
+      'mapFarmerCount' => $mapFarmerCount,
+      'mapMappedFarmerCount' => $mapMappedFarmerCount,
+      'mapPlotCount' => $mapPlotCount,
+      'mapAreaHa' => $mapAreaHa,
+    ])
   </section>
 
   <details class="module-more">

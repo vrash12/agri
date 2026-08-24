@@ -7,24 +7,27 @@ use App\Models\Municipality;
 use App\Models\RiceSeedDistribution;
 use App\Models\User;
 use App\Support\ConcurrentWrite;
+use App\Support\MunicipalityAccess;
 use Endroid\QrCode\ErrorCorrectionLevel\ErrorCorrectionLevelMedium;
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\SvgWriter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
 class FarmerController extends Controller
 {
     public function __construct(
-        private ConcurrentWrite $concurrentWrite
-    )
-    {
+        private ConcurrentWrite $concurrentWrite,
+        private MunicipalityAccess $municipalityAccess
+    ) {
         $this->middleware('auth')->except(['publicLand']);
     }
 
@@ -165,11 +168,22 @@ class FarmerController extends Controller
         $this->authorize('viewAny', Farmer::class);
         $q = $request->query('q');
         $user = $this->authenticatedUser($request);
+        $municipalities = $this->municipalityOptionsFor($user);
+        $selectedMunicipality = $this->resolveWorkspaceMunicipality(
+            $request,
+            $user,
+            $municipalities
+        );
+        $workspaceMunicipalityId = $selectedMunicipality?->id;
 
         $perPage = (int) $request->query('per_page', 25);
         $perPage = max(10, min($perPage, 100));
 
-        $totals = $this->baseQuery($request, false)
+        $totals = $this->baseQuery(
+            $request,
+            false,
+            $workspaceMunicipalityId
+        )
             ->selectRaw(
                 'COUNT(farmers.id) as total_farmers,
                  SUM(COALESCE(a.total_kgs, 0)) as total_kgs,
@@ -197,7 +211,11 @@ class FarmerController extends Controller
             ? round(($mappedFarmers / $totalFarmers) * 100, 1)
             : 0.0;
 
-        $genderStats = $this->baseQuery($request, false)
+        $genderStats = $this->baseQuery(
+            $request,
+            false,
+            $workspaceMunicipalityId
+        )
             ->selectRaw(
                 'COALESCE(farmers.gender, "Unspecified") as gender_group,
                  COUNT(farmers.id) as count'
@@ -205,7 +223,11 @@ class FarmerController extends Controller
             ->groupBy('gender_group')
             ->pluck('count', 'gender_group');
 
-        $locationStats = $this->baseQuery($request, false)
+        $locationStats = $this->baseQuery(
+            $request,
+            false,
+            $workspaceMunicipalityId
+        )
             ->selectRaw(
                 'farmers.farm_location,
                  COUNT(farmers.id) as count'
@@ -217,13 +239,33 @@ class FarmerController extends Controller
             ->limit(10)
             ->pluck('count', 'farmers.farm_location');
 
-        $farmers = $this->baseQuery($request, true)
+        $farmers = $this->baseQuery(
+            $request,
+            true,
+            $workspaceMunicipalityId
+        )
             ->orderBy('farmers.last_name')
             ->orderBy('farmers.first_name')
             ->paginate($perPage)
             ->withQueryString();
 
-        $municipalities = $this->municipalityOptionsFor($user);
+        // The map always receives the complete municipality workspace. Search,
+        // gender, and data-quality filters refine only the registry table.
+        $mapFarmers = $this->baseQuery(
+            $request,
+            true,
+            $workspaceMunicipalityId,
+            false
+        )
+            ->orderBy('farmers.last_name')
+            ->orderBy('farmers.first_name')
+            ->get();
+        $mapFarmerCount = $mapFarmers->count();
+        $mapMappedFarmerCount = $mapFarmers
+            ->where('plot_count', '>', 0)
+            ->count();
+        $mapPlotCount = (int) $mapFarmers->sum('plot_count');
+        $mapAreaHa = (float) $mapFarmers->sum('mapped_area_ha');
         $canChooseMunicipality = $user->isProvincialUser();
 
         return view('farmers.index', compact(
@@ -241,6 +283,12 @@ class FarmerController extends Controller
             'genderStats',
             'locationStats',
             'municipalities',
+            'selectedMunicipality',
+            'mapFarmers',
+            'mapFarmerCount',
+            'mapMappedFarmerCount',
+            'mapPlotCount',
+            'mapAreaHa',
             'canChooseMunicipality'
         ));
     }
@@ -707,7 +755,7 @@ class FarmerController extends Controller
         foreach ($sheetsToRead as $sheetName) {
             $sheet = $spreadsheet->getSheetByName($sheetName);
 
-            if (!$sheet) {
+            if (! $sheet) {
                 continue;
             }
 
@@ -788,19 +836,19 @@ class FarmerController extends Controller
                 $isIp = $this->cellYesNo($row, $map, ['IF IP', 'IP']);
 
                 $farmerKey = $ffrs
-                    ? 'FFRS|' . $ffrs
+                    ? 'FFRS|'.$ffrs
                     : 'NOFFRS|'
-                        . mb_strtoupper($last)
-                        . '|'
-                        . mb_strtoupper($first)
-                        . '|'
-                        . mb_strtoupper((string) $middle)
-                        . '|'
-                        . mb_strtoupper((string) $ext)
-                        . '|'
-                        . ($dob ?? '');
+                        .mb_strtoupper($last)
+                        .'|'
+                        .mb_strtoupper($first)
+                        .'|'
+                        .mb_strtoupper((string) $middle)
+                        .'|'
+                        .mb_strtoupper((string) $ext)
+                        .'|'
+                        .($dob ?? '');
 
-                if (!isset($agg[$farmerKey])) {
+                if (! isset($agg[$farmerKey])) {
                     $agg[$farmerKey] = [
                         'municipality_id' => $municipality->id,
                         'ffrs' => $ffrs,
@@ -858,8 +906,8 @@ class FarmerController extends Controller
                         ) {
                             $agg[$farmerKey]['owner_name'] = trim(
                                 $agg[$farmerKey]['owner_name']
-                                . ', '
-                                . $ownerName
+                                .', '
+                                .$ownerName
                             );
                         }
                     }
@@ -907,7 +955,7 @@ class FarmerController extends Controller
             $municipality
         ) {
             foreach ($agg as $data) {
-                $farmArea = !empty($data['parcels'])
+                $farmArea = ! empty($data['parcels'])
                     ? round(array_sum($data['parcels']), 2)
                     : null;
 
@@ -921,14 +969,14 @@ class FarmerController extends Controller
                 $existing = Farmer::query()
                     ->where('municipality_id', $municipality->id)
                     ->when(
-                        !empty($data['ffrs']) || !empty($data['rsbsa_no']),
+                        ! empty($data['ffrs']) || ! empty($data['rsbsa_no']),
                         function ($query) use ($data) {
                             $query->where(function ($sub) use ($data) {
-                                if (!empty($data['ffrs'])) {
+                                if (! empty($data['ffrs'])) {
                                     $sub->orWhere('ffrs', $data['ffrs']);
                                 }
 
-                                if (!empty($data['rsbsa_no'])) {
+                                if (! empty($data['rsbsa_no'])) {
                                     $sub->orWhere(
                                         'rsbsa_no',
                                         $data['rsbsa_no']
@@ -940,7 +988,7 @@ class FarmerController extends Controller
                     ->first();
 
                 if (
-                    !$existing
+                    ! $existing
                     && empty($data['ffrs'])
                     && empty($data['rsbsa_no'])
                 ) {
@@ -971,7 +1019,7 @@ class FarmerController extends Controller
             ->with(
                 'success',
                 "{$municipality->name} farmers import completed. "
-                . "Created: {$created}, Updated: {$updated}"
+                ."Created: {$created}, Updated: {$updated}"
             );
     }
 
@@ -980,7 +1028,9 @@ class FarmerController extends Controller
      */
     private function baseQuery(
         Request $request,
-        bool $withSelect
+        bool $withSelect,
+        ?int $workspaceMunicipalityId,
+        bool $applyRegistryFilters = true
     ): Builder {
         $user = $this->authenticatedUser($request);
 
@@ -992,10 +1042,10 @@ class FarmerController extends Controller
                  MAX(date_received) as last_received'
             );
 
-        if (!$user->isProvincialUser()) {
+        if ($workspaceMunicipalityId !== null) {
             $aggSub->where(
                 'rice_seed_distributions.municipality_id',
-                $user->municipality_id
+                $workspaceMunicipalityId
             );
         }
 
@@ -1017,11 +1067,18 @@ class FarmerController extends Controller
                 $join->on('p.farmer_id', '=', 'farmers.id');
             });
 
-        $this->applyMunicipalityScope(
-            $query,
-            $user,
-            'farmers.municipality_id'
-        );
+        if ($workspaceMunicipalityId !== null) {
+            $query->where(
+                'farmers.municipality_id',
+                $workspaceMunicipalityId
+            );
+        } else {
+            $this->applyMunicipalityScope(
+                $query,
+                $user,
+                'farmers.municipality_id'
+            );
+        }
 
         if ($withSelect) {
             $query->selectRaw(
@@ -1034,7 +1091,9 @@ class FarmerController extends Controller
             );
         }
 
-        $this->applyFilters($query, $request);
+        if ($applyRegistryFilters) {
+            $this->applyFilters($query, $request);
+        }
 
         return $query;
     }
@@ -1067,12 +1126,6 @@ class FarmerController extends Controller
                     $sub->orWhere('farmers.id', $registryId);
                 }
             });
-        }
-
-        $user = $this->authenticatedUser($request);
-        $municipalityId = (int) $request->query('municipality_id', 0);
-        if ($user->isProvincialUser() && $municipalityId > 0) {
-            $query->where('farmers.municipality_id', $municipalityId);
         }
 
         $gender = (string) $request->query('gender', '');
@@ -1181,7 +1234,7 @@ class FarmerController extends Controller
             return $query;
         }
 
-        if (!$user->municipality_id) {
+        if (! $user->municipality_id) {
             abort(403, 'Your account is not assigned to a municipality.');
         }
 
@@ -1200,7 +1253,7 @@ class FarmerController extends Controller
         }
 
         if (
-            !$user->municipality_id
+            ! $user->municipality_id
             || (int) $farmer->municipality_id
                 !== (int) $user->municipality_id
         ) {
@@ -1222,7 +1275,7 @@ class FarmerController extends Controller
                 ->firstOrFail();
         }
 
-        if (!$user->municipality_id) {
+        if (! $user->municipality_id) {
             abort(403, 'Your account is not assigned to a municipality.');
         }
 
@@ -1233,18 +1286,51 @@ class FarmerController extends Controller
     }
 
     /**
-     * Return municipality choices only to provincial-level users.
+     * Return the active municipality choices visible to this account.
      */
     private function municipalityOptionsFor(User $user)
     {
-        if (!$user->isProvincialUser()) {
-            return collect();
+        return $this->municipalityAccess->choices($user);
+    }
+
+    /**
+     * Resolve the one municipality shared by the registry and parcel map.
+     */
+    private function resolveWorkspaceMunicipality(
+        Request $request,
+        User $user,
+        Collection $municipalities
+    ): ?Municipality {
+        if (! $user->canAccessAllMunicipalities()) {
+            $municipality = $municipalities->first();
+
+            if (! $municipality instanceof Municipality) {
+                abort(403, 'Your account is not assigned to an active municipality.');
+            }
+
+            return $municipality;
         }
 
-        return Municipality::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get(['id', 'name', 'province']);
+        if (! $request->filled('municipality_id')) {
+            return null;
+        }
+
+        $municipalityId = filter_var(
+            $request->query('municipality_id'),
+            FILTER_VALIDATE_INT,
+            ['options' => ['min_range' => 1]]
+        );
+        $municipality = $municipalityId
+            ? $municipalities->firstWhere('id', (int) $municipalityId)
+            : null;
+
+        if (! $municipality instanceof Municipality) {
+            throw ValidationException::withMessages([
+                'municipality_id' => 'Please select an active municipality.',
+            ]);
+        }
+
+        return $municipality;
     }
 
     /**
@@ -1254,7 +1340,7 @@ class FarmerController extends Controller
     {
         $user = $request->user();
 
-        if (!$user instanceof User) {
+        if (! $user instanceof User) {
             abort(401);
         }
 
@@ -1316,7 +1402,7 @@ class FarmerController extends Controller
         foreach ($possibleHeaders as $name) {
             $column = $map[$name] ?? null;
 
-            if (!$column) {
+            if (! $column) {
                 continue;
             }
 
@@ -1348,7 +1434,7 @@ class FarmerController extends Controller
         foreach ($possibleHeaders as $name) {
             $column = $map[$name] ?? null;
 
-            if (!$column) {
+            if (! $column) {
                 continue;
             }
 

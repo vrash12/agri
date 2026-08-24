@@ -4,6 +4,13 @@
   $googleMapsApiKey = $googleMapsApiKey ?? config('services.google_maps.key') ?? env('GOOGLE_MAPS_API_KEY') ?? '';
   $googleMapsMapId  = $googleMapsMapId ?? config('services.google_maps.map_id') ?? env('GOOGLE_MAPS_MAP_ID') ?? '';
   $farmersMapData   = $farmersMapData ?? [];
+  $mapWorkspaceMunicipality = $mapWorkspaceMunicipality ?? null;
+  $mapWorkspaceName = $mapWorkspaceName ?? ($mapWorkspaceMunicipality?->name ?? 'All Tarlac municipalities');
+  $mapWorkspaceShortName = $mapWorkspaceShortName ?? ($mapWorkspaceMunicipality?->name ?? 'Province overview');
+  $mapFarmerCount = (int) ($mapFarmerCount ?? count($farmersMapData));
+  $mapMappedFarmerCount = (int) ($mapMappedFarmerCount ?? 0);
+  $mapPlotCount = (int) ($mapPlotCount ?? 0);
+  $mapAreaHa = (float) ($mapAreaHa ?? 0);
 @endphp
 
 @push('styles')
@@ -827,15 +834,15 @@
   <header class="parcel-workspace-header">
     <div>
       <div class="parcel-title-row">
-        <span class="parcel-kicker">Land management</span>
+        <span class="parcel-kicker">{{ $mapWorkspaceShortName }} · Land management</span>
         <span class="parcel-mode-badge" id="plotModeBadge" style="display:none;">Boundary drawing active</span>
       </div>
-      <h2>Parcel mapping workspace</h2>
+      <h2>{{ $mapWorkspaceShortName }} parcel map</h2>
       <p>
         @if($canManageOperations ?? auth()->user()->canManageOperationalData())
-          Select a farmer, review existing parcels, then draw or import a verified farm boundary.
+          Showing all {{ number_format($mapFarmerCount) }} farmers and {{ number_format($mapPlotCount) }} saved parcel boundaries in this municipality workspace. Select a farmer to review, draw, or import land.
         @else
-          Select a farmer to review existing parcels and export printable plot information.
+          Showing all {{ number_format($mapFarmerCount) }} farmers and {{ number_format($mapPlotCount) }} saved parcel boundaries in this municipality workspace. Select a farmer to review and export parcel information.
         @endif
       </p>
     </div>
@@ -852,9 +859,15 @@
     </div>
   </header>
 
+  <div class="parcel-scope-strip" role="status">
+    <span class="parcel-scope-dot" aria-hidden="true"></span>
+    <div><strong>Map scope: {{ $mapWorkspaceName }}</strong><small>{{ number_format($mapMappedFarmerCount) }} mapped farmers · {{ number_format($mapPlotCount) }} parcel {{ Str::plural('boundary', $mapPlotCount) }} · {{ number_format($mapAreaHa, 2) }} ha mapped</small></div>
+    <a href="#farmerDirectory">Back to registry</a>
+  </div>
+
   <div class="parcel-command-bar">
     <div class="parcel-farmer-picker">
-      <label for="mapFarmerSearch">Find farmer on this page</label>
+      <label for="mapFarmerSearch">Find farmer in {{ $mapWorkspaceShortName }}</label>
       <div class="parcel-search-row">
         <input
           class="parcel-search-input"
@@ -879,19 +892,19 @@
         </datalist>
         <button type="button" class="btn btn-soft btn-sm" id="mapFarmerLocateBtn" disabled>Locate</button>
       </div>
-      <small id="mapPickerHelp">{{ number_format(count($farmersMapData)) }} farmers available from the current table page.</small>
+      <small id="mapPickerHelp">{{ number_format(count($farmersMapData)) }} farmers available across the complete municipality workspace.</small>
     </div>
 
     <div class="parcel-tool-group">
       <span class="parcel-tool-label">Map view</span>
       <div class="parcel-tool-actions">
-        <button type="button" class="btn btn-soft btn-sm" id="recenterMapBtn" title="Fit the camera to visible farmers">Fit results</button>
-        <button type="button" class="btn btn-soft btn-sm" id="resetMapBtn" title="Return to the province view">Reset view</button>
+        <button type="button" class="btn btn-soft btn-sm" id="recenterMapBtn" title="Fit the camera to this municipality's mapped farmers">Fit municipality</button>
+        <button type="button" class="btn btn-soft btn-sm" id="resetMapBtn" title="Reset the map camera">Reset camera</button>
         <button type="button" class="btn btn-sm map-weather-trigger" id="mapWeatherBtn" aria-controls="mapWeatherDrawer" aria-expanded="false" title="Show municipality weather and agricultural advisories">
           <svg viewBox="0 0 24 24"><path d="M7 18h10a5 5 0 0 0 0-10 7 7 0 0 0-13 3 4 4 0 0 0 3 7Z"></path><path d="m8 21-1 2m5-2-1 2m5-2-1 2"></path></svg>
           <span id="mapWeatherButtonLabel">Weather</span>
         </button>
-        <label class="map-toggle"><input type="checkbox" id="toggleMarkers" checked><span>Farmers</span></label>
+        <label class="map-toggle"><input type="checkbox" id="toggleMarkers" checked><span>Farmer markers</span></label>
         <label class="map-toggle"><input type="checkbox" id="togglePlots" checked><span>Parcels</span></label>
       </div>
     </div>
@@ -921,8 +934,8 @@
       <div id="plotCursor" class="plot-cursor" aria-hidden="true"></div>
       
       <div class="map-hint" id="mapHint">
-        <div class="map-hint-title">Select a farmer to begin</div>
-        <div class="map-hint-text">Use the farmer finder, click a map marker, or select a row in the directory above.</div>
+        <div class="map-hint-title">{{ $mapWorkspaceShortName }} land view</div>
+        <div class="map-hint-text">All saved parcel boundaries are visible. Use the finder, click a farmer marker or boundary, or select a registry row.</div>
       </div>
 
       <div class="parcel-map-legend" aria-label="Map legend">
@@ -1380,7 +1393,9 @@
   window.__gmapsApiKey = window.__gmapsApiKey || @json($googleMapsApiKey);
   window.__gmapsMapId = window.__gmapsMapId || @json($googleMapsMapId);
   window.__farmersRecordsBaseUrl = window.__farmersRecordsBaseUrl || "/farmers";
-  window.__allFarmPlotsUrl = "{{ route('farm-plots.all') }}";
+  window.__allFarmPlotsUrl = @json(route('farm-plots.all', array_filter([
+    'municipality_id' => $mapWorkspaceMunicipality?->id,
+  ])));
   window.__farmPlotStaticMapUrlTemplate = @json(route(
     'farm-plots.static-map',
     ['plot' => '__PLOT__']
@@ -1458,6 +1473,32 @@
     font-size: 12px;
     line-height: 1.45;
   }
+
+  #farmersMapModule .parcel-scope-strip {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 20px;
+    border-bottom: 1px solid #dbe7de;
+    color: #506159;
+    background: #eff7f1;
+  }
+
+  #farmersMapModule .parcel-scope-dot {
+    width: 8px;
+    height: 8px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: #35a35d;
+    box-shadow: 0 0 0 4px rgba(53, 163, 93, .12);
+  }
+
+  #farmersMapModule .parcel-scope-strip div { min-width: 0; flex: 1; }
+  #farmersMapModule .parcel-scope-strip strong,
+  #farmersMapModule .parcel-scope-strip small { display: block; }
+  #farmersMapModule .parcel-scope-strip strong { color: #1b4e2d; font-size: 10px; font-weight: 900; }
+  #farmersMapModule .parcel-scope-strip small { margin-top: 2px; color: #708078; font-size: 8px; }
+  #farmersMapModule .parcel-scope-strip a { padding: 6px 8px; border: 1px solid #c8dacd; border-radius: 7px; color: #17643a; background: #fff; font-size: 8px; font-weight: 850; text-decoration: none; white-space: nowrap; }
 
   #farmersMapModule .parcel-load-status {
     width: min(310px, 100%);
@@ -1838,6 +1879,7 @@
     const pickerHelp = document.getElementById('mapPickerHelp');
     const selectedName = document.getElementById('selName');
     const data = Array.isArray(window.__farmersMapData) ? window.__farmersMapData : [];
+    const mapWorkspaceLabel = @json($mapWorkspaceShortName);
 
     if (!input || !locateButton) return;
 
@@ -1875,13 +1917,13 @@
       locateButton.disabled = matches.length !== 1;
 
       if (!clean(input.value)) {
-        pickerHelp.textContent = `${entries.length.toLocaleString()} farmers available from the current table page.`;
+        pickerHelp.textContent = `${entries.length.toLocaleString()} farmers available across ${mapWorkspaceLabel}.`;
       } else if (matches.length === 1) {
         pickerHelp.textContent = `Ready to locate ${matches[0].name}.`;
       } else if (matches.length > 1) {
         pickerHelp.textContent = `${matches.length} matches. Enter more of the name or FFRS.`;
       } else {
-        pickerHelp.textContent = 'No match on this page. Use the farmer search above the directory to load another result.';
+        pickerHelp.textContent = 'No farmer matches inside the current municipality workspace.';
       }
     }
 

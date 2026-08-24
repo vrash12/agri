@@ -38,16 +38,17 @@ class FarmPlotController extends Controller
     public function all(Request $request)
     {
         $this->authorize('viewAny', FarmPlot::class);
-        $query = FarmPlot::query();
-
-        if (!$request->user()->canAccessAllMunicipalities()) {
-            $query->whereHas('farmer', function (Builder $farmerQuery) use ($request) {
-                $this->municipalityAccess->scope(
+        $query = FarmPlot::query()->whereHas(
+            'farmer',
+            function (Builder $farmerQuery) use ($request) {
+                $this->municipalityAccess->applyOptionalFilter(
                     $farmerQuery,
-                    $request->user()
+                    $request->user(),
+                    $request->query('municipality_id'),
+                    'farmers.municipality_id'
                 );
-            });
-        }
+            }
+        );
 
         $plots = $query
                 ->orderByDesc('id')
@@ -326,7 +327,7 @@ class FarmPlotController extends Controller
         libxml_use_internal_errors(true);
         $xml = simplexml_load_file($path, 'SimpleXMLElement', LIBXML_NOCDATA | LIBXML_NONET);
 
-        if (!$xml) {
+        if (! $xml) {
             return back()->with('error', 'Invalid KML file.');
         }
 
@@ -344,17 +345,17 @@ class FarmPlotController extends Controller
         $farmers = Farmer::query()
             ->where('municipality_id', $municipalityId)
             ->get([
-            'id',
-            'municipality_id',
-            'rsbsa_no',
-            'ffrs',
-            'last_name',
-            'first_name',
-            'middle_name',
-            'ext_name',
-            'farm_location',
-            'farm_municipality',
-            'farm_province',
+                'id',
+                'municipality_id',
+                'rsbsa_no',
+                'ffrs',
+                'last_name',
+                'first_name',
+                'middle_name',
+                'ext_name',
+                'farm_location',
+                'farm_municipality',
+                'farm_province',
             ]);
 
         $created = 0;
@@ -394,11 +395,13 @@ class FarmPlotController extends Controller
                 $polygons = $this->extractPlacemarkPolygons($placemark, $kmlNs);
                 if (empty($polygons)) {
                     $skippedNoPolygon++;
+
                     continue;
                 }
 
-                if (!$farmer) {
+                if (! $farmer) {
                     $skippedNoFarmer++;
+
                     continue;
                 }
 
@@ -414,19 +417,19 @@ class FarmPlotController extends Controller
                     $matchedByLooseSurname++;
                 }
 
-   $colorSeed = trim((string) (
-    $extended['GPX_ID']
-    ?? $extended['CONCATENAT']
-    ?? $parcelCode
-    ?? $baseName
-));
+                $colorSeed = trim((string) (
+                    $extended['GPX_ID']
+                    ?? $extended['CONCATENAT']
+                    ?? $parcelCode
+                    ?? $baseName
+                ));
 
-$resolvedColor = $this->resolvePlacemarkColor(
-    $placemark,
-    $kmlNs,
-    $styleLookup,
-    $colorSeed
-);
+                $resolvedColor = $this->resolvePlacemarkColor(
+                    $placemark,
+                    $kmlNs,
+                    $styleLookup,
+                    $colorSeed
+                );
                 $polygonCount = count($polygons);
 
                 foreach ($polygons as $index => $polygon) {
@@ -434,6 +437,7 @@ $resolvedColor = $this->resolvePlacemarkColor(
 
                     if (count($polygon) < 3) {
                         $skippedNoPolygon++;
+
                         continue;
                     }
 
@@ -477,13 +481,13 @@ $resolvedColor = $this->resolvePlacemarkColor(
         return back()->with(
             'success',
             "KML import finished. Created: {$created}, Updated: {$updated}, "
-            . "Skipped (no polygon): {$skippedNoPolygon}, "
-            . "Skipped (no farmer match): {$skippedNoFarmer}, "
-            . "Matched by code: {$matchedByCode}, "
-            . "Matched by full name: {$matchedByFullName}, "
-            . "Matched by surname+barangay: {$matchedBySurnameBarangay}, "
-            . "Matched by unique surname: {$matchedByUniqueSurname}, "
-            . "Matched by loose surname: {$matchedByLooseSurname}"
+            ."Skipped (no polygon): {$skippedNoPolygon}, "
+            ."Skipped (no farmer match): {$skippedNoFarmer}, "
+            ."Matched by code: {$matchedByCode}, "
+            ."Matched by full name: {$matchedByFullName}, "
+            ."Matched by surname+barangay: {$matchedBySurnameBarangay}, "
+            ."Matched by unique surname: {$matchedByUniqueSurname}, "
+            ."Matched by loose surname: {$matchedByLooseSurname}"
         );
     }
 
@@ -538,7 +542,7 @@ $resolvedColor = $this->resolvePlacemarkColor(
                 continue;
             }
 
-            $styleById['#' . $id] = $this->extractStyleColorsFromStyleNode($styleNode, $kmlNs);
+            $styleById['#'.$id] = $this->extractStyleColorsFromStyleNode($styleNode, $kmlNs);
         }
 
         $styleMapNodes = $xml->xpath('//kml:StyleMap') ?: [];
@@ -555,7 +559,7 @@ $resolvedColor = $this->resolvePlacemarkColor(
                 $styleUrl = trim((string) ($pair->styleUrl ?? ''));
 
                 if ($key === 'normal' && $styleUrl !== '') {
-                    $styleMapById['#' . $id] = $styleUrl;
+                    $styleMapById['#'.$id] = $styleUrl;
                     break;
                 }
             }
@@ -577,9 +581,9 @@ private function extractStyleColorsFromStyleNode(\SimpleXMLElement $styleNode, s
     $lineColorMode = 'normal';
 
     $polyNodes = $styleNode->xpath('.//kml:PolyStyle') ?: [];
-    if (!empty($polyNodes)) {
+    if (! empty($polyNodes)) {
         $polyColorNode = $polyNodes[0]->xpath('./kml:color');
-        $polyModeNode  = $polyNodes[0]->xpath('./kml:colorMode');
+        $polyModeNode = $polyNodes[0]->xpath('./kml:colorMode');
 
         if ($polyColorNode && isset($polyColorNode[0])) {
             $polyColor = trim((string) $polyColorNode[0]);
@@ -590,9 +594,9 @@ private function extractStyleColorsFromStyleNode(\SimpleXMLElement $styleNode, s
     }
 
     $lineNodes = $styleNode->xpath('.//kml:LineStyle') ?: [];
-    if (!empty($lineNodes)) {
+    if (! empty($lineNodes)) {
         $lineColorNode = $lineNodes[0]->xpath('./kml:color');
-        $lineModeNode  = $lineNodes[0]->xpath('./kml:colorMode');
+        $lineModeNode = $lineNodes[0]->xpath('./kml:colorMode');
 
         if ($lineColorNode && isset($lineColorNode[0])) {
             $lineColor = trim((string) $lineColorNode[0]);
@@ -611,6 +615,7 @@ private function extractStyleColorsFromStyleNode(\SimpleXMLElement $styleNode, s
         'line_raw' => $lineColor,
     ];
 }
+
 private function resolvePlacemarkColor(
     \SimpleXMLElement $placemark,
     string $kmlNs,
@@ -620,8 +625,9 @@ private function resolvePlacemarkColor(
     $placemark->registerXPathNamespace('kml', $kmlNs);
 
     $inlineStyles = $placemark->xpath('./kml:Style') ?: [];
-    if (!empty($inlineStyles)) {
+    if (! empty($inlineStyles)) {
         $inline = $this->extractStyleColorsFromStyleNode($inlineStyles[0], $kmlNs);
+
         return $this->resolveColorFromStyleArray($inline, $seed);
     }
 
@@ -637,12 +643,13 @@ private function resolvePlacemarkColor(
     }
 
     $style = $styleLookup['styleById'][$styleUrl] ?? null;
-    if (!$style) {
+    if (! $style) {
         return $this->seededPlotColor($seed ?: (string) ($placemark->name ?? 'plot'));
     }
 
     return $this->resolveColorFromStyleArray($style, $seed);
 }
+
 private function resolveColorFromStyleArray(array $style, string $seed = ''): string
 {
     $seed = trim($seed) !== '' ? $seed : 'plot';
@@ -658,15 +665,15 @@ private function resolveColorFromStyleArray(array $style, string $seed = ''): st
         return $this->seededPlotColor($seed, $style['line_raw'] ?? 'ffffffff');
     }
 
-    if (!empty($style['line']) && strtoupper($style['line']) !== '#FFFFFF') {
+    if (! empty($style['line']) && strtoupper($style['line']) !== '#FFFFFF') {
         return $this->normalizeHexColor($style['line']);
     }
 
-    if (!empty($style['poly'])) {
+    if (! empty($style['poly'])) {
         return $this->normalizeHexColor($style['poly']);
     }
 
-    if (!empty($style['line'])) {
+    if (! empty($style['line'])) {
         return $this->normalizeHexColor($style['line']);
     }
 
@@ -703,12 +710,13 @@ private function seededPlotColor(string $seed, string $baseKmlColor = 'ccffffff'
 
     return sprintf('#%02X%02X%02X', $r, $g, $b);
 }
+
     private function parseKmlColorToHex(?string $kmlColor): string
     {
         $kmlColor = trim((string) $kmlColor);
 
         // KML format: aabbggrr
-        if (!preg_match('/^[0-9a-fA-F]{8}$/', $kmlColor)) {
+        if (! preg_match('/^[0-9a-fA-F]{8}$/', $kmlColor)) {
             return '';
         }
 
@@ -716,7 +724,7 @@ private function seededPlotColor(string $seed, string $baseKmlColor = 'ccffffff'
         $gg = substr($kmlColor, 4, 2);
         $rr = substr($kmlColor, 6, 2);
 
-        return '#' . strtoupper($rr . $gg . $bb);
+        return '#'.strtoupper($rr.$gg.$bb);
     }
 
     private function extractPlacemarkPolygons(\SimpleXMLElement $placemark, string $kmlNs): array
@@ -760,7 +768,7 @@ private function seededPlotColor(string $seed, string $baseKmlColor = 'ccffffff'
             $lng = (float) $parts[0];
             $lat = (float) $parts[1];
 
-            if (!is_finite($lat) || !is_finite($lng)) {
+            if (! is_finite($lat) || ! is_finite($lng)) {
                 continue;
             }
 
@@ -812,7 +820,7 @@ private function seededPlotColor(string $seed, string $baseKmlColor = 'ccffffff'
             }
         }
 
-        if (!$parcelCode) {
+        if (! $parcelCode) {
             $codeFields = [
                 'GPX_ID',
                 'LGU RSBSA Number',
@@ -824,7 +832,7 @@ private function seededPlotColor(string $seed, string $baseKmlColor = 'ccffffff'
             ];
 
             foreach ($codeFields as $field) {
-                if (!empty($extended[$field])) {
+                if (! empty($extended[$field])) {
                     $parcelCode = $this->normalizeParcelCode((string) $extended[$field]);
                     break;
                 }
@@ -985,7 +993,7 @@ private function seededPlotColor(string $seed, string $baseKmlColor = 'ccffffff'
         $restParts = preg_split('/\s+/', trim($rest)) ?: [];
 
         $suffix = '';
-        if (!empty($restParts)) {
+        if (! empty($restParts)) {
             $lastToken = end($restParts);
             if ($this->isSuffixToken($lastToken)) {
                 $suffix = array_pop($restParts);
@@ -1130,7 +1138,7 @@ private function seededPlotColor(string $seed, string $baseKmlColor = 'ccffffff'
         ));
 
         if ($totalParts > 1) {
-            return $base . ' Part ' . $partNo;
+            return $base.' Part '.$partNo;
         }
 
         return $base;
@@ -1141,14 +1149,14 @@ private function seededPlotColor(string $seed, string $baseKmlColor = 'ccffffff'
         $out = [];
 
         foreach ($polygon as $p) {
-            if (!isset($p['lat'], $p['lng'])) {
+            if (! isset($p['lat'], $p['lng'])) {
                 continue;
             }
 
             $lat = (float) $p['lat'];
             $lng = (float) $p['lng'];
 
-            if (!is_finite($lat) || !is_finite($lng)) {
+            if (! is_finite($lat) || ! is_finite($lng)) {
                 continue;
             }
 
@@ -1206,11 +1214,11 @@ private function seededPlotColor(string $seed, string $baseKmlColor = 'ccffffff'
         }
 
         if ($hex[0] !== '#') {
-            $hex = '#' . $hex;
+            $hex = '#'.$hex;
         }
 
         if (preg_match('/^#([0-9A-F]{3})$/', $hex)) {
-            return '#' . $hex[1] . $hex[1] . $hex[2] . $hex[2] . $hex[3] . $hex[3];
+            return '#'.$hex[1].$hex[1].$hex[2].$hex[2].$hex[3].$hex[3];
         }
 
         if (preg_match('/^#([0-9A-F]{6})$/', $hex)) {

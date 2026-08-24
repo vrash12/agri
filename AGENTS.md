@@ -117,6 +117,7 @@ Functions:
 
 - list, search, filter, paginate, create, edit, and delete farmer profiles;
 - filter by municipality for provincial users, gender, mapped/unmapped state, missing FFRS, and missing location;
+- use the prominent Municipality Workspace selector as the shared scope for registry totals, the complete map farmer finder, parcel boundaries, and weather; registry-only search and quality filters do not remove other municipality farmers from the map;
 - aggregate input-release history and parcel statistics into the directory;
 - display gender and top-location charts from the filtered record set;
 - store FFRS/RSBSA numbers, identity and contact details, declared area, ecosystem, farm location, and ARB/4Ps/IP/PWD/SC/OFW flags;
@@ -143,6 +144,7 @@ Authenticated functions:
 - rename, recolor, reshape, and delete saved polygons;
 - calculate centroid and approximate spherical area in hectares on the server;
 - show farmer markers, saved parcels, mapping totals, fit/reset controls, and farmer details in the Google Maps workspace;
+- for provincial and super-admin users, pass the selected municipality to the all-plots endpoint so the map never mixes parcel boundaries from other municipalities; mapped-farmer markers use saved parcel centroids and require no extra geocoding request;
 - import KML/KMZ in the browser for a selected farmer and save each parsed polygon through the authorized plot endpoint;
 - bulk-import server-side KML/XML placemarks for one selected municipality;
 - match server-side imports only against farmers in that municipality using parcel codes and progressively looser name/location strategies;

@@ -8,10 +8,10 @@ use App\Models\BackupFile;
 use App\Models\Farmer;
 use App\Models\FarmersCooperative;
 use App\Models\FarmPlot;
-use App\Support\ConcurrentWrite;
 use App\Models\Municipality;
 use App\Models\RiceSeedDistribution;
 use App\Models\User;
+use App\Support\ConcurrentWrite;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
@@ -300,6 +300,71 @@ class MunicipalitySeparationTest extends TestCase
                 ],
             ])
             ->assertCreated();
+    }
+
+    public function test_provincial_farmer_workspace_keeps_registry_and_map_in_one_municipality(): void
+    {
+        $matchingFarmer = Farmer::create([
+            'municipality_id' => $this->firstMunicipality->id,
+            'last_name' => 'WorkspaceMatch',
+            'first_name' => 'Anao',
+        ]);
+        $otherFarmerInMunicipality = Farmer::create([
+            'municipality_id' => $this->firstMunicipality->id,
+            'last_name' => 'WorkspaceMapOnly',
+            'first_name' => 'Anao',
+        ]);
+        $foreignFarmer = Farmer::create([
+            'municipality_id' => $this->secondMunicipality->id,
+            'last_name' => 'WorkspaceForeign',
+            'first_name' => 'Bamban',
+        ]);
+        $ownPlot = $this->makePlot(
+            $otherFarmerInMunicipality,
+            'Workspace Own Boundary'
+        );
+        $foreignPlot = $this->makePlot(
+            $foreignFarmer,
+            'Workspace Foreign Boundary'
+        );
+
+        $this->actingAs($this->provincialUser)
+            ->get(route('farmers.index', [
+                'municipality_id' => $this->firstMunicipality->id,
+                'q' => 'WorkspaceMatch',
+            ]))
+            ->assertOk()
+            ->assertViewHas(
+                'selectedMunicipality',
+                fn ($municipality) => (int) $municipality->id
+                    === (int) $this->firstMunicipality->id
+            )
+            ->assertViewHas('farmers', function ($farmers) use ($matchingFarmer) {
+                return $farmers->count() === 1
+                    && (int) $farmers->first()->id === (int) $matchingFarmer->id;
+            })
+            ->assertViewHas(
+                'mapFarmers',
+                function ($mapFarmers) use (
+                    $matchingFarmer,
+                    $otherFarmerInMunicipality,
+                    $foreignFarmer
+                ) {
+                    $ids = $mapFarmers->pluck('id')->map(fn ($id) => (int) $id);
+
+                    return $ids->contains((int) $matchingFarmer->id)
+                        && $ids->contains((int) $otherFarmerInMunicipality->id)
+                        && ! $ids->contains((int) $foreignFarmer->id);
+                }
+            );
+
+        $this->actingAs($this->provincialUser)
+            ->getJson(route('farm-plots.all', [
+                'municipality_id' => $this->firstMunicipality->id,
+            ]))
+            ->assertOk()
+            ->assertJsonFragment(['id' => $ownPlot->id])
+            ->assertJsonMissing(['id' => $foreignPlot->id]);
     }
 
     public function test_farmer_photos_and_id_cards_are_municipality_scoped(): void
