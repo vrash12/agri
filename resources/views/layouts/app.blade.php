@@ -744,6 +744,32 @@
       font-size: 13px;
     }
 
+    .idle-session-warning{
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      z-index: 120;
+      width: min(360px, calc(100vw - 32px));
+      padding: 14px 16px;
+      border: 1px solid #fbbf24;
+      border-radius: 16px;
+      background: #fffbeb;
+      color: #78350f;
+      box-shadow: 0 18px 45px rgba(120,53,15,.18);
+    }
+
+    .idle-session-warning[hidden]{ display:none; }
+    .idle-session-warning strong{
+      display:block;
+      margin-bottom:4px;
+      font-size:14px;
+    }
+    .idle-session-warning span{
+      display:block;
+      font-size:12px;
+      line-height:1.45;
+    }
+
     /* ===== Core UI ===== */
     .card{
       background: var(--card);
@@ -1080,6 +1106,19 @@
     @endphp
   @endauth
 
+  @auth
+    <div
+      class="idle-session-warning"
+      id="idleSessionWarning"
+      role="status"
+      aria-live="polite"
+      hidden
+    >
+      <strong>Session expires soon</strong>
+      <span id="idleSessionWarningText">Move, type, or tap anywhere to stay signed in.</span>
+    </div>
+  @endauth
+
   <div class="app-shell">
     <div class="overlay" onclick="closeSidebar()" aria-hidden="true"></div>
 
@@ -1406,6 +1445,165 @@
       });
     })();
   </script>
+
+  @auth
+    <script>
+      (function () {
+        const timeoutMs = @json(max(1, (int) config('session.idle_timeout', 15)) * 60 * 1000);
+        const warningMs = Math.min(60 * 1000, Math.floor(timeoutMs / 3));
+        const heartbeatMs = Math.max(60 * 1000, Math.floor(timeoutMs / 3));
+        const heartbeatUrl = @json(route('session.heartbeat'));
+        const timeoutUrl = @json(route('session.timeout'));
+        const loginUrl = @json(route('login', ['timeout' => 1]));
+        const userKey = @json((string) auth()->id());
+        const activityKey = 'pais.session.activity.' + userKey;
+        const timeoutLockKey = activityKey + '.timeout-lock';
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        const warning = document.getElementById('idleSessionWarning');
+        const warningText = document.getElementById('idleSessionWarningText');
+
+        let latestActivity = Date.now();
+        let lastPersistedActivity = 0;
+        let lastHeartbeat = Date.now();
+        let heartbeatPending = false;
+        let timingOut = false;
+
+        function readStoredNumber(key) {
+          try {
+            const value = Number(localStorage.getItem(key));
+            return Number.isFinite(value) ? value : 0;
+          } catch (error) {
+            return 0;
+          }
+        }
+
+        function storeNumber(key, value) {
+          try {
+            localStorage.setItem(key, String(value));
+          } catch (error) {}
+        }
+
+        async function sendHeartbeat(now) {
+          if (heartbeatPending || timingOut) return;
+
+          heartbeatPending = true;
+          lastHeartbeat = now;
+
+          try {
+            const response = await fetch(heartbeatUrl, {
+              method: 'POST',
+              credentials: 'same-origin',
+              headers: {
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+              }
+            });
+
+            if (response.status === 401 || response.redirected) {
+              window.location.replace(loginUrl);
+            }
+          } catch (error) {
+            // A temporary network problem must not interrupt the user's work.
+            // The next activity after the heartbeat interval will try again.
+            lastHeartbeat = 0;
+          } finally {
+            heartbeatPending = false;
+          }
+        }
+
+        function recordActivity() {
+          if (timingOut) return;
+
+          const now = Date.now();
+          latestActivity = now;
+
+          if (warning) warning.hidden = true;
+
+          if ((now - lastPersistedActivity) >= 5000) {
+            lastPersistedActivity = now;
+            storeNumber(activityKey, now);
+          }
+
+          if (
+            document.visibilityState === 'visible'
+            && (now - lastHeartbeat) >= heartbeatMs
+          ) {
+            sendHeartbeat(now);
+          }
+        }
+
+        function endIdleSession() {
+          if (timingOut) return;
+          timingOut = true;
+
+          const now = Date.now();
+          const existingLock = readStoredNumber(timeoutLockKey);
+
+          if (existingLock && (now - existingLock) < 10000) {
+            window.setTimeout(function () {
+              window.location.replace(loginUrl);
+            }, 500);
+            return;
+          }
+
+          storeNumber(timeoutLockKey, now);
+
+          fetch(timeoutUrl, {
+            method: 'POST',
+            credentials: 'same-origin',
+            keepalive: true,
+            headers: {
+              'Accept': 'application/json',
+              'X-CSRF-TOKEN': csrfToken,
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          }).finally(function () {
+            window.location.replace(loginUrl);
+          });
+        }
+
+        function checkIdleTime() {
+          const sharedActivity = readStoredNumber(activityKey);
+          if (sharedActivity > latestActivity) latestActivity = sharedActivity;
+
+          const remainingMs = timeoutMs - (Date.now() - latestActivity);
+
+          if (remainingMs <= 0) {
+            endIdleSession();
+            return;
+          }
+
+          if (warning && warningText && remainingMs <= warningMs) {
+            const seconds = Math.max(1, Math.ceil(remainingMs / 1000));
+            warningText.textContent = 'You will be signed out in ' + seconds
+              + ' second' + (seconds === 1 ? '' : 's')
+              + '. Move, type, or tap anywhere to stay signed in.';
+            warning.hidden = false;
+          } else if (warning) {
+            warning.hidden = true;
+          }
+        }
+
+        ['pointerdown', 'pointermove', 'keydown', 'scroll', 'touchstart']
+          .forEach(function (eventName) {
+            window.addEventListener(eventName, recordActivity, {passive: true});
+          });
+
+        window.addEventListener('storage', function (event) {
+          if (event.key !== activityKey) return;
+          const sharedActivity = Number(event.newValue);
+          if (Number.isFinite(sharedActivity) && sharedActivity > latestActivity) {
+            latestActivity = sharedActivity;
+            if (warning) warning.hidden = true;
+          }
+        });
+
+        storeNumber(activityKey, latestActivity);
+        window.setInterval(checkIdleTime, 1000);
+      })();
+    </script>
+  @endauth
 
   @stack('scripts')
 </body>

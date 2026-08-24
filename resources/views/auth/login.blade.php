@@ -547,6 +547,18 @@
         >
           @csrf
 
+          @if(request()->boolean('timeout'))
+            <div
+              class="error-box"
+              role="alert"
+            >
+              <strong>Session ended</strong>
+              <ul>
+                <li>{{ session('error', 'Your session ended after '.max(1, (int) config('session.idle_timeout', 15)).' minutes of inactivity. Please sign in again.') }}</li>
+              </ul>
+            </div>
+          @endif
+
           @if($errors->any())
             <div
               class="error-box"

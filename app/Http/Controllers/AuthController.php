@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Middleware\EnforceIdleSession;
 use App\Models\User;
 use App\Support\AuditTrail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\Response;
 
 class AuthController extends Controller
 {
@@ -201,6 +203,11 @@ class AuthController extends Controller
             ]
         );
 
+        $request->session()->put(
+            EnforceIdleSession::LAST_ACTIVITY_KEY,
+            now()->timestamp
+        );
+
         /*
         |--------------------------------------------------------------------------
         | Redirect based on role
@@ -258,6 +265,47 @@ class AuthController extends Controller
         return redirect()
             ->route('login')
             ->with('success', 'You have been logged out successfully.');
+    }
+
+    /**
+     * End a session after the browser detects fifteen minutes of inactivity.
+     */
+    public function timeout(Request $request): Response
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        if ($user) {
+            AuditTrail::record(
+                'session_timeout',
+                'Authentication',
+                $user->name.' was signed out after '
+                    .EnforceIdleSession::timeoutMinutes().' minutes of inactivity.',
+                [
+                    'actor' => $user,
+                    'auditable' => $user,
+                    'metadata' => [
+                        'reason' => 'idle_timeout',
+                        'idle_limit_seconds' => EnforceIdleSession::timeoutMinutes() * 60,
+                    ],
+                ]
+            );
+        }
+
+        $this->logoutAuthenticatedUser($request);
+
+        $redirect = route('login', ['timeout' => 1]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => EnforceIdleSession::timeoutMessage(),
+                'code' => 'SESSION_IDLE_TIMEOUT',
+                'redirect' => $redirect,
+            ]);
+        }
+
+        return redirect($redirect)
+            ->with('error', EnforceIdleSession::timeoutMessage());
     }
 
     /**

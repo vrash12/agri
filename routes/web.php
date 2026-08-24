@@ -42,8 +42,18 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::post('/logout', [AuthController::class, 'logout'])
-    ->middleware('auth')
+    ->middleware(['auth', 'idle'])
     ->name('logout');
+
+Route::post('/session/heartbeat', function () {
+    return response()->noContent();
+})
+    ->middleware(['auth', 'idle', 'throttle:12,1'])
+    ->name('session.heartbeat');
+
+Route::post('/session/timeout', [AuthController::class, 'timeout'])
+    ->middleware('auth')
+    ->name('session.timeout');
 
 /*
 |--------------------------------------------------------------------------
@@ -64,7 +74,7 @@ Route::get('/land/{token}', [FarmerController::class, 'publicLand'])
 | AUTHENTICATED ROUTES
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'synchronized'])->group(function () {
+Route::middleware(['auth', 'idle', 'synchronized'])->group(function () {
     /*
     |--------------------------------------------------------------------------
     | DASHBOARD

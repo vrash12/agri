@@ -27,7 +27,7 @@
       'municipal_head' => 'Head Agriculturist',
       'municipal_staff' => 'Municipal Staff',
   ];
-  $eventOrder = ['login_failed', 'login_blocked', 'deleted', 'updated', 'created', 'login', 'logout', 'membership_updated', 'exported'];
+  $eventOrder = ['login_failed', 'login_blocked', 'session_timeout', 'deleted', 'updated', 'created', 'login', 'logout', 'membership_updated', 'exported'];
   $exportQuery = collect(request()->query())->except(['page'])->all();
   $localNow = \App\Support\LocalTime::now();
 @endphp

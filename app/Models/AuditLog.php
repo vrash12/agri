@@ -17,6 +17,7 @@ class AuditLog extends Model
         'membership_updated' => 'Membership changed',
         'login' => 'Signed in',
         'logout' => 'Signed out',
+        'session_timeout' => 'Idle timeout',
         'login_failed' => 'Failed sign-in',
         'login_blocked' => 'Blocked sign-in',
         'exported' => 'Exported',
@@ -83,7 +84,7 @@ class AuditLog extends Model
             'created', 'login' => 'green',
             'updated', 'membership_updated', 'exported' => 'blue',
             'deleted', 'login_failed', 'login_blocked' => 'red',
-            'logout' => 'amber',
+            'logout', 'session_timeout' => 'amber',
             default => 'neutral',
         };
     }

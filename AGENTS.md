@@ -59,6 +59,8 @@ All accounts must be active. Municipal roles also require an existing, active mu
 4. Successful and failed/blocked sign-ins are written to the audit trail when the `audit_logs` table is available.
 5. `last_login_at` is updated, and every role is redirected to the municipality-aware dashboard.
 6. Logout is audited, the session is invalidated, and the CSRF token is regenerated.
+7. Authenticated sessions have a 15-minute idle limit. Browser activity is shared across tabs and sends a throttled heartbeat only while the user is active.
+8. The interface warns during the final minute, then automatically signs the account out. The server independently rejects stale requests, invalidates the session, and records a `session_timeout` audit event.
 
 There is currently no user-facing registration, forgotten-password, email-verification, or password-reset workflow.
 
@@ -339,7 +341,7 @@ The lock mechanism requires an atomic shared cache store. The file cache is suit
 
 ## 6. Route inventory
 
-As of 2026-08-24, `php artisan route:list --json` reports 77 routes protected by Laravel authentication, including the Sanctum endpoint:
+As of 2026-08-24, `php artisan route:list --json` reports 79 routes protected by Laravel authentication, including the Sanctum endpoint:
 
 | Area | Authenticated routes |
 | --- | ---: |
@@ -353,7 +355,7 @@ As of 2026-08-24, `php artisan route:list --json` reports 77 routes protected by
 | Farm plots | 6 |
 | Audit trail | 3 |
 | Weather and agricultural advisories | 4 |
-| Dashboard/logout/API | 4 |
+| Dashboard/logout/session/API | 6 |
 
 Regenerate the inventory instead of preserving this number if routes change:
 
@@ -395,6 +397,7 @@ Distribution records intentionally keep a farmer snapshot in addition to `farmer
 - `app/Support/AuditTrail.php`: safe audit-event creation and secret filtering
 - `app/Support/ConcurrentWrite.php`: record versioning, row locks, retried transactions, and stale-write rejection
 - `app/Http/Middleware/SynchronizeMutatingRequests.php`: per-account and per-record/cache mutexes for state-changing requests
+- `app/Http/Middleware/EnforceIdleSession.php`: server-side 15-minute inactivity enforcement and timeout auditing
 - `app/Observers/AuditModelObserver.php`: automatic model change logging
 - `app/Providers/AuthServiceProvider.php`: model/policy registration
 - `app/Providers/AppServiceProvider.php`: audit observers and custom pagination views
@@ -465,6 +468,9 @@ WEATHER_REFRESH_WAIT_SECONDS=3
 CONCURRENCY_LOCK_SECONDS=120
 CONCURRENCY_WAIT_SECONDS=5
 DB_TRANSACTION_ATTEMPTS=3
+
+SESSION_LIFETIME=15
+SESSION_IDLE_TIMEOUT=15
 ```
 
 Google Maps settings are defined in `config/services.php`. The optional static

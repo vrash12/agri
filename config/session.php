@@ -31,7 +31,11 @@ return [
     |
     */
 
-    'lifetime' => env('SESSION_LIFETIME', 120),
+    'lifetime' => env('SESSION_LIFETIME', 15),
+
+    // Enforced independently so existing production environments that still
+    // have a longer cookie lifetime nevertheless receive the security timeout.
+    'idle_timeout' => env('SESSION_IDLE_TIMEOUT', 15),
 
     'expire_on_close' => false,
 
