@@ -8,8 +8,9 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FarmerController;
-use App\Http\Controllers\FarmPlotController;
 use App\Http\Controllers\FarmersCooperativeController;
+use App\Http\Controllers\FarmPlotController;
+use App\Http\Controllers\MunicipalityBoundaryController;
 use App\Http\Controllers\RiceSeedDistributionController;
 use App\Http\Controllers\WeatherAdvisoryController;
 use Illuminate\Http\Request;
@@ -92,6 +93,28 @@ Route::middleware([
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->name('dashboard');
 
+    Route::get('/municipality-boundaries', [MunicipalityBoundaryController::class, 'index'])
+        ->name('municipality-boundaries.index');
+    Route::get('/municipality-boundaries/data', [MunicipalityBoundaryController::class, 'data'])
+        ->middleware('throttle:30,1')
+        ->name('municipality-boundaries.data');
+    Route::get('/municipality-boundaries/{boundary}/snapshot-base', [MunicipalityBoundaryController::class, 'snapshotBase'])
+        ->middleware('throttle:12,1')
+        ->name('municipality-boundaries.snapshot-base');
+    Route::post('/municipality-boundaries/{boundary}/snapshot-exported', [MunicipalityBoundaryController::class, 'snapshotExported'])
+        ->middleware('throttle:12,1')
+        ->name('municipality-boundaries.snapshot-exported');
+    Route::post('/municipality-boundaries', [MunicipalityBoundaryController::class, 'store'])
+        ->name('municipality-boundaries.store');
+    Route::post('/municipality-boundaries/import', [MunicipalityBoundaryController::class, 'import'])
+        ->name('municipality-boundaries.import');
+    Route::put('/municipality-boundaries/{boundary}', [MunicipalityBoundaryController::class, 'update'])
+        ->name('municipality-boundaries.update');
+    Route::post('/municipality-boundaries/{boundary}/activate', [MunicipalityBoundaryController::class, 'activate'])
+        ->name('municipality-boundaries.activate');
+    Route::post('/municipality-boundaries/{boundary}/archive', [MunicipalityBoundaryController::class, 'archive'])
+        ->name('municipality-boundaries.archive');
+
     Route::get('/weather-advisories', [WeatherAdvisoryController::class, 'index'])
         ->name('weather.index');
 
@@ -121,7 +144,7 @@ Route::middleware([
             ], 422);
         }
 
-        $cacheKey = 'geocode:' . sha1($query);
+        $cacheKey = 'geocode:'.sha1($query);
 
         return Cache::remember(
             $cacheKey,
@@ -138,7 +161,7 @@ Route::middleware([
                         'q' => $query,
                     ]);
 
-                if (!$response->ok()) {
+                if (! $response->ok()) {
                     return response()->json([
                         'error' => 'Geocode failed',
                         'status' => $response->status(),
@@ -147,7 +170,7 @@ Route::middleware([
 
                 $results = $response->json();
 
-                if (!is_array($results) || count($results) < 1) {
+                if (! is_array($results) || count($results) < 1) {
                     return response()->json([
                         'lat' => null,
                         'lng' => null,

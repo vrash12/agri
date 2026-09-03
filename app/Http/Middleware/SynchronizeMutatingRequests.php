@@ -4,6 +4,8 @@ namespace App\Http\Middleware;
 
 use App\Models\Farmer;
 use App\Models\FarmersCooperative;
+use App\Models\FarmPlot;
+use App\Models\MunicipalityBoundary;
 use Closure;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\Eloquent\Model;
@@ -82,6 +84,30 @@ final class SynchronizeMutatingRequests
             ->filter(fn ($value) => $value instanceof Model)
             ->map(fn (Model $model) => get_class($model).':'.$model->getKey())
             ->values();
+
+        if (str_starts_with((string) $request->route()?->getName(), 'municipality-boundaries.')) {
+            $boundary = $request->route('boundary');
+            $municipalityId = $boundary instanceof MunicipalityBoundary
+                ? $boundary->municipality_id
+                : $request->input('municipality_id');
+            if ($municipalityId) {
+                $resources->push(MunicipalityBoundary::class.':municipality:'.(int) $municipalityId);
+            }
+        }
+
+        if (
+            str_starts_with((string) $request->route()?->getName(), 'farm-plots.')
+            || str_starts_with((string) $request->route()?->getName(), 'farmers.plots.')
+        ) {
+            $farmer = $request->route('farmer');
+            $plot = $request->route('plot');
+            $municipalityId = $farmer instanceof Farmer
+                ? $farmer->municipality_id
+                : ($plot instanceof FarmPlot ? $plot->farmer?->municipality_id : $request->input('municipality_id'));
+            if ($municipalityId) {
+                $resources->push(MunicipalityBoundary::class.':municipality:'.(int) $municipalityId);
+            }
+        }
 
         if ($request->filled('farmer_id')) {
             $resources->push(

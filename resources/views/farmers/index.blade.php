@@ -327,6 +327,7 @@
       'mapMappedFarmerCount' => $mapMappedFarmerCount,
       'mapPlotCount' => $mapPlotCount,
       'mapAreaHa' => $mapAreaHa,
+      'mapMunicipalityBoundaries' => $mapMunicipalityBoundaries,
     ])
   </section>
 

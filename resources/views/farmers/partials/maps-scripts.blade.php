@@ -169,6 +169,46 @@ if (btnDownloadAll) {
       window.__setPlotsLoadingEnabled(!!tPlots.checked);
     }
   });
+
+  var tGeofence = document.getElementById('toggleMunicipalityGeofence');
+  if (tGeofence) tGeofence.addEventListener('change', function () {
+    if (typeof window.__applyMunicipalityGeofenceVisibility === 'function') {
+      window.__applyMunicipalityGeofenceVisibility();
+    }
+  });
+
+  var downloadMunicipalityMap = document.getElementById('downloadMunicipalityMapBtn');
+  if (downloadMunicipalityMap) downloadMunicipalityMap.addEventListener('click', async function () {
+    var url = window.__municipalitySnapshotDataUrl;
+    if (!url || !window.MunicipalitySnapshotExport) {
+      if (typeof window.__mapToast === 'function') {
+        window.__mapToast('Select a municipality with an active boundary first.', 'warn');
+      }
+      return;
+    }
+
+    var originalLabel = downloadMunicipalityMap.textContent;
+    downloadMunicipalityMap.disabled = true;
+    downloadMunicipalityMap.textContent = 'Preparing map…';
+
+    try {
+      var response = await fetch(url, { headers: { Accept: 'application/json' } });
+      var payload = await response.json();
+      if (!response.ok) throw new Error(payload.message || 'Could not load the municipality map.');
+      await window.MunicipalitySnapshotExport.download(payload, window.__csrfToken || '');
+      if (typeof window.__mapToast === 'function') {
+        window.__mapToast('Municipality map downloaded.', 'ok');
+      }
+    } catch (error) {
+      console.error(error);
+      if (typeof window.__mapToast === 'function') {
+        window.__mapToast(error.message || 'Municipality map download failed.', 'bad');
+      }
+    } finally {
+      downloadMunicipalityMap.textContent = originalLabel;
+      downloadMunicipalityMap.disabled = false;
+    }
+  });
 }
    $(function () {
   bindRowClickToMap();
@@ -1230,6 +1270,84 @@ var PopoverElement = maps3d.PopoverElement;
     var plotsCacheByFarmerId = new Map();
     var plotFetchPromisesByFarmerId = new Map();
     var savedPlotOverlays = [];
+    var municipalityGeofenceOverlays = [];
+
+    function geoJsonPolygons(geometry) {
+      if (!geometry || !Array.isArray(geometry.coordinates)) return [];
+      if (geometry.type === 'Polygon') return [geometry.coordinates];
+      if (geometry.type === 'MultiPolygon') return geometry.coordinates;
+      return [];
+    }
+
+    function geoJsonRing(ring) {
+      if (!Array.isArray(ring)) return [];
+
+      var points = ring.map(function (coordinate) {
+        if (!Array.isArray(coordinate) || coordinate.length < 2) return null;
+        var lng = Number(coordinate[0]);
+        var lat = Number(coordinate[1]);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+        return { lat: lat, lng: lng };
+      }).filter(Boolean);
+
+      return openRing(points);
+    }
+
+    function renderMunicipalityGeofences() {
+      var boundaries = Array.isArray(window.__municipalityGeofenceData)
+        ? window.__municipalityGeofenceData
+        : [];
+      var toggle = document.getElementById('toggleMunicipalityGeofence');
+      var visible = !toggle || toggle.checked;
+
+      municipalityGeofenceOverlays.forEach(function (overlay) {
+        try {
+          if (overlay.element && overlay.element.isConnected) map3d.removeChild(overlay.element);
+        } catch (ignore) {}
+      });
+      municipalityGeofenceOverlays = [];
+
+      boundaries.forEach(function (boundary) {
+        geoJsonPolygons(boundary.geojson).forEach(function (polygon) {
+          if (!Array.isArray(polygon) || !polygon.length) return;
+          var path = geoJsonRing(polygon[0]);
+          if (path.length < 3) return;
+
+          var innerPaths = polygon.slice(1)
+            .map(geoJsonRing)
+            .filter(function (ring) { return ring.length >= 3; });
+          var color = boundary.color || '#15803D';
+          var options = {
+            path: path,
+            strokeColor: hexAlpha(color, 'F0'),
+            strokeWidth: 4,
+            fillColor: hexToRgba(color, 0.07),
+            altitudeMode: AltitudeMode.CLAMP_TO_GROUND,
+            drawsOccludedSegments: true,
+            zIndex: 1
+          };
+          if (innerPaths.length) options.innerPaths = innerPaths;
+
+          var element = new Polygon3DElement(options);
+          if (visible) map3d.append(element);
+          municipalityGeofenceOverlays.push({
+            element: element,
+            rings: [path].concat(innerPaths),
+            municipalityId: boundary.municipality_id,
+            municipalityName: boundary.municipality_name || 'Municipality'
+          });
+        });
+      });
+    }
+
+    window.__applyMunicipalityGeofenceVisibility = function () {
+      var toggle = document.getElementById('toggleMunicipalityGeofence');
+      var visible = !toggle || toggle.checked;
+
+      municipalityGeofenceOverlays.forEach(function (overlay) {
+        setOverlayVisible(overlay.element, visible);
+      });
+    };
 
     var plotsLoadingEnabled = true;
     var plotQueue = [];
@@ -1650,7 +1768,8 @@ function renderPlotsForFarmer(farmerId, plots) {
       strokeWidth: 0.8,
       fillColor: fillSoft,
       altitudeMode: AltitudeMode.CLAMP_TO_GROUND,
-      drawsOccludedSegments: true
+      drawsOccludedSegments: true,
+      zIndex: 10
     });
     if (show) map3d.append(poly);
 
@@ -1739,6 +1858,18 @@ function zoomToAllLoadedPlots() {
     if (!ring || !ring.length) continue;
     extendBounds(b, ring);
     any = true;
+  }
+
+  var geofenceToggle = document.getElementById('toggleMunicipalityGeofence');
+  if (!geofenceToggle || geofenceToggle.checked) {
+    for (var j = 0; j < municipalityGeofenceOverlays.length; j++) {
+      var rings = municipalityGeofenceOverlays[j].rings || [];
+      for (var k = 0; k < rings.length; k++) {
+        if (!rings[k].length) continue;
+        extendBounds(b, rings[k]);
+        any = true;
+      }
+    }
   }
 
   if (!any) return;
@@ -4030,7 +4161,7 @@ if (btnCancel) {
         r,
         (isEditing ? "Update" : "Save") + " failed (" + r.status + ")"
       );
-    }).then(function () {
+    }).then(function (payload) {
   plotMode = false;
   editingPlotId = null;
   selectedVertexIndex = -1;
@@ -4041,7 +4172,11 @@ if (btnCancel) {
   resetPlotEditorFields();
 
   setStatus(isEditing ? "Updated ✅" : "Saved ✅", isEditing ? "Plot updated." : "Plot added.");
-  toast(isEditing ? "Updated plot ✅" : "Saved plot ✅", "ok");
+  if (payload && payload.geofence && payload.geofence.message) {
+    toast(payload.geofence.message, "warn");
+  } else {
+    toast(isEditing ? "Updated plot ✅" : "Saved plot ✅", "ok");
+  }
 
   restoreSavedPlotsVisibility();
 
@@ -4222,6 +4357,7 @@ syncSuggestedPlotName([], false);
 
 setStatus('Loading 3D map…', 'Loading all saved plots…');
 setProgress(0);
+renderMunicipalityGeofences();
 
 if (mapGeocodedPillEl) {
   mapGeocodedPillEl.textContent = 'Loading plots…';

@@ -2,6 +2,156 @@
 
 This file applies to the entire repository. It is both a functional map of the system and a set of implementation rules for developers and coding agents. Update it whenever a role, route, model, workflow, integration, or deployment requirement changes.
 
+`SYSTEM_FEATURES.md` is the companion user-facing feature catalog. Keep it synchronized with this guide whenever a feature, permission, integration, or operational limitation changes.
+
+## Senior developer mandate
+
+Act as the senior full-stack developer and software architect responsible for helping the project owner build, improve, secure, test, document, and deploy this system. Treat the application as a real government operations platform with multiple simultaneous users and municipality-owned data, not as a prototype or generated demo.
+
+### How to work with the project owner
+
+- Understand the requested operational outcome before changing code.
+- Inspect the relevant routes, controllers, models, policies, migrations, views, tests, and existing conventions before implementation.
+- Explain important choices, risks, tradeoffs, and deployment requirements in clear language.
+- Make reasonable, reversible assumptions when details are minor; ask the owner when a missing decision would materially change permissions, data ownership, privacy, cost, or workflow.
+- Challenge contradictory or unsafe requirements with concrete evidence and offer a practical alternative.
+- Preserve existing working behavior unless the owner explicitly requests a breaking change.
+- Do not silently expand the task into unrelated rewrites.
+- Never push, deploy, email, change production data, run destructive database operations, or expose credentials unless the owner explicitly requests that action.
+- Never place passwords, API keys, database credentials, private tokens, or production secrets in source control, logs, screenshots, tests, documentation, or responses.
+
+### Clean-code standards
+
+- Follow SOLID, DRY, KISS, separation of concerns, least privilege, and secure-by-default design.
+- Prefer clear domain names such as `municipality`, `farmer`, `parcel`, `assistance release`, and `animal-health service` over vague abbreviations.
+- Keep controllers focused on HTTP concerns: validate the request, authorize the action, call domain/application services, and return the response.
+- Move reusable business rules, geometry processing, import logic, ownership resolution, concurrency handling, and integrations into dedicated support or service classes.
+- Use Form Request classes for new forms with complex or reusable validation. Small one-purpose endpoints may keep concise controller validation when that matches the surrounding module.
+- Keep Eloquent models focused on relationships, casts, scopes, constants, and model-level behavior. Do not turn models into catch-all service containers.
+- Reuse policies and `MunicipalityAccess`; do not repeat role and municipality comparisons throughout controllers and Blade files.
+- Prefer small, cohesive methods with one clear responsibility. Extract a method when it removes duplication or gives a business rule a meaningful name.
+- Avoid premature abstractions, unnecessary repositories, speculative patterns, and large framework additions that do not solve a current problem.
+- Use strict comparisons, explicit defaults, meaningful return types, and PHPDoc for non-obvious array shapes or generic collections.
+- Handle expected errors with useful user-facing messages while reporting unexpected failures for developers.
+- Do not swallow exceptions unless the operation is deliberately best-effort, such as audit logging; document that behavior in code.
+- Keep comments focused on why a decision exists, especially for security, geometry, concurrency, compatibility, or provider limitations. Do not narrate obvious syntax.
+- Remove dead code only after confirming it has no route, view, job, test, CLI, or external dependency.
+
+### Architecture boundaries
+
+Use the following responsibility flow for new work:
+
+```text
+Blade / JavaScript interface
+        ↓
+Routes and middleware
+        ↓
+Controller or Form Request validation
+        ↓
+Laravel policy authorization
+        ↓
+Application/domain support service
+        ↓
+Eloquent models and database transaction
+        ↓
+Audit, cache, queue, file, map, weather, or export integration
+```
+
+- Presentation code must not decide whether a user owns a record; policies and municipality-scoped server queries make that decision.
+- Controllers must authorize route-bound records before reading protected relationships, files, or geometry.
+- Database writes involving multiple related records must be transaction-backed and safe to retry when appropriate.
+- Operations that can be edited by multiple users must use the existing optimistic-version and shared-lock mechanisms.
+- External API calls must have timeouts, bounded retries where safe, caching when appropriate, and a useful failure state.
+- Large imports, exports, map payloads, and dashboards must be bounded, paginated, chunked, aggregated, cached, or lazy-loaded rather than fully loaded into memory without a limit.
+- New modules owned by a municipality must include `municipality_id`, a foreign key and indexes, model relationships, municipality-aware policies, scoped queries, validation of related records, audit coverage, and isolation tests.
+- Database constraints should protect important invariants in addition to application validation whenever the supported database can enforce them safely.
+- Schema changes must use reversible migrations and must account for the legacy baseline-schema warning in this guide.
+
+### Laravel and PHP practices
+
+- Follow PSR-12 formatting and the existing Laravel conventions.
+- Format changed PHP files with Laravel Pint before completion.
+- Prefer dependency injection over service-location calls in domain code.
+- Use route-model binding with parameter names that exactly match controller arguments.
+- Prevent mass-assignment mistakes by maintaining each model's `$fillable` or `$guarded` fields deliberately.
+- Add casts for booleans, dates, JSON, decimals, and identifiers where they improve correctness.
+- Avoid raw SQL when Eloquent or the query builder is clear and efficient; parameterize every unavoidable raw expression.
+- Use eager loading and aggregate queries to prevent N+1 query problems.
+- Select only the columns required by large listings and map endpoints.
+- Never call `env()` outside configuration files.
+- Keep application timestamps in UTC and convert them for display through the existing local-time support.
+- Do not change public URLs, route names, legacy table names, or compatibility fields without checking all imports, exports, QR codes, bookmarks, and deployment dependencies.
+
+### Security and privacy review
+
+For every new endpoint or action, verify:
+
+1. authentication and role access;
+2. municipality scope and related-record ownership;
+3. policy authorization for view, create, update, delete, import, export, preview, and download actions;
+4. request validation, file type and size limits, and safe filenames;
+5. CSRF protection or API authentication;
+6. rate limiting for public or provider-backed endpoints;
+7. protection against mass assignment, SQL injection, spreadsheet formula injection, XSS, path traversal, and insecure direct-object references;
+8. exclusion of passwords, secrets, private tokens, birth dates, contact data, and protected paths from public responses and audit metadata;
+9. safe failure behavior that does not reveal whether another municipality's protected record exists;
+10. an audit event for sensitive, administrative, destructive, or export actions when appropriate.
+
+### User-experience standard
+
+- Build interfaces that look and behave like practical agriculture-office tools rather than generic AI-generated dashboards.
+- Use the existing visual system, navigation patterns, colors, spacing, cards, filters, tables, empty states, and responsive behavior.
+- Place filters near the records or map they affect and clearly state the active municipality scope.
+- Use familiar agricultural language and concise instructions for staff who may not be highly technical.
+- Provide loading, success, warning, empty, disabled, and failure states for every asynchronous workflow.
+- Prevent duplicate submissions and preserve user-entered values after validation errors.
+- Ensure keyboard access, readable contrast, descriptive labels, mobile layouts, and useful focus behavior.
+- Confirm destructive actions and explain why an action is unavailable instead of only hiding or disabling it.
+- Keep dashboards decision-oriented: show what needs attention, why it matters, and the next safe action.
+
+### Performance and simultaneous-user standard
+
+- Apply municipality scope before search, statistics, charts, pagination, exports, or map serialization.
+- Prefer database aggregation over loading records and counting them in PHP.
+- Prevent N+1 queries with purposeful eager loading, aggregate subqueries, or grouped queries.
+- Add indexes for frequently filtered foreign keys, statuses, dates, identifiers, and uniqueness rules.
+- Paginate normal listings and chunk large imports or exports.
+- Cache expensive, read-heavy results with explicit invalidation or bounded expiration.
+- Use atomic cache locks around provider refreshes and other stampede-prone work.
+- Use the existing synchronization middleware and `ConcurrentWrite` for shared record changes.
+- Keep transactions short; do not perform slow network calls while holding database row locks.
+- Use queues for long-running work when the hosting environment supports reliable workers. Provide a safe synchronous or scheduled alternative when shared hosting does not.
+- Before horizontal scaling, replace machine-local coordination with Redis or another shared atomic cache and verify shared file storage.
+
+### Required implementation workflow
+
+1. Read this guide and the relevant section of `SYSTEM_FEATURES.md`.
+2. Check the current Git branch and working tree; preserve unrelated owner changes.
+3. Trace the complete existing workflow from route to interface and database before editing.
+4. Write a small implementation plan for changes that cross multiple modules or alter data ownership.
+5. Implement the smallest coherent architecture that fully handles the request.
+6. Add or update tests for the happy path, permissions, municipality isolation, validation, and important failure paths.
+7. Run Laravel Pint on changed PHP files.
+8. Run focused automated tests, Blade compilation, PHP syntax checks, route verification, and `git diff --check` as applicable.
+9. Review the final diff for accidental files, secrets, debug output, duplicate logic, unbounded queries, and incorrect permissions.
+10. Update `AGENTS.md`, `SYSTEM_FEATURES.md`, environment examples, and deployment instructions when behavior or requirements change.
+11. Report what changed, what was verified, any migration or configuration required, and what was not tested or deployed.
+
+### Definition of done
+
+A feature is complete only when:
+
+- the requested workflow works from the interface through persistence and reporting;
+- role permissions and municipality isolation are enforced on the server;
+- validation and failure messages are understandable;
+- concurrent writes cannot silently overwrite newer data;
+- queries and payloads are reasonable for production-sized data;
+- security, privacy, audit, and external-provider behavior have been reviewed;
+- focused tests pass and changed views compile;
+- documentation and environment examples match the implementation;
+- no secrets, temporary files, debug code, or unrelated changes were introduced;
+- deployment steps and migrations are clearly identified, but production is not changed without explicit authorization.
+
 ## 1. What this system is
 
 This is a Laravel-based Agriculture Information System for the Provincial Agriculture Office and municipal agriculture offices in Tarlac. It centralizes:
@@ -44,7 +194,7 @@ The only supported roles are constants in `App\Models\User`:
 
 | Role | Operational visibility | Operational writes | User management | Backup Folder | Audit Trail |
 | --- | --- | --- | --- | --- | --- |
-| `super_admin` | All municipalities | No; read-only oversight | All non-protected account operations; own/super-admin protections apply | No access | Full access and CSV export |
+| `super_admin` | All municipalities | No routine operational writes; may manage official municipality geofences | All non-protected account operations; own/super-admin protections apply | No access | Full access and CSV export |
 | `provincial_staff` | All municipalities | Yes; must choose the municipality for new records | No | All municipalities, subject to policy | No |
 | `provincial_vet` | All municipalities, Animal Health only | Yes, Animal Health only; must choose the municipality for new records | No | No access | No |
 | `municipal_head` | Assigned municipality only | Yes | May manage only `municipal_staff` in the same municipality | Assigned municipality only | No |
@@ -242,12 +392,14 @@ Primary model/table: `AgriculturalMachinery` / `agricultural_machineries`
 Functions:
 
 - create, edit, delete, search, filter, sort, paginate, and CSV-export equipment;
+- provide quick operational views for available, in-use, attention, repair, and unassigned assets, with less-used controls inside an advanced-filter panel;
 - assign each asset to either a farmer or a cooperative in the same municipality;
 - enforce municipality-unique asset codes;
 - track category, brand, model, serial number, acquisition year/date/source/cost, condition, availability, location, service hours, maintenance dates, and notes;
 - report total/available/in-use assets, holder type, total acquisition value, category/condition charts, and a maintenance queue;
 - mark equipment for attention when it is under maintenance, needs repair, is unserviceable, or has maintenance due within 30 days;
 - provide a municipality-scoped JSON holder lookup for dynamic forms;
+- use responsive asset cards on smaller screens and a guided create/edit form with completion progress, live assignment feedback, and maintenance-date warnings;
 - audit CSV exports and normal model changes.
 
 The current form requires a farmer or cooperative holder even though legacy/unassigned assets can still be listed and filtered.
@@ -342,9 +494,35 @@ Create operations and multi-record mutations use retried transactions where the 
 
 The lock mechanism requires an atomic shared cache store. The file cache is suitable for one Hostinger server when every PHP worker sees the same filesystem. Use Redis (recommended) or another shared atomic-lock store before running more than one application server; otherwise locks on separate servers cannot coordinate.
 
+### 5.15 Municipality geofences
+
+Primary model/table: `MunicipalityBoundary` / `municipality_boundaries`
+
+Routes: `municipality-boundaries.*`
+
+Functions:
+
+- provide a province-wide Google Maps boundary workspace with municipality search, filtering, labels, fit/reset controls, and lazy municipality parcel loading;
+- allow all agriculture roles to view boundaries within their normal municipality scope while reserving draw, import, edit, activate, and archive actions for the Super Admin;
+- display active official boundaries beneath farm parcels in the Farmers 3D map, with a visibility toggle and municipality-aware camera fitting; municipal users receive only their assigned boundary, while province-wide users receive boundaries from the selected workspace scope;
+- draw Polygon boundaries in the browser or import Polygon/MultiPolygon KML, KMZ, GeoJSON, JSON, and XML files;
+- normalize coordinates, close rings, reject invalid ranges, reject self-intersections and invalid holes, safely simplify oversized geometry, and reject files above the configured hard vertex limit;
+- retain draft and archived history while permitting one active official boundary per municipality through synchronized, transaction-backed replacement;
+- calculate area, centroid, vertex count, and indexed bounding-box columns for fast overlap candidate selection on MySQL/MariaDB and SQLite-compatible tests;
+- detect overlap with another municipality's active boundary before saving or activation;
+- classify every existing parcel as inside, near the boundary, crossing the boundary, outside, invalid, or unconfigured and provide a field-review list;
+- download a map-only municipality snapshot containing the active boundary and all municipality-owned parcels; parcels outside remain visible as white polygons with warning outlines, while report titles, summaries, legends, review text, and footers are omitted;
+- obtain the satellite base through an authenticated, throttled, same-origin Google Static Maps proxy, mask the image so land outside the official boundary remains white, and preserve Google's complete attribution strip in the exported PNG;
+- validate all new, edited, browser-imported, and server-imported farm parcels: completely outside or invalid parcels are blocked, while crossing and near-boundary parcels are saved with a visible review warning;
+- cache the active municipality boundary used by parcel writes and clear it after boundary changes;
+- use HMAC record versions and municipality-level mutation locks so drawing and import cannot create competing active boundaries;
+- record explicit audit events for drawing, import, update, activation, archival, automatic replacement, and completed municipality snapshot downloads using metadata instead of storing full GeoJSON in the audit log.
+
+`App\Support\GeoGeometry` is the authoritative geometry implementation and `App\Support\MunicipalityBoundaryGuard` is the farm-plot enforcement boundary. Do not copy point-in-polygon or overlap logic into controllers or JavaScript. A missing active boundary does not block existing parcel work; the review workspace reports those parcels as unconfigured until the Super Admin activates an official boundary.
+
 ## 6. Route inventory
 
-As of 2026-08-24, `php artisan route:list --json` reports 79 routes protected by Laravel authentication, including the Sanctum endpoint:
+As of 2026-09-03, `php artisan route:list --json` reports 88 routes protected by Laravel authentication, including the Sanctum endpoint:
 
 | Area | Authenticated routes |
 | --- | ---: |
@@ -358,6 +536,7 @@ As of 2026-08-24, `php artisan route:list --json` reports 79 routes protected by
 | Farm plots | 6 |
 | Audit trail | 3 |
 | Weather and agricultural advisories | 4 |
+| Municipality geofences | 9 |
 | Dashboard/logout/session/API | 6 |
 
 Regenerate the inventory instead of preserving this number if routes change:
@@ -371,6 +550,7 @@ php artisan route:list
 ```text
 Municipality
 ├── users
+├── municipality_boundaries
 ├── farmers
 │   ├── farm_plots
 │   ├── rice_seed_distributions
@@ -399,6 +579,9 @@ Distribution records intentionally keep a farmer snapshot in addition to `farmer
 - `app/Support/MunicipalityAccess.php`: shared tenancy scoping and ownership resolution
 - `app/Support/AuditTrail.php`: safe audit-event creation and secret filtering
 - `app/Support/ConcurrentWrite.php`: record versioning, row locks, retried transactions, and stale-write rejection
+- `app/Support/GeoGeometry.php`: GeoJSON normalization, validation, simplification, measurement, overlap, containment, and near-boundary calculations
+- `app/Support/MunicipalityBoundaryGuard.php`: active-boundary lookup and parcel write enforcement
+- `app/Support/MunicipalityBoundaryImporter.php`: KML, KMZ, and GeoJSON boundary parsing
 - `app/Http/Middleware/SynchronizeMutatingRequests.php`: per-account and per-record/cache mutexes for state-changing requests
 - `app/Http/Middleware/EnforceIdleSession.php`: server-side 15-minute inactivity enforcement and timeout auditing
 - `app/Http/Middleware/RestrictProvincialVeterinaryAccess.php`: route-level Animal Health-only boundary for `provincial_vet`
@@ -427,16 +610,31 @@ Consequences:
 - Obtain the approved, sanitized baseline SQL schema from the project owner, then reconcile migration history before onboarding a fresh environment.
 - The long-term fix is to create and test a complete baseline migration set or squash the verified schema into a Laravel schema dump.
 
-At the time this file was written, the local database had not yet applied:
+Legacy and deployed environments may still be missing these incremental migrations even when the current local database has them:
 
 - `2026_08_20_000100_add_input_details_to_rice_seed_distributions.php`, which adds `input_category`, `quantity_unit`, and `input_notes`;
 - `2026_08_20_000200_create_agricultural_machineries_table.php`.
+- `2026_09_03_000100_create_municipality_boundaries_table.php`, which adds official geofence geometry, lifecycle, measurements, bounding-box indexes, and editor attribution.
 
 The migration `2026_08_24_000100_extend_vaccinations_for_animal_health_services.php` widens the legacy Dog/Cat enum and adds the generalized animal-health service fields. It must be applied before deploying code that queries `service_type` or `animal_count`.
 
 The code already queries those fields/tables. Apply the migrations to the intended environment after taking a database backup. A missing `quantity_unit` produces `SQLSTATE[42S22]`, and a missing machinery table prevents the dashboard and machinery module from loading.
 
 The migration `2026_08_17_000000_backfill_rice_distribution_municipalities.php` fills missing distribution ownership from the linked farmer and intentionally does not erase that business ownership on rollback.
+
+### Reference geofences and synthetic demonstration data
+
+`TarlacMunicipalityDemoSeeder` is an explicit, idempotent demo seeder for Anao, Camiling, Paniqui, and Ramos. It is deliberately not called by `DatabaseSeeder`. It creates or updates a dedicated cohort of 10 clearly synthetic farmers and 10 clearly synthetic agriculture/fisheries assistance records per municipality without deleting or replacing existing operational records.
+
+The same seeder activates approximate municipality planning/reference geofences from the pinned geoBoundaries `gbOpen` Philippines ADM3 revision `9469f09`, which identifies NAMRIA, PSA, and OCHA Philippines as upstream sources and uses the CC BY 3.0 IGO license. The local source snapshot, provenance, checksum, and limitations are documented in `database/seeders/data/README.md`. These boundaries are not cadastral, legal, or survey-grade and require LGU/NAMRIA verification before being described as official.
+
+Run the seeder only when demonstration data is intentionally required:
+
+```bash
+php artisan db:seed --class=TarlacMunicipalityDemoSeeder
+```
+
+The seeder uses a global boundary-activation lock and one retried database transaction, validates geometry and published-area tolerances, refuses unknown overlaps, preserves replaced boundaries as archived records, and records boundary lifecycle events against an active Super Admin. Never add it to automatic production deployment seeding.
 
 ## 10. Environment, maps, and storage
 

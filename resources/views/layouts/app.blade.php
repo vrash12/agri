@@ -1002,6 +1002,7 @@
           'backup' => '<svg viewBox="0 0 24 24"><path d="M4 19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7l-4-4H6a2 2 0 0 0-2 2v14Z"></path><path d="M8 13h8"></path><path d="M12 9v8"></path></svg>',
           'users' => '<svg viewBox="0 0 24 24"><path d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0Z"></path><path d="M4 21a8 8 0 0 1 16 0"></path><path d="M19 8v3"></path><path d="M17.5 9.5h3"></path></svg>',
           'audit' => '<svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"></path><path d="M9 11l2 2 4-4"></path><path d="M9 17h6"></path></svg>',
+          'boundary' => '<svg viewBox="0 0 24 24"><path d="M4 6l5-3 6 3 5-2v14l-5 3-6-3-5 2V6Z"></path><path d="M9 3v15"></path><path d="M15 6v15"></path></svg>',
           'cooperative' => '<svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"></circle><circle cx="17" cy="9" r="2.5"></circle><path d="M2.5 20a5.5 5.5 0 0 1 11 0"></path><path d="M13 19a4.5 4.5 0 0 1 8.5 0"></path></svg>',
           'machinery' => '<svg viewBox="0 0 24 24"><path d="M3 15h18v4H3z"></path><path d="M6 15V9h8l3 6"></path><path d="M9 9V6h4"></path><circle cx="7" cy="19" r="2"></circle><circle cx="18" cy="19" r="2"></circle></svg>',
           'chev-left' => '<svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"></path></svg>',
@@ -1113,6 +1114,23 @@
           'route' => 'audit-logs.index',
           'patterns' => ['audit-logs.*'],
           'badge' => 'Monitor',
+        ];
+      }
+
+      if (! $user->isProvincialVeterinaryOffice() && Route::has('municipality-boundaries.index')) {
+        $navigationGroups['administration'] = $navigationGroups['administration'] ?? [
+          'label' => 'Administration',
+          'items' => [],
+        ];
+        $navigationGroups['administration']['items'][] = [
+          'label' => 'Municipality Geofences',
+          'description' => $user->isSuperAdmin()
+              ? 'Official boundaries and review'
+              : 'Boundary and parcel review',
+          'icon' => 'boundary',
+          'route' => 'municipality-boundaries.index',
+          'patterns' => ['municipality-boundaries.*'],
+          'badge' => $user->isSuperAdmin() ? 'Manage' : 'View',
         ];
       }
 

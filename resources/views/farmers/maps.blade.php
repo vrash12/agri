@@ -11,6 +11,7 @@
   $mapMappedFarmerCount = (int) ($mapMappedFarmerCount ?? 0);
   $mapPlotCount = (int) ($mapPlotCount ?? 0);
   $mapAreaHa = (float) ($mapAreaHa ?? 0);
+  $mapMunicipalityBoundaries = collect($mapMunicipalityBoundaries ?? []);
 @endphp
 
 @push('styles')
@@ -904,7 +905,20 @@
           <svg viewBox="0 0 24 24"><path d="M7 18h10a5 5 0 0 0 0-10 7 7 0 0 0-13 3 4 4 0 0 0 3 7Z"></path><path d="m8 21-1 2m5-2-1 2m5-2-1 2"></path></svg>
           <span id="mapWeatherButtonLabel">Weather</span>
         </button>
+        <label class="map-toggle" title="{{ $mapMunicipalityBoundaries->isEmpty() ? 'The Super Admin has not activated an official boundary for this map scope.' : 'Show or hide the official municipality geofence.' }}">
+          <input type="checkbox" id="toggleMunicipalityGeofence" @checked($mapMunicipalityBoundaries->isNotEmpty()) @disabled($mapMunicipalityBoundaries->isEmpty())>
+          <span>Municipality boundary</span>
+        </label>
         <label class="map-toggle"><input type="checkbox" id="togglePlots" checked><span>Parcels</span></label>
+        <button
+          type="button"
+          class="btn btn-soft btn-sm"
+          id="downloadMunicipalityMapBtn"
+          title="{{ !$mapWorkspaceMunicipality ? 'Select one municipality before downloading.' : ($mapMunicipalityBoundaries->isEmpty() ? 'The selected municipality has no active official boundary.' : 'Download this municipality geofence and its plotted parcels.') }}"
+          @disabled(!$mapWorkspaceMunicipality || $mapMunicipalityBoundaries->isEmpty())
+        >
+          Download municipality map
+        </button>
       </div>
     </div>
 
@@ -945,6 +959,9 @@
       </div>
 
       <div class="parcel-map-legend" aria-label="Map legend">
+        @if($mapMunicipalityBoundaries->isNotEmpty())
+          <span><i class="parcel-legend-line parcel-legend-geofence"></i> Official municipality boundary</span>
+        @endif
         <span><i class="parcel-legend-line"></i> Saved parcel</span>
         <span><i class="parcel-legend-line parcel-legend-draft"></i> Draft</span>
       </div>
@@ -1395,6 +1412,13 @@
 
 <script>
   window.__farmersMapData = window.__farmersMapData || @json($farmersMapData);
+  window.__municipalityGeofenceData = @json($mapMunicipalityBoundaries->values());
+  window.__municipalitySnapshotDataUrl = @json(
+    $mapWorkspaceMunicipality
+      ? route('municipality-boundaries.data', ['municipality_id' => $mapWorkspaceMunicipality->id])
+      : null
+  );
+  window.__csrfToken = @json(csrf_token());
   window.__gmapsApiKey = window.__gmapsApiKey || @json($googleMapsApiKey);
   window.__gmapsMapId = window.__gmapsMapId || @json($googleMapsMapId);
   window.__farmersRecordsBaseUrl = window.__farmersRecordsBaseUrl || "/farmers";
@@ -1411,6 +1435,7 @@
 </script>
 @include('farmers.partials.maps-styles')
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="{{ asset('js/municipality-snapshot-export.js') }}?v=1"></script>
 @include('farmers.partials.maps-scripts')
 
 @push('styles')
@@ -1904,6 +1929,12 @@
     height: 3px;
     border-radius: 999px;
     background: #22c55e;
+  }
+
+  #farmersMapModule .parcel-legend-geofence {
+    height: 0;
+    border-top: 3px dashed #15803d;
+    background: transparent;
   }
 
   #farmersMapModule .parcel-legend-draft {

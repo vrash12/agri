@@ -6,6 +6,7 @@ use App\Models\Farmer;
 use App\Models\FarmPlot;
 use App\Support\ConcurrentWrite;
 use App\Support\MunicipalityAccess;
+use App\Support\MunicipalityBoundaryGuard;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -18,7 +19,8 @@ class FarmPlotController extends Controller
 {
     public function __construct(
         private MunicipalityAccess $municipalityAccess,
-        private ConcurrentWrite $concurrentWrite
+        private ConcurrentWrite $concurrentWrite,
+        private MunicipalityBoundaryGuard $boundaryGuard
     ) {
         $this->middleware('auth');
     }
@@ -209,6 +211,10 @@ class FarmPlotController extends Controller
         ]);
 
         $polygon = $this->normalizePolygon($data['polygon']);
+        $geofence = $this->boundaryGuard->inspect(
+            (int) $farmer->municipality_id,
+            $polygon
+        );
 
         [$centroidLat, $centroidLng] = $this->computeCentroid($polygon);
         $areaHa = $this->areaHectaresSpherical($polygon);
@@ -227,7 +233,13 @@ class FarmPlotController extends Controller
 
         $this->attachVersion($plot);
 
-        return response()->json(['plot' => $plot], 201);
+        return response()->json([
+            'plot' => $plot,
+            'geofence' => [
+                'status' => $geofence['status'],
+                'message' => $geofence['message'],
+            ],
+        ], 201);
     }
 
     public function update(Request $request, FarmPlot $plot)
@@ -248,6 +260,10 @@ class FarmPlotController extends Controller
         ]);
 
         $polygon = $this->normalizePolygon($data['polygon']);
+        $geofence = $this->boundaryGuard->inspect(
+            (int) $plot->farmer->municipality_id,
+            $polygon
+        );
 
         [$centroidLat, $centroidLng] = $this->computeCentroid($polygon);
         $areaHa = $this->areaHectaresSpherical($polygon);
@@ -278,7 +294,13 @@ class FarmPlotController extends Controller
 
         $this->attachVersion($plot);
 
-        return response()->json(['plot' => $plot]);
+        return response()->json([
+            'plot' => $plot,
+            'geofence' => [
+                'status' => $geofence['status'],
+                'message' => $geofence['message'],
+            ],
+        ]);
     }
 
     public function destroy(Request $request, FarmPlot $plot)
@@ -367,6 +389,8 @@ class FarmPlotController extends Controller
         $matchedBySurnameBarangay = 0;
         $matchedByUniqueSurname = 0;
         $matchedByLooseSurname = 0;
+        $skippedOutsideBoundary = 0;
+        $boundaryWarnings = 0;
 
         DB::transaction(function () use (
             $placemarks,
@@ -381,7 +405,9 @@ class FarmPlotController extends Controller
             &$matchedByFullName,
             &$matchedBySurnameBarangay,
             &$matchedByUniqueSurname,
-            &$matchedByLooseSurname
+            &$matchedByLooseSurname,
+            &$skippedOutsideBoundary,
+            &$boundaryWarnings
         ) {
             foreach ($placemarks as $placemark) {
                 $baseName = trim((string) ($placemark->name ?? ''));
@@ -441,6 +467,21 @@ class FarmPlotController extends Controller
                         continue;
                     }
 
+                    try {
+                        $geofence = $this->boundaryGuard->inspect(
+                            (int) $farmer->municipality_id,
+                            $polygon
+                        );
+                    } catch (\Illuminate\Validation\ValidationException $exception) {
+                        $skippedOutsideBoundary++;
+
+                        continue;
+                    }
+
+                    if (in_array($geofence['status'], ['partial', 'near_boundary'], true)) {
+                        $boundaryWarnings++;
+                    }
+
                     [$centroidLat, $centroidLng] = $this->computeCentroid($polygon);
                     $areaHa = $this->areaHectaresSpherical($polygon);
 
@@ -487,7 +528,9 @@ class FarmPlotController extends Controller
             ."Matched by full name: {$matchedByFullName}, "
             ."Matched by surname+barangay: {$matchedBySurnameBarangay}, "
             ."Matched by unique surname: {$matchedByUniqueSurname}, "
-            ."Matched by loose surname: {$matchedByLooseSurname}"
+            ."Matched by loose surname: {$matchedByLooseSurname}, "
+            ."Skipped (outside/invalid boundary): {$skippedOutsideBoundary}, "
+            ."Boundary review warnings: {$boundaryWarnings}"
         );
     }
 

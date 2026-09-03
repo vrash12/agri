@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Municipality extends Model
 {
@@ -61,6 +62,18 @@ class Municipality extends Model
     public function backupFiles(): HasMany
     {
         return $this->hasMany(BackupFile::class);
+    }
+
+    public function boundaries(): HasMany
+    {
+        return $this->hasMany(MunicipalityBoundary::class);
+    }
+
+    public function activeBoundary(): HasOne
+    {
+        return $this->hasOne(MunicipalityBoundary::class)
+            ->where('status', MunicipalityBoundary::STATUS_ACTIVE)
+            ->latestOfMany();
     }
 
     /*

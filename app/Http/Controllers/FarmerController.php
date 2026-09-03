@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Farmer;
 use App\Models\Municipality;
+use App\Models\MunicipalityBoundary;
 use App\Models\RiceSeedDistribution;
 use App\Models\User;
 use App\Support\ConcurrentWrite;
@@ -15,6 +16,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -267,6 +269,41 @@ class FarmerController extends Controller
         $mapPlotCount = (int) $mapFarmers->sum('plot_count');
         $mapAreaHa = (float) $mapFarmers->sum('mapped_area_ha');
         $canChooseMunicipality = $user->isProvincialUser();
+        $mapMunicipalityBoundaries = collect();
+
+        // Keep the registry usable during a rolling deployment where the
+        // geofence migration may not have run yet. Once available, only active
+        // official boundaries within the authenticated map scope are exposed.
+        if (Schema::hasTable('municipality_boundaries')) {
+            $boundaryQuery = MunicipalityBoundary::query()
+                ->active()
+                ->with('municipality:id,name,province')
+                ->orderBy('municipality_id');
+
+            $this->municipalityAccess->scope($boundaryQuery, $user);
+
+            if ($workspaceMunicipalityId) {
+                $boundaryQuery->where('municipality_id', $workspaceMunicipalityId);
+            }
+
+            $mapMunicipalityBoundaries = $boundaryQuery
+                ->get([
+                    'id', 'municipality_id', 'name', 'geojson', 'color',
+                    'area_ha', 'centroid_lat', 'centroid_lng',
+                ])
+                ->map(fn (MunicipalityBoundary $boundary) => [
+                    'id' => $boundary->id,
+                    'municipality_id' => $boundary->municipality_id,
+                    'municipality_name' => $boundary->municipality?->name,
+                    'name' => $boundary->name,
+                    'geojson' => $boundary->geojson,
+                    'color' => $boundary->color ?: '#15803D',
+                    'area_ha' => round((float) $boundary->area_ha, 2),
+                    'centroid_lat' => (float) $boundary->centroid_lat,
+                    'centroid_lng' => (float) $boundary->centroid_lng,
+                ])
+                ->values();
+        }
 
         return view('farmers.index', compact(
             'farmers',
@@ -289,6 +326,7 @@ class FarmerController extends Controller
             'mapMappedFarmerCount',
             'mapPlotCount',
             'mapAreaHa',
+            'mapMunicipalityBoundaries',
             'canChooseMunicipality'
         ));
     }

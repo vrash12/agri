@@ -12,24 +12,46 @@
   <div class="module-alert module-alert-error"><strong>Please review the highlighted machinery information.</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
 @endif
 
-<div class="module-form-shell" id="machineryForm" data-default-municipality="{{ $selectedMunicipalityId }}" data-holders-url="{{ route('machinery-inventory.holders') }}">
+<div id="machineryForm" data-default-municipality="{{ $selectedMunicipalityId }}" data-holders-url="{{ route('machinery-inventory.holders') }}">
+  <div class="machinery-form-progress" aria-label="Machinery form progress">
+    <div>
+      <div class="machinery-progress-copy"><span class="machinery-progress-ring" id="machineryProgressPercent">0%</span><span><small>Record readiness</small><strong id="machineryProgressSummary">Complete the required fields</strong></span></div>
+      <div class="machinery-progress-track" aria-hidden="true"><i id="machineryProgressBar"></i></div>
+    </div>
+    <nav class="machinery-step-links" aria-label="Jump to a form section">
+      <a href="#machineryAssignment"><b>1</b>Assignment</a>
+      <a href="#machineryIdentity"><b>2</b>Identity</a>
+      <a href="#machineryOperations"><b>3</b>Operations</a>
+      <a href="#machineryMaintenance"><b>4</b>Maintenance</a>
+    </nav>
+  </div>
+
+  <div class="module-form-shell" style="margin-top:13px">
   <div class="module-form-main">
-    <section class="module-form-section">
+    <section class="module-form-section" id="machineryAssignment">
       <div class="module-form-section-head"><span class="module-step">1</span><div><h2>Accountability and assignment</h2><p>Select the responsible municipality and assign this equipment to one farmer or cooperative from the same office.</p></div></div>
       <div class="module-form-body">
         <div class="module-form-grid">
           @if($canChooseMunicipality ?? false)
             <div class="module-form-field module-form-field-full"><label for="municipality_id">Municipality <span class="module-required">*</span></label><select class="module-input" id="municipality_id" name="municipality_id" required><option value="">Select municipality</option>@foreach($municipalities as $municipality)<option value="{{ $municipality->id }}" @selected((string) old('municipality_id', $selectedMunicipalityId) === (string) $municipality->id)>{{ $municipality->name }}{{ $municipality->province ? ', '.$municipality->province : '' }}</option>@endforeach</select>@error('municipality_id')<div class="module-hint module-required">{{ $message }}</div>@enderror</div>
           @endif
-          <div class="module-form-field module-form-field-full"><label>Responsible holder <span class="module-required">*</span></label><div style="display:flex;gap:8px;flex-wrap:wrap"><label class="module-button" style="cursor:pointer"><input type="radio" name="holder_type" value="farmer" @checked($holderType === 'farmer')> Individual farmer</label><label class="module-button" style="cursor:pointer"><input type="radio" name="holder_type" value="cooperative" @checked($holderType === 'cooperative')> Farmers cooperative</label></div>@error('holder_type')<div class="module-hint module-required">{{ $message }}</div>@enderror</div>
+          <div class="module-form-field module-form-field-full">
+            <label>Responsible holder <span class="module-required">*</span></label>
+            <div class="machinery-holder-options">
+              <label class="machinery-holder-choice"><input type="radio" name="holder_type" value="farmer" @checked($holderType === 'farmer')><span><div><strong>Individual farmer</strong><small>Assign accountability to one registered farmer.</small></div></span></label>
+              <label class="machinery-holder-choice"><input type="radio" name="holder_type" value="cooperative" @checked($holderType === 'cooperative')><span><div><strong>Farmers cooperative</strong><small>Assign shared equipment to one registered organization.</small></div></span></label>
+            </div>
+            @error('holder_type')<div class="module-hint module-required">{{ $message }}</div>@enderror
+          </div>
           <div class="module-form-field module-form-field-full" id="farmerHolderField"><label for="farmer_holder_id">Select farmer <span class="module-required">*</span></label><select class="module-input" id="farmer_holder_id" data-holder-select="farmer"><option value="">Choose a farmer</option>@foreach($farmers as $farmer)@php($farmerName = trim(implode(' ', array_filter([$farmer->first_name, $farmer->middle_name, $farmer->last_name, $farmer->ext_name]))))<option value="{{ $farmer->id }}" data-municipality="{{ $farmer->municipality_id }}" @selected($holderType === 'farmer' && (string) $holderId === (string) $farmer->id)>{{ $farmerName }}{{ $farmer->ffrs ? ' · '.$farmer->ffrs : '' }}</option>@endforeach</select><div class="module-hint">Only farmers registered under the selected municipality are available.</div></div>
           <div class="module-form-field module-form-field-full" id="cooperativeHolderField"><label for="cooperative_holder_id">Select cooperative <span class="module-required">*</span></label><select class="module-input" id="cooperative_holder_id" data-holder-select="cooperative"><option value="">Choose a cooperative</option>@foreach($cooperatives as $cooperative)<option value="{{ $cooperative->id }}" data-municipality="{{ $cooperative->municipality_id }}" @selected($holderType === 'cooperative' && (string) $holderId === (string) $cooperative->id)>{{ $cooperative->name }}</option>@endforeach</select><div class="module-hint">Only cooperatives registered under the selected municipality are available.</div></div>
+          <div class="module-form-field module-form-field-full"><div class="machinery-inline-status" id="machineryHolderStatus" aria-live="polite"><i></i><span>Select a municipality, holder type, and responsible holder.</span></div></div>
           @error('holder_id')<div class="module-form-field module-form-field-full"><div class="module-hint module-required">{{ $message }}</div></div>@enderror
         </div>
       </div>
     </section>
 
-    <section class="module-form-section">
+    <section class="module-form-section" id="machineryIdentity">
       <div class="module-form-section-head"><span class="module-step">2</span><div><h2>Equipment identity</h2><p>Use a stable asset code so the physical machine and inventory record can be matched quickly.</p></div></div>
       <div class="module-form-body">
         <div class="module-form-grid">
@@ -43,7 +65,7 @@
       </div>
     </section>
 
-    <section class="module-form-section">
+    <section class="module-form-section" id="machineryOperations">
       <div class="module-form-section-head"><span class="module-step">3</span><div><h2>Operations and acquisition</h2><p>Record readiness, current location, utilization, source, and value for asset planning.</p></div></div>
       <div class="module-form-body">
         <div class="module-form-grid">
@@ -59,25 +81,28 @@
       </div>
     </section>
 
-    <section class="module-form-section">
+    <section class="module-form-section" id="machineryMaintenance">
       <div class="module-form-section-head"><span class="module-step">4</span><div><h2>Maintenance plan</h2><p>Keep the last service date and next schedule current so the dashboard can flag equipment early.</p></div></div>
       <div class="module-form-body">
         <div class="module-form-grid">
           <div class="module-form-field"><label for="last_maintenance_date">Last maintenance</label><input class="module-input" id="last_maintenance_date" type="date" name="last_maintenance_date" value="{{ $dateValue('last_maintenance_date') }}"></div>
           <div class="module-form-field"><label for="next_maintenance_date">Next maintenance</label><input class="module-input" id="next_maintenance_date" type="date" name="next_maintenance_date" value="{{ $dateValue('next_maintenance_date') }}">@error('next_maintenance_date')<div class="module-hint module-required">{{ $message }}</div>@enderror</div>
+          <div class="module-form-field module-form-field-full"><div class="machinery-maintenance-warning" id="machineryMaintenanceWarning" hidden></div></div>
           <div class="module-form-field module-form-field-full"><label for="notes">Operational notes</label><textarea class="module-input" id="notes" name="notes" rows="5" maxlength="3000" placeholder="Repairs, attachments, custodian instructions, restrictions, or service history">{{ $value('notes') }}</textarea><div class="module-hint">Do not place passwords or other sensitive personal information in operational notes.</div></div>
         </div>
       </div>
-      <div class="module-form-actions"><a class="module-button" href="{{ route('machinery-inventory.index') }}">Cancel</a><button class="module-button module-button-primary" type="submit">{{ $buttonText ?? 'Save machinery' }}</button></div>
+      <div class="module-form-actions"><a class="module-button" href="{{ route('machinery-inventory.index') }}">Cancel</a><button class="module-button module-button-primary" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h12l2 2v14H5zM8 4v6h7V4M8 20v-6h8v6"></path></svg>{{ $buttonText ?? 'Save machinery' }}</button></div>
     </section>
   </div>
 
   <aside class="module-form-aside">
-    <section class="module-aside-card"><h3>Live record summary</h3><div class="module-preview-grid"><div class="module-preview-item module-preview-item-wide"><span>Asset</span><strong id="machineryPreviewAsset">Not entered</strong></div><div class="module-preview-item module-preview-item-wide"><span>Holder</span><strong id="machineryPreviewHolder">Select a holder</strong></div><div class="module-preview-item"><span>Condition</span><strong id="machineryPreviewCondition">Good</strong></div><div class="module-preview-item"><span>Availability</span><strong id="machineryPreviewAvailability">Available</strong></div><div class="module-preview-item"><span>Next service</span><strong id="machineryPreviewMaintenance">Not scheduled</strong></div></div></section>
+    <section class="module-aside-card machinery-aside-highlight"><h3>Live record summary</h3><div class="module-preview-grid"><div class="module-preview-item module-preview-item-wide"><span>Asset</span><strong id="machineryPreviewAsset">Not entered</strong></div><div class="module-preview-item module-preview-item-wide"><span>Holder</span><strong id="machineryPreviewHolder">Select a holder</strong></div><div class="module-preview-item"><span>Condition</span><strong id="machineryPreviewCondition">Good</strong></div><div class="module-preview-item"><span>Availability</span><strong id="machineryPreviewAvailability">Available</strong></div><div class="module-preview-item"><span>Next service</span><strong id="machineryPreviewMaintenance">Not scheduled</strong></div></div></section>
+    <section class="module-aside-card"><h3>Before saving</h3><ul><li>Confirm the physical asset code matches the machine.</li><li>Choose the person or cooperative accountable for it.</li><li>Record its current condition and availability truthfully.</li><li>Add the next service date when known.</li></ul></section>
     <section class="module-aside-card"><h3>Assignment rule</h3><p>Each machine is assigned to exactly one farmer or one cooperative. The holder and machinery must belong to the same municipality.</p></section>
     <section class="module-aside-card"><h3>Maintenance alerts</h3><p>The inventory dashboard flags equipment that needs repair, is under maintenance, is overdue, or has a service date within the next 30 days.</p></section>
     <section class="module-aside-card"><h3>Office ownership</h3><p>@if($canChooseMunicipality ?? false)Choose the municipal office accountable for this asset. Changing it also requires selecting a holder from that municipality.@elseThis asset will be saved under <strong>{{ auth()->user()->municipality?->name ?? 'your municipal office' }}</strong>.@endif</p></section>
   </aside>
+  </div>
 </div>
 
 @push('scripts')
@@ -89,8 +114,19 @@
     const radios = [...root.querySelectorAll('input[name="holder_type"]')];
     const selects = { farmer:document.getElementById('farmer_holder_id'), cooperative:document.getElementById('cooperative_holder_id') };
     const fields = { farmer:document.getElementById('farmerHolderField'), cooperative:document.getElementById('cooperativeHolderField') };
+    const holderStatus = document.getElementById('machineryHolderStatus');
+    const progressPercent = document.getElementById('machineryProgressPercent');
+    const progressSummary = document.getElementById('machineryProgressSummary');
+    const progressBar = document.getElementById('machineryProgressBar');
+    const maintenanceWarning = document.getElementById('machineryMaintenanceWarning');
     const currentMunicipality = () => municipality ? municipality.value : root.dataset.defaultMunicipality;
     const currentType = () => radios.find(radio => radio.checked)?.value || 'farmer';
+    const setHolderStatus = (message, state = '') => {
+      if (!holderStatus) return;
+      holderStatus.classList.remove('ready', 'bad');
+      if (state) holderStatus.classList.add(state);
+      holderStatus.querySelector('span').textContent = message;
+    };
     const filterHolders = () => {
       const municipalityId = currentMunicipality();
       Object.values(selects).forEach(select => {
@@ -111,11 +147,13 @@
       if (!municipalityId) {
         select.innerHTML = `<option value="">Select a municipality first</option>`;
         select.disabled = type !== currentType();
-        updatePreview();
+        updateAll();
         return;
       }
       select.disabled = true;
       select.innerHTML = `<option value="">Loading ${type === 'farmer' ? 'farmers' : 'cooperatives'}…</option>`;
+      if (type === currentType()) setHolderStatus(`Loading ${type === 'farmer' ? 'farmers' : 'cooperatives'} for this municipality…`);
+      let failed = false;
       try {
         const url = new URL(root.dataset.holdersUrl, window.location.origin);
         url.searchParams.set('municipality_id', municipalityId);
@@ -126,11 +164,13 @@
         select.innerHTML = `<option value="">Choose a ${type === 'farmer' ? 'farmer' : 'cooperative'}</option>`;
         (payload.holders || []).forEach(holder => select.add(new Option(holder.label, holder.id)));
       } catch (error) {
+        failed = true;
         select.innerHTML = '<option value="">Unable to load holder list</option>';
       } finally {
         select.disabled = type !== currentType();
         select.required = type === currentType();
-        updatePreview();
+        updateAll();
+        if (failed && type === currentType()) setHolderStatus('The holder list could not be loaded. Check your connection and try the municipality again.', 'bad');
       }
     };
     const syncHolder = () => {
@@ -142,7 +182,7 @@
         selects[key].required = active;
         if (active) selects[key].name = 'holder_id'; else selects[key].removeAttribute('name');
       });
-      updatePreview();
+      updateAll();
     };
     const label = select => select?.selectedOptions?.[0]?.textContent?.trim() || '';
     const updatePreview = () => {
@@ -156,10 +196,68 @@
       const maintenance = document.getElementById('next_maintenance_date')?.value;
       document.getElementById('machineryPreviewMaintenance').textContent = maintenance ? new Date(maintenance+'T00:00:00').toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}) : 'Not scheduled';
     };
+    const updateHolderStatus = () => {
+      if (!currentMunicipality()) {
+        setHolderStatus('Select the accountable municipality before choosing a holder.');
+        return;
+      }
+      const type = currentType();
+      const select = selects[type];
+      if (select?.value) {
+        setHolderStatus(`${type === 'farmer' ? 'Farmer' : 'Cooperative'} selected: ${label(select)}`, 'ready');
+        return;
+      }
+      setHolderStatus(`Choose the responsible ${type === 'farmer' ? 'farmer' : 'cooperative'} from this municipality.`);
+    };
+    const updateProgress = () => {
+      const checks = [
+        Boolean(currentMunicipality()),
+        Boolean(selects[currentType()]?.value),
+        Boolean(document.getElementById('asset_code')?.value.trim()),
+        Boolean(document.getElementById('name')?.value.trim()),
+        Boolean(document.getElementById('category')?.value),
+        Boolean(document.getElementById('condition_status')?.value),
+        Boolean(document.getElementById('availability_status')?.value),
+      ];
+      const complete = checks.filter(Boolean).length;
+      const percentage = Math.round((complete / checks.length) * 100);
+      if (progressPercent) progressPercent.textContent = `${percentage}%`;
+      if (progressBar) progressBar.style.width = `${percentage}%`;
+      if (progressSummary) progressSummary.textContent = percentage === 100 ? 'Required information is ready' : `${complete} of ${checks.length} required items complete`;
+    };
+    const validateMaintenanceDates = () => {
+      if (!maintenanceWarning) return;
+      const lastValue = document.getElementById('last_maintenance_date')?.value;
+      const nextValue = document.getElementById('next_maintenance_date')?.value;
+      maintenanceWarning.hidden = true;
+      if (!nextValue) return;
+      const nextDate = new Date(`${nextValue}T00:00:00`);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (lastValue && nextDate < new Date(`${lastValue}T00:00:00`)) {
+        maintenanceWarning.textContent = 'Check the schedule: the next maintenance date is earlier than the last maintenance date.';
+        maintenanceWarning.hidden = false;
+      } else if (nextDate < today) {
+        maintenanceWarning.textContent = 'This maintenance date has already passed. The asset will be flagged as overdue.';
+        maintenanceWarning.hidden = false;
+      } else if ((nextDate - today) / 86400000 <= 30) {
+        maintenanceWarning.textContent = 'This asset will appear in the 30-day maintenance attention queue.';
+        maintenanceWarning.hidden = false;
+      }
+    };
+    const updateAll = () => {
+      updatePreview();
+      updateHolderStatus();
+      updateProgress();
+      validateMaintenanceDates();
+    };
     municipality?.addEventListener('change', async () => { await Promise.all([loadHolders('farmer'), loadHolders('cooperative')]); syncHolder(); });
     radios.forEach(radio => radio.addEventListener('change', syncHolder));
-    root.querySelectorAll('input, select, textarea').forEach(input => input.addEventListener('input', updatePreview));
-    filterHolders(); syncHolder(); updatePreview();
+    root.querySelectorAll('input, select, textarea').forEach(input => {
+      input.addEventListener('input', updateAll);
+      input.addEventListener('change', updateAll);
+    });
+    filterHolders(); syncHolder(); updateAll();
   })();
 </script>
 @endpush
