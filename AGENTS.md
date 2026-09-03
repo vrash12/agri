@@ -624,7 +624,7 @@ The migration `2026_08_17_000000_backfill_rice_distribution_municipalities.php` 
 
 ### Reference geofences and synthetic demonstration data
 
-`TarlacMunicipalityDemoSeeder` is an explicit, idempotent demo seeder for Anao, Camiling, Paniqui, and Ramos. It is deliberately not called by `DatabaseSeeder`. It creates or updates a dedicated cohort of 10 clearly synthetic farmers and 10 clearly synthetic agriculture/fisheries assistance records per municipality without deleting or replacing existing operational records.
+`TarlacMunicipalityDemoSeeder` is an explicit, idempotent demo seeder for Anao, Camiling, Paniqui, and Ramos. It is deliberately not called by `DatabaseSeeder`. It creates or updates a dedicated cohort of 10 clearly synthetic farmers and 10 clearly synthetic agriculture/fisheries assistance records in each of those four municipalities without deleting or replacing existing operational records. The same seeder also activates reference geofences for Concepcion and Tarlac City, but deliberately creates no synthetic operational records for those two workspaces.
 
 The same seeder activates approximate municipality planning/reference geofences from the pinned geoBoundaries `gbOpen` Philippines ADM3 revision `9469f09`, which identifies NAMRIA, PSA, and OCHA Philippines as upstream sources and uses the CC BY 3.0 IGO license. The local source snapshot, provenance, checksum, and limitations are documented in `database/seeders/data/README.md`. These boundaries are not cadastral, legal, or survey-grade and require LGU/NAMRIA verification before being described as official.
 

@@ -57,5 +57,31 @@ class TarlacMunicipalityDemoSeederTest extends TestCase
                     ->count()
             );
         }
+
+        foreach (['CONCEPCION', 'TARLAC_CITY'] as $code) {
+            $municipality = Municipality::query()->where('code', $code)->firstOrFail();
+
+            $this->assertSame(
+                1,
+                MunicipalityBoundary::query()
+                    ->active()
+                    ->where('municipality_id', $municipality->id)
+                    ->count()
+            );
+            $this->assertSame(
+                0,
+                Farmer::query()
+                    ->where('municipality_id', $municipality->id)
+                    ->where('ffrs', 'like', "DEMO-{$code}-FFRS-%")
+                    ->count()
+            );
+            $this->assertSame(
+                0,
+                RiceSeedDistribution::query()
+                    ->where('municipality_id', $municipality->id)
+                    ->where('lot_series', 'like', "DEMO-{$code}-2026-%")
+                    ->count()
+            );
+        }
     }
 }

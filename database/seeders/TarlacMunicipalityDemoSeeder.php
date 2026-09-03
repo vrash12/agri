@@ -18,9 +18,14 @@ use RuntimeException;
 
 class TarlacMunicipalityDemoSeeder extends Seeder
 {
-    private const SOURCE_FILE = 'seeders/data/tarlac_reference_boundaries.geojson';
+    /** @var array<string, string> */
+    private const SOURCE_FILES = [
+        'seeders/data/tarlac_reference_boundaries.geojson' => 'a782a110527abd49b8ca91f6fd0636dcb1943989f0a3c12e78a9aa877755e815',
+        'seeders/data/tarlac_extended_reference_boundaries.geojson' => '445c9a349e2313b34afd04105b5c81339aeeb03fdd3d5d04c1c50040ff6b9952',
+    ];
 
-    private const SOURCE_SHA256 = 'a782a110527abd49b8ca91f6fd0636dcb1943989f0a3c12e78a9aa877755e815';
+    /** @var array<int, string> */
+    private const DEMO_MUNICIPALITY_CODES = ['ANAO', 'CAMILING', 'PANIQUI', 'RAMOS'];
 
     private const DATA_MARKER = 'SYNTHETIC-DEMO-V1';
 
@@ -52,6 +57,14 @@ class TarlacMunicipalityDemoSeeder extends Seeder
                 'Bancay 1st', 'San Isidro', 'Bilad', 'Birbira', 'Bobon Caarosipan',
             ],
         ],
+        'CONCEPCION' => [
+            'name' => 'Concepcion',
+            'psgc' => '0306905000',
+            'shape_id' => '30758251B96121562186522',
+            'psa_area_ha' => 21310.0,
+            'color' => '#DC2626',
+            'source_checksum' => '445c9a349e2313b34afd04105b5c81339aeeb03fdd3d5d04c1c50040ff6b9952',
+        ],
         'PANIQUI' => [
             'name' => 'Paniqui',
             'psgc' => '0306910000',
@@ -73,6 +86,15 @@ class TarlacMunicipalityDemoSeeder extends Seeder
                 'Coral-Iloco', 'Guiteb', 'Pance', 'Poblacion Center', 'Poblacion North',
                 'Poblacion South', 'San Juan', 'San Raymundo', 'Toledo', 'Poblacion Center',
             ],
+        ],
+        'TARLAC_CITY' => [
+            'name' => 'Tarlac City',
+            'source_name' => 'City of Tarlac',
+            'psgc' => '0306916000',
+            'shape_id' => '30758251B41951653344210',
+            'psa_area_ha' => 26247.0,
+            'color' => '#0F766E',
+            'source_checksum' => '445c9a349e2313b34afd04105b5c81339aeeb03fdd3d5d04c1c50040ff6b9952',
         ],
     ];
 
@@ -208,7 +230,8 @@ class TarlacMunicipalityDemoSeeder extends Seeder
         $this->recordBoundaryAudits($actor, $auditEvents);
 
         $this->command?->info(sprintf(
-            'Ready: 4 active reference geofences, %d synthetic farmers, and %d synthetic assistance records.',
+            'Ready: %d active reference geofences, %d synthetic farmers, and %d synthetic assistance records.',
+            count(self::MUNICIPALITIES),
             $farmerCount,
             $assistanceCount
         ));
@@ -235,36 +258,42 @@ class TarlacMunicipalityDemoSeeder extends Seeder
      */
     private function loadAndValidateBoundaries(GeoGeometry $geometry): array
     {
-        $path = database_path(self::SOURCE_FILE);
-        if (! is_file($path)) {
-            throw new RuntimeException('The pinned municipality boundary source file is missing.');
+        $features = collect();
+        foreach (self::SOURCE_FILES as $relativePath => $expectedChecksum) {
+            $path = database_path($relativePath);
+            if (! is_file($path)) {
+                throw new RuntimeException("The pinned municipality boundary source file {$relativePath} is missing.");
+            }
+
+            $contents = (string) file_get_contents($path);
+            $normalizedChecksum = hash('sha256', str_replace(["\r\n", "\r"], "\n", $contents));
+            if ($normalizedChecksum !== $expectedChecksum) {
+                throw new RuntimeException("The pinned municipality boundary source checksum changed for {$relativePath}.");
+            }
+
+            $document = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
+            if (($document['type'] ?? null) !== 'FeatureCollection') {
+                throw new RuntimeException("The pinned boundary source {$relativePath} is not a GeoJSON FeatureCollection.");
+            }
+
+            if (
+                ($document['source']['commit'] ?? null) !== '9469f09'
+                || ($document['source']['license'] ?? null) !== 'CC BY 3.0 IGO'
+            ) {
+                throw new RuntimeException('The boundary attribution metadata does not match the approved pinned source.');
+            }
+
+            $features = $features->concat($document['features'] ?? []);
         }
 
-        $contents = (string) file_get_contents($path);
-        $normalizedChecksum = hash('sha256', str_replace(["\r\n", "\r"], "\n", $contents));
-        if ($normalizedChecksum !== self::SOURCE_SHA256) {
-            throw new RuntimeException('The pinned municipality boundary source checksum changed.');
-        }
-
-        $document = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
-        if (($document['type'] ?? null) !== 'FeatureCollection') {
-            throw new RuntimeException('The pinned boundary source is not a GeoJSON FeatureCollection.');
-        }
-
-        if (
-            ($document['source']['commit'] ?? null) !== '9469f09'
-            || ($document['source']['license'] ?? null) !== 'CC BY 3.0 IGO'
-        ) {
-            throw new RuntimeException('The boundary attribution metadata does not match the approved pinned source.');
-        }
-
-        $features = collect($document['features'] ?? [])->keyBy(
+        $features = $features->keyBy(
             fn (array $feature): string => strtoupper((string) ($feature['properties']['shapeName'] ?? ''))
         );
         $prepared = [];
 
         foreach (self::MUNICIPALITIES as $code => $definition) {
-            $feature = $features->get($code);
+            $sourceName = strtoupper((string) ($definition['source_name'] ?? $definition['name']));
+            $feature = $features->get($sourceName);
             if (! is_array($feature)) {
                 throw new RuntimeException("The {$definition['name']} boundary is missing from the pinned source.");
             }
@@ -459,6 +488,10 @@ class TarlacMunicipalityDemoSeeder extends Seeder
         $assistanceSeeded = 0;
 
         foreach (self::MUNICIPALITIES as $code => $definition) {
+            if (! in_array($code, self::DEMO_MUNICIPALITY_CODES, true)) {
+                continue;
+            }
+
             /** @var Municipality $municipality */
             $municipality = $municipalities->get($code);
 
@@ -589,7 +622,8 @@ class TarlacMunicipalityDemoSeeder extends Seeder
             'source_organizations' => ['NAMRIA', 'PSA', 'OCHA Philippines'],
             'source_license' => 'CC BY 3.0 IGO',
             'boundary_year' => 2020,
-            'source_checksum' => self::SOURCE_SHA256,
+            'source_checksum' => $definition['source_checksum']
+                ?? self::SOURCE_FILES['seeders/data/tarlac_reference_boundaries.geojson'],
             'notice' => 'Approximate planning/reference boundary; not legal, cadastral, or survey-grade.',
             'demo_seed' => self::DATA_MARKER,
         ];
