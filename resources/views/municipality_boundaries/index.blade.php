@@ -2,31 +2,67 @@
 
 @section('title', 'Municipality Geofences')
 
+@php
+  $canChooseMunicipality = auth()->user()->canAccessAllMunicipalities();
+  $assignedMunicipality = $canChooseMunicipality ? null : $municipalities->first();
+@endphp
+
 @push('styles')
 <style>
   .geo-page{min-width:0;color:#17211b}.geo-hero{position:relative;overflow:hidden;padding:22px;border:1px solid #dce6df;border-radius:18px;background:linear-gradient(120deg,#fff8cf 0,#f6fbf5 48%,#e6f7e9 100%)}
-  .geo-hero:after{content:"";position:absolute;right:-70px;top:-95px;width:260px;height:260px;border-radius:50%;background:rgba(34,197,94,.12)}.geo-eyebrow{display:flex;align-items:center;gap:7px;color:#08713d;font-size:10px;font-weight:950;letter-spacing:.08em;text-transform:uppercase}.geo-eyebrow i{width:9px;height:9px;border-radius:50%;background:#2eb768;box-shadow:0 0 0 5px rgba(46,183,104,.12)}
-  .geo-title-row{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;gap:18px}.geo-title{margin:7px 0 4px;font-size:clamp(27px,3vw,40px);line-height:1;font-weight:950;letter-spacing:-.035em}.geo-subtitle{max-width:790px;margin:0;color:#5b6a61;font-size:12px;line-height:1.55}.geo-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
-  .geo-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:38px;padding:8px 13px;border:1px solid #d7e1da;border-radius:10px;background:#fff;color:#203128;font-size:10px;font-weight:900;cursor:pointer;transition:.15s}.geo-btn:hover{transform:translateY(-1px);border-color:#99bca5;box-shadow:0 6px 16px rgba(18,77,43,.08)}.geo-btn.primary{border-color:#176d3e;background:#176d3e;color:#fff}.geo-btn.warn{border-color:#f0c8a0;color:#9a4d00;background:#fff8ef}.geo-btn.danger{border-color:#efc1bd;color:#a82820;background:#fff6f5}.geo-btn:disabled{opacity:.48;cursor:not-allowed;transform:none}
-  .geo-stats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:13px 0}.geo-stat{min-width:0;padding:13px;border:1px solid #dce5df;border-radius:13px;background:#fff}.geo-stat small{display:block;color:#65736b;font-size:8px;font-weight:900;letter-spacing:.05em;text-transform:uppercase}.geo-stat strong{display:block;margin-top:5px;font-size:20px;line-height:1;font-weight:950;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.geo-stat span{display:block;margin-top:5px;color:#738078;font-size:8px}
-  .geo-workspace{overflow:hidden;border:1px solid #dbe5de;border-radius:16px;background:#fff;box-shadow:0 10px 30px rgba(24,64,39,.05)}.geo-toolbar{display:flex;align-items:end;gap:9px;padding:12px;border-bottom:1px solid #e0e8e2;background:#fbfdfb}.geo-field{min-width:0;flex:1}.geo-field label{display:block;margin:0 0 5px;color:#526158;font-size:8px;font-weight:950;letter-spacing:.05em;text-transform:uppercase}.geo-field select,.geo-field input{width:100%;height:38px;padding:0 11px;border:1px solid #d5dfd8;border-radius:9px;background:#fff;color:#1c2b22;font-size:10px;font-weight:750;outline:none}.geo-field select:focus,.geo-field input:focus{border-color:#49a46d;box-shadow:0 0 0 3px rgba(34,197,94,.12)}.geo-search{max-width:330px}.geo-select{max-width:310px}
-  .geo-grid{display:grid;grid-template-columns:minmax(0,1fr) 360px;min-height:650px}.geo-map-wrap{position:relative;min-width:0;background:#e8eef2}.geo-map{width:100%;height:650px}.geo-map-message{position:absolute;z-index:4;left:16px;top:16px;max-width:330px;padding:11px 13px;border-radius:10px;background:rgba(20,39,29,.92);color:#fff;font-size:9px;line-height:1.5;box-shadow:0 8px 22px rgba(0,0,0,.18)}.geo-map-legend{position:absolute;z-index:3;left:14px;bottom:14px;display:flex;gap:11px;padding:8px 10px;border:1px solid #dfe5e0;border-radius:9px;background:rgba(255,255,255,.94);font-size:8px;font-weight:850}.geo-map-legend span{display:flex;align-items:center;gap:5px}.geo-map-legend i{width:13px;height:7px;border-radius:2px}.geo-map-legend .active{background:#15803d}.geo-map-legend .draft{border:2px dashed #d68b16;background:#fff3d8}.geo-map-legend .parcel{background:#2563eb}
-  .geo-panel{min-width:0;border-left:1px solid #dde6df;background:#fbfdfb}.geo-panel-head{padding:16px;border-bottom:1px solid #e0e8e2;background:#fff}.geo-panel-head small{color:#08713d;font-size:8px;font-weight:950;letter-spacing:.07em;text-transform:uppercase}.geo-panel-head h2{margin:4px 0 2px;font-size:19px;font-weight:950}.geo-panel-head p{margin:0;color:#6a776f;font-size:9px;line-height:1.45}.geo-panel-scroll{height:560px;overflow:auto;padding:12px}.geo-empty{padding:24px 15px;border:1px dashed #cfdcd3;border-radius:12px;text-align:center;color:#68756d;font-size:9px;line-height:1.55;background:#fff}.geo-mini-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-bottom:12px}.geo-mini{padding:10px;border:1px solid #dfe7e1;border-radius:10px;background:#fff}.geo-mini span{display:block;color:#68766e;font-size:7px;font-weight:900;text-transform:uppercase}.geo-mini strong{display:block;margin-top:3px;font-size:15px;font-weight:950}.geo-section-title{display:flex;align-items:center;justify-content:space-between;margin:14px 0 7px;font-size:10px;font-weight:950}.geo-boundary-card,.geo-review-card{padding:10px;border:1px solid #dce5df;border-radius:11px;background:#fff;margin-bottom:7px}.geo-boundary-card.active{border-color:#8ac9a2;box-shadow:inset 3px 0 #19824a}.geo-boundary-top{display:flex;align-items:flex-start;justify-content:space-between;gap:7px}.geo-boundary-card strong{font-size:10px}.geo-badge{display:inline-flex;padding:4px 6px;border-radius:999px;background:#edf3ef;color:#56645b;font-size:7px;font-weight:950;text-transform:uppercase}.geo-badge.active{background:#e2f5e9;color:#08713d}.geo-badge.draft{background:#fff1d7;color:#986000}.geo-boundary-meta{margin-top:6px;color:#69776f;font-size:8px}.geo-card-actions{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.geo-card-actions .geo-btn{min-height:29px;padding:5px 8px;font-size:8px}.geo-review-card{cursor:pointer}.geo-review-card:hover{border-color:#9db5a5}.geo-review-top{display:flex;justify-content:space-between;gap:8px}.geo-review-card strong{font-size:9px}.geo-review-card p{margin:5px 0 0;color:#6a776f;font-size:8px}.geo-review-status{font-size:7px;font-weight:950;text-transform:uppercase}.geo-review-status.outside,.geo-review-status.invalid{color:#b42318}.geo-review-status.partial{color:#b15b00}.geo-review-status.near_boundary{color:#9b7100}
-  .geo-editor{position:absolute;z-index:5;right:14px;top:14px;width:min(360px,calc(100% - 28px));padding:13px;border:1px solid #cbd8cf;border-radius:13px;background:rgba(255,255,255,.97);box-shadow:0 16px 42px rgba(0,0,0,.18)}.geo-editor[hidden]{display:none}.geo-editor h3{margin:0;font-size:14px;font-weight:950}.geo-editor p{margin:4px 0 10px;color:#65736a;font-size:8px;line-height:1.45}.geo-editor-grid{display:grid;grid-template-columns:1fr 95px;gap:7px}.geo-editor .geo-field{margin-bottom:8px}.geo-editor-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}.geo-check{display:flex;align-items:flex-start;gap:7px;margin:8px 0;color:#536159;font-size:8px;line-height:1.45}.geo-check input{margin-top:1px}.geo-draw-state{display:flex;align-items:center;gap:6px;padding:7px 9px;border-radius:8px;background:#eef7f1;color:#176d3e;font-size:8px;font-weight:850}
-  .geo-dialog{width:min(480px,calc(100% - 28px));padding:0;border:0;border-radius:16px;box-shadow:0 25px 70px rgba(0,0,0,.28)}.geo-dialog::backdrop{background:rgba(11,27,18,.52)}.geo-dialog-head{display:flex;align-items:flex-start;justify-content:space-between;padding:16px;border-bottom:1px solid #e0e7e2}.geo-dialog-head h3{margin:0;font-size:17px;font-weight:950}.geo-dialog-head p{margin:4px 0 0;color:#65736b;font-size:9px}.geo-dialog-body{padding:16px}.geo-dialog-grid{display:grid;grid-template-columns:1fr 120px;gap:10px}.geo-dialog-actions{display:flex;justify-content:flex-end;gap:7px;padding:12px 16px;border-top:1px solid #e0e7e2;background:#f9fbf9}.geo-file{height:auto!important;padding:9px!important}.geo-toast{position:fixed;z-index:9999;right:18px;bottom:18px;max-width:390px;padding:11px 14px;border-radius:10px;background:#173a27;color:#fff;font-size:10px;font-weight:800;box-shadow:0 12px 34px rgba(0,0,0,.22)}.geo-toast.bad{background:#9b2c25}.geo-toast[hidden]{display:none}
+  .geo-hero:after{content:"";position:absolute;right:-70px;top:-95px;width:260px;height:260px;border-radius:50%;background:rgba(34,197,94,.12)}.geo-eyebrow{display:flex;align-items:center;gap:7px;color:#08713d;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:none}.geo-eyebrow i{width:9px;height:9px;border-radius:50%;background:#2eb768;box-shadow:0 0 0 5px rgba(46,183,104,.12)}
+  .geo-title-row{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;gap:18px}.geo-title{margin:7px 0 4px;font-size:clamp(27px,3vw,40px);line-height:1;font-weight:700;letter-spacing:-.035em}.geo-subtitle{max-width:790px;margin:0;color:#5b6a61;font-size:12px;line-height:1.55}.geo-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
+  .geo-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:38px;padding:8px 13px;border:1px solid #d7e1da;border-radius:10px;background:#fff;color:#203128;font-size:12px;font-weight:700;cursor:pointer;transition:.15s}.geo-btn:hover{transform:translateY(-1px);border-color:#99bca5;box-shadow:0 6px 16px rgba(18,77,43,.08)}.geo-btn.primary{border-color:#176d3e;background:#176d3e;color:#fff}.geo-btn.warn{border-color:#f0c8a0;color:#9a4d00;background:#fff8ef}.geo-btn.danger{border-color:#efc1bd;color:#a82820;background:#fff6f5}.geo-btn:disabled{opacity:.48;cursor:not-allowed;transform:none}
+  .geo-stats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:13px 0}.geo-stat{min-width:0;padding:13px;border:1px solid #dce5df;border-radius:13px;background:#fff}.geo-stat small{display:block;color:#65736b;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:none}.geo-stat strong{display:block;margin-top:5px;font-size:20px;line-height:1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.geo-stat span{display:block;margin-top:5px;color:#738078;font-size:12px}
+  .geo-workspace{overflow:hidden;border:1px solid #dbe5de;border-radius:16px;background:#fff;box-shadow:0 10px 30px rgba(24,64,39,.05)}.geo-toolbar{display:flex;align-items:end;gap:9px;padding:12px;border-bottom:1px solid #e0e8e2;background:#fbfdfb}.geo-field{min-width:0;flex:1}.geo-field label{display:block;margin:0 0 5px;color:#526158;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:none}.geo-field select,.geo-field input{width:100%;height:38px;padding:0 11px;border:1px solid #d5dfd8;border-radius:9px;background:#fff;color:#1c2b22;font-size:12px;font-weight:700;outline:none}.geo-field select:focus,.geo-field input:focus{border-color:#49a46d;box-shadow:0 0 0 3px rgba(34,197,94,.12)}.geo-search{max-width:330px}.geo-select{max-width:310px}
+  .geo-grid{display:grid;grid-template-columns:minmax(0,1fr) 360px;min-height:650px}.geo-map-wrap{position:relative;min-width:0;background:#e8eef2}.geo-map{width:100%;height:650px}.geo-map-message{position:absolute;z-index:4;left:16px;top:16px;max-width:330px;padding:11px 13px;border-radius:10px;background:rgba(20,39,29,.92);color:#fff;font-size:12px;line-height:1.5;box-shadow:0 8px 22px rgba(0,0,0,.18)}.geo-map-legend{position:absolute;z-index:3;left:14px;bottom:14px;display:flex;gap:11px;padding:8px 10px;border:1px solid #dfe5e0;border-radius:9px;background:rgba(255,255,255,.94);font-size:12px;font-weight:700}.geo-map-legend span{display:flex;align-items:center;gap:5px}.geo-map-legend i{width:13px;height:7px;border-radius:2px}.geo-map-legend .active{background:#15803d}.geo-map-legend .draft{border:2px dashed #d68b16;background:#fff3d8}.geo-map-legend .parcel{background:#2563eb}
+  .geo-panel{min-width:0;border-left:1px solid #dde6df;background:#fbfdfb}.geo-panel-head{padding:16px;border-bottom:1px solid #e0e8e2;background:#fff}.geo-panel-head small{color:#08713d;font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:none}.geo-panel-head h2{margin:4px 0 2px;font-size:19px;font-weight:700}.geo-panel-head p{margin:0;color:#6a776f;font-size:12px;line-height:1.45}.geo-panel-scroll{height:560px;overflow:auto;padding:12px}.geo-empty{padding:24px 15px;border:1px dashed #cfdcd3;border-radius:12px;text-align:center;color:#68756d;font-size:12px;line-height:1.55;background:#fff}.geo-mini-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-bottom:12px}.geo-mini{padding:10px;border:1px solid #dfe7e1;border-radius:10px;background:#fff}.geo-mini span{display:block;color:#68766e;font-size:12px;font-weight:700;text-transform:none}.geo-mini strong{display:block;margin-top:3px;font-size:15px;font-weight:700}.geo-section-title{display:flex;align-items:center;justify-content:space-between;margin:14px 0 7px;font-size:12px;font-weight:700}.geo-boundary-card,.geo-review-card{padding:10px;border:1px solid #dce5df;border-radius:11px;background:#fff;margin-bottom:7px}.geo-boundary-card.active{border-color:#8ac9a2;box-shadow:inset 3px 0 #19824a}.geo-boundary-top{display:flex;align-items:flex-start;justify-content:space-between;gap:7px}.geo-boundary-card strong{font-size:12px}.geo-badge{display:inline-flex;padding:4px 6px;border-radius:999px;background:#edf3ef;color:#56645b;font-size:12px;font-weight:700;text-transform:none}.geo-badge.active{background:#e2f5e9;color:#08713d}.geo-badge.draft{background:#fff1d7;color:#986000}.geo-boundary-meta{margin-top:6px;color:#69776f;font-size:12px}.geo-card-actions{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.geo-card-actions .geo-btn{min-height:29px;padding:5px 8px;font-size:12px}.geo-review-card{cursor:pointer}.geo-review-card:hover{border-color:#9db5a5}.geo-review-top{display:flex;justify-content:space-between;gap:8px}.geo-review-card strong{font-size:12px}.geo-review-card p{margin:5px 0 0;color:#6a776f;font-size:12px}.geo-review-status{font-size:12px;font-weight:700;text-transform:none}.geo-review-status.outside,.geo-review-status.invalid{color:#b42318}.geo-review-status.partial{color:#b15b00}.geo-review-status.near_boundary{color:#9b7100}
+  .geo-editor{position:absolute;z-index:5;right:14px;top:14px;width:min(360px,calc(100% - 28px));padding:13px;border:1px solid #cbd8cf;border-radius:13px;background:rgba(255,255,255,.97);box-shadow:0 16px 42px rgba(0,0,0,.18)}.geo-editor[hidden]{display:none}.geo-editor h3{margin:0;font-size:14px;font-weight:700}.geo-editor p{margin:4px 0 10px;color:#65736a;font-size:12px;line-height:1.45}.geo-editor-grid{display:grid;grid-template-columns:1fr 95px;gap:7px}.geo-editor .geo-field{margin-bottom:8px}.geo-editor-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}.geo-check{display:flex;align-items:flex-start;gap:7px;margin:8px 0;color:#536159;font-size:12px;line-height:1.45}.geo-check input{margin-top:1px}.geo-draw-state{display:flex;align-items:center;gap:6px;padding:7px 9px;border-radius:8px;background:#eef7f1;color:#176d3e;font-size:12px;font-weight:700}
+  .geo-dialog{width:min(480px,calc(100% - 28px));padding:0;border:0;border-radius:16px;box-shadow:0 25px 70px rgba(0,0,0,.28)}.geo-dialog::backdrop{background:rgba(11,27,18,.52)}.geo-dialog-head{display:flex;align-items:flex-start;justify-content:space-between;padding:16px;border-bottom:1px solid #e0e7e2}.geo-dialog-head h3{margin:0;font-size:17px;font-weight:700}.geo-dialog-head p{margin:4px 0 0;color:#65736b;font-size:12px}.geo-dialog-body{padding:16px}.geo-dialog-grid{display:grid;grid-template-columns:1fr 120px;gap:10px}.geo-dialog-actions{display:flex;justify-content:flex-end;gap:7px;padding:12px 16px;border-top:1px solid #e0e7e2;background:#f9fbf9}.geo-file{height:auto!important;padding:9px!important}.geo-toast{position:fixed;z-index:9999;right:18px;bottom:18px;max-width:390px;padding:11px 14px;border-radius:10px;background:#173a27;color:#fff;font-size:12px;font-weight:700;box-shadow:0 12px 34px rgba(0,0,0,.22)}.geo-toast.bad{background:#9b2c25}.geo-toast[hidden]{display:none}
   @media(max-width:1100px){.geo-stats{grid-template-columns:repeat(3,1fr)}.geo-grid{grid-template-columns:1fr}.geo-panel{border-left:0;border-top:1px solid #dde6df}.geo-panel-scroll{height:auto;max-height:520px}.geo-map,.geo-grid{min-height:560px}.geo-map{height:560px}}
   @media(max-width:700px){.geo-title-row{display:block}.geo-actions{justify-content:flex-start;margin-top:13px}.geo-stats{grid-template-columns:repeat(2,1fr)}.geo-toolbar{align-items:stretch;flex-direction:column}.geo-search,.geo-select{max-width:none}.geo-toolbar .geo-btn{width:100%}.geo-map,.geo-grid{min-height:480px}.geo-map{height:480px}.geo-dialog-grid,.geo-editor-grid{grid-template-columns:1fr}}
+  .geo-page{font-family:var(--ui-font);color:var(--ui-text);font-size:14px;line-height:1.5}
+  .geo-hero{border-radius:12px;background:var(--ui-surface);box-shadow:none}
+  .geo-eyebrow i{display:none}
+  .geo-subtitle{font-size:14px}
+  .geo-btn,.geo-card-actions .geo-btn{min-height:44px;font-size:14px;font-weight:500;border-radius:8px}
+  .geo-btn:hover{transform:none;box-shadow:none}
+  .geo-field label{font-size:14px;font-weight:500}
+  .geo-field select,.geo-field input{min-height:44px;font-size:16px;font-weight:400;border-color:var(--ui-control-border)}
+  .geo-workspace,.geo-dialog{border-radius:12px;box-shadow:none}
+  .geo-stats{margin:0;padding:16px}
+  .geo-map-tools{align-self:stretch;min-width:190px}
+  .geo-map-tools>summary{padding:12px;min-height:44px;font-size:14px;cursor:pointer;border:1px solid var(--ui-control-border);border-radius:8px}
+  .geo-map-tools>.geo-actions{margin-top:12px}
+  .geo-opacity{padding:12px;margin-top:12px;border:1px solid var(--ui-border);border-radius:8px;background:var(--ui-surface)}
+  .geo-opacity-heading{display:flex;justify-content:space-between;gap:12px;font-size:14px;font-weight:700}
+  .geo-opacity output{min-width:4ch;text-align:right;color:var(--ui-primary)}
+  .geo-opacity input{display:block;width:100%;height:32px;margin:4px 0;accent-color:var(--ui-primary);cursor:pointer}
+  .geo-opacity-scale{display:flex;justify-content:space-between;font-size:12px;color:var(--ui-text-muted)}
+  .geo-opacity p{margin:8px 0 0;font-size:12px;color:var(--ui-text-muted)}
+  .geo-boundary-label{padding:4px 8px;border:1px solid var(--ui-text);border-radius:6px;background:var(--ui-accent-soft);box-shadow:0 1px 4px rgba(0,0,0,.35)}
+  .geo-toolbar{flex-wrap:wrap}
+  .geo-field{flex-basis:200px}
+  .geo-field.geo-search{flex-basis:180px}
+  .geo-assigned-scope{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
+  .geo-assigned-scope span{color:var(--ui-text-muted);font-size:12px}
+  .geo-assigned-scope strong{font-size:16px;overflow-wrap:anywhere}
+  .geo-panel-scroll .module-more{margin-block:16px}
+  .geo-section-title,.geo-boundary-card strong,.geo-review-card strong{font-size:14px}
+  .geo-page :is(button,a,input,select,summary,[role="button"]):focus-visible{outline:3px solid var(--ui-focus);outline-offset:3px}
+  @media(max-width:700px){.geo-field{flex-basis:auto}.geo-map-tools{width:100%}.geo-stats{grid-template-columns:1fr 1fr}.geo-stat strong{white-space:normal;font-size:18px}}
 </style>
 @endpush
 
 @section('content')
+@include('partials.operations-ui-styles')
 <div class="geo-page">
   <section class="geo-hero">
     <div class="geo-title-row">
       <div>
-        <div class="geo-eyebrow"><i></i> Province boundary administration</div>
+        <div class="geo-eyebrow"><i></i> {{ $canChooseMunicipality ? 'Province boundary administration' : $assignedMunicipality?->name.' workspace' }}</div>
         <h1 class="geo-title">Municipality geofences</h1>
-        <p class="geo-subtitle">Maintain official municipal coverage, inspect mapped parcels, and catch land records that cross or fall outside their assigned municipality.</p>
+        <p class="geo-subtitle">{{ $canManageBoundaries ? 'Maintain official municipal coverage, inspect mapped parcels, and catch land records that cross or fall outside their assigned municipality.' : 'Review your '.($canChooseMunicipality ? 'municipality workspaces' : 'assigned municipality boundary').' and mapped parcels that need field verification.' }}</p>
       </div>
       @if($canManageBoundaries)
         <div class="geo-actions">
@@ -37,23 +73,28 @@
     </div>
   </section>
 
+  <details class="module-more"><summary>Coverage summary <span>{{ $canChooseMunicipality ? 'Municipality, farmer, and parcel totals' : 'Boundary, farmer, and parcel totals for '.$assignedMunicipality?->name }}</span></summary>
   <section class="geo-stats" aria-label="Geofence summary">
-    <article class="geo-stat"><small>Municipalities in scope</small><strong>{{ number_format($summary['municipalities']) }}</strong><span>Active municipal offices</span></article>
+    @if($canChooseMunicipality)
+      <article class="geo-stat"><small>Municipalities in scope</small><strong>{{ number_format($summary['municipalities']) }}</strong><span>Active municipal offices</span></article>
+    @else
+      <article class="geo-stat"><small>Assigned municipality</small><strong>{{ $assignedMunicipality?->name }}</strong><span>Your office workspace</span></article>
+    @endif
     <article class="geo-stat"><small>Official boundaries</small><strong id="summaryConfigured">{{ number_format($summary['configured']) }}</strong><span>Active geofences</span></article>
-    <article class="geo-stat"><small>Boundary coverage</small><strong>{{ number_format($summary['boundary_area_ha'], 0) }} ha</strong><span>Combined official area</span></article>
+    <article class="geo-stat"><small>Boundary coverage</small><strong>{{ number_format($summary['boundary_area_ha'], 0) }} ha</strong><span>{{ $canChooseMunicipality ? 'Combined official area' : 'Active boundary area' }}</span></article>
     <article class="geo-stat"><small>Registered farmers</small><strong id="summaryFarmers">{{ number_format($summary['farmers']) }}</strong><span>Current access scope</span></article>
     <article class="geo-stat"><small>Mapped parcels</small><strong id="summaryParcels">{{ number_format($summary['parcels']) }}</strong><span>Saved farm polygons</span></article>
     <article class="geo-stat"><small>Mapped land</small><strong id="summaryMappedArea">{{ number_format($summary['mapped_area_ha'], 2) }} ha</strong><span>Across visible parcels</span></article>
   </section>
+  </details>
 
   <section class="geo-workspace">
     <div class="geo-toolbar">
+      @if($canChooseMunicipality)
       <div class="geo-field geo-select">
         <label for="municipalityFilter">Municipality workspace</label>
         <select id="municipalityFilter">
-          @if(auth()->user()->canAccessAllMunicipalities())
-            <option value="">All municipalities</option>
-          @endif
+          <option value="">All municipalities</option>
           @foreach($municipalities as $municipality)
             <option value="{{ $municipality->id }}">{{ $municipality->name }}, {{ $municipality->province }}</option>
           @endforeach
@@ -63,15 +104,32 @@
         <label for="boundarySearch">Find municipality</label>
         <input id="boundarySearch" type="search" placeholder="Type a municipality name" autocomplete="off">
       </div>
+      @else
+        <div class="geo-assigned-scope" aria-label="Assigned municipality workspace">
+          <span>Assigned municipality</span>
+          <strong>{{ $assignedMunicipality?->name }}</strong>
+          <span>Boundary and parcel checks for your office</span>
+        </div>
+        <input type="hidden" id="municipalityFilter" value="{{ $assignedMunicipality?->id }}">
+      @endif
+      <details class="geo-map-tools"><summary>Map tools</summary><div class="geo-actions">
       <button class="geo-btn" type="button" id="fitVisible">Fit visible boundaries</button>
-      <button class="geo-btn" type="button" id="resetMap">Reset province view</button>
+      <button class="geo-btn" type="button" id="resetMap">{{ $canChooseMunicipality ? 'Reset province view' : 'Reset municipality view' }}</button>
       <button class="geo-btn primary" type="button" id="downloadSnapshot" disabled>Download municipality snapshot</button>
+      </div>
+      <div class="geo-opacity">
+        <div class="geo-opacity-heading"><label for="geofenceOpacity">Geofence color opacity</label><output id="geofenceOpacityValue" for="geofenceOpacity">20%</output></div>
+        <input id="geofenceOpacity" type="range" min="0" max="100" step="5" value="20" aria-describedby="geofenceOpacityHelp" aria-valuetext="20% color opacity">
+        <div class="geo-opacity-scale"><span>0% Clear</span><span>100% Solid</span></div>
+        <p id="geofenceOpacityHelp">Adjust the map's color fill. Outlines stay visible; drafts use a lighter fill.</p>
+      </div>
+      </details>
     </div>
 
     <div class="geo-grid">
       <div class="geo-map-wrap">
         <div id="geofenceMap" class="geo-map" aria-label="Municipality boundary map"></div>
-        <div class="geo-map-message" id="mapMessage">Choose a municipality to load its farmers, parcels, and compliance review. All active municipality boundaries remain visible in the province view.</div>
+        <div class="geo-map-message" id="mapMessage">{{ $canChooseMunicipality ? 'Choose a municipality to load its farmers, parcels, and compliance review. All active municipality boundaries remain visible in the province view.' : 'The map opens your assigned municipality boundary and parcel checks automatically.' }}</div>
         <div class="geo-map-legend"><span><i class="active"></i>Official boundary</span><span><i class="draft"></i>Draft</span><span><i class="parcel"></i>Farm parcel</span></div>
 
         @if($canManageBoundaries)
@@ -109,12 +167,12 @@
 
       <aside class="geo-panel">
         <div class="geo-panel-head">
-          <small id="panelEyebrow">Province-wide view</small>
-          <h2 id="panelTitle">Boundary overview</h2>
-          <p id="panelDescription">Select one municipality to inspect its active boundary and parcel placement.</p>
+          <small id="panelEyebrow">{{ $canChooseMunicipality ? 'Province-wide view' : 'Assigned municipality' }}</small>
+          <h2 id="panelTitle">{{ $canChooseMunicipality ? 'Boundary overview' : $assignedMunicipality?->name }}</h2>
+          <p id="panelDescription">{{ $canChooseMunicipality ? 'Select one municipality to inspect its active boundary and parcel placement.' : 'Review your boundary and parcels needing attention.' }}</p>
         </div>
         <div class="geo-panel-scroll" id="panelContent">
-          <div class="geo-empty">The map is showing all available municipality geofences. Use the municipality selector to load detailed parcel checks.</div>
+          <div class="geo-empty">{{ $canChooseMunicipality ? 'The map is showing all available municipality geofences. Use the municipality selector to load detailed parcel checks.' : 'Your boundary and parcel checks appear here when the map is available.' }}</div>
         </div>
       </aside>
     </div>
@@ -152,6 +210,8 @@
     key: @json($googleMapsApiKey),
     mapId: @json($googleMapsMapId),
     canManage: @json($canManageBoundaries),
+    canChooseMunicipality: @json($canChooseMunicipality),
+    assignedMunicipalityId: @json($assignedMunicipality?->id),
     csrf: @json(csrf_token()),
     dataUrl: @json(route('municipality-boundaries.data')),
     storeUrl: @json(route('municipality-boundaries.store')),
@@ -168,6 +228,8 @@
     map: null,
     info: null,
     boundaryOverlays: new Map(),
+    boundaryFills: new Map(),
+    fillOpacity: .2,
     labels: new Map(),
     parcelOverlays: new Map(),
     boundaries: settings.initialBoundaries.slice(),
@@ -185,6 +247,12 @@
   const el = id => document.getElementById(id);
   const filter = el('municipalityFilter');
   const panel = el('panelContent');
+  const initialBoundary = settings.initialBoundaries[0];
+  const defaultViewport = settings.canChooseMunicipality
+    ? {center: {lat: 15.4755, lng: 120.5963}, zoom: 10}
+    : initialBoundary
+      ? {center: {lat: Number(initialBoundary.centroid_lat), lng: Number(initialBoundary.centroid_lng)}, zoom: 12}
+      : {center: {lat: 12.8797, lng: 121.774}, zoom: 5};
 
   function toast(message, bad) {
     const node = el('geoToast');
@@ -226,14 +294,28 @@
 
   function drawBoundary(boundary) {
     removeBoundary(boundary.id);
-    const overlays = geometryPolygons(boundary.geojson).map(polygon => {
+    const fills = [];
+    const fillScale = boundary.status === 'draft' ? .5 : 1;
+    const overlays = geometryPolygons(boundary.geojson).flatMap(polygon => {
+      const paths = googlePaths(polygon);
+      // A pale casing keeps dark saved colors visible over satellite terrain.
+      const outline = new google.maps.Polygon({
+        paths,
+        strokeColor: '#FFF8D6',
+        strokeOpacity: 1,
+        strokeWeight: boundary.status === 'draft' ? 6 : 8,
+        fillOpacity: 0,
+        clickable: false,
+        zIndex: boundary.status === 'active' ? 1.9 : .9,
+      });
+      outline.setMap(state.map);
       const overlay = new google.maps.Polygon({
-        paths: googlePaths(polygon),
+        paths,
         strokeColor: boundary.color,
-        strokeOpacity: boundary.status === 'draft' ? .9 : 1,
-        strokeWeight: boundary.status === 'draft' ? 2 : 3,
+        strokeOpacity: 1,
+        strokeWeight: boundary.status === 'draft' ? 3 : 4,
         fillColor: boundary.color,
-        fillOpacity: boundary.status === 'draft' ? .08 : .16,
+        fillOpacity: state.fillOpacity * fillScale,
         clickable: true,
         zIndex: boundary.status === 'active' ? 2 : 1,
       });
@@ -245,15 +327,17 @@
         filter.value = String(boundary.municipality_id);
         loadMunicipality(boundary.municipality_id, boundary.id);
       });
-      return overlay;
+      fills.push(overlay);
+      return [outline, overlay];
     });
     state.boundaryOverlays.set(String(boundary.id), overlays);
+    state.boundaryFills.set(String(boundary.id), {overlays: fills, scale: fillScale});
 
     if (boundary.status === 'active') {
       const marker = new google.maps.Marker({
         map: state.map,
         position: {lat: Number(boundary.centroid_lat), lng: Number(boundary.centroid_lng)},
-        label: {text: String(boundary.municipality_name || ''), color: '#123322', fontSize: '11px', fontWeight: '800'},
+        label: {text: String(boundary.municipality_name || ''), color: '#20362c', fontSize: '12px', fontWeight: '700', className: 'geo-boundary-label'},
         icon: {path: google.maps.SymbolPath.CIRCLE, scale: 0},
         clickable: false,
         zIndex: 4,
@@ -265,6 +349,7 @@
   function removeBoundary(id) {
     (state.boundaryOverlays.get(String(id)) || []).forEach(item => item.setMap(null));
     state.boundaryOverlays.delete(String(id));
+    state.boundaryFills.delete(String(id));
     const label = state.labels.get(String(id));
     if (label) label.setMap(null);
     state.labels.delete(String(id));
@@ -312,12 +397,13 @@
     state.boundaryOverlays.forEach(overlays => overlays.forEach(overlay => overlay.getPaths().forEach(path => path.forEach(point => { bounds.extend(point); count++; }))));
     state.parcelOverlays.forEach(overlay => overlay.getPath().forEach(point => { bounds.extend(point); count++; }));
     if (count) state.map.fitBounds(bounds, 34);
-    else resetProvince();
+    else resetDefaultView();
   }
 
-  function resetProvince() { state.map.setCenter({lat: 15.4755, lng: 120.5963}); state.map.setZoom(10); }
+  function resetDefaultView() { state.map.setCenter(defaultViewport.center); state.map.setZoom(defaultViewport.zoom); }
 
   async function loadMunicipality(id, selectedBoundaryId) {
+    if (!settings.canChooseMunicipality) id = settings.assignedMunicipalityId;
     const revision = ++state.loadRevision;
     state.selectedMunicipality = id ? String(id) : '';
     cancelEditor();
@@ -325,6 +411,7 @@
     state.currentPayload = null;
     el('downloadSnapshot').disabled = true;
 
+    @if($canChooseMunicipality)
     if (!id) {
       renderBoundaries();
       el('panelEyebrow').textContent = 'Province-wide view';
@@ -339,8 +426,10 @@
       fitVisible();
       return;
     }
+    @endif
 
     el('mapMessage').textContent = 'Loading ' + municipalityName(id) + ' boundary and parcels…';
+    panel.innerHTML = '<div class="geo-empty" role="status">Loading boundary and parcel checks…</div>';
     try {
       const payload = await request(settings.dataUrl + '?municipality_id=' + encodeURIComponent(id));
       if (revision !== state.loadRevision) return;
@@ -360,6 +449,7 @@
       if (revision !== state.loadRevision) return;
       toast(error.message, true);
       el('mapMessage').textContent = 'The municipality workspace could not be loaded.';
+      panel.innerHTML = '<div class="geo-empty">Boundary and parcel checks could not be loaded. <button type="button" class="geo-btn" data-retry-workspace>Try again</button></div>';
     }
   }
 
@@ -372,29 +462,39 @@
   function renderPanel(payload) {
     el('panelEyebrow').textContent = 'Municipality workspace';
     el('panelTitle').textContent = payload.municipality.name;
-    el('panelDescription').textContent = 'Boundary history, mapping coverage, and parcels that need verification.';
+    el('panelDescription').textContent = 'Review the official boundary and parcels needing attention. Older boundaries are available in history.';
     const stats = payload.stats;
     let html = '<div class="geo-mini-stats">' +
       mini('Farmers', stats.farmers) + mini('Mapped farmers', stats.mapped_farmers) + mini('Parcels', stats.parcels) + mini('Mapped hectares', formatNumber(stats.mapped_area_ha, 2)) +
       mini('Outside boundary', stats.outside) + mini('Crossing / near', Number(stats.partial) + Number(stats.near_boundary)) + '</div>';
-    html += '<div class="geo-section-title"><span>Boundary records</span><span>' + payload.boundaries.length + '</span></div>';
-    if (!payload.boundaries.length) html += '<div class="geo-empty">No boundary has been saved for this municipality.</div>';
-    payload.boundaries.forEach(boundary => {
-      html += '<article class="geo-boundary-card ' + (boundary.status === 'active' ? 'active' : '') + '"><div class="geo-boundary-top"><strong>' + escapeHtml(boundary.name) + '</strong><span class="geo-badge ' + boundary.status + '">' + escapeHtml(boundary.status) + '</span></div><div class="geo-boundary-meta">' + formatNumber(boundary.area_ha, 2) + ' ha · ' + formatNumber(boundary.vertex_count, 0) + ' vertices</div><div class="geo-card-actions">';
-      if (boundary.status !== 'archived') html += '<button class="geo-btn" type="button" data-focus-boundary="' + boundary.id + '">Focus</button>';
+    function boundaryCard(boundary) {
+      let card = '';
+      card += '<article class="geo-boundary-card ' + (boundary.status === 'active' ? 'active' : '') + '"><div class="geo-boundary-top"><strong>' + escapeHtml(boundary.name) + '</strong><span class="geo-badge ' + boundary.status + '">' + escapeHtml(boundary.status) + '</span></div><div class="geo-boundary-meta">' + formatNumber(boundary.area_ha, 2) + ' ha · ' + formatNumber(boundary.vertex_count, 0) + ' vertices</div><div class="geo-card-actions">';
+      if (boundary.status !== 'archived') card += '<button class="geo-btn" type="button" data-focus-boundary="' + boundary.id + '">Focus</button>';
       if (settings.canManage) {
-        if (boundary.status !== 'archived') html += '<button class="geo-btn" type="button" data-edit-boundary="' + boundary.id + '">Edit</button>';
-        if (boundary.status !== 'active') html += '<button class="geo-btn primary" type="button" data-activate-boundary="' + boundary.id + '">Activate</button>';
-        if (boundary.status !== 'archived') html += '<button class="geo-btn danger" type="button" data-archive-boundary="' + boundary.id + '">Archive</button>';
+        if (boundary.status !== 'archived') card += '<button class="geo-btn" type="button" data-edit-boundary="' + boundary.id + '">Edit</button>';
+        if (boundary.status !== 'active') card += '<button class="geo-btn primary" type="button" data-activate-boundary="' + boundary.id + '">Activate</button>';
+        if (boundary.status !== 'archived') card += '<button class="geo-btn danger" type="button" data-archive-boundary="' + boundary.id + '">Archive</button>';
       }
-      html += '</div></article>';
-    });
+      card += '</div></article>';
+      return card;
+    }
+    const active = payload.boundaries.filter(boundary => boundary.status === 'active');
+    const history = payload.boundaries.filter(boundary => boundary.status !== 'active');
+    html += '<div class="geo-section-title">Official boundary</div>';
+    html += active.length ? active.map(boundaryCard).join('') : '<div class="geo-empty">No official boundary is active. ' + (settings.canManage ? 'Review a draft or add a boundary.' : 'Contact the Super Administrator to configure the boundary.') + '</div>';
+    html += '<details class="module-more"><summary>Drafts and boundary history <span>' + history.length + ' records</span></summary><div class="module-more-content">';
+    html += history.length ? history.map(boundaryCard).join('') : '<div class="geo-empty">No drafts or older boundaries.</div>';
+    html += '</div></details>';
     html += '<div class="geo-section-title"><span>Needs field review</span><span>' + payload.review.length + '</span></div>';
     if (!payload.review.length) html += '<div class="geo-empty">No outside, crossing, near-boundary, or invalid parcels were found.</div>';
     payload.review.forEach(item => {
-      html += '<article class="geo-review-card" data-focus-plot="' + item.plot_id + '"><div class="geo-review-top"><strong>' + escapeHtml(item.plot_name) + '</strong><span class="geo-review-status ' + item.status + '">' + escapeHtml(item.status.replace('_', ' ')) + '</span></div><p>' + escapeHtml(item.farmer_name || 'Unknown farmer') + (item.ffrs ? ' · ' + escapeHtml(item.ffrs) : '') + '<br>' + escapeHtml(item.location || 'Location not recorded') + ' · ' + formatNumber(item.area_ha, 4) + ' ha</p></article>';
+      html += '<article class="geo-review-card" tabindex="0" role="button" data-focus-plot="' + item.plot_id + '"><div class="geo-review-top"><strong>' + escapeHtml(item.plot_name) + '</strong><span class="geo-review-status ' + item.status + '">' + escapeHtml(item.status.replace('_', ' ')) + '</span></div><p>' + escapeHtml(item.farmer_name || 'Unknown farmer') + (item.ffrs ? ' · ' + escapeHtml(item.ffrs) : '') + '<br>' + escapeHtml(item.location || 'Location not recorded') + ' · ' + formatNumber(item.area_ha, 4) + ' ha</p></article>';
     });
     panel.innerHTML = html;
+    panel.querySelectorAll('[data-focus-plot]').forEach(card => card.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); card.click(); }
+    }));
   }
 
   function mini(label, value) { return '<div class="geo-mini"><span>' + escapeHtml(label) + '</span><strong>' + escapeHtml(value) + '</strong></div>'; }
@@ -710,11 +810,11 @@
   }
 
   function bindUi() {
-    filter.addEventListener('change', () => loadMunicipality(filter.value));
+    if (settings.canChooseMunicipality) filter.addEventListener('change', () => loadMunicipality(filter.value));
     el('fitVisible').addEventListener('click', fitVisible);
-    el('resetMap').addEventListener('click', resetProvince);
+    el('resetMap').addEventListener('click', () => settings.canChooseMunicipality ? resetDefaultView() : fitVisible());
     el('downloadSnapshot').addEventListener('click', downloadMunicipalitySnapshot);
-    el('boundarySearch').addEventListener('input', event => {
+    el('boundarySearch')?.addEventListener('input', event => {
       const value = event.target.value.trim().toLowerCase();
       if (!value) return;
       const match = settings.municipalities.find(item => item.name.toLowerCase().includes(value));
@@ -722,6 +822,7 @@
     });
 
     panel.addEventListener('click', event => {
+      if (event.target.closest('[data-retry-workspace]')) loadMunicipality(state.selectedMunicipality);
       const focusBoundaryButton = event.target.closest('[data-focus-boundary]');
       const editButton = event.target.closest('[data-edit-boundary]');
       const activateButton = event.target.closest('[data-activate-boundary]');
@@ -757,7 +858,7 @@
   }
 
   window.initMunicipalityGeofenceMap = function () {
-    const options = {center:{lat:15.4755,lng:120.5963},zoom:10,mapTypeId:'hybrid',streetViewControl:false,fullscreenControl:true,mapTypeControl:true,gestureHandling:'greedy'};
+    const options = {center:defaultViewport.center,zoom:defaultViewport.zoom,mapTypeId:'hybrid',streetViewControl:false,fullscreenControl:true,mapTypeControl:true,gestureHandling:'greedy'};
     if (settings.mapId) options.mapId = settings.mapId;
     state.map = new google.maps.Map(el('geofenceMap'), options);
     state.info = new google.maps.InfoWindow();
@@ -766,6 +867,17 @@
     fitVisible();
     if (filter.value) loadMunicipality(filter.value);
   };
+
+  el('geofenceOpacity').addEventListener('input', event => {
+    const value = Number(event.target.value);
+    const percentage = Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 20;
+    state.fillOpacity = percentage / 100;
+    el('geofenceOpacityValue').value = percentage + '%';
+    event.target.setAttribute('aria-valuetext', percentage + '% color opacity');
+    state.boundaryFills.forEach(group => group.overlays.forEach(overlay => {
+      overlay.setOptions({fillOpacity: state.fillOpacity * group.scale});
+    }));
+  });
 
   if (!settings.key) {
     el('mapMessage').textContent = 'Google Maps is not configured. Add GOOGLE_MAPS_API_KEY and clear Laravel configuration cache.';

@@ -26,6 +26,7 @@ class AuditLog extends Model
     protected $fillable = [
         'user_id',
         'municipality_id',
+        'province_id',
         'actor_name',
         'actor_email',
         'actor_role',
@@ -46,6 +47,7 @@ class AuditLog extends Model
     protected $casts = [
         'user_id' => 'integer',
         'municipality_id' => 'integer',
+        'province_id' => 'integer',
         'old_values' => 'array',
         'new_values' => 'array',
         'metadata' => 'array',
@@ -60,6 +62,11 @@ class AuditLog extends Model
     public function municipality(): BelongsTo
     {
         return $this->belongsTo(Municipality::class);
+    }
+
+    public function province(): BelongsTo
+    {
+        return $this->belongsTo(Province::class);
     }
 
     public function scopeEvent(Builder $query, ?string $event): Builder

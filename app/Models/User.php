@@ -19,6 +19,8 @@ class User extends Authenticatable
     |--------------------------------------------------------------------------
     */
 
+    public const ROLE_SYSTEM_OWNER = 'system_owner';
+
     public const ROLE_SUPER_ADMIN = 'super_admin';
 
     public const ROLE_PROVINCIAL_STAFF = 'provincial_staff';
@@ -33,6 +35,7 @@ class User extends Authenticatable
      * All valid system roles.
      */
     public const ROLES = [
+        self::ROLE_SYSTEM_OWNER,
         self::ROLE_SUPER_ADMIN,
         self::ROLE_PROVINCIAL_STAFF,
         self::ROLE_PROVINCIAL_VET,
@@ -78,6 +81,7 @@ class User extends Authenticatable
         'password',
         'role',
         'municipality_id',
+        'province_id',
         'is_active',
         'last_login_at',
     ];
@@ -113,6 +117,7 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'last_login_at' => 'datetime',
         'municipality_id' => 'integer',
+        'province_id' => 'integer',
         'is_active' => 'boolean',
     ];
 
@@ -172,6 +177,65 @@ class User extends Authenticatable
         return $this->hasRole(self::ROLE_PROVINCIAL_STAFF);
     }
 
+    public function province(): BelongsTo
+    {
+        return $this->belongsTo(Province::class);
+    }
+
+    public function isSystemOwner(): bool
+    {
+        return $this->hasRole(self::ROLE_SYSTEM_OWNER);
+    }
+
+    public function requiresProvince(): bool
+    {
+        return $this->hasAnyRole(self::PROVINCIAL_ROLES);
+    }
+
+    public function canOverseeSystem(): bool
+    {
+        return $this->isActive() && ($this->isSystemOwner() || $this->isSuperAdmin());
+    }
+
+    public function hasUsableScope(): bool
+    {
+        if (! $this->isActive() || ! $this->hasAnyRole(self::ROLES)) {
+            return false;
+        }
+        if ($this->isSystemOwner()) {
+            return true;
+        }
+        if ($this->requiresProvince()) {
+            return $this->province_id !== null && Province::query()->active()->whereKey($this->province_id)->exists();
+        }
+
+        return $this->municipality_id !== null && Municipality::query()->active()->whereKey($this->municipality_id)
+            ->whereHas('supervisingProvince', fn (Builder $query) => $query->active())->exists();
+    }
+
+    public function canAccessProvince(?int $provinceId): bool
+    {
+        return $this->hasUsableScope() && ($this->isSystemOwner()
+            || ($this->requiresProvince() && $provinceId !== null && $this->province_id === $provinceId));
+    }
+
+    public function getScopeLabelAttribute(): string
+    {
+        if ($this->isSystemOwner()) {
+            return 'All supervised provinces';
+        }
+        if ($this->requiresProvince()) {
+            return $this->province?->name ?? 'Province not assigned';
+        }
+
+        return $this->municipality?->name ?? 'Municipality not assigned';
+    }
+
+    public function scopeLabel(): string
+    {
+        return $this->scope_label;
+    }
+
     /**
      * Determine whether the user belongs to the Provincial Veterinary Office.
      */
@@ -185,7 +249,7 @@ class User extends Authenticatable
      */
     public function isProvincialUser(): bool
     {
-        return $this->hasAnyRole(self::PROVINCIAL_ROLES);
+        return $this->isSystemOwner() || $this->requiresProvince();
     }
 
     /**
@@ -221,7 +285,8 @@ class User extends Authenticatable
     }
 
     /**
-     * Determine whether the user can access all municipalities.
+     * Whether the interface may offer multiple municipalities within the user's scope.
+     * This is not a global query bypass: always apply MunicipalityAccess.
      */
     public function canAccessAllMunicipalities(): bool
     {
@@ -233,12 +298,17 @@ class User extends Authenticatable
      */
     public function canAccessMunicipality(?int $municipalityId): bool
     {
-        if ($this->canAccessAllMunicipalities()) {
+        if (! $this->hasUsableScope()) {
+            return false;
+        }
+        if ($this->isSystemOwner()) {
             return true;
         }
-
-        if ($municipalityId === null || $this->municipality_id === null) {
+        if ($municipalityId === null) {
             return false;
+        }
+        if ($this->requiresProvince()) {
+            return Municipality::query()->active()->whereKey($municipalityId)->where('province_id', $this->province_id)->exists();
         }
 
         return (int) $this->municipality_id === (int) $municipalityId;
@@ -249,7 +319,7 @@ class User extends Authenticatable
      */
     public function canManageAllUsers(): bool
     {
-        return $this->isSuperAdmin();
+        return $this->isActive() && $this->isSystemOwner();
     }
 
     /**
@@ -258,7 +328,7 @@ class User extends Authenticatable
     public function canManageMunicipalStaff(): bool
     {
         return $this->isActive()
-            && ($this->isSuperAdmin()
+            && ($this->canOverseeSystem()
                 || ($this->isMunicipalHead() && $this->municipality_id !== null));
     }
 
@@ -283,7 +353,7 @@ class User extends Authenticatable
      */
     public function canViewAuditTrail(): bool
     {
-        return $this->isActive() && $this->isSuperAdmin();
+        return $this->canOverseeSystem() && $this->hasUsableScope();
     }
 
     /**
@@ -300,6 +370,7 @@ class User extends Authenticatable
     public function getRoleLabelAttribute(): string
     {
         return match ($this->role) {
+            self::ROLE_SYSTEM_OWNER => 'System Owner',
             self::ROLE_SUPER_ADMIN => 'Super Admin',
             self::ROLE_PROVINCIAL_STAFF => 'Provincial Staff',
             self::ROLE_PROVINCIAL_VET => 'Provincial Veterinary Office',
@@ -314,6 +385,9 @@ class User extends Authenticatable
      */
     public function getOfficeLabelAttribute(): string
     {
+        if ($this->isSystemOwner()) {
+            return 'System Administration';
+        }
         if ($this->isProvincialVeterinaryOffice()) {
             return 'Provincial Veterinary Office';
         }

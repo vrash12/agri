@@ -122,20 +122,18 @@
     @if($records->isNotEmpty())
       <div class="module-table-scroll">
         <table class="module-table">
-          <thead><tr><th>Cooperative</th><th>Chairperson</th><th>Contact</th><th>Address</th><th>Members</th><th>Machinery</th><th>Description</th><th><span class="sr-only">Actions</span></th></tr></thead>
+          <thead><tr><th>Cooperative</th><th>Chairperson / contact</th><th>Address</th><th>Members</th><th>Machinery</th><th><span class="sr-only">Actions</span></th></tr></thead>
           <tbody>
             @foreach($records as $record)
               @php
                 $initials = collect(preg_split('/\s+/', trim($record->name)))->filter()->take(2)->map(fn ($word) => mb_strtoupper(mb_substr($word, 0, 1)))->implode('');
               @endphp
               <tr>
-                <td><div class="module-person"><span class="module-avatar">{{ $initials ?: 'CO' }}</span><span class="module-person-copy"><strong>{{ $record->name }}</strong><small>{{ $record->municipality?->name ?? 'Municipality unavailable' }}</small></span></div></td>
-                <td><strong>{{ $record->chairperson ?: 'Not recorded' }}</strong></td>
-                <td>{{ $record->contact_number ?: '—' }}</td>
-                <td><span title="{{ $record->address }}">{{ Str::limit($record->address ?: 'Not recorded', 42) }}</span></td>
+                <td><div class="module-person"><span class="module-avatar">{{ $initials ?: 'CO' }}</span><span class="module-person-copy"><strong>{{ $record->name }}</strong><small>{{ $record->municipality?->name ?? 'Municipality unavailable' }}</small></span></div>@if(filled($record->description))<details style="margin-top:8px"><summary>Profile notes</summary><p>{{ $record->description }}</p></details>@endif</td>
+                <td><strong>{{ $record->chairperson ?: 'Not recorded' }}</strong><small>{{ $record->contact_number ?: 'No contact recorded' }}</small></td>
+                <td><span title="{{ $record->address }}">{{ $record->address ?: 'Not recorded' }}</span></td>
                 <td><span class="module-badge {{ (int) $record->farmers_count > 0 ? 'module-badge-green' : 'module-badge-amber' }}">{{ number_format((int) $record->farmers_count) }} {{ Str::plural('member', (int) $record->farmers_count) }}</span></td>
-                <td><a class="module-badge {{ (int) $record->machineries_count > 0 ? 'module-badge-blue' : '' }}" style="text-decoration:none" href="{{ route('machinery-inventory.index', ['holder_type' => 'cooperative', 'q' => $record->name]) }}">{{ number_format((int) $record->machineries_count) }} {{ Str::plural('asset', (int) $record->machineries_count) }}</a></td>
-                <td>{{ Str::limit($record->description ?: 'No description', 58) }}</td>
+                <td><a class="module-badge {{ (int) $record->machineries_count > 0 ? 'module-badge-blue' : '' }}" style="text-decoration:none" href="{{ route('machinery-inventory.index', ['holder_type' => 'cooperative', 'q' => $record->name, 'municipality_id' => $record->municipality_id]) }}">{{ number_format((int) $record->machineries_count) }} {{ Str::plural('asset', (int) $record->machineries_count) }}</a></td>
                 <td>
                   <div class="module-row-actions">
                     @if($canManageOperations)<a class="module-button module-button-primary module-button-small" href="{{ route('farmers-cooperatives.assign-farmers', $record) }}">Manage members</a>@endif

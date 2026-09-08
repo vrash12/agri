@@ -83,8 +83,8 @@
   <header class="module-header">
     <div>
       <div class="module-eyebrow">{{ $workspaceShortName }} · Registry and land management</div>
-      <h1>Farmers workspace</h1>
-      <p>The registry and parcel map are synchronized to <strong>{{ $workspaceName }}</strong>. Change the municipality above to move the entire workspace.</p>
+      <h1>Farmers</h1>
+      <p>Find and manage farmer profiles in <strong>{{ $workspaceName }}</strong>.</p>
     </div>
     <div class="module-actions">
       @if($canManageOperations)
@@ -243,10 +243,7 @@
             <th>Farmer</th>
             <th>Registry IDs</th>
             <th>Farm location</th>
-            <th>Farm profile</th>
             <th>Mapping</th>
-            <th>Assistance history</th>
-            <th>Latest activity</th>
             <th style="text-align:right">Actions</th>
           </tr>
         </thead>
@@ -257,8 +254,6 @@
               $initials = strtoupper(substr($farmer->first_name ?: 'F', 0, 1).substr($farmer->last_name ?: 'R', 0, 1));
               $plotCount = (int) ($farmer->plot_count ?? 0);
               $mappedArea = (float) ($farmer->mapped_area_ha ?? 0);
-              $recordCount = (int) ($farmer->records_count ?? 0);
-              $lastReceived = $farmer->last_received ? \Illuminate\Support\Carbon::parse($farmer->last_received)->format('M d, Y') : null;
             @endphp
             <tr id="farmer-row-{{ $farmer->id }}" data-farmer-id="{{ $farmer->id }}" data-location="{{ e((string) $farmer->farm_location) }}" tabindex="0">
               <td data-label="Farmer">
@@ -275,7 +270,6 @@
               </td>
               <td data-label="Registry IDs"><strong class="module-mono">{{ $farmer->registry_id }}</strong><small class="module-mono">FFRS: {{ $farmer->ffrs ?: '—' }}</small><small class="module-mono">RSBSA: {{ $farmer->rsbsa_no ?: '—' }}</small></td>
               <td data-label="Farm location"><strong>{{ $farmer->farm_location ?: 'Location needed' }}</strong><small>{{ $farmer->farm_municipality ?: 'Municipality not recorded' }}</small></td>
-              <td data-label="Farm profile"><strong>{{ $farmer->farm_area_ha !== null ? number_format((float) $farmer->farm_area_ha, 2).' ha' : 'Area needed' }}</strong><small>{{ $farmer->ecosystem ?: 'Ecosystem not recorded' }}</small></td>
               <td data-label="Mapping">
                 @if ($plotCount > 0)
                   <span class="module-badge module-badge-green">{{ $plotCount }} parcel{{ $plotCount === 1 ? '' : 's' }}</span>
@@ -285,11 +279,9 @@
                   <small>No saved boundary</small>
                 @endif
               </td>
-              <td data-label="Assistance history"><strong>{{ number_format((float) ($farmer->total_kgs ?? 0), 2) }} kg</strong><small>Weight-based · {{ number_format($recordCount) }} distribution record{{ $recordCount === 1 ? '' : 's' }}</small></td>
-              <td data-label="Latest activity"><strong>{{ $lastReceived ?: 'No distribution yet' }}</strong><small>{{ $farmer->updated_at ? 'Profile updated '.$farmer->updated_at->diffForHumans() : '—' }}</small></td>
               <td data-label="Actions">
                 <div class="module-row-actions">
-                  <a class="module-button module-button-small" href="{{ route('farmers.records', $farmer) }}">History</a>
+                  <a class="module-button module-button-small" href="{{ route('farmers.records', $farmer) }}">Details &amp; history</a>
                   <details class="module-action-menu">
                     <summary aria-label="More actions">⋯</summary>
                     <div class="module-action-menu-list">
@@ -309,7 +301,7 @@
               </td>
             </tr>
           @empty
-            <tr><td colspan="8"><div class="module-empty"><span class="module-empty-icon"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8"/></svg></span><strong>No farmer profiles match</strong><span>Clear the current filters to review other profiles.</span>@if($canManageOperations)<a class="module-button module-button-primary" href="{{ route('farmers.create') }}">Add farmer</a>@endif</div></td></tr>
+            <tr><td colspan="5"><div class="module-empty"><span class="module-empty-icon"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8"/></svg></span><strong>No farmer profiles match</strong><span>Clear the current filters to review other profiles.</span>@if($canManageOperations)<a class="module-button module-button-primary" href="{{ route('farmers.create') }}">Add farmer</a>@endif</div></td></tr>
           @endforelse
         </tbody>
       </table>
@@ -317,7 +309,8 @@
     @include('partials.pagination', ['paginator' => $farmers, 'label' => 'farmer', 'fragment' => 'farmerDirectory'])
   </section>
 
-  <section aria-label="Parcel mapping workspace" class="farmer-map-section">
+  <details id="farmerMapWorkspace" class="module-more farmer-map-section">
+    <summary>Parcel map <span>View boundaries, select a farmer, and open mapping tools</span></summary>
     @include('farmers.maps', [
       'farmersMapData' => $farmersMapData,
       'mapWorkspaceMunicipality' => $selectedMunicipality,
@@ -329,11 +322,23 @@
       'mapAreaHa' => $mapAreaHa,
       'mapMunicipalityBoundaries' => $mapMunicipalityBoundaries,
     ])
-  </section>
+  </details>
 
-  <details class="module-more">
+  <details class="module-more" id="farmerInsights">
     <summary>Registry insights <span>Gender and high-volume farm locations</span></summary>
     <div class="module-more-content">
+      <p class="module-hint" id="farmerInsightsStatus" role="status">Figures reflect the current registry filters.</p>
+      <div class="module-table-scroll">
+        <table class="module-table"><caption>Registry figures for the current filters</caption><thead><tr><th>Breakdown</th><th>Group</th><th>Farmers</th></tr></thead><tbody>
+          @foreach(['Gender' => $genderStats, 'Farm location' => $locationStats] as $group => $figures)
+            @forelse($figures as $label => $count)
+              <tr><td>{{ $group }}</td><td>{{ $label }}</td><td>{{ number_format($count) }}</td></tr>
+            @empty
+              <tr><td>{{ $group }}</td><td colspan="2">No records in this result set.</td></tr>
+            @endforelse
+          @endforeach
+        </tbody></table>
+      </div>
       <div class="module-analytics-grid">
         <article class="module-chart"><div class="module-chart-head"><h3>Profile gender distribution</h3><p>Composition of the filtered farmer set.</p></div><div class="module-chart-body"><canvas id="genderChart"></canvas>@if (collect($genderStats)->isEmpty())<div class="module-chart-empty">No gender data to chart.</div>@endif</div></article>
         <article class="module-chart"><div class="module-chart-head"><h3>Top farm locations</h3><p>Locations with the most matching farmer profiles.</p></div><div class="module-chart-body"><canvas id="locationChart"></canvas>@if (collect($locationStats)->isEmpty())<div class="module-chart-empty">No location data to chart.</div>@endif</div></article>
@@ -382,39 +387,85 @@
 <style>
   .farmers-registry-page{scroll-behavior:smooth}
   #farmerDirectory,#farmersMapModule{scroll-margin-top:16px}
-  .farmer-scope-banner{display:flex;align-items:center;gap:10px;padding:11px 13px;border:1px solid #cfdfd4;border-radius:10px;color:#526159;background:#f7fbf8;font-size:9px;line-height:1.4}.farmer-scope-banner .farmer-scope-icon{width:28px;height:28px;display:grid;place-items:center;flex:0 0 auto;border-radius:8px;color:var(--module-green);background:var(--module-green-soft)}.farmer-scope-banner svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}.farmer-scope-banner>div{display:flex;min-width:0;flex:1;flex-direction:column}.farmer-scope-banner strong{color:var(--module-ink);font-size:10px}.farmer-scope-banner a{padding:5px 8px;border-radius:6px;color:var(--module-green);font-weight:850;text-decoration:none;white-space:nowrap}.farmer-scope-banner a:hover{background:var(--module-green-soft)}.farmer-scope-banner a[data-clear-all]{color:var(--module-red)}.farmer-scope-banner a[data-clear-all]:hover{background:var(--module-red-soft)}
-  .farmer-directory-head{align-items:center}.farmer-directory-filter{padding:14px 16px;border-bottom:1px solid var(--module-border);background:#fff}.farmer-search-toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:end}.farmer-primary-search label{display:block;margin:0 0 6px;color:#45534a;font-size:10px;font-weight:850}.farmer-primary-search .module-input{height:42px;font-size:11px}.farmer-search-button,.farmer-clear-button{height:42px;padding-inline:15px}
-  .farmer-filter-drawer{margin-top:10px;border:1px solid #e0e7e2;border-radius:9px;background:#fafcfa}.farmer-filter-drawer>summary{display:flex;align-items:center;gap:9px;padding:10px 12px;list-style:none;cursor:pointer;user-select:none}.farmer-filter-drawer>summary::-webkit-details-marker{display:none}.farmer-filter-summary-icon{width:27px;height:27px;display:grid;place-items:center;flex:0 0 auto;border-radius:7px;color:var(--module-green);background:var(--module-green-soft)}.farmer-filter-summary-icon svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}.farmer-filter-drawer>summary>span:nth-child(2){display:flex;min-width:0;flex:1;flex-direction:column}.farmer-filter-drawer>summary strong{color:var(--module-ink);font-size:10px}.farmer-filter-drawer>summary small{margin-top:2px;color:var(--module-muted);font-size:8px}.farmer-filter-drawer>summary b{padding:4px 7px;border-radius:999px;color:var(--module-green);background:var(--module-green-soft);font-size:8px;white-space:nowrap}.farmer-filter-drawer>summary i{width:8px;height:8px;margin:0 4px;border-right:2px solid #758078;border-bottom:2px solid #758078;transform:rotate(45deg);transition:transform .15s}.farmer-filter-drawer[open]>summary i{transform:rotate(225deg)}.farmer-filter-drawer-body{padding:12px;border-top:1px solid #e4eae6;background:#fff}.farmer-filter-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:11px;padding-top:11px;border-top:1px solid #edf1ee}.farmer-filter-actions>span{color:var(--module-muted);font-size:9px}.farmer-filter-actions>div{display:flex;gap:7px;flex-wrap:wrap}
-  .farmer-active-filters{display:flex;align-items:center;gap:6px;padding:10px 16px;border-bottom:1px solid var(--module-border);background:#f8faf8;overflow-x:auto}.farmer-active-filters>span{margin-right:2px;color:var(--module-muted);font-size:8px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}.farmer-active-filters a{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border:1px solid #d8e3db;border-radius:999px;color:#34483b;background:#fff;font-size:9px;font-weight:800;text-decoration:none;white-space:nowrap}.farmer-active-filters a:hover{color:var(--module-red);border-color:#e7bbbb}.farmer-active-filters small{color:var(--module-muted);font-size:8px;font-weight:750}.farmer-active-filters b{font-size:12px;line-height:1}
-  .farmer-results-tools{background:#fbfcfb}.farmer-map-hint{display:flex!important;align-items:center;gap:6px;color:var(--module-muted)!important;font-size:9px!important;white-space:nowrap}.farmer-map-hint i{width:7px;height:7px;border-radius:50%;background:#43a765}
+  .farmer-scope-banner{display:flex;align-items:center;gap:10px;padding:11px 13px;border:1px solid #cfdfd4;border-radius:10px;color:#526159;background:#f7fbf8;font-size:12px;line-height:1.4}.farmer-scope-banner .farmer-scope-icon{width:28px;height:28px;display:grid;place-items:center;flex:0 0 auto;border-radius:8px;color:var(--module-green);background:var(--module-green-soft)}.farmer-scope-banner svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}.farmer-scope-banner>div{display:flex;min-width:0;flex:1;flex-direction:column}.farmer-scope-banner strong{color:var(--module-ink);font-size:12px}.farmer-scope-banner a{padding:5px 8px;border-radius:6px;color:var(--module-green);font-weight:700;text-decoration:none;white-space:nowrap}.farmer-scope-banner a:hover{background:var(--module-green-soft)}.farmer-scope-banner a[data-clear-all]{color:var(--module-red)}.farmer-scope-banner a[data-clear-all]:hover{background:var(--module-red-soft)}
+  .farmer-directory-head{align-items:center}.farmer-directory-filter{padding:14px 16px;border-bottom:1px solid var(--module-border);background:#fff}.farmer-search-toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:end}.farmer-primary-search label{display:block;margin:0 0 6px;color:#45534a;font-size:12px;font-weight:700}.farmer-primary-search .module-input{height:42px;font-size:12px}.farmer-search-button,.farmer-clear-button{height:42px;padding-inline:15px}
+  .farmer-filter-drawer{margin-top:10px;border:1px solid #e0e7e2;border-radius:9px;background:#fafcfa}.farmer-filter-drawer>summary{display:flex;align-items:center;gap:9px;padding:10px 12px;list-style:none;cursor:pointer;user-select:none}.farmer-filter-drawer>summary::-webkit-details-marker{display:none}.farmer-filter-summary-icon{width:27px;height:27px;display:grid;place-items:center;flex:0 0 auto;border-radius:7px;color:var(--module-green);background:var(--module-green-soft)}.farmer-filter-summary-icon svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}.farmer-filter-drawer>summary>span:nth-child(2){display:flex;min-width:0;flex:1;flex-direction:column}.farmer-filter-drawer>summary strong{color:var(--module-ink);font-size:12px}.farmer-filter-drawer>summary small{margin-top:2px;color:var(--module-muted);font-size:12px}.farmer-filter-drawer>summary b{padding:4px 7px;border-radius:999px;color:var(--module-green);background:var(--module-green-soft);font-size:12px;white-space:nowrap}.farmer-filter-drawer>summary i{width:8px;height:8px;margin:0 4px;border-right:2px solid #758078;border-bottom:2px solid #758078;transform:rotate(45deg);transition:transform .15s}.farmer-filter-drawer[open]>summary i{transform:rotate(225deg)}.farmer-filter-drawer-body{padding:12px;border-top:1px solid #e4eae6;background:#fff}.farmer-filter-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:11px;padding-top:11px;border-top:1px solid #edf1ee}.farmer-filter-actions>span{color:var(--module-muted);font-size:12px}.farmer-filter-actions>div{display:flex;gap:7px;flex-wrap:wrap}
+  .farmer-active-filters{display:flex;align-items:center;gap:6px;padding:10px 16px;border-bottom:1px solid var(--module-border);background:#f8faf8;overflow-x:auto}.farmer-active-filters>span{margin-right:2px;color:var(--module-muted);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:none;white-space:nowrap}.farmer-active-filters a{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border:1px solid #d8e3db;border-radius:999px;color:#34483b;background:#fff;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap}.farmer-active-filters a:hover{color:var(--module-red);border-color:#e7bbbb}.farmer-active-filters small{color:var(--module-muted);font-size:12px;font-weight:700}.farmer-active-filters b{font-size:12px;line-height:1}
+  .farmer-results-tools{background:#fbfcfb}.farmer-map-hint{display:flex!important;align-items:center;gap:6px;color:var(--module-muted)!important;font-size:12px!important;white-space:nowrap}.farmer-map-hint i{width:7px;height:7px;border-radius:50%;background:#43a765}
   .farmer-directory-table{min-width:1120px}.farmer-directory-table tbody tr[data-farmer-id]{cursor:pointer}.farmer-directory-table tbody tr.row-highlight td{background:#eef7f1}.farmer-directory-table tbody tr.row-highlight td:first-child{box-shadow:inset 3px 0 0 var(--module-green)}.farmer-directory-avatar{overflow:hidden}.farmer-directory-avatar img{width:100%;height:100%;display:block;object-fit:cover}
-  .farmer-import-form{display:grid;grid-template-columns:minmax(0,1fr) 230px auto;gap:10px;align-items:end;padding-top:12px}.farmer-import-form .module-dropzone{padding:12px}.farmer-import-form .module-dropzone>div{display:grid;gap:3px;width:100%}.farmer-import-form .module-dropzone strong{color:var(--module-ink);font-size:10px}.farmer-import-form .module-dropzone small{color:var(--module-muted);font-size:8px}.farmer-import-form .module-dropzone input{margin-top:5px}.farmer-import-error{margin-top:8px;color:var(--module-red);font-size:10px;font-weight:750}
-  .module-more>summary span{margin-left:auto;color:var(--module-muted);font-size:9px;font-weight:650}.module-more>summary:after{margin-left:8px}
+  .farmer-import-form{display:grid;grid-template-columns:minmax(0,1fr) 230px auto;gap:10px;align-items:end;padding-top:12px}.farmer-import-form .module-dropzone{padding:12px}.farmer-import-form .module-dropzone>div{display:grid;gap:3px;width:100%}.farmer-import-form .module-dropzone strong{color:var(--module-ink);font-size:12px}.farmer-import-form .module-dropzone small{color:var(--module-muted);font-size:12px}.farmer-import-form .module-dropzone input{margin-top:5px}.farmer-import-error{margin-top:8px;color:var(--module-red);font-size:12px;font-weight:700}
+  .module-more>summary span{margin-left:auto;color:var(--module-muted);font-size:12px;font-weight:650}.module-more>summary:after{margin-left:8px}
   @media(max-width:900px){.farmer-import-form{grid-template-columns:1fr}.farmer-import-form .module-button{width:100%}.farmer-filter-actions{align-items:flex-start;flex-direction:column}.farmer-results-tools{align-items:flex-start;flex-direction:column}}
-  @media(max-width:620px){#farmerDirectory,#farmersMapModule{scroll-margin-top:76px}.farmer-scope-banner{align-items:flex-start;flex-wrap:wrap}.farmer-scope-banner>div{flex-basis:calc(100% - 42px)}.farmer-search-toolbar{grid-template-columns:1fr 1fr}.farmer-primary-search{grid-column:1/-1}.farmer-search-button,.farmer-clear-button{width:100%}.farmer-filter-drawer>summary small{display:none}.farmer-filter-actions>div,.farmer-filter-actions .module-button{width:100%}.farmer-directory-head{align-items:flex-start}.farmer-active-filters{padding-inline:12px}.farmer-directory-table,.farmer-directory-table tbody{display:block;width:100%!important;max-width:100%!important;min-width:0!important}.farmer-directory-table thead{display:none}.farmer-directory-table tbody{padding:10px;background:#f5f8f6}.farmer-directory-table tbody tr[data-farmer-id]{display:grid;width:100%!important;max-width:100%!important;grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:10px;overflow:hidden;border:1px solid #dfe7e1;border-radius:10px;background:#fff;box-shadow:0 2px 7px rgba(20,40,27,.025)}.farmer-directory-table tbody tr[data-farmer-id]:last-child{margin-bottom:0}.farmer-directory-table tbody tr[data-farmer-id] td{display:block;width:auto!important;max-width:none!important;min-width:0;padding:9px 11px;border:0;border-bottom:1px solid #edf1ee;background:#fff}.farmer-directory-table tbody tr[data-farmer-id] td:nth-child(odd):not(:first-child):not(:last-child){border-right:1px solid #edf1ee}.farmer-directory-table tbody tr[data-farmer-id] td:first-child,.farmer-directory-table tbody tr[data-farmer-id] td:last-child{grid-column:1/-1}.farmer-directory-table tbody tr[data-farmer-id] td:first-child{padding-block:11px;background:#fbfcfb}.farmer-directory-table tbody tr[data-farmer-id] td:last-child{border-bottom:0}.farmer-directory-table tbody tr[data-farmer-id] td:not(:first-child):before{content:attr(data-label);display:block;margin-bottom:5px;color:var(--module-muted);font-size:7px;font-weight:900;letter-spacing:.04em;text-transform:uppercase}.farmer-directory-table .module-row-actions{justify-content:flex-start}.farmer-directory-table .module-action-menu-list{left:0;right:auto}.module-table-scroll:has(.farmer-directory-table){width:100%;max-width:100%;overflow:visible}}
+  @media(max-width:620px){#farmerDirectory,#farmersMapModule{scroll-margin-top:76px}.farmer-scope-banner{align-items:flex-start;flex-wrap:wrap}.farmer-scope-banner>div{flex-basis:calc(100% - 42px)}.farmer-search-toolbar{grid-template-columns:1fr 1fr}.farmer-primary-search{grid-column:1/-1}.farmer-search-button,.farmer-clear-button{width:100%}.farmer-filter-drawer>summary small{display:none}.farmer-filter-actions>div,.farmer-filter-actions .module-button{width:100%}.farmer-directory-head{align-items:flex-start}.farmer-active-filters{padding-inline:12px}.farmer-directory-table,.farmer-directory-table tbody{display:block;width:100%!important;max-width:100%!important;min-width:0!important}.farmer-directory-table thead{display:none}.farmer-directory-table tbody{padding:10px;background:#f5f8f6}.farmer-directory-table tbody tr[data-farmer-id]{display:grid;width:100%!important;max-width:100%!important;grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:10px;overflow:hidden;border:1px solid #dfe7e1;border-radius:10px;background:#fff;box-shadow:0 2px 7px rgba(20,40,27,.025)}.farmer-directory-table tbody tr[data-farmer-id]:last-child{margin-bottom:0}.farmer-directory-table tbody tr[data-farmer-id] td{display:block;width:auto!important;max-width:none!important;min-width:0;padding:9px 11px;border:0;border-bottom:1px solid #edf1ee;background:#fff}.farmer-directory-table tbody tr[data-farmer-id] td:nth-child(odd):not(:first-child):not(:last-child){border-right:1px solid #edf1ee}.farmer-directory-table tbody tr[data-farmer-id] td:first-child,.farmer-directory-table tbody tr[data-farmer-id] td:last-child{grid-column:1/-1}.farmer-directory-table tbody tr[data-farmer-id] td:first-child{padding-block:11px;background:#fbfcfb}.farmer-directory-table tbody tr[data-farmer-id] td:last-child{border-bottom:0}.farmer-directory-table tbody tr[data-farmer-id] td:not(:first-child):before{content:attr(data-label);display:block;margin-bottom:5px;color:var(--module-muted);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:none}.farmer-directory-table .module-row-actions{justify-content:flex-start}.farmer-directory-table .module-action-menu-list{left:0;right:auto}.module-table-scroll:has(.farmer-directory-table){width:100%;max-width:100%;overflow:visible}}
+  .farmer-primary-search label,.farmer-filter-drawer>summary strong{font-size:14px;font-weight:500}
+  .farmer-filter-drawer>summary{min-height:44px}
+  .farmer-filter-drawer summary:focus-visible{outline:3px solid var(--ui-focus,#236344);outline-offset:3px}
+  .farmer-directory-table tr[data-farmer-id]:focus-visible{outline:3px solid var(--ui-focus,#236344);outline-offset:-3px}
+  .farmer-map-hint i{display:none}
+  .farmer-map-section>summary{font-size:18px}
 </style>
 @endpush
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function () {
+    const insights = document.getElementById('farmerInsights');
+    let chartsLoaded = false;
+    async function showCharts() {
+      if (!insights?.open || chartsLoaded) return;
+      chartsLoaded = true;
+      try {
+        if (!window.Chart) await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js';
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
     const gender = window.__genderStats || {};
     const locations = window.__locationStats || {};
     const genderCanvas = document.getElementById('genderChart');
     if (genderCanvas && Object.keys(gender).length) {
-      new Chart(genderCanvas, {type:'doughnut',data:{labels:Object.keys(gender),datasets:[{data:Object.values(gender),backgroundColor:['#17643a','#d8a438','#6986a4','#9a7ab2'],borderColor:'#fff',borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{position:'right',labels:{usePointStyle:true,boxWidth:7,font:{size:10}}}}}});
+      new Chart(genderCanvas, {type:'doughnut',data:{labels:Object.keys(gender),datasets:[{data:Object.values(gender),backgroundColor:['#17643a','#d8a438','#6986a4','#9a7ab2'],borderColor:'#fff',borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{position:'right',labels:{usePointStyle:true,boxWidth:7,font:{size:12}}}}}});
     }
     const locationCanvas = document.getElementById('locationChart');
     if (locationCanvas && Object.keys(locations).length) {
-      new Chart(locationCanvas, {type:'bar',data:{labels:Object.keys(locations),datasets:[{data:Object.values(locations),backgroundColor:'#4f8765',borderRadius:4,maxBarThickness:32}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0,font:{size:9}},grid:{color:'#edf1ee'}},x:{ticks:{font:{size:9}},grid:{display:false}}}}});
+      new Chart(locationCanvas, {type:'bar',data:{labels:Object.keys(locations),datasets:[{data:Object.values(locations),backgroundColor:'#4f8765',borderRadius:4,maxBarThickness:32}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0,font:{size:12}},grid:{color:'#edf1ee'}},x:{ticks:{font:{size:12}},grid:{display:false}}}}});
     }
 
-    function focusFarmer(id, openMap) {
+      } catch (_) {
+        insights.querySelector('.module-analytics-grid').hidden = true;
+        document.getElementById('farmerInsightsStatus').textContent = 'Charts could not load. Use the registry figures below.';
+      }
+    }
+    insights?.addEventListener('toggle', showCharts);
+
+    function revealTarget(hash) {
+      let target;
+      try { target = document.getElementById(decodeURIComponent(hash.slice(1))); } catch (_) { return; }
+      if (!target) return;
+      let parent = target;
+      while (parent) {
+        if (parent.tagName === 'DETAILS') parent.open = true;
+        parent = parent.parentElement;
+      }
+      target.scrollIntoView({behavior: 'auto', block: 'start'});
+    }
+    document.addEventListener('click', event => {
+      const link = event.target.closest('a[href^="#"]');
+      if (link) revealTarget(link.hash);
+    });
+    window.addEventListener('hashchange', () => revealTarget(window.location.hash));
+    revealTarget(window.location.hash);
+
+    async function focusFarmer(id, openMap) {
       document.querySelectorAll('#farmersTable tbody tr').forEach(row => row.classList.remove('row-highlight'));
       document.getElementById('farmer-row-' + id)?.classList.add('row-highlight');
-      if (openMap && typeof window.__openFarmer3d === 'function') window.__openFarmer3d(String(id), {showMarker:false});
-      document.getElementById('farmersMapModule')?.scrollIntoView({behavior:'smooth', block:'start'});
+      revealTarget('#farmersMapModule');
+      if (openMap && typeof window.__startFarmerMap === 'function') {
+        const ready = await window.__startFarmerMap();
+        if (ready && typeof window.__openFarmer3d === 'function') window.__openFarmer3d(String(id), {showMarker:false});
+      }
     }
     document.getElementById('farmersTable')?.addEventListener('click', function (event) {
       const action = event.target.closest('a,button,form,details,summary,input,select,label');
@@ -423,7 +474,7 @@
       if (row) focusFarmer(row.dataset.farmerId, true);
     });
     document.querySelectorAll('#farmersTable tr[data-farmer-id]').forEach(row => row.addEventListener('keydown', event => {
-      if (event.key === 'Enter' || event.key === ' ') {
+      if (event.target === row && (event.key === 'Enter' || event.key === ' ')) {
         event.preventDefault();
         focusFarmer(row.dataset.farmerId, true);
       }

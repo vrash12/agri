@@ -4,7 +4,7 @@
 
 @push('styles')
   @include('partials.operations-ui-styles')
-  <style>.animal-health-kpis{grid-template-columns:repeat(5,minmax(0,1fr))}.animal-service-badge-vaccination{color:#17643a;background:#e7f4eb}.animal-service-badge-deworming{color:#8b641c;background:#fbf2dc}.animal-service-badge-vitamins{color:#2d6594;background:#e8f2fb}.animal-service-badge-treatment{color:#8e4440;background:#fbeceb}@media(max-width:1000px){.animal-health-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:650px){.animal-health-kpis{grid-template-columns:1fr}}</style>
+  <style>.animal-health-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.animal-service-badge-vaccination{color:#17643a;background:#e7f4eb}.animal-service-badge-deworming{color:#8b641c;background:#fbf2dc}.animal-service-badge-vitamins{color:#2d6594;background:#e8f2fb}.animal-service-badge-treatment{color:#8e4440;background:#fbeceb}@media(max-width:1000px){.animal-health-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:650px){.animal-health-kpis{grid-template-columns:1fr}}</style>
 @endpush
 
 @php
@@ -57,12 +57,7 @@
       <strong>{{ number_format((int) ($uniqueOwners ?? 0)) }}</strong>
       <small>Distinct owner names</small>
     </article>
-    <article class="module-kpi">
-      <div class="module-kpi-top"><span class="module-kpi-label">Animal profiles / groups</span><span class="module-kpi-icon module-kpi-icon-blue"><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="2"></circle><circle cx="16" cy="8" r="2"></circle><circle cx="5" cy="13" r="2"></circle><circle cx="19" cy="13" r="2"></circle><path d="M8 19c0-3 2-5 4-5s4 2 4 5c-2 2-6 2-8 0Z"></path></svg></span></div>
-      <strong>{{ number_format((int) ($uniquePets ?? 0)) }}</strong>
-      <small>Latest service {{ $fmtDate($latestServiceDate, 'M d') }}</small>
-    </article>
-  </section>
+</section>
 
   <section class="module-panel">
     <div class="module-panel-head"><div><h2>Find animal-health records</h2><p>Search owners, animals, products, or diagnoses and narrow by service, species, location, and year.</p></div>@if($hasFilters)<span class="module-panel-tag">Filtered view</span>@endif</div>
@@ -74,29 +69,19 @@
         @endif
         <div class="module-field"><label for="animalServiceType">Service type</label><select class="module-input" id="animalServiceType" name="service_type"><option value="">All services</option>@foreach(($serviceTypeOptions ?? []) as $type => $label)<option value="{{ $type }}" @selected(($serviceType ?? '') === $type)>{{ $label }}</option>@endforeach</select></div>
         <div class="module-field"><label for="vaccinationPetType">Animal species</label><select class="module-input" id="vaccinationPetType" name="pet_type"><option value="">All animal species</option>@foreach(($petTypeOptions ?? []) as $type => $label)<option value="{{ $type }}" @selected(($petType ?? '') === $type)>{{ $label }}</option>@endforeach</select></div>
+      </div>
+      <details class="module-more" @if(filled($barangay ?? '') || filled($year ?? '') || (int) $perPage !== 20) open @endif>
+        <summary>More filters @if(filled($barangay ?? '') || filled($year ?? '') || (int) $perPage !== 20)<span class="module-badge">Active filters</span>@endif</summary>
+        <div class="module-more-content"><div class="module-filter-grid">
         <div class="module-field"><label for="vaccinationBarangay">Barangay</label><select class="module-input" id="vaccinationBarangay" name="barangay"><option value="">All barangays</option>@foreach(($barangayOptions ?? []) as $option)<option value="{{ $option }}" @selected(($barangay ?? '') === $option)>{{ $option }}</option>@endforeach</select></div>
         <div class="module-field"><label for="vaccinationYear">Year</label><select class="module-input" id="vaccinationYear" name="year"><option value="">All years</option>@foreach(($yearOptions ?? []) as $option)<option value="{{ $option }}" @selected((string) ($year ?? '') === (string) $option)>{{ $option }}</option>@endforeach</select></div>
         <div class="module-field"><label for="vaccinationPerPage">Rows per page</label><select class="module-input" id="vaccinationPerPage" name="per_page">@foreach([10,20,50,100] as $n)<option value="{{ $n }}" @selected((int) $perPage === $n)>{{ $n }} rows</option>@endforeach</select></div>
       </div>
+        </div>
+      </details>
       <div class="module-filter-actions"><span>@if($hasFilters)<span class="module-active-filter">Summary and charts reflect these filters</span>@else Showing all animal-health records in your access scope @endif</span><div class="module-filter-buttons">@if($hasFilters)<a class="module-button" href="{{ route('anti-rabies-vaccinations.index') }}">Clear filters</a>@endif<button class="module-button module-button-primary" type="submit">Apply filters</button></div></div>
     </form>
   </section>
-
-  <section class="module-analytics-grid" aria-label="Animal health analytics">
-    <article class="module-chart"><div class="module-chart-head"><h3>Monthly service trend</h3><p>Animal-health activity during {{ $chartYear ?? \App\Support\LocalTime::now()->year }}</p></div><div class="module-chart-body"><canvas id="vaccinationMonthlyChart"></canvas>@if(collect($monthlyChartData ?? [])->sum() <= 0)<div class="module-chart-empty">No animal-health activity for this year.</div>@endif</div></article>
-    <article class="module-chart"><div class="module-chart-head"><h3>Service mix</h3><p>Vaccination, deworming, vitamins, and treatment</p></div><div class="module-chart-body"><canvas id="animalServiceTypeChart"></canvas></div></article>
-    <article class="module-chart"><div class="module-chart-head"><h3>Animals served by species</h3><p>Uses the number of animals recorded per service</p></div><div class="module-chart-body"><canvas id="vaccinationPetChart"></canvas>@if(collect($petTypeChartData ?? [])->sum() <= 0)<div class="module-chart-empty">No animal-species data for this view.</div>@endif</div></article>
-  </section>
-
-  <details class="module-more">
-    <summary>Open detailed animal-health analytics</summary>
-    <div class="module-more-content"><div class="module-analytics-grid">
-      <article class="module-chart"><div class="module-chart-head"><h3>Services by year</h3><p>Long-term animal-health activity</p></div><div class="module-chart-body"><canvas id="vaccinationYearChart"></canvas></div></article>
-      <article class="module-chart"><div class="module-chart-head"><h3>Leading barangays</h3><p>Top ten service locations</p></div><div class="module-chart-body"><canvas id="vaccinationBarangayChart"></canvas></div></article>
-      <article class="module-chart"><div class="module-chart-head"><h3>Common breeds</h3><p>Top ten recorded breeds</p></div><div class="module-chart-body"><canvas id="vaccinationBreedChart"></canvas></div></article>
-      <article class="module-chart"><div class="module-chart-head"><h3>Owner age groups</h3><p>Based on recorded birthdays</p></div><div class="module-chart-body"><canvas id="vaccinationAgeChart"></canvas></div></article>
-    </div></div>
-  </details>
 
   <section class="module-panel">
     <div class="module-table-tools"><div><strong>Animal-health register</strong><span>{{ number_format($records->total()) }} {{ Str::plural('record', $records->total()) }} · newest services first</span></div></div>
@@ -124,25 +109,71 @@
     @endif
     @include('partials.pagination', ['paginator' => $records, 'label' => 'animal-health record'])
   </section>
+  <details class="module-more" id="animalHealthReports">
+    <summary>Reports — services and animal coverage</summary>
+    <div class="module-more-content">
+      <p class="module-hint" data-report-status role="status">Charts load when you open Reports. Figures are also available in tables.</p>
+      <p class="module-hint">Animal profiles / groups: {{ number_format((int) ($uniquePets ?? 0)) }}. Latest service: {{ $fmtDate($latestServiceDate ?? null) }}.</p>
+      <div class="module-analytics-grid">
+        <article class="module-chart">
+          <div class="module-chart-head"><h3>Monthly service trend</h3></div>
+          <div class="module-chart-body"><canvas id="vaccinationMonthlyChart" aria-hidden="true"></canvas></div>
+          @include('partials.operational-report-figures', ['reportTitle' => 'Monthly service trend', 'reportLabels' => $monthlyChartLabels ?? [], 'reportValues' => $monthlyChartData ?? [], 'reportUnit' => 'Services in '.($chartYear ?? \App\Support\LocalTime::now()->year)])
+        </article>
+        <article class="module-chart">
+          <div class="module-chart-head"><h3>Service mix</h3></div>
+          <div class="module-chart-body"><canvas id="animalServiceTypeChart" aria-hidden="true"></canvas></div>
+          @include('partials.operational-report-figures', ['reportTitle' => 'Service mix', 'reportLabels' => $serviceTypeChartLabels ?? [], 'reportValues' => $serviceTypeChartData ?? [], 'reportUnit' => 'Services'])
+        </article>
+        <article class="module-chart">
+          <div class="module-chart-head"><h3>Animals served by species</h3></div>
+          <div class="module-chart-body"><canvas id="vaccinationPetChart" aria-hidden="true"></canvas></div>
+          @include('partials.operational-report-figures', ['reportTitle' => 'Animals served by species', 'reportLabels' => $petTypeChartLabels ?? [], 'reportValues' => $petTypeChartData ?? [], 'reportUnit' => 'Animals served'])
+        </article>
+        <article class="module-chart">
+          <div class="module-chart-head"><h3>Services by year</h3></div>
+          <div class="module-chart-body"><canvas id="vaccinationYearChart" aria-hidden="true"></canvas></div>
+          @include('partials.operational-report-figures', ['reportTitle' => 'Services by year', 'reportLabels' => $yearChartLabels ?? [], 'reportValues' => $yearChartData ?? [], 'reportUnit' => 'Services'])
+        </article>
+        <article class="module-chart">
+          <div class="module-chart-head"><h3>Leading barangays</h3></div>
+          <div class="module-chart-body"><canvas id="vaccinationBarangayChart" aria-hidden="true"></canvas></div>
+          @include('partials.operational-report-figures', ['reportTitle' => 'Leading barangays', 'reportLabels' => $barangayChartLabels ?? [], 'reportValues' => $barangayChartData ?? [], 'reportUnit' => 'Services'])
+        </article>
+        <article class="module-chart">
+          <div class="module-chart-head"><h3>Common breeds</h3></div>
+          <div class="module-chart-body"><canvas id="vaccinationBreedChart" aria-hidden="true"></canvas></div>
+          @include('partials.operational-report-figures', ['reportTitle' => 'Common breeds', 'reportLabels' => $breedChartLabels ?? [], 'reportValues' => $breedChartData ?? [], 'reportUnit' => 'Service records'])
+        </article>
+        <article class="module-chart">
+          <div class="module-chart-head"><h3>Owner age groups</h3></div>
+          <div class="module-chart-body"><canvas id="vaccinationAgeChart" aria-hidden="true"></canvas></div>
+          @include('partials.operational-report-figures', ['reportTitle' => 'Owner age groups', 'reportLabels' => $ageChartLabels ?? [], 'reportValues' => $ageChartData ?? [], 'reportUnit' => 'Service records'])
+        </article>
+      </div>
+    </div>
+  </details>
+
 </div>
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
 (() => {
-  if (typeof Chart === 'undefined') return;
+  document.getElementById('animalHealthReports').renderOperationalCharts = () => {
   const grid = 'rgba(23,33,27,.07)';
-  const ticks = { color:'#68756d', font:{ size:9, weight:'600' } };
+  const ticks = { color:'#68756d', font:{ size:12, weight:'600' } };
   const cartesian = { responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#17211b',padding:9,cornerRadius:6}},scales:{x:{grid:{display:false},ticks},y:{beginAtZero:true,grid:{color:grid},ticks}} };
   const make = (id,type,labels,data,color='#17643a',options=cartesian) => { const canvas=document.getElementById(id); if(!canvas)return; new Chart(canvas,{type,data:{labels,datasets:[{data,backgroundColor:type==='line'?'rgba(23,100,58,.09)':color,borderColor:color,borderWidth:type==='line'?2:0,pointRadius:3,tension:.28,fill:type==='line'}]},options}); };
   make('vaccinationMonthlyChart','line',@json($monthlyChartLabels ?? []),@json($monthlyChartData ?? []));
-  make('animalServiceTypeChart','doughnut',@json($serviceTypeChartLabels ?? []),@json($serviceTypeChartData ?? []),['#247246','#b67b22','#3978b5','#a64d49'],{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:9}}}}});
-  make('vaccinationPetChart','doughnut',@json($petTypeChartLabels ?? []),@json($petTypeChartData ?? []),['#3978b5','#d3a03a','#4c8b63','#7a6da8','#b45d54','#4b91aa','#9b7245','#749353','#b67b22','#5b79a6','#8e6c9e','#7d8b83','#a85f75'],{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:9}}}}});
+  make('animalServiceTypeChart','doughnut',@json($serviceTypeChartLabels ?? []),@json($serviceTypeChartData ?? []),['#247246','#b67b22','#3978b5','#a64d49'],{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:12}}}}});
+  make('vaccinationPetChart','doughnut',@json($petTypeChartLabels ?? []),@json($petTypeChartData ?? []),['#3978b5','#d3a03a','#4c8b63','#7a6da8','#b45d54','#4b91aa','#9b7245','#749353','#b67b22','#5b79a6','#8e6c9e','#7d8b83','#a85f75'],{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:12}}}}});
   make('vaccinationYearChart','bar',@json($yearChartLabels ?? []),@json($yearChartData ?? []),'#4c8b63');
   make('vaccinationBarangayChart','bar',@json($barangayChartLabels ?? []),@json($barangayChartData ?? []),'#3978b5',{...cartesian,indexAxis:'y'});
   make('vaccinationBreedChart','bar',@json($breedChartLabels ?? []),@json($breedChartData ?? []),'#b67b22',{...cartesian,indexAxis:'y'});
   make('vaccinationAgeChart','bar',@json($ageChartLabels ?? []),@json($ageChartData ?? []),'#7a6da8');
+  };
 })();
 </script>
+@include('partials.operational-report-loader', ['reportId' => 'animalHealthReports'])
 @endpush

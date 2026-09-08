@@ -68,7 +68,7 @@
     padding: 5px 10px;
     border-radius: 999px;
     font-size: 12px;
-    font-weight: 900;
+    font-weight:700;
     letter-spacing: .2px;
     border: 1px solid var(--border);
     background: rgba(2,6,23,.03);
@@ -88,7 +88,7 @@
     flex-wrap: wrap;
   }
 
-  .map-status-small{ font-size: 12px; color: var(--muted); font-weight: 800; }
+  .map-status-small{ font-size: 12px; color: var(--muted); font-weight:700; }
 
   .map-progress{
     width: 180px;
@@ -129,7 +129,7 @@
 
   .map-control-label{
     font-size: 12px;
-    font-weight: 900;
+    font-weight:700;
     color: #0b1220;
     margin-right: 6px;
     white-space: nowrap;
@@ -144,7 +144,7 @@
     border: 1px solid var(--border);
     background: rgba(2,6,23,.02);
     font-size: 12px;
-    font-weight: 900;
+    font-weight:700;
     color: #0b1220;
     user-select: none;
     cursor: pointer;
@@ -204,7 +204,7 @@
     border-bottom: 1px solid var(--border);
   }
 
-  .map-panel-title{ font-size: 13px; font-weight: 900; color: #0b1220; }
+  .map-panel-title{ font-size: 13px; font-weight:700; color: #0b1220; }
   .map-panel-body{ padding: 12px; }
 
   .map-kv{
@@ -215,8 +215,8 @@
     border-bottom: 1px dashed rgba(2,6,23,.08);
   }
 
-  .map-k{ font-size: 12px; font-weight: 900; color: var(--muted); }
-  .map-v{ font-size: 12px; font-weight: 900; color: #0b1220; word-break: break-word; }
+  .map-k{ font-size: 12px; font-weight:700; color: var(--muted); }
+  .map-v{ font-size: 12px; font-weight:700; color: #0b1220; word-break: break-word; }
 
   .map-metrics{
     display:grid;
@@ -232,8 +232,8 @@
     padding: 10px;
   }
 
-  .map-metric-label{ font-size: 11px; font-weight: 900; color: var(--muted); margin-bottom: 4px; }
-  .map-metric-value{ font-size: 12px; font-weight: 900; color: #0b1220; }
+  .map-metric-label{ font-size:12px; font-weight:700; color: var(--muted); margin-bottom: 4px; }
+  .map-metric-value{ font-size: 12px; font-weight:700; color: #0b1220; }
 
   .map-panel-actions{ display:flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
   .map-divider{ height: 1px; background: rgba(2,6,23,.08); margin: 12px 0; }
@@ -247,17 +247,17 @@
     margin-bottom: 10px;
   }
 
-  .map-plot-draft{ font-size: 12px; font-weight: 800; color: #0b1220; line-height: 1.45; }
+  .map-plot-draft{ font-size: 12px; font-weight:700; color: #0b1220; line-height: 1.45; }
 
   .map-input-row{ margin-bottom: 10px; }
-  .map-input-label{ display:block; font-size: 12px; font-weight: 900; color: var(--muted); margin-bottom: 6px; }
+  .map-input-label{ display:block; font-size: 12px; font-weight:700; color: var(--muted); margin-bottom: 6px; }
 
   .map-input{
     width: 100%;
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 10px 12px;
-    font-weight: 800;
+    font-weight:700;
     outline: none;
     transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
   }
@@ -283,7 +283,7 @@
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 10px 12px;
-    font-weight: 900;
+    font-weight:700;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   }
 
@@ -338,8 +338,8 @@
     vertical-align: middle;
   }
 
-  .map-plot-name{ font-size: 12px; font-weight: 900; color: #0b1220; }
-  .map-plot-sub{ font-size: 11px; font-weight: 800; color: var(--muted); margin-top: 4px; }
+  .map-plot-name{ font-size: 12px; font-weight:700; color: #0b1220; }
+  .map-plot-sub{ font-size:12px; font-weight:700; color: var(--muted); margin-top: 4px; }
   .map-plot-actions{ display:flex; gap: 8px; align-items:center; flex-wrap: wrap; }
 
   .map-empty{
@@ -348,7 +348,7 @@
     border-radius: 14px;
     background: rgba(2,6,23,.02);
     color: var(--muted);
-    font-weight: 800;
+    font-weight:700;
     font-size: 12px;
   }
 
@@ -360,9 +360,9 @@
     background: rgba(2,6,23,.02);
   }
 
-  .map-help summary{ cursor: pointer; font-weight: 900; font-size: 12px; color: #0b1220; }
+  .map-help summary{ cursor: pointer; font-weight:700; font-size: 12px; color: #0b1220; }
   .map-help-body{ margin-top: 8px; }
-  .map-help-list{ margin: 0; padding-left: 18px; color: var(--muted); font-weight: 800; font-size: 12px; }
+  .map-help-list{ margin: 0; padding-left: 18px; color: var(--muted); font-weight:700; font-size: 12px; }
 
   .farmers-map-foot{
     padding: 10px 14px;
@@ -388,8 +388,8 @@
     z-index: 30;
   }
 
-  .map-hint-title{ font-weight: 900; color: #0b1220; font-size: 13px; margin-bottom: 4px; }
-  .map-hint-text{ font-weight: 800; color: var(--muted); font-size: 12px; line-height: 1.35; }
+  .map-hint-title{ font-weight:700; color: #0b1220; font-size: 13px; margin-bottom: 4px; }
+  .map-hint-text{ font-weight:700; color: var(--muted); font-size: 12px; line-height: 1.35; }
 
   .map-selection-chip{
     position:absolute;
@@ -407,7 +407,7 @@
     backdrop-filter: blur(8px);
     z-index: 45;
     font-size: 12px;
-    font-weight: 900;
+    font-weight:700;
     color: #0b1220;
   }
 
@@ -443,7 +443,7 @@
 
   .map-workflow-title{
     font-size: 13px;
-    font-weight: 900;
+    font-weight:700;
     color: #0b1220;
   }
 
@@ -452,7 +452,7 @@
     font-size: 12px;
     line-height: 1.45;
     color: var(--muted);
-    font-weight: 800;
+    font-weight:700;
   }
 
   .map-workflow-grid{
@@ -471,17 +471,17 @@
   }
 
   .map-workflow-label{
-    font-size: 10px;
-    font-weight: 900;
+    font-size:12px;
+    font-weight:700;
     color: var(--muted);
     margin-bottom: 4px;
-    text-transform: uppercase;
+    text-transform: none;
     letter-spacing: .04em;
   }
 
   .map-workflow-value{
     font-size: 12px;
-    font-weight: 900;
+    font-weight:700;
     color: #0b1220;
     white-space: nowrap;
     overflow: hidden;
@@ -510,7 +510,7 @@
     box-shadow: 0 10px 24px rgba(2,6,23,.08);
     z-index: 30;
     font-size: 12px;
-    font-weight: 800;
+    font-weight:700;
     color: #0b1220;
   }
 
@@ -548,7 +548,7 @@
   backdrop-filter:blur(8px);
 }
 .map-hint-title{
-  font-weight:900;
+  font-weight:700;
   font-size:14px;
   margin-bottom:4px;
   color:#ffffff;
@@ -583,7 +583,7 @@
   padding:12px 14px;
   border-radius:14px;
   font-size:13px;
-  font-weight:800;
+  font-weight:700;
   line-height:1.4;
   color:#fff;
   background:rgba(15,23,42,.94);

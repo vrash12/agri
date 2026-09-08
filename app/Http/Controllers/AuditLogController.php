@@ -7,15 +7,17 @@ use App\Models\Municipality;
 use App\Models\User;
 use App\Support\AuditTrail;
 use App\Support\LocalTime;
+use App\Support\MunicipalityAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AuditLogController extends Controller
 {
-    public function __construct()
+    public function __construct(private MunicipalityAccess $municipalityAccess)
     {
         $this->middleware('auth');
     }
@@ -55,7 +57,7 @@ class AuditLogController extends Controller
             ->get();
 
         $records = (clone $query)
-            ->with(['actor:id,name,email,role', 'municipality:id,name'])
+            ->with($this->auditRelations($request->user()))
             ->latest('created_at')
             ->latest('id')
             ->paginate($perPage)
@@ -67,9 +69,9 @@ class AuditLogController extends Controller
             'eventCounts' => $eventCounts,
             'moduleCounts' => $moduleCounts,
             'eventLabels' => AuditLog::EVENT_LABELS,
-            'modules' => AuditLog::query()->distinct()->orderBy('module')->pluck('module'),
-            'municipalities' => Municipality::query()->orderBy('name')->get(['id', 'name']),
-            'users' => User::query()->orderBy('name')->get(['id', 'name', 'email']),
+            'modules' => $this->visibleQuery($request->user())->distinct()->orderBy('module')->pluck('module'),
+            'municipalities' => $this->municipalityAccess->scopeMunicipalities(Municipality::query(), $request->user())->orderBy('name')->get(['id', 'name']),
+            'users' => $this->actorChoices($request->user()),
             'filters' => [
                 'q' => trim((string) $request->query('q', '')),
                 'event' => (string) $request->query('event', ''),
@@ -87,7 +89,8 @@ class AuditLogController extends Controller
     {
         $this->authorizeAccess($request);
 
-        $auditLog->load(['actor:id,name,email,role', 'municipality:id,name']);
+        abort_unless($this->visibleQuery($request->user())->whereKey($auditLog->getKey())->exists(), 404);
+        $auditLog->load($this->auditRelations($request->user()));
 
         return view('audit_logs.show', [
             'auditLog' => $auditLog,
@@ -124,7 +127,9 @@ class AuditLogController extends Controller
 
         $fileName = 'audit-trail-'.LocalTime::now()->format('Y-m-d-His').'.csv';
 
-        return response()->streamDownload(function () use ($query, $maxId): void {
+        $relations = $this->auditRelations($request->user());
+
+        return response()->streamDownload(function () use ($query, $maxId, $relations): void {
             $output = fopen('php://output', 'w');
             fwrite($output, "\xEF\xBB\xBF");
             fputcsv($output, [
@@ -137,6 +142,7 @@ class AuditLogController extends Controller
                 'Actor Email',
                 'Role',
                 'Municipality',
+                'Province',
                 'IP Address',
                 'Request',
                 'Record Type',
@@ -148,7 +154,7 @@ class AuditLogController extends Controller
 
             if ($maxId !== null) {
                 $query->where('id', '<=', $maxId)
-                    ->with(['municipality:id,name'])
+                    ->with($relations)
                     ->orderBy('id')
                     ->chunkById(500, function ($logs) use ($output): void {
                         foreach ($logs as $log) {
@@ -162,6 +168,7 @@ class AuditLogController extends Controller
                                 $log->actor_email,
                                 $log->actor_role,
                                 $log->municipality?->name,
+                                $log->province?->name,
                                 $log->ip_address,
                                 trim(($log->request_method ?? '').' '.($log->request_url ?? '')),
                                 $log->auditable_type,
@@ -185,7 +192,7 @@ class AuditLogController extends Controller
 
     private function filteredQuery(Request $request): Builder
     {
-        $query = AuditLog::query();
+        $query = $this->visibleQuery($request->user());
         $search = trim((string) $request->query('q', ''));
 
         if ($search !== '') {
@@ -227,7 +234,40 @@ class AuditLogController extends Controller
         return $query;
     }
 
-    /** @param mixed $value */
+    private function visibleQuery(User $user): Builder
+    {
+        $query = AuditLog::query();
+
+        // Never infer historical scope from the actor's current assignment.
+        return $user->isSystemOwner()
+            ? $query
+            : $query->where('province_id', $user->province_id)->whereNotNull('province_id');
+    }
+
+    private function actorChoices(User $user): Collection
+    {
+        // One captured identity per actor, even if an account was renamed or
+        // reassigned. Never expose its current profile in another province.
+        $latestEvents = $this->visibleQuery($user)->whereNotNull('user_id')
+            ->selectRaw('MAX(id)')->groupBy('user_id');
+
+        return AuditLog::query()->whereIn('id', $latestEvents)->orderBy('actor_name')
+            ->get(['user_id as id', 'actor_name as name', 'actor_email as email']);
+    }
+
+    /** @return array<string|int, mixed> */
+    private function auditRelations(User $user): array
+    {
+        return [
+            'province:id,name',
+            'municipality' => function ($query) use ($user): void {
+                $this->municipalityAccess->scopeMunicipalities($query->getQuery(), $user)
+                    ->select(['id', 'name']);
+            },
+        ];
+    }
+
+    /** @param  mixed  $value */
     private function parseDate($value): ?Carbon
     {
         if (! is_string($value) || ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
@@ -241,7 +281,7 @@ class AuditLogController extends Controller
         }
     }
 
-    /** @param mixed $values */
+    /** @param  mixed  $values */
     private function jsonForCsv($values): string
     {
         return $values
@@ -249,7 +289,7 @@ class AuditLogController extends Controller
             : '';
     }
 
-    /** @param mixed $value */
+    /** @param  mixed  $value */
     private function csvValue($value): string
     {
         $value = (string) ($value ?? '');

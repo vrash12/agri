@@ -27,7 +27,7 @@
         </section>
         <section class="module-form-section">
           <div class="module-form-section-head"><span class="module-step">2</span><div><h2>Select the Excel workbook</h2><p>Accepted formats are .xlsx and .xls.</p></div></div>
-          <div class="module-form-body"><label class="module-dropzone" for="riceImportFile"><span class="module-dropzone-icon"><svg viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"></path></svg></span><span style="min-width:0;flex:1"><strong style="display:block;font-size:11px">Choose an NRP workbook</strong><small style="display:block;margin:3px 0 8px;color:var(--module-muted);font-size:9px">The import validates rows before saving.</small><input id="riceImportFile" type="file" name="file" accept=".xlsx,.xls" required></span></label></div>
+          <div class="module-form-body"><label class="module-dropzone" for="riceImportFile"><span class="module-dropzone-icon"><svg viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"></path></svg></span><span style="min-width:0;flex:1"><strong style="display:block;font-size:12px">Choose an NRP workbook</strong><small style="display:block;margin:3px 0 8px;color:var(--module-muted);font-size:12px">The import validates rows before saving.</small><input id="riceImportFile" type="file" name="file" accept=".xlsx,.xls" required></span></label></div>
           <div class="module-form-actions"><a class="module-button" href="{{ route('rice-seed-distributions.index') }}">Cancel</a><button class="module-button module-button-primary" type="submit">Import workbook</button></div>
         </section>
       </div>

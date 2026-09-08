@@ -8,20 +8,14 @@ class UserPolicy
 {
     public function before(User $user): ?bool
     {
-        if (! $user->isActive() || ! $user->hasAnyRole(User::ROLES)) {
-            return false;
-        }
-
-        if ($user->isSuperAdmin()) {
-            return true;
-        }
-
-        return null;
+        return $user->isActive() && $user->hasAnyRole(User::ROLES) && $user->hasUsableScope()
+            ? null
+            : false;
     }
 
     public function viewAny(User $user): bool
     {
-        return $user->isMunicipalHead() && $user->municipality_id !== null;
+        return $user->isSystemOwner() || $user->isSuperAdmin() || $user->isMunicipalHead();
     }
 
     public function create(User $user): bool
@@ -31,26 +25,47 @@ class UserPolicy
 
     public function view(User $user, User $account): bool
     {
-        return $this->canManageMunicipalAccount($user, $account);
+        return $this->update($user, $account);
     }
 
     public function update(User $user, User $account): bool
     {
-        return $this->canManageMunicipalAccount($user, $account);
+        if ($user->is($account) && ($user->isSystemOwner() || $user->isSuperAdmin())) {
+            return true;
+        }
+
+        return $this->canManageAccount($user, $account);
     }
 
     public function delete(User $user, User $account): bool
     {
-        return $this->canManageMunicipalAccount($user, $account);
+        return ! $user->is($account) && $this->canManageAccount($user, $account);
     }
 
-    private function canManageMunicipalAccount(
+    private function canManageAccount(
         User $user,
         User $account
     ): bool {
+        if ($account->isSystemOwner()) {
+            return false;
+        }
+
+        if ($user->isSystemOwner()) {
+            return true;
+        }
+
+        if ($user->isSuperAdmin()) {
+            if ($account->isSuperAdmin()) {
+                return false;
+            }
+
+            return $account->requiresProvince()
+                ? $user->canAccessProvince($account->province_id)
+                : ($account->isMunicipalUser() && $user->canAccessMunicipality($account->municipality_id));
+        }
+
         return $user->isMunicipalHead()
-            && $user->municipality_id !== null
             && $account->isMunicipalStaff()
-            && (int) $account->municipality_id === (int) $user->municipality_id;
+            && $user->canAccessMunicipality($account->municipality_id);
     }
 }

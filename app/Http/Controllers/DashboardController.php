@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\AntiRabiesVaccination;
 use App\Models\AgriculturalMachinery;
+use App\Models\AntiRabiesVaccination;
 use App\Models\BackupFile;
 use App\Models\Farmer;
 use App\Models\FarmersCooperative;
@@ -11,12 +11,13 @@ use App\Models\FarmPlot;
 use App\Models\Municipality;
 use App\Models\RiceSeedDistribution;
 use App\Models\User;
+use App\Support\MunicipalityAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
-    public function __construct()
+    public function __construct(private MunicipalityAccess $municipalityAccess)
     {
         $this->middleware('auth');
     }
@@ -36,9 +37,7 @@ class DashboardController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        if ($user->isMunicipalUser() && ! $user->municipality_id) {
-            abort(403, 'Your account is not assigned to a municipality.');
-        }
+        abort_unless($user->hasUsableScope(), 403, 'Your account does not have an active workspace.');
 
         $currentYear = (int) now()->year;
 
@@ -51,7 +50,8 @@ class DashboardController extends Controller
         | - super_admin
         | - provincial_staff
         |
-        | These users can see all municipalities.
+        | These users can see municipalities within their assigned province.
+        | The System Owner can oversee every province.
         |
         | Municipal roles:
         | - municipal_head
@@ -131,7 +131,7 @@ class DashboardController extends Controller
         $totalAnimalsServed = (int) (clone $vaccinationQuery)
             ->sum('animal_count');
 
-        $totalBackupFiles = $user->isSuperAdmin()
+        $totalBackupFiles = $user->canOverseeSystem()
             ? 0
             : (clone $backupQuery)->count();
 
@@ -190,7 +190,7 @@ class DashboardController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        $latestBackupAt = $user->isSuperAdmin()
+        $latestBackupAt = $user->canOverseeSystem()
             ? null
             : (clone $backupQuery)->max('created_at');
 
@@ -416,9 +416,9 @@ class DashboardController extends Controller
         $municipalityStats = collect();
         $provinceOverview = [];
 
-        if ($user->isSuperAdmin()) {
+        if ($user->canOverseeSystem()) {
             [$municipalityStats, $provinceOverview] =
-                $this->buildMunicipalityOverview();
+                $this->buildMunicipalityOverview($user);
         }
 
         return view('dashboard', compact(
@@ -441,9 +441,9 @@ class DashboardController extends Controller
      *
      * @return array{0: \Illuminate\Support\Collection, 1: array<string, int>}
      */
-    private function buildMunicipalityOverview(): array
+    private function buildMunicipalityOverview(User $user): array
     {
-        $municipalities = Municipality::query()
+        $municipalities = $this->municipalityAccess->scopeMunicipalities(Municipality::query(), $user)
             ->active()
             ->orderBy('name')
             ->get(['id', 'name', 'province']);
@@ -626,11 +626,11 @@ class DashboardController extends Controller
             ];
         });
 
-        $unassignedRecords = Farmer::query()->whereNull('municipality_id')->count()
+        $unassignedRecords = $user->isSystemOwner() ? Farmer::query()->whereNull('municipality_id')->count()
             + RiceSeedDistribution::query()->whereNull('municipality_id')->count()
             + AntiRabiesVaccination::query()->whereNull('municipality_id')->count()
             + FarmersCooperative::query()->whereNull('municipality_id')->count()
-            + AgriculturalMachinery::query()->whereNull('municipality_id')->count();
+            + AgriculturalMachinery::query()->whereNull('municipality_id')->count() : 0;
 
         return [$municipalityStats, [
             'active_municipalities' => $municipalityStats->count(),
@@ -638,8 +638,7 @@ class DashboardController extends Controller
                 ->where('municipal_heads', '>', 0)
                 ->count(),
             'municipal_accounts' => $municipalityStats
-                ->sum(fn (array $item) =>
-                    $item['municipal_heads'] + $item['municipal_staff']),
+                ->sum(fn (array $item) => $item['municipal_heads'] + $item['municipal_staff']),
             'mapped_municipalities' => $municipalityStats
                 ->where('mapped_farmers', '>', 0)
                 ->count(),
@@ -653,25 +652,14 @@ class DashboardController extends Controller
     /**
      * Restrict a model query based on the logged-in user's municipality.
      *
-     * Super admins and provincial staff can see all municipalities.
+     * Provincial roles see only the municipalities in their assigned province.
      * Municipal heads and municipal staff can only see their municipality.
      */
     private function scopeByMunicipality(
         Builder $query,
         User $user
     ): Builder {
-        if ($user->isProvincialUser()) {
-            return $query;
-        }
-
-        if (! $user->municipality_id) {
-            abort(403, 'Your account is not assigned to a municipality.');
-        }
-
-        return $query->where(
-            $query->getModel()->qualifyColumn('municipality_id'),
-            $user->municipality_id
-        );
+        return $this->municipalityAccess->scope($query, $user);
     }
 
     private function kilogramReleases(Builder $query): Builder

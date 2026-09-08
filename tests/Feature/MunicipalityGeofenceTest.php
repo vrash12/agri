@@ -6,6 +6,7 @@ use App\Models\Farmer;
 use App\Models\FarmPlot;
 use App\Models\Municipality;
 use App\Models\MunicipalityBoundary;
+use App\Models\Province;
 use App\Models\User;
 use App\Support\ConcurrentWrite;
 use Illuminate\Database\Schema\Blueprint;
@@ -43,9 +44,10 @@ class MunicipalityGeofenceTest extends TestCase
         DB::setDefaultConnection('sqlite');
         Cache::clear();
         $this->createSchema();
+        $province = Province::create(['name' => 'Tarlac', 'is_active' => true]);
 
-        $this->first = Municipality::create(['name' => 'Anao', 'province' => 'Tarlac', 'code' => 'ANA', 'is_active' => true]);
-        $this->second = Municipality::create(['name' => 'Ramos', 'province' => 'Tarlac', 'code' => 'RAM', 'is_active' => true]);
+        $this->first = Municipality::create(['name' => 'Anao', 'province' => 'Tarlac', 'province_id' => $province->id, 'code' => 'ANA', 'is_active' => true]);
+        $this->second = Municipality::create(['name' => 'Ramos', 'province' => 'Tarlac', 'province_id' => $province->id, 'code' => 'RAM', 'is_active' => true]);
         $this->superAdmin = $this->user(User::ROLE_SUPER_ADMIN, null, 'super@example.test');
         $this->provincial = $this->user(User::ROLE_PROVINCIAL_STAFF, null, 'province@example.test');
         $this->municipal = $this->user(User::ROLE_MUNICIPAL_STAFF, $this->first->id, 'anao@example.test');
@@ -85,6 +87,74 @@ class MunicipalityGeofenceTest extends TestCase
             ->assertOk()
             ->assertDontSee('Draw municipality boundary')
             ->assertSee('Municipality geofences');
+    }
+
+    public function test_municipal_roles_receive_only_their_assigned_workspace_without_municipality_search(): void
+    {
+        $ownBoundary = $this->createBoundary($this->first, 120.50, 15.40);
+        $foreignBoundary = $this->createBoundary($this->second, 120.60, 15.50);
+        $foreignBoundary->update(['name' => 'Foreign boundary detail']);
+        $ownFarmer = Farmer::create(['municipality_id' => $this->first->id, 'first_name' => 'Own', 'last_name' => 'Farmer']);
+        $foreignFarmer = Farmer::create(['municipality_id' => $this->second->id, 'first_name' => 'Foreign', 'last_name' => 'Farmer']);
+        $ownPlot = $this->plot($ownFarmer, 'Own parcel', 120.505, 15.405);
+        $this->plot($foreignFarmer, 'Foreign parcel detail', 120.605, 15.505);
+
+        foreach ([User::ROLE_MUNICIPAL_STAFF, User::ROLE_MUNICIPAL_HEAD] as $role) {
+            $this->municipal->role = $role;
+
+            $this->actingAs($this->municipal)
+                ->get(route('municipality-boundaries.index', ['municipality_id' => $this->second->id]))
+                ->assertOk()
+                ->assertSee('Assigned municipality')
+                ->assertSee('Geofence color opacity')
+                ->assertSee('id="geofenceOpacity" type="range" min="0" max="100" step="5" value="20"', false)
+                ->assertSee($this->first->name)
+                ->assertSee('Reset municipality view')
+                ->assertSee('type="hidden" id="municipalityFilter" value="'.$this->first->id.'"', false)
+                ->assertDontSee('Find municipality')
+                ->assertDontSee('id="boundarySearch"', false)
+                ->assertDontSee('<select id="municipalityFilter">', false)
+                ->assertDontSee('All municipalities')
+                ->assertDontSee('Reset province view')
+                ->assertDontSee('Province-wide view')
+                ->assertDontSee('Province boundary administration')
+                ->assertDontSee('Use the municipality selector')
+                ->assertDontSee($this->second->name)
+                ->assertDontSee('Foreign boundary detail')
+                ->assertViewHas('municipalities', fn ($items) => $items->pluck('id')->all() === [$this->first->id])
+                ->assertViewHas('boundaries', fn ($items) => $items->pluck('id')->all() === [$ownBoundary->id])
+                ->assertViewHas('summary', fn ($summary) => $summary['municipalities'] === 1 && $summary['farmers'] === 1 && $summary['parcels'] === 1);
+
+            $this->getJson(route('municipality-boundaries.data', ['municipality_id' => $this->first->id]))
+                ->assertOk()
+                ->assertJsonCount(1, 'boundaries')
+                ->assertJsonPath('boundaries.0.id', $ownBoundary->id)
+                ->assertJsonCount(1, 'parcels')
+                ->assertJsonPath('parcels.0.id', $ownPlot->id)
+                ->assertJsonPath('stats.farmers', 1)
+                ->assertJsonMissing(['name' => 'Foreign parcel detail']);
+
+            $this->getJson(route('municipality-boundaries.data', ['municipality_id' => $this->second->id]))
+                ->assertNotFound();
+        }
+    }
+
+    public function test_provincial_roles_keep_municipality_search_and_province_overview(): void
+    {
+        foreach ([$this->provincial, $this->superAdmin] as $user) {
+            $this->actingAs($user)
+                ->get(route('municipality-boundaries.index'))
+                ->assertOk()
+                ->assertSee('Find municipality')
+                ->assertSee('Geofence color opacity')
+                ->assertSee('<select id="municipalityFilter">', false)
+                ->assertSee('All municipalities')
+                ->assertSee('Reset province view')
+                ->assertSee('Province-wide view')
+                ->assertSee($this->first->name)
+                ->assertSee($this->second->name)
+                ->assertViewHas('municipalities', fn ($items) => $items->count() === 2);
+        }
     }
 
     public function test_super_admin_can_import_a_valid_geojson_draft(): void
@@ -319,10 +389,17 @@ class MunicipalityGeofenceTest extends TestCase
 
     private function createSchema(): void
     {
+        Schema::create('provinces', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
+        });
         Schema::create('municipalities', function (Blueprint $table) {
             $table->id();
             $table->string('name');
             $table->string('province')->nullable();
+            $table->unsignedBigInteger('province_id')->nullable();
             $table->string('code')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
@@ -334,6 +411,7 @@ class MunicipalityGeofenceTest extends TestCase
             $table->string('password');
             $table->string('role');
             $table->unsignedBigInteger('municipality_id')->nullable();
+            $table->unsignedBigInteger('province_id')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamp('last_login_at')->nullable();
             $table->rememberToken();
@@ -385,6 +463,7 @@ class MunicipalityGeofenceTest extends TestCase
             $table->id();
             $table->unsignedBigInteger('user_id')->nullable();
             $table->unsignedBigInteger('municipality_id')->nullable();
+            $table->unsignedBigInteger('province_id')->nullable();
             $table->string('actor_name')->nullable();
             $table->string('actor_email')->nullable();
             $table->string('actor_role', 40)->nullable();
@@ -406,7 +485,7 @@ class MunicipalityGeofenceTest extends TestCase
 
     private function user(string $role, ?int $municipalityId, string $email): User
     {
-        return User::create(['name' => $email, 'email' => $email, 'password' => Hash::make('password'), 'role' => $role, 'municipality_id' => $municipalityId, 'is_active' => true]);
+        return User::create(['name' => $email, 'email' => $email, 'password' => Hash::make('password'), 'role' => $role, 'province_id' => in_array($role, User::PROVINCIAL_ROLES, true) ? Province::where('name', 'Tarlac')->value('id') : null, 'municipality_id' => $municipalityId, 'is_active' => true]);
     }
 
     private function createBoundary(Municipality $municipality, float $lng, float $lat, float $size = 0.02): MunicipalityBoundary

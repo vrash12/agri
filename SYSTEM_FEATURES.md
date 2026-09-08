@@ -2,7 +2,7 @@
 
 ## 1. System overview
 
-The Agriculture Information System is a province-wide Laravel and MySQL platform for managing agricultural records across the Provincial Agriculture Office and participating municipal agriculture offices. It combines farmer registration, GIS land mapping, agricultural and fisheries assistance, animal-health services, cooperative management, machinery monitoring, protected files, dashboards, reporting, user administration, and audit records in one municipality-aware system.
+The Agriculture Information System is a Laravel and MySQL platform for multiple supervised provinces for managing agricultural records across the Provincial Agriculture Office and participating municipal agriculture offices. It combines farmer registration, GIS land mapping, agricultural and fisheries assistance, animal-health services, cooperative management, machinery monitoring, protected files, dashboards, reporting, user administration, and audit records in one municipality-aware system.
 
 The application is designed for multiple offices using the system at the same time. Every operational record is assigned to a municipality, and users only receive the records and actions allowed by their role.
 
@@ -10,9 +10,10 @@ The application is designed for multiple offices using the system at the same ti
 
 | Role | Main access |
 | --- | --- |
-| Super Administrator | Province-wide operational viewing, municipality geofence management, user management, system security, and audit trail |
-| Provincial Agriculture Staff | Province-wide operational access with the ability to select a municipality when creating or importing records |
-| Provincial Veterinary Office | Province-wide access limited to Animal Health services |
+| System Owner | Oversight of all configured provinces; province Super Admin management, geofences, and global audit/security |
+| Super Administrator | Operational viewing, municipality geofences, staff management, and audit records limited to the assigned province |
+| Provincial Agriculture Staff | Operational access within the assigned province, with the ability to select a municipality when creating or importing records |
+| Provincial Veterinary Office | Access within the assigned province, limited to Animal Health services |
 | Municipal Head Agriculturist | Full operational access for the assigned municipality and management of municipal staff accounts |
 | Municipal Staff | Operational access limited to the assigned municipality |
 
@@ -21,9 +22,11 @@ The application is designed for multiple offices using the system at the same ti
 - Municipal accounts can only view and manage records belonging to their assigned municipality.
 - Provincial agriculture staff can work across municipalities but must select the correct municipality for new records and imports.
 - Provincial Veterinary Office accounts can only access the Animal Health module.
-- Super Administrators have read-only oversight of ordinary operational records.
-- Only Super Administrators can manage official municipality geofences.
-- Super Administrators cannot access the Backup Folder.
+- System Owners and Super Administrators have read-only oversight of ordinary operational records.
+- A Benguet Super Admin sees only Benguet workspaces; a Tarlac Super Admin sees only Tarlac workspaces. The same separation applies to staff, maps, dashboards, reports, searches, and exports. Data in other provinces is retained.
+- Provincial agriculture and veterinary staff require their own province assignment. Unassigned or inactive province access is blocked at login and on protected requests.
+- System Owners can manage geofences across provinces; Super Administrators can manage only their province’s geofences.
+- System Owners and Super Administrators cannot access the Backup Folder.
 - Municipal Heads can only manage Municipal Staff accounts from their own municipality.
 - Every protected record is checked again on the server before it can be viewed, changed, deleted, downloaded, previewed, or exported.
 
@@ -43,6 +46,17 @@ The application is designed for multiple offices using the system at the same ti
 - Activity synchronization across browser tabs.
 - Server-side idle-session enforcement even when browser JavaScript is unavailable.
 - Throttled activity heartbeat while a user is active.
+
+### Shared interface behavior
+
+- Consistent green/yellow theme with a nearly white background and faint corner tints, solid work surfaces, Roboto typography, readable form controls, and visible keyboard focus; color rules are documented in [GREEN_YELLOW_THEME.md](GREEN_YELLOW_THEME.md).
+- Navigation grouped into daily work, office tools, and administration as permitted by the account role.
+- Mobile menu with keyboard focus handling and a skip-to-content link.
+- Optional form sections keep entered values and open when validation errors need attention.
+- Error summaries link to the first field to check; the existing idle-session warning explains the risk to unsaved changes.
+- Detailed assistance, Animal Health, machinery, and farmer charts open through labeled reports or insights, with readable figures available if charts fail.
+
+Implementation status and remaining staff/staging checks are documented in [DESIGN_IMPLEMENTATION.md](DESIGN_IMPLEMENTATION.md).
 
 ## 4. Dashboard and analytics
 
@@ -69,18 +83,21 @@ The application is designed for multiple offices using the system at the same ti
 - Farmers that still need parcel mapping.
 - Backup-file summary for roles allowed to access protected files.
 - Role-aware dashboard actions and links.
+- A default view with four key figures, up to three common actions, attention items, and five recent assistance releases.
+- Attention shortcuts open farmers missing parcels, FFRS numbers, or locations and machinery requiring maintenance.
+- Reports disclosure for detailed totals, current-month activity, charts, recent services, and parcel activity; chart loading starts when opened and monthly figures remain available without charts.
 
-### Super Administrator dashboard
+### System Owner and Super Administrator dashboards
 
-- Province-wide municipality comparison.
+- Separate province-wide municipality comparison with search, status filters, sorting, and scoped directory links.
 - Farmer totals per municipality.
 - Mapping coverage and mapped hectares per municipality.
 - Distribution, animal-health, cooperative, machinery, and staffing statistics.
 - Identification of municipalities without a Municipal Head.
 - Identification of municipalities without farmer records.
 - Identification of municipalities behind on parcel mapping.
-- Monitoring of operational records that have no assigned municipality.
-- Province-wide read-only oversight without operational data-entry controls.
+- Monitoring of operational records that have no assigned municipality, visible only to the System Owner.
+- Read-only oversight without operational data-entry controls: all provinces for the System Owner, or the assigned province for a Super Administrator.
 
 ## 5. Farmer registry
 
@@ -103,6 +120,9 @@ The application is designed for multiple offices using the system at the same ti
 - Farmer-level charts and historical record views.
 - Safe farmer deletion rules that protect linked assistance and parcel records.
 - Automatic cooperative-membership cleanup when deletion is allowed.
+- Five-column directory with explicit details/history, ID, profile-edit, and map actions according to role.
+- Optional contact, photo, and classification sections in farmer forms.
+- Parcel Map workspace opened separately from directory work while preserving existing map bookmarks; map startup and parcel retrieval begin on opening.
 
 ## 6. Farmer ID and digital identification
 
@@ -150,13 +170,15 @@ The application is designed for multiple offices using the system at the same ti
 
 ### Boundary management
 
-- Province-wide Google Maps geofence workspace.
-- Municipality search and selection.
+- Google Maps geofence workspace scoped to the signed-in account.
+- Municipality search and selection for provincial staff and Super Administrators. Municipal heads and staff open their assigned workspace directly, without the municipality finder or references to other workspaces.
+- The sidebar office label uses the assigned workspace's municipality and province rather than a fixed province name.
 - Display of active, draft, and archived boundary records.
 - Distinct boundary colors and municipality labels.
-- Fit-to-boundary and province reset controls.
+- Brighter boundary edges and municipality label badges for satellite visibility. Map tools includes a Geofence color opacity slider from 0% (clear fill) to 100% (solid fill), starting at 20%; outlines remain visible and drafts retain lighter fill. The setting applies to the current map view and survives municipality changes on that page without changing saved boundary colors or exported snapshots.
+- Fit-to-boundary and reset controls; municipal users stay on their own boundary and parcels.
 - Active official geofences are also displayed beneath parcels in the Farmers 3D map, with a show/hide control and scope-aware camera fitting.
-- Super Administrator-only boundary creation and modification.
+- Boundary creation and modification by the System Owner or the assigned province Super Administrator.
 - Draw official municipality polygons directly on the map.
 - Import KML, KMZ, GeoJSON, JSON, and XML boundaries.
 - Polygon and MultiPolygon support.
@@ -173,6 +195,12 @@ The application is designed for multiple offices using the system at the same ti
 - Detection of overlapping active municipality boundaries.
 - Shared municipality edges are allowed when they do not create an actual overlap.
 - Optimistic locking and municipality-level mutation locks for concurrent edits.
+- Explicit, idempotent reference imports cover all 18 Tarlac workspaces (17 municipalities and Tarlac City), the Bulacan province evaluation workspace, Baguio City, and all thirteen Benguet municipalities.
+- A separate boundary-only Tarlac import adds Bamban, Capas, Gerona, La Paz, Mayantoc, Moncada, Pura, San Clemente, San Jose, San Manuel, Santa Ignacia, and Victoria. It preserves the six existing references and archived boundary history, creates no sample operational records, and stops the entire import if any boundary or workspace conflicts. The pinned municipality identities and areas are checked against PSA/GeoRiskPH references. These approximate planning boundaries require LGU/NAMRIA verification before official use; normal municipality isolation and parcel geofence validation apply once active.
+- The Bulacan import is stored as a clearly labeled ADM2 planning/reference boundary and does not create farmers or operational records.
+- The Baguio import uses a pinned city-level boundary from geoBoundaries, checked against PSA identity and area references. It creates or reuses the Baguio workspace without creating sample records, preserves an existing different active boundary, and applies the normal parcel validation once active. The boundary is an approximate planning reference requiring LGU/NAMRIA verification before official use.
+- La Trinidad, Atok, and Tublay have a separate import using verified municipality features from the same pinned dataset. It creates or reuses their Benguet workspaces and activates all three references together, preserving existing different active boundaries and creating no sample records. Any conflict stops the entire import. These planning references retain normal municipality isolation and require LGU/NAMRIA verification before official use.
+- A second Benguet boundary-only import adds Bakun, Bokod, Buguias, Itogon, Kabayan, Kapangan, Kibungan, Mankayan, Sablan, and Tuba. It creates missing municipality workspaces or reuses existing active ones, preserves existing boundaries and archived history, and creates no users or sample operational records. All ten references are applied together; an identity or boundary conflict stops the entire import. They use the existing geofence visibility and opacity controls, municipality isolation, and parcel validation. These are approximate planning references requiring LGU/NAMRIA verification before official use.
 
 ### Parcel geofence validation
 
@@ -347,7 +375,7 @@ The historical route and table names retain “anti-rabies” for compatibility,
 - Maintenance-attention queue.
 - Automatic attention indicator for maintenance, repair, unserviceable status, and maintenance due within 30 days.
 - Municipality-scoped farmer and cooperative holder lookup.
-- Guided create/edit workflow with completion progress, a live record summary, assignment feedback, and maintenance-date warnings.
+- Guided create/edit workflow with optional acquisition and notes sections, a live record summary, assignment feedback, and maintenance-date warnings.
 - Chunked and formula-safe CSV export.
 
 ## 14. Backup Folder
@@ -371,7 +399,7 @@ The Backup Folder is a protected document repository. It is not an automatic dat
 - Physical stored-file removal when its database record is deleted.
 - Municipal users only access their assigned municipality’s files.
 - Provincial agriculture staff can work across municipalities.
-- Super Administrators and Provincial Veterinary Office accounts are denied access.
+- System Owners, Super Administrators, and Provincial Veterinary Office accounts are denied access.
 
 ## 15. User management
 
@@ -379,20 +407,25 @@ The Backup Folder is a protected document repository. It is not an automatic dat
 - Create and edit accounts.
 - Activate and deactivate accounts.
 - Assign and change supported roles.
-- Assign municipalities to municipal roles.
+- Assign municipalities to municipal roles; their province follows their municipality.
+- Assign an active province to Super Admin, Provincial Staff, and Provincial Veterinary Office accounts.
 - Clear municipality assignment for provincial roles.
 - Reset passwords securely.
 - Require password confirmation and a minimum of eight characters.
 - Prevent more than one active Municipal Head for the same municipality.
 - Prevent self-deletion.
-- Prevent deletion of a Super Administrator through the normal controller.
+- System Owners can manage provincial Super Admin accounts. Super Admins cannot manage other Super Admins or the System Owner.
+- Protect every System Owner account and prevent users from changing their own role, province, municipality, or active status.
 - Municipal Heads can manage only Municipal Staff from the same municipality.
-- Super Administrators can manage the broader account list.
+- Super Administrators can manage only provincial staff, veterinary staff, municipal heads, and municipal staff in their assigned province.
+- Only the System Owner can choose a different province for a provincial account.
+- Inactive Super Admin accounts prepared during setup require a new password before activation.
 - Create province-wide Animal Health-only Provincial Veterinary Office accounts.
 
 ## 16. Audit trail
 
-- Super Administrator-only audit dashboard.
+- System Owner audit dashboard across all provinces, and Super Administrator audit dashboard limited to the assigned province.
+- Province ownership is saved with each audit event and does not follow later account reassignment. Global, unknown-scope, and cross-province reassignment events are visible only to the System Owner.
 - Activity totals for today and the previous seven days.
 - Security, failed-login, blocked-login, timeout, and deletion alerts.
 - Search and filtering by event, module, municipality, actor, and local date range.
@@ -414,7 +447,7 @@ The Backup Folder is a protected document repository. It is not an automatic dat
 - Weather panel embedded directly in the farmer Parcel Map.
 - Municipality-specific forecast selection.
 - Municipal users are locked to their assigned municipality.
-- Provincial and Super Administrator users can select an active municipality.
+- Provincial and Super Administrator users can select an active municipality in their assigned province; the System Owner can select across provinces.
 - The panel follows the municipality of the currently selected farmer.
 - Current temperature and apparent temperature.
 - Humidity and wind conditions.

@@ -32,8 +32,9 @@
 
         e.set("callback", c + ".maps." + q);
         a.src = "https://maps." + c + "apis.com/maps/api/js?" + e.toString();
-        d[q] = resolve;
-        a.onerror = function () { reject(Error(p + " could not load.")); };
+        var timeout = setTimeout(function () { reject(Error(p + " timed out.")); }, 20000);
+        d[q] = function () { clearTimeout(timeout); resolve(); };
+        a.onerror = function () { clearTimeout(timeout); reject(Error(p + " could not load.")); };
 
         var nonceEl = m.querySelector("script[nonce]");
         a.nonce = nonceEl ? nonceEl.nonce : "";
@@ -92,26 +93,6 @@
     window.__mapToast = showToast;
     window.__mapUiSetText = setText;
     window.__mapUiSetHref = setHref;
-
-    function bindRowClickToMap() {
-      if (!window.jQuery) return;
-
-      $('#farmersTable')
-        .off('click.__rowToMap')
-        .on('click.__rowToMap', 'tbody tr', function (e) {
-          if ($(e.target).closest('a,button,input,select,textarea,label').length) return;
-
-          var id = this && this.dataset ? this.dataset.farmerId : null;
-          if (!id) return;
-
-          if (typeof window.__openFarmer3d === 'function') {
-window.__openFarmer3d(String(id));
-          } else if (typeof window.__mapToast === 'function') {
-            window.__mapToast('Map is still loading… try again in a moment.', 'warn');
-          }
-        });
-    }
-
 
 function bindButtons() {
   var btnFit = document.getElementById('recenterMapBtn');
@@ -210,21 +191,41 @@ if (btnDownloadAll) {
     }
   });
 }
-   $(function () {
-  bindRowClickToMap();
-  bindButtons();
+    document.addEventListener('DOMContentLoaded', function () {
+      bindButtons();
+      var workspace = document.getElementById('farmerMapWorkspace');
+      var startup = null;
 
-  initFarmersMap3D().catch(function (e) {
-    console.error(e);
-    var statusEl = document.getElementById('mapStatus');
-    var statusSmall = document.getElementById('mapStatusSmall');
-
-    if (statusEl) statusEl.textContent = '3D map failed to load.';
-    if (statusSmall) statusSmall.textContent = 'Check your API key / Map ID.';
-
-    showToast('3D map failed to load. Check API key and Map ID.', 'bad');
-  });
-});
+      // Directory visits do not request the provider or parcel geometry.
+      window.__startFarmerMap = function () {
+        if (startup) return startup;
+        if (workspace) workspace.open = true;
+        startup = initFarmersMap3D().then(function () { return true; }).catch(function (error) {
+          console.error(error);
+          var statusEl = document.getElementById('mapStatus');
+          var statusSmall = document.getElementById('mapStatusSmall');
+          if (statusEl) statusEl.textContent = 'Map unavailable';
+          if (statusSmall) statusSmall.textContent = 'Check your connection and reload to try again. You can still use the registry.';
+          var retry = document.getElementById('mapReloadBtn');
+          if (retry) retry.hidden = false;
+          showToast('The map could not load. Your registry remains available.', 'bad');
+          return false;
+        });
+        return startup;
+      };
+      document.getElementById('mapReloadBtn')?.addEventListener('click', function () {
+        window.location.hash = 'farmersMapModule';
+        window.location.reload();
+      });
+      if (workspace) {
+        workspace.addEventListener('toggle', function () {
+          if (workspace.open) window.__startFarmerMap();
+        });
+        if (workspace.open) window.__startFarmerMap();
+      } else {
+        window.__startFarmerMap();
+      }
+    });
   })();
 
   async function initFarmersMap3D() {
@@ -737,7 +738,13 @@ async function readKmzOrKmlText(file) {
   }
 
   if (typeof JSZip === 'undefined') {
-    throw new Error('JSZip is required for KMZ import.');
+    await new Promise(function (resolve, reject) {
+      var script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+      script.onload = resolve;
+      script.onerror = function () { reject(new Error('KMZ tools could not load. Check your connection and try again, or select a KML file.')); };
+      document.head.appendChild(script);
+    });
   }
 
   var zip = await JSZip.loadAsync(file);
@@ -1229,8 +1236,7 @@ function getEffectivePlotColor(plot) {
     }
 
     if (!GOOGLE_MAPS_API_KEY || !GOOGLE_MAPS_MAP_ID || GOOGLE_MAPS_MAP_ID === "YOUR_REAL_MAP_ID_HERE") {
-      setStatus('Map error.', 'Check API key or Map ID.');
-      return;
+      throw new Error('The map service is not configured. Contact your system administrator.');
     }
 
     var maps3d = await google.maps.importLibrary("maps3d");

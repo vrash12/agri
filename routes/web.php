@@ -82,6 +82,7 @@ Route::get('/land/{token}', [FarmerController::class, 'publicLand'])
 Route::middleware([
     'auth',
     'idle',
+    'account-scope',
     'provincial-vet-scope',
     'synchronized',
 ])->group(function () {

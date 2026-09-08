@@ -8,13 +8,12 @@
   $fullName = trim(collect([$record->first_name, $record->middle_name, $record->last_name, $record->ext_name])->filter()->implode(' '));
 @endphp
 <div class="module-page">
-  @include('farmers.partials.workspace-nav', ['workspaceMunicipality' => $record->municipality])
 
   <header class="module-header">
     <div>
       <div class="module-eyebrow">Farmer registry</div>
       <h1>Edit farmer profile</h1>
-      <p>Update {{ $fullName ?: 'this farmer' }}'s registry, contact, and farm details. Existing distributions and plotted boundaries remain linked.</p>
+      <p>Update {{ $fullName ?: 'this farmer' }}'s profile, then save your changes.</p>
     </div>
     <div class="module-actions">
       <a class="module-button" href="{{ route('farmers.id-card', $record) }}">View digital ID</a>

@@ -9,6 +9,7 @@ use App\Models\RiceSeedDistribution;
 use App\Models\User;
 use App\Support\AuditTrail;
 use App\Support\GeoGeometry;
+use App\Support\ReferenceBoundaryAccess;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -172,17 +173,10 @@ class TarlacMunicipalityDemoSeeder extends Seeder
         $this->assertRequiredSchema();
 
         $geometry = app(GeoGeometry::class);
-        $actor = User::query()
-            ->where('role', User::ROLE_SUPER_ADMIN)
-            ->where('is_active', true)
-            ->orderBy('id')
-            ->first();
-
-        if (! $actor) {
-            throw new RuntimeException('An active Super Admin account is required to attribute the boundary import.');
-        }
+        $actor = ReferenceBoundaryAccess::actor('Tarlac');
 
         $municipalities = Municipality::query()
+            ->where('province_id', ReferenceBoundaryAccess::provinceId('Tarlac'))
             ->active()
             ->whereIn('code', array_keys(self::MUNICIPALITIES))
             ->get()

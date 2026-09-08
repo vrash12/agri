@@ -1,8 +1,8 @@
 {{-- resources/views/farmers/maps.blade.php --}}
 
 @php
-  $googleMapsApiKey = $googleMapsApiKey ?? config('services.google_maps.key') ?? env('GOOGLE_MAPS_API_KEY') ?? '';
-  $googleMapsMapId  = $googleMapsMapId ?? config('services.google_maps.map_id') ?? env('GOOGLE_MAPS_MAP_ID') ?? '';
+  $googleMapsApiKey = $googleMapsApiKey ?? config('services.google_maps.key') ?? '';
+  $googleMapsMapId  = $googleMapsMapId ?? config('services.google_maps.map_id') ?? '';
   $farmersMapData   = $farmersMapData ?? [];
   $mapWorkspaceMunicipality = $mapWorkspaceMunicipality ?? null;
   $mapWorkspaceName = $mapWorkspaceName ?? ($mapWorkspaceMunicipality?->name ?? 'All Tarlac municipalities');
@@ -153,13 +153,13 @@
   margin:0;
   color:var(--fd-text);
   font-size:16px;
-  font-weight:950;
+  font-weight:700;
 }
 
 #farmersMapModule .farmer-details-heading p{
   margin:3px 0 0;
   color:var(--fd-muted);
-  font-size:11px;
+  font-size:12px;
 }
 
 #farmersMapModule .farmer-close-btn{
@@ -239,13 +239,13 @@
   margin:0;
   color:var(--fd-text);
   font-size:13px;
-  font-weight:950;
+  font-weight:700;
 }
 
 #farmersMapModule .fd-section-subtitle{
   margin:3px 0 0;
   color:var(--fd-muted);
-  font-size:10px;
+  font-size:12px;
   line-height:1.4;
 }
 
@@ -300,7 +300,7 @@
   background:linear-gradient(135deg,#22c55e,#166534);
   box-shadow:0 12px 22px rgba(22,163,74,.20);
   font-size:18px;
-  font-weight:950;
+  font-weight:700;
   overflow:hidden;
   background-position:center;
   background-size:cover;
@@ -312,10 +312,10 @@
   gap:7px;
   margin-bottom:5px;
   color:var(--fd-green-dark);
-  font-size:9px;
-  font-weight:950;
+  font-size:12px;
+  font-weight:700;
   letter-spacing:.55px;
-  text-transform:uppercase;
+  text-transform:none;
 }
 
 #farmersMapModule .fd-profile-label-dot{
@@ -330,7 +330,7 @@
   margin:0;
   color:var(--fd-text);
   font-size:18px;
-  font-weight:950;
+  font-weight:700;
   line-height:1.22;
   word-break:break-word;
 }
@@ -352,8 +352,8 @@
     Monaco,
     Consolas,
     monospace;
-  font-size:10px;
-  font-weight:850;
+  font-size:12px;
+  font-weight:700;
 }
 
 #farmersMapModule .fd-location{
@@ -392,17 +392,17 @@
 
 #farmersMapModule .fd-location-label{
   color:var(--fd-muted);
-  font-size:9px;
-  font-weight:950;
+  font-size:12px;
+  font-weight:700;
   letter-spacing:.35px;
-  text-transform:uppercase;
+  text-transform:none;
 }
 
 #farmersMapModule .fd-location-value{
   margin-top:2px;
   color:var(--fd-text);
-  font-size:11px;
-  font-weight:850;
+  font-size:12px;
+  font-weight:700;
   line-height:1.4;
 }
 
@@ -428,18 +428,18 @@
 
 #farmersMapModule .fd-info-label{
   color:var(--fd-muted);
-  font-size:9px;
-  font-weight:950;
+  font-size:12px;
+  font-weight:700;
   letter-spacing:.35px;
-  text-transform:uppercase;
+  text-transform:none;
 }
 
 #farmersMapModule .fd-info-value{
   margin-top:5px;
   overflow:hidden;
   color:var(--fd-text);
-  font-size:11px;
-  font-weight:900;
+  font-size:12px;
+  font-weight:700;
   line-height:1.4;
   text-overflow:ellipsis;
   word-break:break-word;
@@ -521,10 +521,10 @@
   position:relative;
   z-index:1;
   color:var(--fd-muted);
-  font-size:9px;
-  font-weight:950;
+  font-size:12px;
+  font-weight:700;
   letter-spacing:.35px;
-  text-transform:uppercase;
+  text-transform:none;
 }
 
 #farmersMapModule .fd-metric-value{
@@ -533,7 +533,7 @@
   margin-top:7px;
   color:var(--metric-colour);
   font-size:19px;
-  font-weight:950;
+  font-weight:700;
 }
 
 /* Plot summary */
@@ -553,16 +553,16 @@
 
 #farmersMapModule .fd-plot-summary-label{
   color:var(--fd-muted);
-  font-size:9px;
-  font-weight:950;
-  text-transform:uppercase;
+  font-size:12px;
+  font-weight:700;
+  text-transform:none;
 }
 
 #farmersMapModule .fd-plot-summary-value{
   margin-top:5px;
   color:var(--fd-text);
   font-size:13px;
-  font-weight:950;
+  font-weight:700;
 }
 
 /* Draft box */
@@ -577,8 +577,8 @@
 }
 
 #farmersMapModule .fd-draft-title{
-  font-size:11px;
-  font-weight:950;
+  font-size:12px;
+  font-weight:700;
 }
 
 #farmersMapModule .fd-draft-grid{
@@ -597,9 +597,9 @@
 #farmersMapModule .fd-draft-stat span{
   display:block;
   color:#b45309;
-  font-size:9px;
-  font-weight:900;
-  text-transform:uppercase;
+  font-size:12px;
+  font-weight:700;
+  text-transform:none;
 }
 
 #farmersMapModule .fd-draft-stat strong{
@@ -618,8 +618,8 @@
   display:block;
   margin:0 0 6px;
   color:var(--fd-text);
-  font-size:10px;
-  font-weight:950;
+  font-size:12px;
+  font-weight:700;
 }
 
 #farmersMapModule .fd-input{
@@ -631,8 +631,8 @@
   outline:none;
   color:var(--fd-text);
   background:#fff;
-  font-size:11px;
-  font-weight:800;
+  font-size:12px;
+  font-weight:700;
 }
 
 #farmersMapModule .fd-input:focus{
@@ -643,7 +643,7 @@
 #farmersMapModule .fd-help-text{
   margin-top:5px;
   color:var(--fd-muted);
-  font-size:9px;
+  font-size:12px;
   line-height:1.4;
 }
 
@@ -679,8 +679,8 @@
     Monaco,
     Consolas,
     monospace;
-  font-size:11px;
-  font-weight:900;
+  font-size:12px;
+  font-weight:700;
 }
 
 #farmersMapModule .fd-colour-presets{
@@ -727,8 +727,8 @@
   gap:8px;
   padding:11px 12px;
   color:var(--fd-text);
-  font-size:10px;
-  font-weight:950;
+  font-size:12px;
+  font-weight:700;
   cursor:pointer;
   list-style:none;
 }
@@ -775,8 +775,8 @@
   color:var(--fd-muted);
   background:linear-gradient(145deg,#fff,#f8fafc);
   text-align:center;
-  font-size:10px;
-  font-weight:800;
+  font-size:12px;
+  font-weight:700;
   line-height:1.5;
 }
 
@@ -850,8 +850,9 @@
 
     <div class="parcel-load-status" aria-live="polite">
       <div class="parcel-load-copy">
-        <strong id="mapStatus">Loading map…</strong>
-        <span id="mapStatusSmall">Preparing farmer locations</span>
+        <strong id="mapStatus">Preparing map…</strong>
+        <span id="mapStatusSmall">Parcel boundaries load when this workspace opens.</span>
+        <button type="button" id="mapReloadBtn" class="module-button" hidden>Reload map</button>
       </div>
       <div class="map-progress" aria-hidden="true">
         <div class="map-progress-bar" id="mapProgressBar" style="width:0%;"></div>
@@ -896,8 +897,8 @@
       <small id="mapPickerHelp">{{ number_format(count($farmersMapData)) }} farmers available across the complete municipality workspace.</small>
     </div>
 
-    <div class="parcel-tool-group">
-      <span class="parcel-tool-label">Map view</span>
+    <details class="parcel-tool-group parcel-map-tools">
+      <summary class="parcel-tool-label">Map tools <span>View, weather, and downloads</span></summary>
       <div class="parcel-tool-actions">
         <button type="button" class="btn btn-soft btn-sm" id="recenterMapBtn" title="Fit the camera to this municipality's mapped farmers">Fit municipality</button>
         <button type="button" class="btn btn-soft btn-sm" id="resetMapBtn" title="Reset the map camera">Reset camera</button>
@@ -920,7 +921,7 @@
           Download municipality map
         </button>
       </div>
-    </div>
+    </details>
 
     <div class="parcel-tool-group parcel-tool-group-primary">
       <span class="parcel-tool-label">Selected farmer actions</span>
@@ -1193,7 +1194,7 @@
               <div class="fd-metric-label">Total Seed Received</div>
               <div class="fd-metric-value">
                 <span id="selKgs">0.00</span>
-                <span style="font-size:10px;">kg</span>
+                <span style="font-size:12px;">kg</span>
               </div>
             </article>
           </div>
@@ -1434,7 +1435,6 @@
   window.__canManageOperationalData = @json($canManageOperations ?? auth()->user()->canManageOperationalData());
 </script>
 @include('farmers.partials.maps-styles')
-<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="{{ asset('js/municipality-snapshot-export.js') }}?v=1"></script>
 @include('farmers.partials.maps-scripts')
 
@@ -1472,10 +1472,10 @@
 
   #farmersMapModule .parcel-kicker {
     color: var(--parcel-green);
-    font-size: 10px;
-    font-weight: 850;
+    font-size:12px;
+    font-weight:700;
     letter-spacing: .06em;
-    text-transform: uppercase;
+    text-transform: none;
   }
 
   #farmersMapModule .parcel-mode-badge {
@@ -1483,17 +1483,17 @@
     border-radius: 5px;
     color: #8a5707;
     background: #faf1dc;
-    font-size: 9px;
-    font-weight: 850;
+    font-size:12px;
+    font-weight:700;
     letter-spacing: .03em;
-    text-transform: uppercase;
+    text-transform: none;
   }
 
   #farmersMapModule .parcel-workspace-header h2 {
     margin: 5px 0 4px;
     color: var(--parcel-ink);
     font-size: 20px;
-    font-weight: 800;
+    font-weight:700;
     letter-spacing: -.025em;
   }
 
@@ -1526,9 +1526,9 @@
   #farmersMapModule .parcel-scope-strip div { min-width: 0; flex: 1; }
   #farmersMapModule .parcel-scope-strip strong,
   #farmersMapModule .parcel-scope-strip small { display: block; }
-  #farmersMapModule .parcel-scope-strip strong { color: #1b4e2d; font-size: 10px; font-weight: 900; }
-  #farmersMapModule .parcel-scope-strip small { margin-top: 2px; color: #708078; font-size: 8px; }
-  #farmersMapModule .parcel-scope-strip a { padding: 6px 8px; border: 1px solid #c8dacd; border-radius: 7px; color: #17643a; background: #fff; font-size: 8px; font-weight: 850; text-decoration: none; white-space: nowrap; }
+  #farmersMapModule .parcel-scope-strip strong { color: #1b4e2d; font-size:12px; font-weight:700; }
+  #farmersMapModule .parcel-scope-strip small { margin-top: 2px; color: #708078; font-size:12px; }
+  #farmersMapModule .parcel-scope-strip a { padding: 6px 8px; border: 1px solid #c8dacd; border-radius: 7px; color: #17643a; background: #fff; font-size:12px; font-weight:700; text-decoration: none; white-space: nowrap; }
 
   #farmersMapModule .parcel-load-status {
     width: min(310px, 100%);
@@ -1555,15 +1555,15 @@
     background: none !important;
     border: 0 !important;
     box-shadow: none !important;
-    font-size: 11px;
-    font-weight: 800;
+    font-size:12px;
+    font-weight:700;
   }
 
   #farmersMapModule .parcel-load-copy span {
     margin-top: 2px;
     color: var(--parcel-muted) !important;
     text-shadow: none !important;
-    font-size: 10px !important;
+    font-size:12px !important;
     font-weight: 650 !important;
   }
 
@@ -1576,8 +1576,8 @@
     color: #405047 !important;
     background: #f5f7f5 !important;
     box-shadow: none !important;
-    font-size: 9px;
-    font-weight: 800;
+    font-size:12px;
+    font-weight:700;
     white-space: nowrap;
   }
 
@@ -1621,10 +1621,10 @@
     display: block;
     margin-bottom: 6px;
     color: #4f5e55;
-    font-size: 9px;
-    font-weight: 850;
+    font-size:12px;
+    font-weight:700;
     letter-spacing: .055em;
-    text-transform: uppercase;
+    text-transform: none;
   }
 
   #farmersMapModule .parcel-search-row,
@@ -1649,7 +1649,7 @@
     outline: none;
     color: var(--parcel-ink);
     background: #ffffff;
-    font-size: 11px;
+    font-size:12px;
     font-weight: 650;
   }
 
@@ -1662,7 +1662,7 @@
     display: block;
     margin-top: 5px;
     color: var(--parcel-muted);
-    font-size: 9px;
+    font-size:12px;
     line-height: 1.35;
   }
 
@@ -1671,8 +1671,8 @@
     padding: 7px 10px;
     border-radius: 7px;
     box-shadow: none;
-    font-size: 10px;
-    font-weight: 800;
+    font-size:12px;
+    font-weight:700;
   }
 
   #farmersMapModule .parcel-command-bar .btn-primary {
@@ -1700,8 +1700,8 @@
     border-color: #cfd8d2;
     border-radius: 7px;
     background: #ffffff;
-    font-size: 10px;
-    font-weight: 750;
+    font-size:12px;
+    font-weight:700;
   }
 
   #farmersMapModule .map-toggle input {
@@ -1783,11 +1783,11 @@
 
   #farmersMapModule .map-hint-title {
     font-size: 12px;
-    font-weight: 800;
+    font-weight:700;
   }
 
   #farmersMapModule .map-hint-text {
-    font-size: 10px;
+    font-size:12px;
     font-weight: 600;
   }
 
@@ -1808,8 +1808,8 @@
     box-shadow: 0 6px 20px rgba(14, 40, 24, .15);
     backdrop-filter: blur(8px);
     cursor: pointer;
-    font-size: 10px;
-    font-weight: 850;
+    font-size:12px;
+    font-weight:700;
   }
 
   #farmersMapModule .parcel-focus-reset[hidden] {
@@ -1861,10 +1861,10 @@
     display: block;
     margin-bottom: 3px;
     color: #15803d;
-    font-size: 8px;
-    font-weight: 900;
+    font-size:12px;
+    font-weight:700;
     letter-spacing: .08em;
-    text-transform: uppercase;
+    text-transform: none;
   }
 
   #farmersMapModule .parcel-hover-card strong {
@@ -1872,7 +1872,7 @@
     overflow: hidden;
     color: #14251b;
     font-size: 12px;
-    font-weight: 900;
+    font-weight:700;
     line-height: 1.3;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1884,7 +1884,7 @@
     gap: 4px 8px;
     margin-top: 5px;
     color: #526259;
-    font-size: 9px;
+    font-size:12px;
     font-weight: 700;
     line-height: 1.35;
   }
@@ -1895,8 +1895,8 @@
     padding-top: 7px;
     border-top: 1px solid #e3e9e5;
     color: #17643a;
-    font-size: 9px;
-    font-weight: 850;
+    font-size:12px;
+    font-weight:700;
   }
 
   #farmersMapModule .parcel-map-legend {
@@ -1914,8 +1914,8 @@
     background: rgba(255, 255, 255, .94);
     box-shadow: 0 4px 14px rgba(23, 33, 27, .09);
     backdrop-filter: blur(6px);
-    font-size: 9px;
-    font-weight: 750;
+    font-size:12px;
+    font-weight:700;
   }
 
   #farmersMapModule .parcel-map-legend span {
@@ -2005,6 +2005,20 @@
       display: none;
     }
   }
+  #farmersMapModule {border-radius:var(--ui-radius-panel,12px);box-shadow:none}
+  #farmersMapModule .parcel-map-tools {display:block;align-self:start}
+  #farmersMapModule .parcel-map-tools>summary {min-height:44px;padding:12px;cursor:pointer;border:1px solid var(--ui-control-border,#7a9182);border-radius:8px;font-size:14px}
+  #farmersMapModule .parcel-map-tools>summary span {display:block;font-size:12px;font-weight:400}
+  #farmersMapModule .parcel-map-tools .parcel-tool-actions {margin-top:12px}
+  #farmersMapModule:not(.has-farmer-selection) .parcel-tool-group-primary {display:none}
+  #farmersMapModule .parcel-search-input,#farmersMapModule .fd-input {min-height:44px;font-size:16px;border-color:var(--ui-control-border,#7a9182)}
+  #farmersMapModule .parcel-command-bar .btn,#farmersMapModule .map-toggle {min-height:44px;font-size:14px}
+  #farmersMapModule .parcel-farmer-picker label,#farmersMapModule .fd-label {font-size:14px;font-weight:500}
+  #farmersMapModule .parcel-scope-dot,#farmersMapModule .fd-profile-label-dot {display:none}
+  #farmersMapModule .parcel-workspace-header p {font-size:14px}
+  #farmersMapModule .farmers-map-stage {border-radius:0}
+  #farmersMapModule :is(button,input,a,summary):focus-visible {outline:3px solid var(--ui-focus,#236344);outline-offset:3px}
+  #farmersMapModule #mapReloadBtn[hidden] {display:none}
 </style>
 @endpush
 

@@ -17,10 +17,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
     rel="stylesheet"
   >
 
+  @include('partials.design-tokens')
   <style>
     :root {
       --bg-green: #f6fff4;
@@ -503,6 +504,31 @@
         animation: none !important;
       }
     }
+    :root {
+      --text: var(--ui-text); --muted: var(--ui-text-muted); --border: var(--ui-control-border);
+      --green: var(--ui-primary); --green-dark: var(--ui-primary-hover); --green-bright: var(--ui-primary);
+      --radius: var(--ui-radius-panel); --shadow: 0 4px 24px rgba(32,54,44,.07);
+    }
+    body { background: var(--ui-page-background); font-size: 14px; line-height: 1.5; }
+    .page::before, .page::after, .office-badge-dot { display: none; }
+    .login-card { background: var(--ui-surface); backdrop-filter: none; border-color: var(--ui-border); }
+    .login-card::before { height: 5px; background: var(--ui-brand-stripe); }
+    .logo-wrap { background: var(--ui-surface); border: 0; box-shadow: none; border-radius: 12px; width: 80px; height: 80px; margin-bottom: 12px; }
+    .office-badge { font-size: 12px; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--ui-on-accent); background: var(--ui-accent-soft); border: 0; }
+    .login-title { color: var(--ui-text); font-weight: 700; line-height: 1.3; letter-spacing: 0; }
+    .login-subtitle, .error-box, .field-label, .remember { font-size: 14px; }
+    .field-label, .remember { color: var(--ui-text); font-weight: 500; }
+    .remember { min-height: 44px; }
+    .input { min-height: 48px; font-size: 16px; font-weight: 400; border-radius: 8px; }
+    .input::placeholder { color: var(--ui-text-muted); }
+    .input:focus, .password-toggle:focus, .login-button:focus { border-color: var(--ui-focus); outline: 3px solid var(--ui-focus); outline-offset: 3px; box-shadow: none; }
+    .password-toggle { min-height: 44px; right: 2px; font-size: 12px; font-weight: 500; border: 0; border-radius: 8px; }
+    .login-button { min-height: 48px; border-radius: 8px; background: var(--ui-primary); color: white; font-weight: 500; box-shadow: none; }
+    .login-button:hover { background: var(--ui-primary-hover); transform: none; box-shadow: none; }
+    .login-button:disabled { cursor: wait; opacity: .7; }
+    .error-box { border-radius: 8px; }
+    .error-box strong, .login-footer strong { font-weight: 700; }
+    .login-footer { background: var(--ui-surface-subtle); border-color: var(--ui-border); }
   </style>
 </head>
 
@@ -535,8 +561,7 @@
           </h1>
 
           <p class="login-subtitle">
-            Province of Tarlac agricultural records, assistance,
-            monitoring, mapping, and municipal operations platform.
+            Sign in to manage your office's agricultural records.
           </p>
         </header>
 
@@ -718,6 +743,20 @@
           : 'Show password'
       );
     }
+  </script>
+  @include('partials.form-feedback')
+  <script>
+    document.querySelector('.login-form').addEventListener('submit', event => {
+      const button = event.currentTarget.querySelector('.login-button');
+      if (button.disabled) { event.preventDefault(); return; }
+      button.disabled = true;
+      button.querySelector('span').textContent = 'Signing in…';
+    });
+    window.addEventListener('pageshow', () => {
+      const button = document.querySelector('.login-button');
+      button.disabled = false;
+      button.querySelector('span').textContent = 'Sign In';
+    });
   </script>
 </body>
 </html>

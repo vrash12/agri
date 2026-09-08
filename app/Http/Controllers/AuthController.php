@@ -48,7 +48,7 @@ class AuthController extends Controller
 
         $remember = $request->boolean('remember');
 
-        if (!Auth::attempt($credentials, $remember)) {
+        if (! Auth::attempt($credentials, $remember)) {
             AuditTrail::record(
                 'login_failed',
                 'Authentication',
@@ -77,7 +77,7 @@ class AuthController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        if (!$user) {
+        if (! $user) {
             AuditTrail::record(
                 'login_blocked',
                 'Authentication',
@@ -102,7 +102,7 @@ class AuthController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        if (!in_array($user->role, User::ROLES, true)) {
+        if (! in_array($user->role, User::ROLES, true)) {
             $this->recordBlockedLogin($user, 'Role is not authorized');
             $this->logoutAuthenticatedUser($request);
 
@@ -119,7 +119,7 @@ class AuthController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        if (!$user->isActive()) {
+        if (! $user->isActive()) {
             $this->recordBlockedLogin($user, 'Account is inactive');
             $this->logoutAuthenticatedUser($request);
 
@@ -136,7 +136,7 @@ class AuthController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        if ($user->requiresMunicipality() && !$user->municipality_id) {
+        if ($user->requiresMunicipality() && ! $user->municipality_id) {
             $this->recordBlockedLogin($user, 'Municipality is not assigned');
             $this->logoutAuthenticatedUser($request);
 
@@ -156,7 +156,7 @@ class AuthController extends Controller
         if ($user->requiresMunicipality()) {
             $municipality = $user->municipality;
 
-            if (!$municipality) {
+            if (! $municipality) {
                 $this->recordBlockedLogin($user, 'Assigned municipality was not found');
                 $this->logoutAuthenticatedUser($request);
 
@@ -169,7 +169,7 @@ class AuthController extends Controller
 
             if (
                 isset($municipality->is_active) &&
-                !$municipality->is_active
+                ! $municipality->is_active
             ) {
                 $this->recordBlockedLogin($user, 'Assigned municipality is inactive');
                 $this->logoutAuthenticatedUser($request);
@@ -187,6 +187,15 @@ class AuthController extends Controller
         | Record successful login
         |--------------------------------------------------------------------------
         */
+
+        if (! $user->hasUsableScope()) {
+            $this->recordBlockedLogin($user, 'Province or municipality scope is unavailable');
+            $this->logoutAuthenticatedUser($request);
+
+            return back()->withInput($request->only('email'))->withErrors([
+                'email' => 'Your account needs an active province or municipality assignment. Contact the System Owner.',
+            ]);
+        }
 
         $user->forceFill([
             'last_login_at' => now(),
@@ -219,6 +228,7 @@ class AuthController extends Controller
         */
 
         return match ($user->role) {
+            User::ROLE_SYSTEM_OWNER => redirect()->intended(route('dashboard')),
             User::ROLE_SUPER_ADMIN => redirect()->intended(
                 route('dashboard')
             ),

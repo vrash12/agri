@@ -185,7 +185,7 @@
     @if($records->isNotEmpty())
       <div class="module-table-scroll machinery-table-wrap">
         <table class="module-table">
-          <thead><tr><th>Asset</th><th>Assigned holder</th><th>Condition</th><th>Availability</th><th>Location</th><th>Maintenance</th><th class="module-numeric">Value</th><th><span class="sr-only">Actions</span></th></tr></thead>
+          <thead><tr><th>Asset</th><th>Assigned holder</th><th>Status</th><th>Location</th><th>Maintenance</th><th><span class="sr-only">Actions</span></th></tr></thead>
           <tbody>
             @foreach($records as $record)
               @php
@@ -199,14 +199,12 @@
               <tr class="machinery-table-row" data-attention="{{ $needsAttention ? 'true' : 'false' }}">
                 <td><div class="module-person"><span class="module-avatar">{{ mb_strtoupper(mb_substr($record->name, 0, 2)) }}</span><span class="module-person-copy"><strong>{{ $record->name }}</strong><small><span class="machinery-code module-mono">{{ $record->asset_code }}</span> · {{ $record->category_label }}</small></span></div></td>
                 <td><strong>{{ $record->holder_label }}</strong><small>{{ $record->holder_type === 'farmer' ? 'Individual farmer'.($record->farmer?->ffrs ? ' · '.$record->farmer->ffrs : '') : ($record->holder_type === 'cooperative' ? 'Farmers cooperative' : 'Assignment required') }}</small></td>
-                <td><span class="module-badge {{ $conditionBadge($record->condition_status) }}"><span class="machinery-condition-dot"></span>{{ $record->condition_label }}</span></td>
-                <td><span class="module-badge {{ $availabilityBadge($record->availability_status) }}">{{ $record->availability_label }}</span></td>
+                <td><span class="module-badge {{ $conditionBadge($record->condition_status) }}"><span class="machinery-condition-dot"></span>{{ $record->condition_label }}</span><br><span class="module-badge {{ $availabilityBadge($record->availability_status) }}">{{ $record->availability_label }}</span></td>
                 <td><strong>{{ $record->location ?: 'Not recorded' }}</strong><small>{{ $record->municipality?->name ?? 'Municipality unavailable' }}</small></td>
                 <td><span class="machinery-maintenance-state {{ $maintenanceClass }}">{{ $maintenanceLabel }}</span>@if($record->next_maintenance_date)<small>{{ $record->next_maintenance_date->format('M d, Y') }} · {{ $record->next_maintenance_date->diffForHumans() }}</small>@else<small>No next service date</small>@endif</td>
-                <td class="module-numeric"><strong>{{ $record->acquisition_cost !== null ? '₱'.number_format((float) $record->acquisition_cost, 2) : '—' }}</strong></td>
-                <td><div class="module-row-actions"><button class="module-button module-button-small machinery-detail-toggle" type="button" data-detail-target="machinery-details-{{ $record->id }}" aria-expanded="false">Details</button>@if($canManageOperations)<a class="module-button module-button-primary module-button-small" href="{{ route('machinery-inventory.edit', $record) }}">Edit</a>@endif<details class="module-action-menu"><summary aria-label="More actions">•••</summary><div class="module-action-menu-list">@if($canManageOperations)<a href="{{ route('machinery-inventory.edit', $record) }}">Update record</a><form method="POST" action="{{ route('machinery-inventory.destroy', $record) }}" onsubmit="return confirm('Remove {{ addslashes($record->asset_code) }} from the machinery inventory?')">@csrf @method('DELETE')<button class="danger" type="submit">Delete machinery</button></form>@else<span style="display:block;padding:8px;color:var(--module-muted);font-size:9px">Read-only record</span>@endif</div></details></div></td>
+                <td><div class="module-row-actions"><button class="module-button module-button-small machinery-detail-toggle" type="button" data-detail-target="machinery-details-{{ $record->id }}" aria-expanded="false">Details</button>@if($canManageOperations)<a class="module-button module-button-primary module-button-small" href="{{ route('machinery-inventory.edit', $record) }}">Edit</a>@endif<details class="module-action-menu"><summary aria-label="More actions">•••</summary><div class="module-action-menu-list">@if($canManageOperations)<a href="{{ route('machinery-inventory.edit', $record) }}">Update record</a><form method="POST" action="{{ route('machinery-inventory.destroy', $record) }}" onsubmit="return confirm('Remove {{ addslashes($record->asset_code) }} from the machinery inventory?')">@csrf @method('DELETE')<button class="danger" type="submit">Delete machinery</button></form>@else<span style="display:block;padding:8px;color:var(--module-muted);font-size:12px">Read-only record</span>@endif</div></details></div></td>
               </tr>
-              <tr class="module-detail-row" id="machinery-details-{{ $record->id }}" hidden><td colspan="8"><dl class="module-detail-grid"><div><dt>Brand / model</dt><dd>{{ collect([$record->brand, $record->model])->filter()->implode(' · ') ?: 'Not recorded' }}</dd></div><div><dt>Serial number</dt><dd class="module-mono">{{ $record->serial_number ?: 'Not recorded' }}</dd></div><div><dt>Acquisition</dt><dd>{{ $record->acquisition_source_label }}{{ $record->acquisition_date ? ' · '.$record->acquisition_date->format('M d, Y') : '' }}</dd></div><div><dt>Year acquired</dt><dd>{{ $record->year_acquired ?: 'Not recorded' }}</dd></div><div><dt>Service hours</dt><dd>{{ $record->service_hours !== null ? number_format((float) $record->service_hours, 1).' hours' : 'Not recorded' }}</dd></div><div><dt>Last maintenance</dt><dd>{{ $record->last_maintenance_date?->format('M d, Y') ?? 'Not recorded' }}</dd></div><div><dt>Assignment type</dt><dd>{{ ucfirst($record->holder_type) }}</dd></div><div><dt>Municipality</dt><dd>{{ $record->municipality?->name ?? 'Unavailable' }}</dd></div><div><dt>Notes</dt><dd>{{ $record->notes ?: 'No operational notes' }}</dd></div><div><dt>Registered</dt><dd>{{ $record->created_at?->format('M d, Y') ?? 'Not recorded' }}</dd></div></dl></td></tr>
+              <tr class="module-detail-row" id="machinery-details-{{ $record->id }}" hidden><td colspan="6"><dl class="module-detail-grid"><div><dt>Acquisition value</dt><dd>{{ $record->acquisition_cost !== null ? '₱'.number_format((float) $record->acquisition_cost, 2) : 'Not recorded' }}</dd></div><div><dt>Brand / model</dt><dd>{{ collect([$record->brand, $record->model])->filter()->implode(' · ') ?: 'Not recorded' }}</dd></div><div><dt>Serial number</dt><dd class="module-mono">{{ $record->serial_number ?: 'Not recorded' }}</dd></div><div><dt>Acquisition</dt><dd>{{ $record->acquisition_source_label }}{{ $record->acquisition_date ? ' · '.$record->acquisition_date->format('M d, Y') : '' }}</dd></div><div><dt>Year acquired</dt><dd>{{ $record->year_acquired ?: 'Not recorded' }}</dd></div><div><dt>Service hours</dt><dd>{{ $record->service_hours !== null ? number_format((float) $record->service_hours, 1).' hours' : 'Not recorded' }}</dd></div><div><dt>Last maintenance</dt><dd>{{ $record->last_maintenance_date?->format('M d, Y') ?? 'Not recorded' }}</dd></div><div><dt>Assignment type</dt><dd>{{ ucfirst($record->holder_type) }}</dd></div><div><dt>Municipality</dt><dd>{{ $record->municipality?->name ?? 'Unavailable' }}</dd></div><div><dt>Notes</dt><dd>{{ $record->notes ?: 'No operational notes' }}</dd></div><div><dt>Registered</dt><dd>{{ $record->created_at?->format('M d, Y') ?? 'Not recorded' }}</dd></div></dl></td></tr>
             @endforeach
           </tbody>
         </table>
@@ -262,24 +260,33 @@
     <div class="machinery-assignment-summary"><span class="module-badge module-badge-blue">{{ number_format((int) ($summary->farmer_assigned ?? 0)) }} farmer-assigned</span><span class="module-badge module-badge-green">{{ number_format((int) ($summary->cooperative_assigned ?? 0)) }} cooperative-assigned</span>@if((int) ($summary->unassigned ?? 0) > 0)<span class="module-badge module-badge-amber">{{ number_format((int) $summary->unassigned) }} need assignment</span>@endif</div>
   </section>
 
-  <section class="module-analytics-grid" aria-label="Machinery analytics">
-    <article class="module-chart"><div class="module-chart-head"><h3>Inventory by machinery type</h3><p>Composition of the currently filtered asset list</p></div><div class="module-chart-body"><canvas id="machineryCategoryChart"></canvas>@if($categoryChart->sum('total') === 0)<div class="module-chart-empty">No machinery data for this view.</div>@endif</div></article>
-    <article class="module-chart"><div class="module-chart-head"><h3>Equipment condition</h3><p>Service readiness across recorded machinery</p></div><div class="module-chart-body"><canvas id="machineryConditionChart"></canvas>@if($conditionChart->sum('total') === 0)<div class="module-chart-empty">No condition data for this view.</div>@endif</div></article>
-  </section>
+  <details class="module-more" id="machineryReports">
+    <summary>Reports — inventory and condition</summary>
+    <div class="module-more-content">
+      <p class="module-hint" data-report-status role="status">Charts load when you open Reports. Figures are also available in tables.</p>
+      <section class="module-analytics-grid" aria-label="Machinery analytics">
+    <article class="module-chart"><div class="module-chart-head"><h3>Inventory by machinery type</h3><p>Composition of the currently filtered asset list</p></div><div class="module-chart-body"><canvas id="machineryCategoryChart" aria-hidden="true"></canvas>@if($categoryChart->sum('total') === 0)<div class="module-chart-empty">No machinery data for this view.</div>@endif</div></article>
+    <article class="module-chart"><div class="module-chart-head"><h3>Equipment condition</h3><p>Service readiness across recorded machinery</p></div><div class="module-chart-body"><canvas id="machineryConditionChart" aria-hidden="true"></canvas>@if($conditionChart->sum('total') === 0)<div class="module-chart-empty">No condition data for this view.</div>@endif</div></article>
+      </section>
+      @include('partials.operational-report-figures', ['reportTitle' => 'Inventory by machinery type', 'reportLabels' => $categoryChart->pluck('label')->all(), 'reportValues' => $categoryChart->pluck('total')->all(), 'reportUnit' => 'Assets'])
+      @include('partials.operational-report-figures', ['reportTitle' => 'Equipment condition', 'reportLabels' => $conditionChart->pluck('label')->all(), 'reportValues' => $conditionChart->pluck('total')->all(), 'reportUnit' => 'Assets'])
+    </div>
+  </details>
 </div>
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script>
   (() => {
+    document.getElementById('machineryReports').renderOperationalCharts = () => {
     const category = @json($categoryChart);
     const condition = @json($conditionChart);
-    const baseOptions = { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false }, tooltip:{ displayColors:false } }, scales:{ y:{ beginAtZero:true, ticks:{ precision:0 }, grid:{ color:'rgba(97,116,104,.10)' } }, x:{ grid:{ display:false }, ticks:{ maxRotation:0, autoSkip:true, font:{ size:9 } } } } };
+    const baseOptions = { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false }, tooltip:{ displayColors:false } }, scales:{ y:{ beginAtZero:true, ticks:{ precision:0 }, grid:{ color:'rgba(97,116,104,.10)' } }, x:{ grid:{ display:false }, ticks:{ maxRotation:0, autoSkip:true, font:{ size:12 } } } } };
     const categoryCanvas = document.getElementById('machineryCategoryChart');
     if (categoryCanvas && category.length) new Chart(categoryCanvas, { type:'bar', data:{ labels:category.map(item => item.label), datasets:[{ data:category.map(item => item.total), backgroundColor:'#2f7d4c', borderRadius:5, maxBarThickness:42 }] }, options:baseOptions });
     const conditionCanvas = document.getElementById('machineryConditionChart');
-    if (conditionCanvas && condition.length) new Chart(conditionCanvas, { type:'doughnut', data:{ labels:condition.map(item => item.label), datasets:[{ data:condition.map(item => item.total), backgroundColor:condition.map(item => ({ excellent:'#267a47', good:'#55a66d', fair:'#d6a438', needs_repair:'#dc7b32', unserviceable:'#b54747' }[item.key] || '#8a9890')), borderWidth:0 }] }, options:{ responsive:true, maintainAspectRatio:false, cutout:'64%', plugins:{ legend:{ position:'bottom', labels:{ boxWidth:9, usePointStyle:true, font:{ size:9 } } } } } });
+    if (conditionCanvas && condition.length) new Chart(conditionCanvas, { type:'doughnut', data:{ labels:condition.map(item => item.label), datasets:[{ data:condition.map(item => item.total), backgroundColor:condition.map(item => ({ excellent:'#267a47', good:'#55a66d', fair:'#d6a438', needs_repair:'#dc7b32', unserviceable:'#b54747' }[item.key] || '#8a9890')), borderWidth:0 }] }, options:{ responsive:true, maintainAspectRatio:false, cutout:'64%', plugins:{ legend:{ position:'bottom', labels:{ boxWidth:9, usePointStyle:true, font:{ size:12 } } } } } });
+    };
     document.querySelectorAll('.machinery-detail-toggle').forEach(button => button.addEventListener('click', () => {
       const row = document.getElementById(button.dataset.detailTarget);
       const open = button.getAttribute('aria-expanded') === 'true';
@@ -290,4 +297,5 @@
     document.addEventListener('click', event => document.querySelectorAll('.module-action-menu[open]').forEach(menu => { if(!menu.contains(event.target)) menu.removeAttribute('open'); }));
   })();
 </script>
+@include('partials.operational-report-loader', ['reportId' => 'machineryReports'])
 @endpush

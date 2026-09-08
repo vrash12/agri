@@ -13,19 +13,6 @@
 @endif
 
 <div id="machineryForm" data-default-municipality="{{ $selectedMunicipalityId }}" data-holders-url="{{ route('machinery-inventory.holders') }}">
-  <div class="machinery-form-progress" aria-label="Machinery form progress">
-    <div>
-      <div class="machinery-progress-copy"><span class="machinery-progress-ring" id="machineryProgressPercent">0%</span><span><small>Record readiness</small><strong id="machineryProgressSummary">Complete the required fields</strong></span></div>
-      <div class="machinery-progress-track" aria-hidden="true"><i id="machineryProgressBar"></i></div>
-    </div>
-    <nav class="machinery-step-links" aria-label="Jump to a form section">
-      <a href="#machineryAssignment"><b>1</b>Assignment</a>
-      <a href="#machineryIdentity"><b>2</b>Identity</a>
-      <a href="#machineryOperations"><b>3</b>Operations</a>
-      <a href="#machineryMaintenance"><b>4</b>Maintenance</a>
-    </nav>
-  </div>
-
   <div class="module-form-shell" style="margin-top:13px">
   <div class="module-form-main">
     <section class="module-form-section" id="machineryAssignment">
@@ -58,48 +45,59 @@
           <div class="module-form-field module-form-field-third"><label for="asset_code">Asset code <span class="module-required">*</span></label><input class="module-input module-mono" id="asset_code" type="text" name="asset_code" value="{{ $value('asset_code') }}" maxlength="60" placeholder="e.g. ANAO-TRC-001" autocomplete="off" required>@error('asset_code')<div class="module-hint module-required">{{ $message }}</div>@enderror</div>
           <div class="module-form-field module-form-field-third"><label for="name">Machinery name <span class="module-required">*</span></label><input class="module-input" id="name" type="text" name="name" value="{{ $value('name') }}" maxlength="150" placeholder="e.g. Kubota farm tractor" required>@error('name')<div class="module-hint module-required">{{ $message }}</div>@enderror</div>
           <div class="module-form-field module-form-field-third"><label for="category">Machinery type <span class="module-required">*</span></label><select class="module-input" id="category" name="category" required><option value="">Select type</option>@foreach($categories as $key => $label)<option value="{{ $key }}" @selected($value('category') === $key)>{{ $label }}</option>@endforeach</select>@error('category')<div class="module-hint module-required">{{ $message }}</div>@enderror</div>
-          <div class="module-form-field module-form-field-third"><label for="brand">Brand</label><input class="module-input" id="brand" type="text" name="brand" value="{{ $value('brand') }}" maxlength="100" placeholder="Manufacturer"></div>
-          <div class="module-form-field module-form-field-third"><label for="model">Model</label><input class="module-input" id="model" type="text" name="model" value="{{ $value('model') }}" maxlength="100" placeholder="Model or variant"></div>
-          <div class="module-form-field module-form-field-third"><label for="serial_number">Serial number</label><input class="module-input module-mono" id="serial_number" type="text" name="serial_number" value="{{ $value('serial_number') }}" maxlength="120" placeholder="Manufacturer serial number"></div>
+
         </div>
       </div>
     </section>
 
     <section class="module-form-section" id="machineryOperations">
-      <div class="module-form-section-head"><span class="module-step">3</span><div><h2>Operations and acquisition</h2><p>Record readiness, current location, utilization, source, and value for asset planning.</p></div></div>
+      <div class="module-form-section-head"><span class="module-step">3</span><div><h2>Current condition and location</h2><p>Record whether the equipment is ready for use and where it is kept.</p></div></div>
       <div class="module-form-body">
         <div class="module-form-grid">
-          <div class="module-form-field module-form-field-third"><label for="condition_status">Condition <span class="module-required">*</span></label><select class="module-input" id="condition_status" name="condition_status" required>@foreach($conditions as $key => $label)<option value="{{ $key }}" @selected($value('condition_status', 'good') === $key)>{{ $label }}</option>@endforeach</select></div>
-          <div class="module-form-field module-form-field-third"><label for="availability_status">Availability <span class="module-required">*</span></label><select class="module-input" id="availability_status" name="availability_status" required>@foreach($availabilityStatuses as $key => $label)<option value="{{ $key }}" @selected($value('availability_status', 'available') === $key)>{{ $label }}</option>@endforeach</select></div>
-          <div class="module-form-field module-form-field-third"><label for="service_hours">Service hours</label><input class="module-input" id="service_hours" type="number" name="service_hours" value="{{ $value('service_hours') }}" min="0" step="0.1" placeholder="0.0"></div>
-          <div class="module-form-field module-form-field-full"><label for="location">Current storage or operating location</label><input class="module-input" id="location" type="text" name="location" value="{{ $value('location') }}" maxlength="255" placeholder="Barangay, facility, shed, or service area"></div>
-          <div class="module-form-field module-form-field-third"><label for="acquisition_source">Acquisition source</label><select class="module-input" id="acquisition_source" name="acquisition_source"><option value="">Not recorded</option>@foreach($acquisitionSources as $key => $label)<option value="{{ $key }}" @selected($value('acquisition_source', 'municipal_purchase') === $key)>{{ $label }}</option>@endforeach</select></div>
-          <div class="module-form-field module-form-field-third"><label for="acquisition_date">Acquisition date</label><input class="module-input" id="acquisition_date" type="date" name="acquisition_date" value="{{ $dateValue('acquisition_date') }}"></div>
-          <div class="module-form-field module-form-field-third"><label for="year_acquired">Year acquired</label><input class="module-input" id="year_acquired" type="number" name="year_acquired" value="{{ $value('year_acquired') }}" min="1900" max="{{ now()->year + 1 }}" placeholder="{{ now()->year }}"></div>
-          <div class="module-form-field module-form-field-third"><label for="acquisition_cost">Acquisition cost (₱)</label><input class="module-input" id="acquisition_cost" type="number" name="acquisition_cost" value="{{ $value('acquisition_cost') }}" min="0" step="0.01" placeholder="0.00"></div>
+          <div class="module-form-field module-form-field-third"><label for="condition_status">Condition <span class="module-required">*</span></label><select class="module-input" id="condition_status" name="condition_status" required aria-describedby="condition_status_error">@foreach($conditions as $key => $label)<option value="{{ $key }}" @selected($value('condition_status', 'good') === $key)>{{ $label }}</option>@endforeach</select>@error('condition_status')<span class="module-hint module-required" id="condition_status_error">{{ $message }}</span>@enderror</div>
+          <div class="module-form-field module-form-field-third"><label for="availability_status">Availability <span class="module-required">*</span></label><select class="module-input" id="availability_status" name="availability_status" required aria-describedby="availability_status_error">@foreach($availabilityStatuses as $key => $label)<option value="{{ $key }}" @selected($value('availability_status', 'available') === $key)>{{ $label }}</option>@endforeach</select>@error('availability_status')<span class="module-hint module-required" id="availability_status_error">{{ $message }}</span>@enderror</div>
+          <div class="module-form-field module-form-field-third"><label for="service_hours">Service hours</label><input class="module-input" id="service_hours" type="number" name="service_hours" value="{{ $value('service_hours') }}" min="0" step="0.1" placeholder="0.0" aria-describedby="service_hours_error">@error('service_hours')<span class="module-hint module-required" id="service_hours_error">{{ $message }}</span>@enderror</div>
+          <div class="module-form-field module-form-field-full"><label for="location">Current storage or operating location</label><input class="module-input" id="location" type="text" name="location" value="{{ $value('location') }}" maxlength="255" placeholder="Barangay, facility, shed, or service area" aria-describedby="location_error">@error('location')<span class="module-hint module-required" id="location_error">{{ $message }}</span>@enderror</div>
+
         </div>
       </div>
     </section>
+
+    <details class="module-more" id="machineryAcquisition" @if(collect(['brand', 'model', 'serial_number', 'acquisition_source', 'acquisition_date', 'year_acquired', 'acquisition_cost'])->contains(fn ($key) => filled($value($key)) || $errors->has($key))) open @endif>
+      <summary>Acquisition and manufacturer details <span class="module-hint">Optional</span></summary>
+      <div class="module-more-content"><div class="module-form-grid">
+          <div class="module-form-field module-form-field-third"><label for="brand">Brand</label><input class="module-input" id="brand" type="text" name="brand" value="{{ $value('brand') }}" maxlength="100" placeholder="Manufacturer" aria-describedby="brand_error">@error('brand')<span class="module-hint module-required" id="brand_error">{{ $message }}</span>@enderror</div>
+          <div class="module-form-field module-form-field-third"><label for="model">Model</label><input class="module-input" id="model" type="text" name="model" value="{{ $value('model') }}" maxlength="100" placeholder="Model or variant" aria-describedby="model_error">@error('model')<span class="module-hint module-required" id="model_error">{{ $message }}</span>@enderror</div>
+          <div class="module-form-field module-form-field-third"><label for="serial_number">Serial number</label><input class="module-input module-mono" id="serial_number" type="text" name="serial_number" value="{{ $value('serial_number') }}" maxlength="120" placeholder="Manufacturer serial number" aria-describedby="serial_number_error">@error('serial_number')<span class="module-hint module-required" id="serial_number_error">{{ $message }}</span>@enderror</div>
+          <div class="module-form-field module-form-field-third"><label for="acquisition_source">Acquisition source</label><select class="module-input" id="acquisition_source" name="acquisition_source" aria-describedby="acquisition_source_error"><option value="">Not recorded</option>@foreach($acquisitionSources as $key => $label)<option value="{{ $key }}" @selected($value('acquisition_source', 'municipal_purchase') === $key)>{{ $label }}</option>@endforeach</select>@error('acquisition_source')<span class="module-hint module-required" id="acquisition_source_error">{{ $message }}</span>@enderror</div>
+          <div class="module-form-field module-form-field-third"><label for="acquisition_date">Acquisition date</label><input class="module-input" id="acquisition_date" type="date" name="acquisition_date" value="{{ $dateValue('acquisition_date') }}" aria-describedby="acquisition_date_error">@error('acquisition_date')<span class="module-hint module-required" id="acquisition_date_error">{{ $message }}</span>@enderror</div>
+          <div class="module-form-field module-form-field-third"><label for="year_acquired">Year acquired</label><input class="module-input" id="year_acquired" type="number" name="year_acquired" value="{{ $value('year_acquired') }}" min="1900" max="{{ now()->year + 1 }}" placeholder="{{ now()->year }}" aria-describedby="year_acquired_error">@error('year_acquired')<span class="module-hint module-required" id="year_acquired_error">{{ $message }}</span>@enderror</div>
+          <div class="module-form-field module-form-field-third"><label for="acquisition_cost">Acquisition cost (₱)</label><input class="module-input" id="acquisition_cost" type="number" name="acquisition_cost" value="{{ $value('acquisition_cost') }}" min="0" step="0.01" placeholder="0.00" aria-describedby="acquisition_cost_error">@error('acquisition_cost')<span class="module-hint module-required" id="acquisition_cost_error">{{ $message }}</span>@enderror</div>
+      </div></div>
+    </details>
 
     <section class="module-form-section" id="machineryMaintenance">
       <div class="module-form-section-head"><span class="module-step">4</span><div><h2>Maintenance plan</h2><p>Keep the last service date and next schedule current so the dashboard can flag equipment early.</p></div></div>
       <div class="module-form-body">
         <div class="module-form-grid">
-          <div class="module-form-field"><label for="last_maintenance_date">Last maintenance</label><input class="module-input" id="last_maintenance_date" type="date" name="last_maintenance_date" value="{{ $dateValue('last_maintenance_date') }}"></div>
+          <div class="module-form-field"><label for="last_maintenance_date">Last maintenance</label><input class="module-input" id="last_maintenance_date" type="date" name="last_maintenance_date" value="{{ $dateValue('last_maintenance_date') }}" aria-describedby="last_maintenance_date_error">@error('last_maintenance_date')<span class="module-hint module-required" id="last_maintenance_date_error">{{ $message }}</span>@enderror</div>
           <div class="module-form-field"><label for="next_maintenance_date">Next maintenance</label><input class="module-input" id="next_maintenance_date" type="date" name="next_maintenance_date" value="{{ $dateValue('next_maintenance_date') }}">@error('next_maintenance_date')<div class="module-hint module-required">{{ $message }}</div>@enderror</div>
           <div class="module-form-field module-form-field-full"><div class="machinery-maintenance-warning" id="machineryMaintenanceWarning" hidden></div></div>
-          <div class="module-form-field module-form-field-full"><label for="notes">Operational notes</label><textarea class="module-input" id="notes" name="notes" rows="5" maxlength="3000" placeholder="Repairs, attachments, custodian instructions, restrictions, or service history">{{ $value('notes') }}</textarea><div class="module-hint">Do not place passwords or other sensitive personal information in operational notes.</div></div>
+
         </div>
       </div>
+      <details class="module-more" @if(filled($value('notes')) || $errors->has('notes')) open @endif>
+        <summary>Operational notes <span class="module-hint">Optional</span></summary>
+        <div class="module-more-content">
+          <div class="module-form-field module-form-field-full"><label for="notes">Operational notes</label><textarea class="module-input" id="notes" name="notes" rows="5" maxlength="3000" placeholder="Repairs, attachments, custodian instructions, restrictions, or service history" aria-describedby="notes_error">{{ $value('notes') }}</textarea><div class="module-hint">Do not place passwords or other sensitive personal information in operational notes.</div>@error('notes')<span class="module-hint module-required" id="notes_error">{{ $message }}</span>@enderror</div>
+        </div>
+      </details>
       <div class="module-form-actions"><a class="module-button" href="{{ route('machinery-inventory.index') }}">Cancel</a><button class="module-button module-button-primary" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h12l2 2v14H5zM8 4v6h7V4M8 20v-6h8v6"></path></svg>{{ $buttonText ?? 'Save machinery' }}</button></div>
     </section>
   </div>
 
   <aside class="module-form-aside">
-    <section class="module-aside-card machinery-aside-highlight"><h3>Live record summary</h3><div class="module-preview-grid"><div class="module-preview-item module-preview-item-wide"><span>Asset</span><strong id="machineryPreviewAsset">Not entered</strong></div><div class="module-preview-item module-preview-item-wide"><span>Holder</span><strong id="machineryPreviewHolder">Select a holder</strong></div><div class="module-preview-item"><span>Condition</span><strong id="machineryPreviewCondition">Good</strong></div><div class="module-preview-item"><span>Availability</span><strong id="machineryPreviewAvailability">Available</strong></div><div class="module-preview-item"><span>Next service</span><strong id="machineryPreviewMaintenance">Not scheduled</strong></div></div></section>
-    <section class="module-aside-card"><h3>Before saving</h3><ul><li>Confirm the physical asset code matches the machine.</li><li>Choose the person or cooperative accountable for it.</li><li>Record its current condition and availability truthfully.</li><li>Add the next service date when known.</li></ul></section>
-    <section class="module-aside-card"><h3>Assignment rule</h3><p>Each machine is assigned to exactly one farmer or one cooperative. The holder and machinery must belong to the same municipality.</p></section>
-    <section class="module-aside-card"><h3>Maintenance alerts</h3><p>The inventory dashboard flags equipment that needs repair, is under maintenance, is overdue, or has a service date within the next 30 days.</p></section>
+    <section class="module-aside-card machinery-aside-highlight"><h3>Record summary</h3><div class="module-preview-grid"><div class="module-preview-item module-preview-item-wide"><span>Asset</span><strong id="machineryPreviewAsset">Not entered</strong></div><div class="module-preview-item module-preview-item-wide"><span>Holder</span><strong id="machineryPreviewHolder">Select a holder</strong></div><div class="module-preview-item"><span>Condition</span><strong id="machineryPreviewCondition">Good</strong></div><div class="module-preview-item"><span>Availability</span><strong id="machineryPreviewAvailability">Available</strong></div><div class="module-preview-item"><span>Next service</span><strong id="machineryPreviewMaintenance">Not scheduled</strong></div></div></section>
     <section class="module-aside-card"><h3>Office ownership</h3><p>@if($canChooseMunicipality ?? false)Choose the municipal office accountable for this asset. Changing it also requires selecting a holder from that municipality.@elseThis asset will be saved under <strong>{{ auth()->user()->municipality?->name ?? 'your municipal office' }}</strong>.@endif</p></section>
   </aside>
   </div>

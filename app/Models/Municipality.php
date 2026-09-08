@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -15,12 +16,14 @@ class Municipality extends Model
     protected $fillable = [
         'name',
         'province',
+        'province_id',
         'code',
         'is_active',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'province_id' => 'integer',
     ];
 
     /*
@@ -32,6 +35,11 @@ class Municipality extends Model
     public function users(): HasMany
     {
         return $this->hasMany(User::class);
+    }
+
+    public function supervisingProvince(): BelongsTo
+    {
+        return $this->belongsTo(Province::class, 'province_id');
     }
 
     public function farmers(): HasMany

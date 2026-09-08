@@ -10,7 +10,8 @@
   <!-- Roboto -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  @include('partials.design-tokens')
 
   <!-- DataTables -->
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
@@ -958,6 +959,71 @@
 
   </style>
 
+  <style>
+    /* Shared shell: module-specific layouts continue to own their content. */
+    :root {
+      --text: var(--ui-text); --muted: var(--ui-text-muted); --border: var(--ui-border);
+      --card: var(--ui-surface); --green: var(--ui-primary); --green2: var(--ui-primary);
+      --yellow: var(--ui-accent); --yellow2: var(--ui-accent-soft);
+      --radius: var(--ui-radius-panel); --shadow: 0 2px 8px rgba(32,54,44,.05);
+    }
+    body { background: var(--ui-page-background); font-size: 14px; line-height: 1.5; }
+    .sidebar::before, .mobilebar::before { background: var(--ui-brand-stripe); }
+    .sidebar, .sidebar-nav-scroll {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(35, 99, 68, .22) transparent;
+    }
+    .sidebar:hover, .sidebar:focus-within,
+    .sidebar-nav-scroll:hover, .sidebar-nav-scroll:focus-within {
+      scrollbar-color: rgba(35, 99, 68, .5) transparent;
+    }
+    .sidebar::-webkit-scrollbar, .sidebar-nav-scroll::-webkit-scrollbar { width: 6px; }
+    .sidebar::-webkit-scrollbar-track, .sidebar-nav-scroll::-webkit-scrollbar-track { background: transparent; }
+    .sidebar::-webkit-scrollbar-thumb, .sidebar-nav-scroll::-webkit-scrollbar-thumb {
+      background: rgba(35, 99, 68, .22);
+      border-radius: 6px;
+    }
+    .sidebar::-webkit-scrollbar-thumb:hover, .sidebar-nav-scroll::-webkit-scrollbar-thumb:hover {
+      background: rgba(35, 99, 68, .5);
+    }
+    @media (forced-colors: active) {
+      .sidebar, .sidebar-nav-scroll { scrollbar-color: auto; }
+    }
+    .link.is-active::before { background: var(--ui-primary); }
+    .brand-title { font-size: 14px; font-weight: 700; line-height: 1.4; }
+    .brand-sub, .user-role { font-size: 12px; font-weight: 400; }
+    .brand-sub { white-space: normal; overflow: visible; text-overflow: clip; }
+    .user-name { font-size: 14px; font-weight: 500; }
+    .nav-title { font-size: 12px; font-weight: 500; text-transform: none; letter-spacing: 0; padding: 12px 10px 6px; }
+    .navlinks { gap: 4px; }
+    .navlinks .link { min-height: 48px; font-size: 14px; font-weight: 500; border-color: transparent; border-radius: 8px; }
+    .navlinks .link:hover { transform: none; background: var(--ui-surface-subtle); box-shadow: none; }
+    .navlinks .link.is-active { background: var(--ui-accent-soft); color: var(--ui-primary); box-shadow: none; }
+    .nav-ico { width: 28px; height: 28px; background: transparent; border-color: transparent; border-radius: 8px; }
+    .link .nav-text { white-space: normal; line-height: 1.4; }
+    .nav-tooltip { font-size: 12px; font-weight: 500; }
+    .logout-btn, .menu-btn { min-height: 44px; font-size: 14px; font-weight: 500; border-radius: 8px; }
+    .container { max-width: 1920px; padding: 24px 24px 40px; }
+    .mobilebar { background: var(--ui-surface); backdrop-filter: none; }
+    .idle-session-warning { font-size: 14px; }
+    .idle-session-warning strong, .idle-session-warning span { font-size: 14px; }
+    .idle-session-warning small { display: block; margin-top: 4px; font-size: 12px; }
+    .flash-success, .flash-error { font-size: 14px; border-radius: 8px; }
+    .app-list-range, .app-list-complete { font-size: 12px; }
+    .app-list-range strong, .app-list-complete { font-weight: 500; }
+    .app-list-footer { background: var(--ui-surface); }
+    .input, select.input, textarea.input { min-height: 44px; font-size: 16px; border-color: var(--ui-control-border); border-radius: 8px; }
+    .btn { min-height: 44px; font-size: 14px; font-weight: 500; border-radius: 8px; }
+    .ts-control, .ts-dropdown { font-size: 16px; }
+    .ts-control { min-height: 44px; border-color: var(--ui-control-border); }
+    .app-shell :is(a, button, input, select, textarea, summary):focus-visible { outline: 3px solid var(--ui-focus); outline-offset: 3px; }
+    .skip-link { position: fixed; top: 8px; left: 8px; z-index: 200; transform: translateY(-160%); padding: 12px 16px; background: var(--ui-surface); color: var(--ui-primary); border: 2px solid var(--ui-primary); border-radius: 8px; }
+    .skip-link:focus { transform: none; }
+    .nav-mobile-close { display: none; }
+    @media(max-width: 900px) { .nav-mobile-close { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 8px; border: 1px solid var(--ui-border); border-radius: 8px; background: white; color: var(--ui-text); font-size: 14px; cursor: pointer; } }
+    @media(max-width: 600px) { .container { padding: 16px 12px 32px; } }
+    @media(prefers-reduced-motion: reduce) { .app-shell *, .app-shell *::before, .app-shell *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
+  </style>
   @stack('styles')
 </head>
 
@@ -968,6 +1034,7 @@
       $role = $user->role ?? 'municipal_staff';
 
       $roleLabels = [
+        'system_owner' => 'System Owner',
         'super_admin' => 'Super Admin',
         'provincial_staff' => 'Provincial Staff',
         'provincial_vet' => 'Provincial Veterinary Office',
@@ -978,14 +1045,8 @@
       ];
 
       $roleLabel = $roleLabels[$role] ?? ucwords(str_replace('_', ' ', $role));
-      $isProvincialUser = $user->isProvincialUser();
       $canManageUsers = $user->canManageMunicipalStaff();
-      $municipalityName = optional($user->municipality)->name;
-      $officeLabel = $user->isProvincialVeterinaryOffice()
-          ? 'Provincial Veterinary Office'
-          : ($isProvincialUser
-              ? 'Provincial Agriculture Office'
-              : (($municipalityName ?: 'Municipality not assigned') . ', Tarlac'));
+      $officeLabel = $user->scopeLabel();
 
       $initials = collect(explode(' ', trim($user->name ?? 'User')))
           ->filter()
@@ -1012,10 +1073,10 @@
         return $icons[$name] ?? '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle></svg>';
       };
 
-      $operationBadge = $user->isSuperAdmin() ? 'View' : null;
+      $operationBadge = $user->canOverseeSystem() ? 'View' : null;
       $navigationGroups = [
         'operations' => [
-          'label' => 'Operations',
+          'label' => 'Daily work',
           'items' => [
             [
               'label' => 'Dashboard',
@@ -1077,17 +1138,17 @@
       }
 
       if (
-        ! $user->isSuperAdmin()
+        ! $user->canOverseeSystem()
         && ! $user->isProvincialVeterinaryOffice()
       ) {
-        $navigationGroups['operations']['items'][] = [
+        $navigationGroups['office_tools'] = ['label' => 'Office tools', 'items' => [[
           'label' => 'Backup Folder',
           'description' => 'Protected files and exports',
           'icon' => 'backup',
           'route' => 'backups.index',
           'patterns' => ['backups.*'],
           'badge' => null,
-        ];
+        ]]];
       }
 
       if ($canManageUsers && Route::has('admins.index')) {
@@ -1101,7 +1162,7 @@
             'icon' => 'users',
             'route' => 'admins.index',
             'patterns' => ['admins.*'],
-            'badge' => $user->isSuperAdmin() ? 'Manage' : null,
+            'badge' => $user->canOverseeSystem() ? 'Manage' : null,
           ]],
         ];
       }
@@ -1124,13 +1185,13 @@
         ];
         $navigationGroups['administration']['items'][] = [
           'label' => 'Municipality Geofences',
-          'description' => $user->isSuperAdmin()
+          'description' => $user->canOverseeSystem()
               ? 'Official boundaries and review'
               : 'Boundary and parcel review',
           'icon' => 'boundary',
           'route' => 'municipality-boundaries.index',
           'patterns' => ['municipality-boundaries.*'],
-          'badge' => $user->isSuperAdmin() ? 'Manage' : 'View',
+          'badge' => $user->canOverseeSystem() ? 'Manage' : 'View',
         ];
       }
 
@@ -1147,9 +1208,11 @@
     >
       <strong>Session expires soon</strong>
       <span id="idleSessionWarningText">Move, type, or tap anywhere to stay signed in.</span>
+      <small>Unsaved changes may be lost when you are signed out.</small>
     </div>
   @endauth
 
+  <a class="skip-link" href="#mainContent">Skip to content</a>
   <div class="app-shell">
     <div class="overlay" onclick="closeSidebar()" aria-hidden="true"></div>
 
@@ -1157,6 +1220,7 @@
       <div class="sidebar-inner">
         <div class="sidebar-topbar">
           @auth
+            <button class="nav-mobile-close" type="button" onclick="closeSidebar()" aria-label="Close menu">Close</button>
             <div class="brand">
 
               <img src="{{ asset('images/da.jpg') }}" alt="Department of Agriculture logo">
@@ -1196,7 +1260,7 @@
             <div class="sidebar-nav-scroll">
               @foreach($navigationGroups as $groupKey => $group)
                 <section class="nav-section">
-                  <div class="nav-title"><span>{{ $group['label'] }}</span><small>{{ count($group['items']) }}</small></div>
+                  <div class="nav-title">{{ $group['label'] }}</div>
 
                   <nav class="navlinks" aria-label="{{ $group['label'] }} modules">
                     @foreach($group['items'] as $item)
@@ -1211,9 +1275,7 @@
                         <span class="nav-ico" aria-hidden="true">{!! $ico($item['icon']) !!}</span>
                         <span class="nav-copy">
                           <span class="nav-text">{{ $item['label'] }}</span>
-                          <span class="nav-description">{{ $item['description'] }}</span>
                         </span>
-                        @if($item['badge'])<span class="nav-badge">{{ $item['badge'] }}</span>@endif
                         <span class="nav-arrow" aria-hidden="true">›</span>
                         <span class="nav-tooltip" role="tooltip">{{ $item['label'] }}</span>
                       </a>
@@ -1246,7 +1308,7 @@
     </aside>
 
     {{-- MAIN --}}
-    <main class="main">
+    <main class="main" id="mainContent" tabindex="-1">
       {{-- Mobile top bar --}}
       @auth
         <div class="mobilebar">
@@ -1263,11 +1325,11 @@
 
       <div class="container">
         @if(session('success'))
-          <div class="flash-success">{{ session('success') }}</div>
+          <div class="flash-success" role="status">{{ session('success') }}</div>
         @endif
 
         @if(session('error'))
-          <div class="flash-error">{{ session('error') }}</div>
+          <div class="flash-error" role="alert">{{ session('error') }}</div>
         @endif
 
         @yield('content')
@@ -1298,7 +1360,7 @@
 
       // Tom Select
       document.querySelectorAll('select.js-select').forEach(function (el) {
-        if (el.tomselect) return;
+        if (el.tomselect || typeof TomSelect === 'undefined') return;
         new TomSelect(el, {
           create: false,
           allowEmptyOption: true,
@@ -1316,6 +1378,7 @@
       }catch(e){}
 
       syncNavBtn();
+      syncMobileNavigation();
       initializeNavigationLinks();
     });
 
@@ -1349,10 +1412,26 @@
     function toggleSidebar(){
       const open = document.body.classList.toggle('sidebar-open');
       setAriaExpanded(open);
+      syncMobileNavigation();
+      if (open) document.querySelector('.nav-mobile-close')?.focus();
     }
     function closeSidebar(){
+      const wasOpen = document.body.classList.contains('sidebar-open');
       document.body.classList.remove('sidebar-open');
       setAriaExpanded(false);
+      syncMobileNavigation();
+      if (wasOpen && window.innerWidth <= 900) document.querySelector('.menu-btn')?.focus();
+    }
+    function syncMobileNavigation(){
+      const mobile = window.innerWidth <= 900;
+      const open = mobile && document.body.classList.contains('sidebar-open');
+      const sidebar = document.getElementById('sidebarNav');
+      if (sidebar) {
+        sidebar.inert = mobile && !open;
+        if (mobile && !open) sidebar.setAttribute('aria-hidden', 'true');
+        else sidebar.removeAttribute('aria-hidden');
+      }
+      document.querySelector('.main').inert = open;
     }
 
     // Desktop: expand/collapse into the compact icon rail
@@ -1400,6 +1479,13 @@
 
     document.addEventListener('keydown', function(e){
       if(e.key === 'Escape') closeSidebar();
+      if (e.key === 'Tab' && window.innerWidth <= 900 && document.body.classList.contains('sidebar-open')) {
+        const controls = Array.from(document.querySelectorAll('#sidebarNav a[href], #sidebarNav button:not([disabled])')).filter(control => control.getClientRects().length > 0);
+        const first = controls[0];
+        const last = controls[controls.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
+      }
 
       // optional shortcut: Ctrl + \
       if((e.ctrlKey || e.metaKey) && e.key === '\\'){
@@ -1409,6 +1495,7 @@
     });
 
     window.addEventListener('resize', function(){
+      syncMobileNavigation();
       if(window.innerWidth > 900) closeSidebar();
 
       // On mobile, disable "navbar removed" mode (drawer controls nav)
@@ -1637,5 +1724,6 @@
   @endauth
 
   @stack('scripts')
+  @include('partials.form-feedback')
 </body>
 </html>

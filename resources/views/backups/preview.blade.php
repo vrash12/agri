@@ -27,8 +27,8 @@
     flex-wrap: wrap;
   }
   .pv-title{ display:flex; flex-direction:column; gap:4px; min-width: 260px; }
-  .pv-title h1{ margin:0; font-size:16px; font-weight:950; color:#0b1220; }
-  .pv-title .sub{ font-size:12px; font-weight:800; color: var(--muted); }
+  .pv-title h1{ margin:0; font-size:16px; font-weight:700; color:#0b1220; }
+  .pv-title .sub{ font-size:12px; font-weight:700; color: var(--muted); }
 
   .pv-actions{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:flex-end; }
   .pv-actions .btn-sm{ padding: 8px 10px; border-radius: 12px; }
@@ -79,7 +79,7 @@
     border: 1px solid rgba(2,6,23,.10);
     background: rgba(2,6,23,.03);
     font-size: 12px;
-    font-weight: 950;
+    font-weight:700;
     color:#0b1220;
     max-width: 520px;
     overflow:hidden;
@@ -127,7 +127,7 @@
     background:#fff;
     padding: 7px 10px;
     border-radius: 999px;
-    font-weight: 950;
+    font-weight:700;
     font-size: 12px;
     cursor:pointer;
   }
@@ -151,7 +151,7 @@
     padding: 12px;
     background:#f8fafc;
     border-bottom: 1px solid var(--border);
-    font-weight: 950;
+    font-weight:700;
     color:#0b1220;
   }
   .info-body{
@@ -167,8 +167,8 @@
     padding: 8px 0;
     border-bottom: 1px dashed rgba(2,6,23,.10);
   }
-  .k{ font-size: 12px; font-weight: 900; color: var(--muted); }
-  .v{ font-size: 12px; font-weight: 900; color:#0b1220; word-break: break-word; }
+  .k{ font-size: 12px; font-weight:700; color: var(--muted); }
+  .v{ font-size: 12px; font-weight:700; color:#0b1220; word-break: break-word; }
   .mono{
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
     font-size: 12px;
@@ -186,7 +186,7 @@
     color:#0b1220;
     padding: 8px 10px;
     border-radius: 12px;
-    font-weight: 950;
+    font-weight:700;
     font-size: 12px;
     cursor: pointer;
   }
@@ -209,7 +209,7 @@
     border-radius: 16px;
     padding: 14px 16px;
     box-shadow: 0 18px 60px rgba(2,6,23,.18);
-    font-weight: 950;
+    font-weight:700;
     color:#0b1220;
     display:flex;
     gap: 10px;
@@ -222,7 +222,8 @@
     box-shadow: 0 0 0 6px rgba(59,130,246,.12);
   }
 
-  .pv-msg{ padding: 14px; font-weight: 900; color: var(--muted); }
+  .pv-msg{ padding: 14px; font-weight:700; color: var(--muted); }
+  .preview-technical>summary{min-height:44px;padding:12px 0;font-size:14px;color:var(--ui-primary);cursor:pointer}.backup-preview-page .kv .v{font-size:14px}.backup-preview-page .kv .k{font-size:12px}.backup-preview-page .copy-btn{min-height:44px;font-size:14px}.backup-preview-page .pv-body{grid-template-columns:minmax(0,1fr) 300px}.backup-preview-page .pv-info,.backup-preview-page .pv-view{min-width:0}.backup-preview-page .info-card{overflow-wrap:anywhere}@media(max-width:980px){.backup-preview-page .pv-body{grid-template-columns:1fr}}
 </style>
 @endpush
 
@@ -357,18 +358,21 @@
           <div class="kv"><div class="k">Name</div><div class="v">{{ $name }}</div></div>
           <div class="kv"><div class="k">Folder</div><div class="v">{{ $folder }}</div></div>
           <div class="kv"><div class="k">Type</div><div class="v">{{ strtoupper($ext ?: 'file') }}</div></div>
-          <div class="kv"><div class="k">MIME</div><div class="v">{{ $mime ?: '—' }}</div></div>
           <div class="kv"><div class="k">Size</div><div class="v">{{ number_format($mb, 2) }} MB</div></div>
           <div class="kv"><div class="k">Uploaded</div><div class="v">{{ \App\Support\LocalTime::fromUtc($file->created_at)?->format('Y-m-d H:i') ?? '—' }} PHT</div></div>
           <div class="kv"><div class="k">Uploader</div><div class="v">{{ optional($file->uploader)->name ?? '—' }}</div></div>
           <div class="kv"><div class="k">Municipality</div><div class="v">{{ optional($file->municipality)->name ?? 'Provincial / unassigned' }}</div></div>
-          <div class="kv"><div class="k">SHA-256</div><div class="v mono" title="{{ $file->sha256 }}">{{ $file->sha256 ? substr($file->sha256, 0, 20).'…' : 'Unavailable' }}</div></div>
           <div class="kv"><div class="k">Notes</div><div class="v">{{ $file->notes ?: 'No notes' }}</div></div>
-          <div class="kv"><div class="k">Path</div><div class="v mono" id="pathVal">{{ $file->path ?: '—' }}</div></div>
 
+          <details class="preview-technical"><summary>Technical file details</summary>
+          <div class="kv"><div class="k">MIME</div><div class="v">{{ $mime ?: '—' }}</div></div>
+          <div class="kv"><div class="k">SHA-256</div><div class="v mono" title="{{ $file->sha256 }}">{{ $file->sha256 ? substr($file->sha256, 0, 20).'…' : 'Unavailable' }}</div></div>
+          <div class="kv"><div class="k">Path</div><div class="v mono" id="pathVal">{{ $file->path ?: '—' }}</div></div>
           <div class="info-actions">
             <button class="copy-btn" type="button" id="copyPathBtn" @disabled(empty($file->path))>Copy Path</button>
           </div>
+
+          </details>
 
           <div class="help">
             Edit supported: TXT/LOG/SQL/CSV/JSON/XML/MD and XLSX.
@@ -387,7 +391,7 @@
   .backup-preview-page .pv-shell{border-radius:11px;box-shadow:0 2px 8px rgba(20,40,27,.03)}
   .backup-preview-page .viewer-card,.backup-preview-page .info-card{border-radius:10px;box-shadow:0 2px 8px rgba(20,40,27,.04)}
   .backup-preview-page .viewer-toolbar,.backup-preview-page .info-head{background:#f8faf8}
-  .backup-preview-page .media-preview{width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:9px;padding:24px;background:linear-gradient(145deg,#f8faf8,#eef6f0)}.backup-preview-page .media-preview-icon{width:58px;height:58px;display:grid;place-items:center;border-radius:16px;color:#fff;background:var(--module-green);font-size:25px;font-weight:800}.backup-preview-page .media-preview strong{max-width:80%;overflow:hidden;color:var(--module-ink);font-size:15px;text-overflow:ellipsis;white-space:nowrap}.backup-preview-page .media-preview span{color:var(--module-muted);font-size:10px}.backup-preview-page .media-preview audio{width:min(560px,90%);margin-top:8px}.backup-preview-page .media-preview-video{background:#101613}.backup-preview-page .media-preview video{max-width:100%;max-height:100%}
+  .backup-preview-page .media-preview{width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:9px;padding:24px;background:linear-gradient(145deg,#f8faf8,#eef6f0)}.backup-preview-page .media-preview-icon{width:58px;height:58px;display:grid;place-items:center;border-radius:16px;color:#fff;background:var(--module-green);font-size:25px;font-weight:700}.backup-preview-page .media-preview strong{max-width:80%;overflow:hidden;color:var(--module-ink);font-size:15px;text-overflow:ellipsis;white-space:nowrap}.backup-preview-page .media-preview span{color:var(--module-muted);font-size:12px}.backup-preview-page .media-preview audio{width:min(560px,90%);margin-top:8px}.backup-preview-page .media-preview-video{background:#101613}.backup-preview-page .media-preview video{max-width:100%;max-height:100%}
   @media(max-width:620px){.backup-preview-page .module-header h1{max-width:100%;white-space:normal;overflow-wrap:anywhere}.backup-preview-page .pv-view,.backup-preview-page .pv-info{padding:10px}}
 </style>
 @endpush

@@ -22,7 +22,7 @@ class MunicipalityBoundaryPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->canAccessAllMunicipalities() || $user->municipality_id !== null;
+        return $user->hasUsableScope();
     }
 
     public function view(User $user, MunicipalityBoundary $boundary): bool
@@ -32,26 +32,26 @@ class MunicipalityBoundaryPolicy
 
     public function create(User $user): bool
     {
-        return $user->isSuperAdmin();
+        return $user->canOverseeSystem() && $user->hasUsableScope();
     }
 
     public function import(User $user): bool
     {
-        return $user->isSuperAdmin();
+        return $this->create($user);
     }
 
     public function update(User $user, MunicipalityBoundary $boundary): bool
     {
-        return $user->isSuperAdmin();
+        return $this->create($user) && $this->view($user, $boundary);
     }
 
     public function activate(User $user, MunicipalityBoundary $boundary): bool
     {
-        return $user->isSuperAdmin();
+        return $this->update($user, $boundary);
     }
 
     public function archive(User $user, MunicipalityBoundary $boundary): bool
     {
-        return $user->isSuperAdmin();
+        return $this->update($user, $boundary);
     }
 }

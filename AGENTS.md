@@ -4,6 +4,12 @@ This file applies to the entire repository. It is both a functional map of the s
 
 `SYSTEM_FEATURES.md` is the companion user-facing feature catalog. Keep it synchronized with this guide whenever a feature, permission, integration, or operational limitation changes.
 
+Read [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) before creating or revising user interfaces. It defines the shared management-system theme, typography, forms, tables, actions, responsive behavior, and accessibility targets. Adopt it within the requested scope; its target styles do not imply that every existing screen has already been migrated.
+
+Use [GREEN_YELLOW_THEME.md](GREEN_YELLOW_THEME.md) for the current color treatment: green primary actions, restrained yellow accents, white work surfaces, and separate status colors. Consume the shared tokens; preserve stored parcel colors and readable focus on both light and dark surfaces.
+
+The current interface implementation and outstanding verification are recorded in [DESIGN_IMPLEMENTATION.md](DESIGN_IMPLEMENTATION.md). Reuse `partials.design-tokens`, `partials.operations-ui-styles`, and the layout's `partials.form-feedback`. Optional native disclosures must retain their controls inside the form and reveal validation errors. Operational report pages register `renderOperationalCharts` on their report disclosure before including `partials.operational-report-loader`; figures must remain available if the library fails.
+
 ## Senior developer mandate
 
 Act as the senior full-stack developer and software architect responsible for helping the project owner build, improve, secure, test, document, and deploy this system. Treat the application as a real government operations platform with multiple simultaneous users and municipality-owned data, not as a prototype or generated demo.
@@ -166,7 +172,7 @@ This is a Laravel-based Agriculture Information System for the Provincial Agricu
 - user and role management;
 - province-wide dashboards and audit trails.
 
-The application is multi-municipality. Operational records belong to one `municipality_id`, and municipal users must never see or mutate another municipality's records. Provincial agriculture staff can work across municipalities, Provincial Veterinary Office accounts can work across municipalities only inside Animal Health, and the super administrator has province-wide read-only operational oversight and manages accounts/security.
+The application is multi-municipality. Operational records belong to one `municipality_id`, and municipal users must never see or mutate another municipality's records. The System Owner oversees all configured provinces. Super Administrators, provincial agriculture staff, and veterinary accounts require an explicit province_id and are limited to that province; veterinary accounts remain Animal Health-only. Municipal accounts inherit their province through their assigned municipality. Super Administrators and the System Owner have read-only operational oversight and manage accounts/security within their scope.
 
 ## 2. Technology and important dependencies
 
@@ -194,13 +200,14 @@ The only supported roles are constants in `App\Models\User`:
 
 | Role | Operational visibility | Operational writes | User management | Backup Folder | Audit Trail |
 | --- | --- | --- | --- | --- | --- |
-| `super_admin` | All municipalities | No routine operational writes; may manage official municipality geofences | All non-protected account operations; own/super-admin protections apply | No access | Full access and CSV export |
-| `provincial_staff` | All municipalities | Yes; must choose the municipality for new records | No | All municipalities, subject to policy | No |
-| `provincial_vet` | All municipalities, Animal Health only | Yes, Animal Health only; must choose the municipality for new records | No | No access | No |
+| `system_owner` | All configured provinces | No routine operational writes; may manage geofences | Create/manage province Super Admins and lower roles; own privileges and all owner accounts protected | No access | Global access and CSV export |
+| `super_admin` | Assigned province only | No routine operational writes; may manage geofences in own province | Provincial and municipal staff in own province; own profile only; no peer/owner management | No access | Own province snapshots and CSV export |
+| `provincial_staff` | Assigned province only | Yes; must choose an authorized municipality for new records | No | Own province, subject to policy | No |
+| `provincial_vet` | Assigned province, Animal Health only | Yes, Animal Health only; must choose the municipality for new records | No | No access | No |
 | `municipal_head` | Assigned municipality only | Yes | May manage only `municipal_staff` in the same municipality | Assigned municipality only | No |
 | `municipal_staff` | Assigned municipality only | Yes | No | Assigned municipality only | No |
 
-All accounts must be active. Municipal roles also require an existing, active municipality. UI visibility is not security: controllers must still call policies for every protected action.
+All accounts must be active. Provincial roles require an existing active province; municipal roles require an existing active municipality and supervising province. `EnsureAccountScope` checks authenticated application requests, and the Sanctum user endpoint uses the same check. Login independently validates scope. UI visibility is not security: controllers must still call policies for every protected action.
 
 ### Authentication workflow
 
@@ -217,7 +224,12 @@ There is currently no user-facing registration, forgotten-password, email-verifi
 
 ## 4. Municipality isolation — non-negotiable rules
 
-The primary tenancy boundary is the numeric foreign key `municipality_id`, not the human-readable `farm_municipality` field.
+Operational ownership remains the numeric foreign key `municipality_id`, not the human-readable `farm_municipality` field. Province supervision uses `municipalities.province_id -> provinces.id` and `users.province_id` for provincial roles. The legacy municipality `province` string remains a display/compatibility field and must never decide access.
+
+- Only `system_owner` has global visibility. Null, inactive, missing, or unsupported scope fails closed.
+- `MunicipalityAccess::scopeMunicipalities()` scopes municipality queries; `scope()`, `choices()`, and `resolveForWrite()` enforce province or municipality ownership for operational work.
+- `User::canAccessAllMunicipalities()` is a compatibility UI helper for choosing multiple municipalities within authorized scope; it is never permission to return an unfiltered query.
+- System Owner account setup and province migration are explicit operations documented in `PROVINCE_SUPERVISION.md`; never guess assignments or promote an arbitrary account automatically.
 
 - Use `App\Support\MunicipalityAccess` for operational queries, filters, allowed municipality choices, and write ownership.
 - Municipal list queries must apply municipality scope before search, statistics, charts, pagination, lookups, or exports.
@@ -255,11 +267,13 @@ The dashboard builds role-scoped operational KPIs and recent activity:
 - current-month distributions and animal-health services;
 - monthly kilogram release and top seed-variety charts;
 - recent recipients, animal-health services, and parcel activity;
-- backup totals/latest upload for non-super-admin users.
+- backup totals/latest upload only for roles allowed to use Backup Folder.
 
-For super admins it also produces a province comparison without per-municipality N+1 queries. Each active municipality includes farmer, mapping, distribution, vaccination, cooperative, machinery, and staffing metrics. Municipalities are classified as operational, missing a head, without farmer records, or behind on mapping. It also counts operational records with no municipality.
+The default dashboard shows four key figures, up to three role-aware actions, an attention panel, and five recent assistance releases. Additional program totals, current-month details, charts, recent services, and parcel activity are in a closed Reports disclosure. Chart.js loads when Reports opens; monthly figures remain readable without it. Super Admin municipality comparison has its own disclosure with search, status filtering, sorting, and municipality-scoped directory links.
 
-Weather and agricultural advisories are intentionally embedded in the Parcel Map instead of being shown as a separate page or global-sidebar module. The map's Weather button lazy-loads a municipality-scoped drawer with current conditions, rainfall/wind indicators, advisories, a three-day outlook, refresh controls, and PAGASA links. Selecting a farmer switches the drawer to that farmer's municipality; municipal accounts remain locked to their assignment, while provincial staff and super admins may choose any active municipality.
+For super admins it also produces a province comparison without per-municipality N+1 queries. Each active municipality includes farmer, mapping, distribution, vaccination, cooperative, machinery, and staffing metrics. Municipalities are classified as operational, missing a head, without farmer records, or behind on mapping. Only the System Owner receives the count of operational records with no municipality; a province admin cannot infer unassigned/global data.
+
+Weather and agricultural advisories are intentionally embedded in the Parcel Map instead of being shown as a separate page or global-sidebar module. The map's Weather button lazy-loads a municipality-scoped drawer with current conditions, rainfall/wind indicators, advisories, a three-day outlook, refresh controls, and PAGASA links. Selecting a farmer switches the drawer to that farmer's municipality; municipal accounts remain locked to their assignment, while provincial staff and super admins may choose active municipalities in their assigned province; the System Owner can choose across provinces.
 
 ### 5.2 Farmer registry
 
@@ -271,6 +285,7 @@ Functions:
 
 - list, search, filter, paginate, create, edit, and delete farmer profiles;
 - filter by municipality for provincial users, gender, mapped/unmapped state, missing FFRS, and missing location;
+- use five directory columns, explicit record/history and map actions, optional profile disclosures, and registry insights loaded on demand;
 - use the prominent Municipality Workspace selector as the shared scope for registry totals, the complete map farmer finder, parcel boundaries, and weather; registry-only search and quality filters do not remove other municipality farmers from the map;
 - aggregate input-release history and parcel statistics into the directory;
 - display gender and top-location charts from the filtered record set;
@@ -292,6 +307,8 @@ Farmer deletion is blocked when distributions or farm plots exist. Cooperative m
 Primary model/table: `FarmPlot` / `farm_plots`
 
 Authenticated functions:
+
+The directory's Parcel Map disclosure preserves `#farmersMapModule` bookmarks and row actions. It defers Google Maps startup and the all-plots request until opened; KMZ tools load when a KMZ file is selected. The complete municipality farmer finder and boundary metadata are still assembled in the initial page, and the all-plots endpoint remains unpaginated. This presentation change does not resolve those server payload limits.
 
 - retrieve all visible parcels or one accessible farmer's parcels as JSON;
 - draw and save polygon boundaries for the selected farmer;
@@ -365,7 +382,7 @@ Functions:
 - filter by municipality, service type, species, owner/animal/product/diagnosis text, barangay, and optional year;
 - report total services, animals served, owners, animal profiles/groups, service mix, species coverage, latest service, monthly/year activity, barangays, breeds, and owner-age charts.
 
-The owner lookup uses write-scope resolution because it populates an entry form; province-wide agriculture and veterinary users must select a municipality before using it. `provincial_vet` accounts can list, create, update, and delete Animal Health records across all municipalities but cannot open any other authenticated module. All records retain the same municipality policies, optimistic record-version checks, and mutation locks as the original anti-rabies module.
+The owner lookup uses write-scope resolution because it populates an entry form; province-wide agriculture and veterinary users must select a municipality before using it. `provincial_vet` accounts can list, create, update, and delete Animal Health records across municipalities in their assigned province but cannot open any other authenticated module. All records retain the same municipality policies, optimistic record-version checks, and mutation locks as the original anti-rabies module.
 
 ### 5.7 Farmers' cooperatives
 
@@ -399,7 +416,7 @@ Functions:
 - report total/available/in-use assets, holder type, total acquisition value, category/condition charts, and a maintenance queue;
 - mark equipment for attention when it is under maintenance, needs repair, is unserviceable, or has maintenance due within 30 days;
 - provide a municipality-scoped JSON holder lookup for dynamic forms;
-- use responsive asset cards on smaller screens and a guided create/edit form with completion progress, live assignment feedback, and maintenance-date warnings;
+- use responsive asset cards on smaller screens and a guided create/edit form with optional acquisition/notes sections, live assignment feedback, and maintenance-date warnings;
 - audit CSV exports and normal model changes.
 
 The current form requires a farmer or cooperative holder even though legacy/unassigned assets can still be listed and filtered.
@@ -422,7 +439,7 @@ Functions:
 - edit text-like files and `.xlsx` files in place, then recompute file size and SHA-256;
 - physically delete the stored file when its database record is deleted.
 
-Super admins are intentionally denied this module. Other authorized operational roles receive the normal province/municipality scope described above.
+System Owners and Super Admins are intentionally denied this module. Other authorized operational roles receive the normal province/municipality scope described above.
 
 ### 5.10 User management
 
@@ -436,11 +453,14 @@ Functions:
 - hash every new or changed password with Laravel `Hash`;
 - require at least eight characters and confirmation in account forms;
 - require an active municipality for municipal roles and clear `municipality_id` for provincial roles;
-- let super admins create `provincial_vet` accounts without a municipality; these accounts are restricted to province-wide Animal Health routes and policies;
+- let province Super Admins create `provincial_vet` accounts assigned to their province without a municipality; these accounts are restricted to province-wide Animal Health routes and policies;
 - permit only one active municipal head per municipality;
-- prevent self-deletion and deletion of a super-admin account through the controller;
+- prevent self-deletion and deletion of any System Owner; only the System Owner may delete a Super Admin;
 - let municipal heads manage only municipal-staff accounts in their municipality;
-- let super admins manage the broader account set.
+- let province Super Admins manage only provincial and municipal staff in their province, with profile-only edits to their own account;
+- let the System Owner create, assign, activate, edit, or delete province Super Admins and lower roles, while preventing own privilege changes and all System Owner deletion/creation in the web UI;
+- require a new password when activating an inactive Super Admin prepared by the setup command;
+- reauthorize the freshly locked manager and target inside account mutations before saving.
 
 Passwords are one-way hashes and cannot be retrieved. Developers may reset a password, but must never attempt to display existing passwords or store plaintext credentials.
 
@@ -448,7 +468,7 @@ Passwords are one-way hashes and cannot be retrieved. Developers may reset a pas
 
 Primary model/table: `AuditLog` / `audit_logs`
 
-Super-admin-only functions:
+System Owner and province-scoped Super Admin functions:
 
 - view activity totals, today's activity, seven-day activity, and security/deletion alerts;
 - search/filter by event, module, municipality, actor, and date range;
@@ -480,7 +500,7 @@ Functions:
 - generate transparent threshold-based farm guidance for heavy rainfall, high rain probability, strong wind, heat, and irrigation review;
 - let provincial users select any active municipality while locking municipal users to their assigned municipality;
 - provide direct links to PAGASA weather, tropical cyclone, flood, and agri-weather pages for official bulletins;
-- follow the municipality of the currently selected map farmer and expose the drawer through the Parcel Map and dashboard quick action without navigating to another page.
+- follow the municipality of the currently selected map farmer and expose the drawer through Parcel Map controls and existing weather links without navigating to another page.
 
 The municipality coordinates in `config/weather.php` are town-center forecast reference points. They are not surveyed parcel coordinates. Open-Meteo guidance must never be presented as an official typhoon, rainfall, thunderstorm, or flood warning; PAGASA and local disaster-risk authorities remain the official sources. Forecast refreshes use an atomic cache lock and recheck the cache after waiting so simultaneous dashboard requests do not create an outbound-request stampede.
 
@@ -502,8 +522,9 @@ Routes: `municipality-boundaries.*`
 
 Functions:
 
-- provide a province-wide Google Maps boundary workspace with municipality search, filtering, labels, fit/reset controls, and lazy municipality parcel loading;
-- allow all agriculture roles to view boundaries within their normal municipality scope while reserving draw, import, edit, activate, and archive actions for the Super Admin;
+- provide a Google Maps boundary workspace with municipality search and selection for province-wide users; municipal accounts open only their assigned workspace, without the municipality finder or province-wide summary controls, and fit/reset stays within their own boundary and parcels;
+- allow all agriculture roles to view boundaries within their normal municipality scope while reserving draw, import, edit, activate, and archive actions for the System Owner or a Super Admin assigned to that municipality’s province;
+- keep saved boundary colors visible over satellite imagery using a pale outline casing and municipality label badges; the geofence workspace's Map tools includes a keyboard-accessible color-opacity slider (0–100%, initially 20%) that changes the current map fill immediately, keeps outlines visible, uses half-strength fill for drafts, and retains the selected opacity while switching workspaces on the page; this display control does not write boundary data or change snapshot exports;
 - display active official boundaries beneath farm parcels in the Farmers 3D map, with a visibility toggle and municipality-aware camera fitting; municipal users receive only their assigned boundary, while province-wide users receive boundaries from the selected workspace scope;
 - draw Polygon boundaries in the browser or import Polygon/MultiPolygon KML, KMZ, GeoJSON, JSON, and XML files;
 - normalize coordinates, close rings, reject invalid ranges, reject self-intersections and invalid holes, safely simplify oversized geometry, and reject files above the configured hard vertex limit;
@@ -628,13 +649,36 @@ The migration `2026_08_17_000000_backfill_rice_distribution_municipalities.php` 
 
 The same seeder activates approximate municipality planning/reference geofences from the pinned geoBoundaries `gbOpen` Philippines ADM3 revision `9469f09`, which identifies NAMRIA, PSA, and OCHA Philippines as upstream sources and uses the CC BY 3.0 IGO license. The local source snapshot, provenance, checksum, and limitations are documented in `database/seeders/data/README.md`. These boundaries are not cadastral, legal, or survey-grade and require LGU/NAMRIA verification before being described as official.
 
-Run the seeder only when demonstration data is intentionally required:
+`BulacanProvinceBoundarySeeder` is a separate, explicit, idempotent reference-boundary import for the existing Bulacan evaluation workspace. It uses the pinned geoBoundaries Philippines ADM2 revision `41af8f1`, validates the Bulacan feature ID and PSGC identity, checks the computed area against the Province of Bulacan's 278,369-hectare planning reference, prevents cross-workspace overlap, and activates one province-level planning/reference boundary without creating operational data. It may create the Bulacan workspace when absent, but it must not create users, farmers, or releases.
+
+`BaguioCityBoundarySeeder` explicitly imports the Baguio City ADM3 planning/reference boundary from revision `9469f09`, feature `30758251B18922588133033`, PSGC `1430300000` (legacy `141102000`). It validates the pinned checksum and area against the GeoRiskPH/PSA reference, reuses an unambiguous active Baguio workspace or creates `BAGUIO`, and activates one boundary without creating accounts or operational records. Workspace creation and boundary activation share one transaction and the global activation lock. A conflicting active boundary, inactive workspace, or ambiguous identity stops the import; an existing different Baguio boundary is preserved. The display province `Benguet` follows the source's geographic grouping and does not alter Baguio's highly urbanized city status or municipality-based access rules. See `database/seeders/data/README.md` for source attribution, checksum, limitations, and the explicit import command. Do not register this reference seeder in `DatabaseSeeder` or automatic production deployment.
+
+`BenguetMunicipalityBoundarySeeder` explicitly imports only La Trinidad, Atok, and Tublay using the pinned ADM3 revision `9469f09`. It verifies all feature identities, PSGC codes, checksum, and area tolerances before applying the three references in one transaction under the global activation lock. It reuses unambiguous active Benguet workspaces or creates `LATRINIDAD`, `ATOK`, and `TUBLAY`; a wrong province, ambiguity, inactive workspace, overlap, or existing changed/deactivated boundary aborts the entire import. Each new reference has an attributed audit event, and successful application invalidates all three boundary caches. No accounts or operational records are created. The geometries share compatible edges with each other and the Baguio reference. Source provenance and explicit instructions are in `database/seeders/data/README.md`. This named seeder must not be included in automatic production seeding.
+
+`TarlacRemainingMunicipalityBoundarySeeder` explicitly imports the other twelve Tarlac municipalities: Bamban, Capas, Gerona, La Paz, Mayantoc, Moncada, Pura, San Clemente, San Jose, San Manuel, Santa Ignacia, and Victoria. Together with the existing six references, these cover Tarlac's 17 municipalities and one city. The separate pinned snapshot uses ADM3 revision `9469f09`; PSGC identities, geographic extents, and areas were checked against the GeoRiskPH/PSA Tarlac layer to distinguish same-named municipalities in other provinces. This importer creates no accounts or operational data and preserves existing boundaries, including unrelated archived Moncada history. It does not call the demo seeder. Source attribution, identities, checksum, and the explicit import command are in `database/seeders/data/README.md`.
+
+`BenguetRemainingMunicipalityBoundarySeeder` explicitly imports Bakun, Bokod, Buguias, Itogon, Kabayan, Kapangan, Kibungan, Mankayan, Sablan, and Tuba from a separate pinned ADM3 revision `9469f09` snapshot. Together with La Trinidad, Atok, and Tublay, these cover all thirteen Benguet municipalities; Baguio City retains its separate city reference. Source identities, geographic extents, and areas were checked against PSA/GeoRiskPH references. It reuses unambiguous active workspaces or creates only the missing municipality workspaces, preserves existing boundaries and archived history, and creates no users or operational records. All ten references share one atomic import. See `database/seeders/data/README.md` for provenance, metrics, checksum, and the explicit command.
+
+The Benguet, remaining-Benguet, and remaining-Tarlac seeders delegate to `App\Support\ReferenceMunicipalityBoundaryImporter`. This service validates the complete pinned source before writing, resolves unambiguous active workspaces, and imports the entire set under the shared activation lock and one retried transaction. It refuses ambiguous identities, wrong provinces, inactive workspaces, overlaps, and different active or changed/deactivated reference boundaries. Successful application clears each target's boundary cache; new boundaries receive attributed import audit events through the existing best-effort audit mechanism. Repeated imports do not duplicate boundaries or events. These seeders are intentionally excluded from `DatabaseSeeder` and automatic production deployment.
+
+Run the demo seeder only when demonstration data is intentionally required; run each reference importer explicitly for its intended workspace:
 
 ```bash
 php artisan db:seed --class=TarlacMunicipalityDemoSeeder
+php artisan db:seed --class=BulacanProvinceBoundarySeeder
+php artisan db:seed --class=BaguioCityBoundarySeeder
+php artisan db:seed --class=BenguetMunicipalityBoundarySeeder
+php artisan db:seed --class=BenguetRemainingMunicipalityBoundarySeeder
+php artisan db:seed --class=TarlacRemainingMunicipalityBoundarySeeder
 ```
 
-The seeder uses a global boundary-activation lock and one retried database transaction, validates geometry and published-area tolerances, refuses unknown overlaps, preserves replaced boundaries as archived records, and records boundary lifecycle events against an active Super Admin. Never add it to automatic production deployment seeding.
+These seeders use a global boundary-activation lock and retried database transactions, validate geometry and published-area tolerances, refuse unknown overlaps, and record boundary lifecycle events against an active System Owner or a Super Admin assigned to the target province through `ReferenceBoundaryAccess`. New reference workspaces receive an explicit `province_id`; inactive or mismatched supervision is rejected. The Baguio, Benguet, and remaining-Tarlac importers preserve existing different active boundaries and require explicit review instead of replacing them. `TarlacMunicipalityDemoSeeder` and `BulacanProvinceBoundarySeeder` retain their documented archival behavior. Never add these named seeders to automatic production deployment seeding.
+
+### Province supervision deployment
+
+Apply only `2026_09_08_000100_add_province_supervision.php` to a verified existing schema, then explicitly run `province-access:setup` with the intended owner ID and staff province. The migration creates provinces, adds indexed province foreign keys to municipalities/users/audit logs, and backfills known municipality and audit ownership without changing user roles. The setup command preserves the chosen existing administrator's sign-in password, promotes that account to System Owner, assigns explicitly selected unassigned provincial staff, and prepares inactive provincial Super Admin accounts. No password is output, reused, emailed, or stored in plaintext. Set their passwords and activate them through User Management. See `PROVINCE_SUPERVISION.md` for rollout and rollback sequencing.
+
+Audit `province_id` is a durable snapshot derived from record ownership, with actor scope only for non-record events. Provincial audit lists, totals, options, details, and CSV exports use this snapshot. Global/null events and cross-province reassignment events are owner-only. Do not infer historical scope from an actor's current assignment or expose current foreign account profiles through historical audit relationships.
 
 ## 10. Environment, maps, and storage
 
@@ -753,6 +797,8 @@ Important feature suites include:
 
 The current `phpunit.xml` does not configure a separate test database, and feature tests use `DatabaseTransactions`. Never run the suite while `.env` points to production. Configure a dedicated disposable test database first. Add a regression test whenever changing permissions, municipality scoping, route-model binding, public-map privacy, imports, exports, file access, or audit redaction.
 
+The UI suites `SharedDesignPresentationTest`, `DashboardPresentationTest`, `FarmerWorkspacePresentationTest`, `OperationsPresentationTest`, and `SupportingWorkflowPresentationTest` use unsaved fixtures and an in-memory SQLite connection. They check rendering, visible role actions, form values, and version tokens; they do not replace database-backed authorization, persistence, or provider integration tests.
+
 ## 13. Rules for implementing changes
 
 1. Inspect the working tree before editing and preserve unrelated/uncommitted work.
@@ -762,7 +808,7 @@ The current `phpunit.xml` does not configure a separate test database, and featu
 5. Apply municipality scope to the base query before deriving tables, lookups, KPIs, charts, exports, or pagination.
 6. Validate cross-model municipality ownership on every create/update/assignment/import.
 7. Use the same filtered query for on-screen reports and exports so totals cannot disagree.
-8. Keep super-admin operational access read-only and keep Backup Folder unavailable to super admins unless the product owner explicitly changes the rule.
+8. Keep System Owner and Super Admin operational access read-only and keep Backup Folder unavailable to both roles unless the product owner explicitly changes the rule.
 9. Keep public QR responses read-only and privacy-limited; do not expose contact, birth, eligibility, vaccination, distribution, or account data.
 10. Keep secrets and passwords out of audit values and logs.
 11. Use eager loading, grouped aggregates, pagination caps, and chunked exports for multi-user performance.

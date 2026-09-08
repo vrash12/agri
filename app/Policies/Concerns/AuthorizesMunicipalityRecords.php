@@ -75,8 +75,7 @@ trait AuthorizesMunicipalityRecords
 
     private function hasUsableScope(User $user): bool
     {
-        return $user->canAccessAllMunicipalities()
-            || $user->municipality_id !== null;
+        return $user->hasUsableScope();
     }
 
     private function canManageModule(User $user): bool

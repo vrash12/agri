@@ -4,6 +4,8 @@ namespace App\Support;
 
 use App\Models\AuditLog;
 use App\Models\FarmPlot;
+use App\Models\Municipality;
+use App\Models\Province;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -52,13 +54,10 @@ class AuditTrail
                 $metadata['route_name'] = $request->route()->getName();
             }
 
-            return AuditLog::query()->create([
+            $municipalityId = self::municipalityId($context['municipality_id'] ?? null, $actor, $auditable);
+            $values = [
                 'user_id' => $actor instanceof User ? $actor->getKey() : null,
-                'municipality_id' => self::municipalityId(
-                    $context['municipality_id'] ?? null,
-                    $actor,
-                    $auditable
-                ),
+                'municipality_id' => $municipalityId,
                 'actor_name' => $context['actor_name']
                     ?? ($actor instanceof User ? $actor->name : null),
                 'actor_email' => $context['actor_email']
@@ -83,7 +82,17 @@ class AuditTrail
                     : null,
                 'request_method' => $request?->method(),
                 'request_url' => $request?->fullUrl(),
-            ]);
+            ];
+
+            // Allow the earlier isolated fixtures and rolling deployments to log
+            // events before this additive schema migration has been applied.
+            if (Schema::hasColumn('audit_logs', 'province_id')) {
+                $values['province_id'] = ($context['owner_only'] ?? false)
+                    ? null
+                    : self::provinceId($municipalityId, $actor, $auditable);
+            }
+
+            return AuditLog::query()->create($values);
         } catch (Throwable $exception) {
             report($exception);
 
@@ -185,8 +194,8 @@ class AuditTrail
      */
     private static function municipalityId($explicitId, $actor, $auditable): ?int
     {
-        if (filled($explicitId)) {
-            return (int) $explicitId;
+        if ($auditable instanceof Municipality) {
+            return (int) $auditable->getKey();
         }
 
         if ($auditable instanceof FarmPlot) {
@@ -195,12 +204,47 @@ class AuditTrail
                 : null;
         }
 
-        if ($auditable instanceof Model && filled($auditable->municipality_id)) {
-            return (int) $auditable->municipality_id;
+        if ($auditable instanceof Model && array_key_exists('municipality_id', $auditable->getAttributes())) {
+            return filled($auditable->municipality_id) ? (int) $auditable->municipality_id : null;
+        }
+
+        if (filled($explicitId)) {
+            return (int) $explicitId;
         }
 
         if ($actor instanceof User && filled($actor->municipality_id)) {
             return (int) $actor->municipality_id;
+        }
+
+        return null;
+    }
+
+    /**
+     * Snapshot record ownership so deleting or reassigning a user or record
+     * cannot make its history visible in an unrelated province.
+     */
+    private static function provinceId(?int $municipalityId, mixed $actor, mixed $auditable): ?int
+    {
+        if ($auditable instanceof Province) {
+            return (int) $auditable->getKey();
+        }
+
+        if ($auditable instanceof Municipality) {
+            return $auditable->province_id ? (int) $auditable->province_id : null;
+        }
+
+        if ($municipalityId !== null) {
+            $provinceId = Municipality::query()->whereKey($municipalityId)->value('province_id');
+
+            return $provinceId ? (int) $provinceId : null;
+        }
+
+        if ($auditable instanceof Model) {
+            return $auditable->province_id ? (int) $auditable->province_id : null;
+        }
+
+        if ($actor instanceof User) {
+            return $actor->province_id ? (int) $actor->province_id : null;
         }
 
         return null;

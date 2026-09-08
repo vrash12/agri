@@ -16,19 +16,19 @@ class BackupFilePolicy
 
     public function viewAny(User $user): bool
     {
-        return ! $user->isSuperAdmin()
+        return ! $user->canOverseeSystem()
             && $this->viewAnyWithinMunicipality($user);
     }
 
     public function view(User $user, Model $record): bool
     {
-        return ! $user->isSuperAdmin()
+        return ! $user->canOverseeSystem()
             && $this->viewWithinMunicipality($user, $record);
     }
 
     public function export(User $user, ?Model $record = null): bool
     {
-        return ! $user->isSuperAdmin()
+        return ! $user->canOverseeSystem()
             && $this->exportWithinMunicipality($user, $record);
     }
 }

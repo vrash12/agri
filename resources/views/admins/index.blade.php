@@ -5,6 +5,7 @@
 @section('content')
 @php
   $roleLabels = [
+    \App\Models\User::ROLE_SYSTEM_OWNER => 'System Owner',
     \App\Models\User::ROLE_SUPER_ADMIN => 'Super Admin',
     \App\Models\User::ROLE_PROVINCIAL_STAFF => 'Provincial Staff',
     \App\Models\User::ROLE_PROVINCIAL_VET => 'Provincial Veterinary Office',
@@ -13,6 +14,7 @@
   ];
 
   $roleClasses = [
+    \App\Models\User::ROLE_SYSTEM_OWNER => 'is-green',
     \App\Models\User::ROLE_SUPER_ADMIN => 'is-purple',
     \App\Models\User::ROLE_PROVINCIAL_STAFF => 'is-blue',
     \App\Models\User::ROLE_PROVINCIAL_VET => 'is-green',
@@ -26,31 +28,33 @@
     <div>
       <div class="user-management-eyebrow">
         <span></span>
-        {{ $isMunicipalHeadManager ? (($manager->municipality?->name ?? 'Municipal') . ' Agriculture Office') : 'Provincial Agriculture Office' }}
+        {{ $manager->isSystemOwner() ? 'System Administration' : ($isMunicipalHeadManager ? (($manager->municipality?->name ?? 'Municipal') . ' Agriculture Office') : $manager->province?->name . ' Provincial Administration') }}
       </div>
       <h1>{{ $isMunicipalHeadManager ? 'Municipal Staff Management' : 'User Management' }}</h1>
       <p>
         @if($isMunicipalHeadManager)
           Manage municipal-staff accounts assigned to your municipality, including account status and login access.
+        @elseif($manager->isSystemOwner())
+          Manage province super administrators, staff accounts, and office assignments across supervised provinces.
         @else
           Manage provincial agriculture and veterinary accounts, head
           agriculturists, municipal staff, municipality assignments, account
-          status, and login access.
+          status, and login access within {{ $manager->province?->name }}.
         @endif
       </p>
     </div>
 
-    <a class="btn user-create-btn" href="{{ route('admins.create') }}">
+    <a class="module-button module-button-primary user-create-btn" href="{{ route('admins.create') }}">
       <span aria-hidden="true">+</span>
       {{ $isMunicipalHeadManager ? 'Create Staff' : 'Create User' }}
     </a>
   </section>
 
-  <section class="user-stat-grid">
+  <details class="module-more user-account-summary"><summary>Account overview</summary><section class="user-stat-grid">
     <article class="user-stat-card is-dark">
       <span>Total Accounts</span>
       <strong>{{ number_format($stats['total'] ?? 0) }}</strong>
-      <small>{{ $isMunicipalHeadManager ? 'Staff in your municipality' : 'All registered system users' }}</small>
+      <small>{{ $manager->isSystemOwner() ? 'All registered system users' : ($isMunicipalHeadManager ? 'Staff in your municipality' : 'Accounts in your administration scope') }}</small>
     </article>
 
     <article class="user-stat-card is-green">
@@ -78,7 +82,7 @@
       <strong>{{ number_format($stats['municipal_staff'] ?? 0) }}</strong>
       <small>Municipal encoder and staff accounts</small>
     </article>
-  </section>
+  </section></details>
 
   <section class="user-filter-card">
     <div class="user-filter-heading">
@@ -87,7 +91,7 @@
         <p>{{ $isMunicipalHeadManager ? 'Narrow municipal staff by name or status.' : 'Narrow accounts by role, municipality, or status.' }}</p>
       </div>
 
-      @if(request()->hasAny(['q', 'role', 'status', 'municipality_id']))
+      @if(request()->hasAny(['q', 'role', 'status', 'municipality_id', 'province_id']))
         <a class="btn btn-soft" href="{{ route('admins.index') }}">Clear filters</a>
       @endif
     </div>
@@ -96,7 +100,7 @@
       <div class="user-filter-field user-filter-search">
         <label for="q">Search</label>
         <input
-          class="input"
+          class="module-input input"
           id="q"
           name="q"
           type="search"
@@ -105,27 +109,29 @@
         >
       </div>
 
-      @unless($isMunicipalHeadManager)
+      @if($manager->isSystemOwner())
         <div class="user-filter-field">
-          <label for="role">Role</label>
-          <select class="input js-select" id="role" name="role">
-            <option value="">All roles</option>
-            @foreach($roleOptions as $value => $label)
-              <option value="{{ $value }}" @selected($role === $value)>{{ $label }}</option>
+          <label for="province_id">Province</label>
+          <select class="module-input input js-select" id="province_id" name="province_id">
+            <option value="">All provinces</option>
+            @foreach($provinces as $province)
+              <option value="{{ $province->id }}" @selected((int) $provinceId === (int) $province->id)>{{ $province->name }}</option>
             @endforeach
           </select>
         </div>
+      @endif
 
+      @unless($isMunicipalHeadManager)
         <div class="user-filter-field">
           <label for="municipality_id">Municipality</label>
-          <select class="input js-select" id="municipality_id" name="municipality_id">
+          <select class="module-input input js-select" id="municipality_id" name="municipality_id">
             <option value="">All municipalities</option>
             @foreach($municipalities as $municipality)
               <option
                 value="{{ $municipality->id }}"
                 @selected((int) $municipalityId === (int) $municipality->id)
               >
-                {{ $municipality->name }}
+                {{ $municipality->name }}{{ $manager->isSystemOwner() ? ' · ' . $municipality->province : '' }}
               </option>
             @endforeach
           </select>
@@ -134,24 +140,38 @@
 
       <div class="user-filter-field">
         <label for="status">Status</label>
-        <select class="input js-select" id="status" name="status">
+        <select class="module-input input js-select" id="status" name="status">
           <option value="">All statuses</option>
           <option value="active" @selected($status === 'active')>Active</option>
           <option value="inactive" @selected($status === 'inactive')>Inactive</option>
         </select>
       </div>
 
+      <details class="module-more user-advanced-filters" @if($role !== '' || (int) $perPage !== 10) open @endif><summary>More filters @if($role !== '')<span> · {{ $roleOptions[$role] ?? $role }}</span>@endif</summary><div class="user-field-grid">
+        @unless($isMunicipalHeadManager)
+        <div class="user-filter-field">
+          <label for="role">Role</label>
+          <select class="module-input input js-select" id="role" name="role">
+            <option value="">All roles</option>
+            @foreach($roleOptions as $value => $label)
+              <option value="{{ $value }}" @selected($role === $value)>{{ $label }}</option>
+            @endforeach
+          </select>
+        </div>
+
+        @endunless
       <div class="user-filter-field user-filter-rows">
         <label for="per_page">Rows</label>
-        <select class="input js-select" id="per_page" name="per_page">
+        <select class="module-input input js-select" id="per_page" name="per_page">
           @foreach([5, 10, 25, 50, 100] as $size)
             <option value="{{ $size }}" @selected((int) $perPage === $size)>{{ $size }}</option>
           @endforeach
         </select>
       </div>
 
+      </div></details>
       <div class="user-filter-actions">
-        <button class="btn user-apply-btn" type="submit">Apply Filters</button>
+        <button class="module-button module-button-primary user-apply-btn" type="submit">Apply filters</button>
       </div>
     </form>
   </section>
@@ -218,11 +238,11 @@
                 @if($account->isProvincialUser())
                   <div class="user-office-name">{{ $account->office_label }}</div>
                   <div class="user-office-sub">
-                    {{ $account->isProvincialVeterinaryOffice() ? 'Animal Health only · All municipalities' : 'All municipalities' }}
+                    {{ $account->isSystemOwner() ? 'All supervised provinces' : ($account->province?->name ?? 'Province not assigned') }}{{ $account->isProvincialVeterinaryOffice() ? ' · Animal Health only' : '' }}
                   </div>
                 @else
                   <div class="user-office-name">{{ $account->municipality?->name ?? 'Not assigned' }}</div>
-                  <div class="user-office-sub">Municipal Agriculture Office</div>
+                  <div class="user-office-sub">{{ $account->municipality?->province ?? 'Municipal Agriculture Office' }}</div>
                 @endif
               </td>
 
@@ -245,21 +265,24 @@
 
               <td data-label="Actions" class="user-actions-column">
                 <div class="user-row-actions">
+                  @can('update', $account)
                   <a class="btn btn-soft user-row-btn" href="{{ route('admins.edit', $account) }}">
                     Edit
                   </a>
+                  @endcan
 
-                  @if(!$isOwnAccount && !$account->isSuperAdmin())
+                  @can('delete', $account)
                     <form
                       method="POST"
                       action="{{ route('admins.destroy', $account) }}"
-                      onsubmit="return confirm('Delete {{ addslashes($account->name) }}? This cannot be undone.');"
+                      data-account-name="{{ $account->name }}"
+                      onsubmit="return confirm('Delete ' + this.dataset.accountName + '? This permanently removes this user account.');"
                     >
                       @csrf
                       @method('DELETE')
                       <button class="btn btn-danger user-row-btn" type="submit">Delete</button>
                     </form>
-                  @endif
+                  @endcan
                 </div>
               </td>
             </tr>
@@ -270,7 +293,7 @@
                   <div class="user-empty-icon">U</div>
                   <h3>No user accounts found</h3>
                   <p>Change the filters or create a new {{ $isMunicipalHeadManager ? 'staff' : 'user' }} account.</p>
-                  <a class="btn user-create-btn" href="{{ route('admins.create') }}">{{ $isMunicipalHeadManager ? 'Create Staff' : 'Create User' }}</a>
+                  <a class="module-button module-button-primary user-create-btn" href="{{ route('admins.create') }}">{{ $isMunicipalHeadManager ? 'Create Staff' : 'Create User' }}</a>
                 </div>
               </td>
             </tr>
@@ -285,6 +308,7 @@
 @endsection
 
 @push('styles')
+  @include('partials.operations-ui-styles')
 <style>
   .user-management-page{display:flex;flex-direction:column;gap:16px;}
   .user-management-hero{
@@ -293,9 +317,9 @@
     background:radial-gradient(circle at top right,rgba(250,204,21,.24),transparent 30%),linear-gradient(135deg,#052e16,#166534);
     box-shadow:0 18px 42px rgba(15,23,42,.12);
   }
-  .user-management-eyebrow{display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border:1px solid rgba(255,255,255,.2);border-radius:999px;background:rgba(255,255,255,.1);font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.45px;}
+  .user-management-eyebrow{display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border:1px solid rgba(255,255,255,.2);border-radius:999px;background:rgba(255,255,255,.1);font-size:12px;font-weight:700;text-transform:none;letter-spacing:.45px;}
   .user-management-eyebrow span{width:7px;height:7px;border-radius:50%;background:#bbf7d0;box-shadow:0 0 0 4px rgba(187,247,208,.14);}
-  .user-management-hero h1{margin:14px 0 7px;font-size:34px;line-height:1;font-weight:900;}
+  .user-management-hero h1{margin:14px 0 7px;font-size:34px;line-height:1;font-weight:700;}
   .user-management-hero p{max-width:760px;margin:0;color:rgba(255,255,255,.78);font-size:13px;line-height:1.6;}
   .user-create-btn{color:#064e3b!important;border-color:#fde047!important;background:linear-gradient(135deg,#fef08a,#facc15)!important;box-shadow:0 12px 24px rgba(250,204,21,.22);}
 
@@ -303,9 +327,9 @@
   .user-stat-card{position:relative;overflow:hidden;padding:16px;border:1px solid var(--border);border-radius:18px;background:#fff;box-shadow:0 9px 24px rgba(15,23,42,.05);}
   .user-stat-card::after{content:"";position:absolute;top:-34px;right:-30px;width:78px;height:78px;border-radius:50%;background:var(--stat-soft);}
   .user-stat-card span,.user-stat-card strong,.user-stat-card small{position:relative;z-index:1;display:block;}
-  .user-stat-card span{color:#64748b;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.35px;}
-  .user-stat-card strong{margin-top:8px;color:var(--stat-color);font-size:25px;font-weight:900;}
-  .user-stat-card small{margin-top:5px;color:#64748b;font-size:10px;line-height:1.4;}
+  .user-stat-card span{color:#64748b;font-size:12px;font-weight:700;text-transform:none;letter-spacing:.35px;}
+  .user-stat-card strong{margin-top:8px;color:var(--stat-color);font-size:25px;font-weight:700;}
+  .user-stat-card small{margin-top:5px;color:#64748b;font-size:12px;line-height:1.4;}
   .user-stat-card.is-dark{--stat-color:#0f172a;--stat-soft:rgba(15,23,42,.08)}
   .user-stat-card.is-green{--stat-color:#15803d;--stat-soft:rgba(34,197,94,.12)}
   .user-stat-card.is-blue{--stat-color:#1d4ed8;--stat-soft:rgba(37,99,235,.11)}
@@ -316,10 +340,10 @@
   .user-filter-card{padding:17px;}
   .user-filter-heading,.user-table-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;}
   .user-filter-heading{margin-bottom:13px;}
-  .user-filter-heading h2,.user-table-heading h2{margin:0;color:#0f172a;font-size:16px;font-weight:900;}
-  .user-filter-heading p,.user-table-heading p{margin:4px 0 0;color:#64748b;font-size:11px;line-height:1.45;}
+  .user-filter-heading h2,.user-table-heading h2{margin:0;color:#0f172a;font-size:16px;font-weight:700;}
+  .user-filter-heading p,.user-table-heading p{margin:4px 0 0;color:#64748b;font-size:12px;line-height:1.45;}
   .user-filter-grid{display:grid;grid-template-columns:minmax(240px,1.4fr) repeat(4,minmax(130px,.75fr)) auto;gap:10px;align-items:end;}
-  .user-filter-field label{display:block;margin-bottom:6px;color:#475569;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.3px;}
+  .user-filter-field label{display:block;margin-bottom:6px;color:#475569;font-size:12px;font-weight:700;text-transform:none;letter-spacing:.3px;}
   .user-filter-actions{display:flex;align-items:flex-end;}
   .user-apply-btn{min-height:42px;color:#fff!important;border-color:#16a34a!important;background:linear-gradient(135deg,#22c55e,#15803d)!important;}
 
@@ -327,16 +351,16 @@
   .user-table-heading{padding:17px;border-bottom:1px solid var(--border);background:#f8fafc;}
   .user-table-scroll{overflow-x:auto;}
   .user-table{width:100%;min-width:980px;border-collapse:separate;border-spacing:0;font-size:12px;}
-  .user-table th{padding:12px 14px;text-align:left;color:#475569;background:#fff;border-bottom:1px solid var(--border);font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.35px;white-space:nowrap;}
+  .user-table th{padding:12px 14px;text-align:left;color:#475569;background:#fff;border-bottom:1px solid var(--border);font-size:12px;font-weight:700;text-transform:none;letter-spacing:.35px;white-space:nowrap;}
   .user-table td{padding:13px 14px;border-bottom:1px solid #eef2f7;color:#334155;vertical-align:middle;}
   .user-table tbody tr:hover td{background:rgba(34,197,94,.035);}
   .user-table tbody tr:last-child td{border-bottom:0;}
   .user-identity{display:flex;align-items:center;gap:10px;min-width:210px;}
-  .user-list-avatar{width:38px;height:38px;display:grid;place-items:center;flex:0 0 auto;border-radius:13px;color:var(--badge-color);background:var(--badge-bg);font-size:11px;font-weight:900;}
-  .user-list-name{color:#0f172a;font-size:12px;font-weight:900;}
-  .user-list-email{margin-top:3px;color:#64748b;font-size:10px;}
-  .user-you-badge{display:inline-flex;margin-left:5px;padding:2px 6px;border-radius:999px;color:#166534;background:#dcfce7;font-size:8px;font-weight:900;text-transform:uppercase;vertical-align:middle;}
-  .user-role-badge,.user-status-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border:1px solid var(--badge-border);border-radius:999px;color:var(--badge-color);background:var(--badge-bg);font-size:9px;font-weight:900;white-space:nowrap;}
+  .user-list-avatar{width:38px;height:38px;display:grid;place-items:center;flex:0 0 auto;border-radius:13px;color:var(--badge-color);background:var(--badge-bg);font-size:12px;font-weight:700;}
+  .user-list-name{color:#0f172a;font-size:12px;font-weight:700;}
+  .user-list-email{margin-top:3px;color:#64748b;font-size:12px;}
+  .user-you-badge{display:inline-flex;margin-left:5px;padding:2px 6px;border-radius:999px;color:#166534;background:#dcfce7;font-size:12px;font-weight:700;text-transform:none;vertical-align:middle;}
+  .user-role-badge,.user-status-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border:1px solid var(--badge-border);border-radius:999px;color:var(--badge-color);background:var(--badge-bg);font-size:12px;font-weight:700;white-space:nowrap;}
   .is-purple{--badge-color:#6d28d9;--badge-bg:#f5f3ff;--badge-border:#ddd6fe}
   .is-blue{--badge-color:#1d4ed8;--badge-bg:#eff6ff;--badge-border:#bfdbfe}
   .is-yellow{--badge-color:#a16207;--badge-bg:#fffbeb;--badge-border:#fde68a}
@@ -345,16 +369,16 @@
   .user-status-badge.is-active{--badge-color:#15803d;--badge-bg:#ecfdf5;--badge-border:#bbf7d0}
   .user-status-badge.is-inactive{--badge-color:#b91c1c;--badge-bg:#fef2f2;--badge-border:#fecaca}
   .user-status-badge > span{width:6px;height:6px;border-radius:50%;background:currentColor;}
-  .user-office-name,.user-date-main{color:#0f172a;font-size:11px;font-weight:900;}
-  .user-office-sub,.user-date-sub{margin-top:3px;color:#64748b;font-size:9px;}
+  .user-office-name,.user-date-main{color:#0f172a;font-size:12px;font-weight:700;}
+  .user-office-sub,.user-date-sub{margin-top:3px;color:#64748b;font-size:12px;}
   .user-actions-column{text-align:right;}
   .user-row-actions{display:flex;justify-content:flex-end;gap:7px;}
   .user-row-actions form{margin:0;}
-  .user-row-btn{padding:7px 9px!important;border-radius:10px!important;font-size:10px!important;box-shadow:none!important;}
+  .user-row-btn{padding:7px 9px!important;border-radius:10px!important;font-size:12px!important;box-shadow:none!important;}
   .user-empty-state{display:grid;place-items:center;padding:34px;text-align:center;}
-  .user-empty-icon{width:48px;height:48px;display:grid;place-items:center;border-radius:16px;color:#166534;background:#dcfce7;font-size:18px;font-weight:900;}
+  .user-empty-icon{width:48px;height:48px;display:grid;place-items:center;border-radius:16px;color:#166534;background:#dcfce7;font-size:18px;font-weight:700;}
   .user-empty-state h3{margin:11px 0 4px;color:#0f172a;font-size:15px;}
-  .user-empty-state p{margin:0 0 12px;color:#64748b;font-size:11px;}
+  .user-empty-state p{margin:0 0 12px;color:#64748b;font-size:12px;}
 
   @media(max-width:1220px){
     .user-stat-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
@@ -371,4 +395,5 @@
   }
   @media(max-width:480px){.user-stat-grid{grid-template-columns:1fr;}}
 </style>
+  @include('admins.partials.styles')
 @endpush

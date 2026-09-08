@@ -5,12 +5,12 @@
 @push('styles')
   @include('partials.operations-ui-styles')
   <style>
-    .member-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:14px}.member-card{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px;border:1px solid var(--module-border);border-radius:9px;background:#fff}.member-card-copy{min-width:0}.member-card-copy strong,.member-card-copy small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.member-card-copy strong{font-size:10px}.member-card-copy small{margin-top:3px;color:var(--module-muted);font-size:8px}.member-empty{grid-column:1/-1;padding:30px;text-align:center;color:var(--module-muted);font-size:10px}.member-modal-backdrop{position:fixed;inset:0;z-index:900;display:none;background:rgba(12,24,16,.56);backdrop-filter:blur(2px)}.member-modal{position:fixed;inset:50% auto auto 50%;z-index:901;display:none;width:min(1120px,calc(100vw - 30px));max-height:calc(100vh - 38px);transform:translate(-50%,-50%);overflow:hidden;border:1px solid var(--module-border);border-radius:13px;background:#fff;box-shadow:0 25px 70px rgba(15,30,20,.28)}.member-modal.is-open,.member-modal-backdrop.is-open{display:block}.member-modal-head,.member-modal-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 15px;border-bottom:1px solid var(--module-border)}.member-modal-head h2{margin:0;font-size:14px}.member-modal-head p{margin:3px 0 0;color:var(--module-muted);font-size:9px}.member-modal-search{width:min(330px,100%)}.member-modal-body{max-height:calc(100vh - 190px);overflow:auto}.member-modal-table{min-width:920px}.member-modal-foot{border-top:1px solid var(--module-border);border-bottom:0;background:#fbfcfb}.member-modal-foot span{color:var(--module-muted);font-size:9px}.member-modal-tools{display:flex;gap:7px;flex-wrap:wrap}.member-checkbox{width:16px;height:16px;accent-color:var(--module-green)}body.member-modal-open{overflow:hidden}@media(max-width:760px){.member-list{grid-template-columns:1fr}.member-modal-head{align-items:stretch;flex-direction:column}.member-modal-search{width:100%}.member-modal-body{max-height:calc(100vh - 245px)}.member-modal-foot{align-items:flex-start;flex-direction:column}.member-modal-tools,.member-modal-tools .module-button{width:100%}}
+    .member-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:14px}.member-card{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px;border:1px solid var(--module-border);border-radius:9px;background:#fff}.member-card-copy{min-width:0}.member-card-copy strong,.member-card-copy small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.member-card-copy strong{font-size:14px}.member-card-copy small{margin-top:3px;color:var(--module-muted);font-size:12px}.member-empty{grid-column:1/-1;padding:30px;text-align:center;color:var(--module-muted);font-size:12px}.member-modal-backdrop{position:fixed;inset:0;z-index:900;display:none;background:rgba(12,24,16,.56);backdrop-filter:blur(2px)}.member-modal{position:fixed;inset:50% auto auto 50%;z-index:901;display:none;width:min(1120px,calc(100vw - 30px));max-height:calc(100vh - 38px);transform:translate(-50%,-50%);overflow:hidden;border:1px solid var(--module-border);border-radius:13px;background:#fff;box-shadow:0 25px 70px rgba(15,30,20,.28)}.member-modal.is-open,.member-modal-backdrop.is-open{display:block}.member-modal-head,.member-modal-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 15px;border-bottom:1px solid var(--module-border)}.member-modal-head h2{margin:0;font-size:14px}.member-modal-head p{margin:3px 0 0;color:var(--module-muted);font-size:12px}.member-modal-search{width:min(330px,100%)}.member-modal-body{max-height:calc(100vh - 190px);overflow:auto}.member-modal-table{min-width:920px}.member-modal-foot{border-top:1px solid var(--module-border);border-bottom:0;background:#fbfcfb}.member-modal-foot span{color:var(--module-muted);font-size:12px}.member-modal-tools{display:flex;gap:7px;flex-wrap:wrap}.member-checkbox{width:22px;height:22px;accent-color:var(--module-green)}body.member-modal-open{overflow:hidden}@media(max-width:760px){.member-list{grid-template-columns:1fr}.member-modal-head{align-items:stretch;flex-direction:column}.member-modal-search{width:100%}.member-modal-body{max-height:calc(100vh - 245px)}.member-modal-foot{align-items:flex-start;flex-direction:column}.member-modal-tools,.member-modal-tools .module-button{width:100%}}
   </style>
 @endpush
 
 @php
-  $selectedFarmerIds = collect($selectedFarmerIds ?? [])->map(fn ($id) => (int) $id)->all();
+  $selectedFarmerIds = collect(old('farmer_ids', $selectedFarmerIds ?? []))->map(fn ($id) => (int) $id)->all();
   $selectedFarmers = $farmers->filter(fn ($farmer) => in_array((int) $farmer->id, $selectedFarmerIds, true));
   $selectedArea = (float) $selectedFarmers->sum('farm_area_ha');
 @endphp
@@ -52,7 +52,7 @@
 
 <div class="member-modal-backdrop" id="memberModalBackdrop"></div>
 <section class="member-modal" id="memberModal" role="dialog" aria-modal="true" aria-labelledby="memberModalTitle">
-  <div class="member-modal-head"><div><h2 id="memberModalTitle">Select cooperative farmers</h2><p>Search and select any registered farmer available to this municipality.</p></div><div class="module-search-wrap member-modal-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg><input class="module-input" id="memberSearch" type="search" placeholder="Search name, FFRS, or location"></div></div>
+  <div class="member-modal-head"><div><h2 id="memberModalTitle">Select cooperative farmers</h2><p>Search and select any registered farmer available to this municipality.</p></div><div class="module-search-wrap member-modal-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg><input class="module-input" id="memberSearch" type="search" placeholder="Search name, FFRS, or location" aria-label="Search available farmers"></div></div>
   <div class="member-modal-body">
     <table class="module-table member-modal-table" id="memberPickerTable">
       <thead><tr><th>Select</th><th>Farmer</th><th>FFRS</th><th>Gender</th><th>Farm location</th><th class="module-numeric">Farm area</th></tr></thead>
@@ -63,7 +63,7 @@
             $location = trim(($farmer->farm_location ?: 'Not recorded').($farmer->farm_municipality ? ' · '.$farmer->farm_municipality : ''));
             $search = mb_strtolower($fullName.' '.$farmer->ffrs.' '.$location);
           @endphp
-          <tr data-member-row data-search="{{ $search }}"><td><input class="member-checkbox" type="checkbox" value="{{ $farmer->id }}" data-member-checkbox data-name="{{ $fullName }}" data-ffrs="{{ $farmer->ffrs ?: 'not assigned' }}" data-location="{{ $location }}" data-area="{{ (float) ($farmer->farm_area_ha ?? 0) }}" @checked(in_array((int) $farmer->id, $selectedFarmerIds, true))></td><td><strong>{{ $fullName }}</strong></td><td class="module-mono">{{ $farmer->ffrs ?: '—' }}</td><td>{{ $farmer->gender ?: '—' }}</td><td>{{ $location }}</td><td class="module-numeric">{{ $farmer->farm_area_ha !== null ? number_format((float) $farmer->farm_area_ha, 2).' ha' : '—' }}</td></tr>
+          <tr data-member-row data-search="{{ $search }}"><td><input class="member-checkbox" type="checkbox" value="{{ $farmer->id }}" data-member-checkbox aria-label="Select {{ $fullName }}" data-name="{{ $fullName }}" data-ffrs="{{ $farmer->ffrs ?: 'not assigned' }}" data-location="{{ $location }}" data-area="{{ (float) ($farmer->farm_area_ha ?? 0) }}" @checked(in_array((int) $farmer->id, $selectedFarmerIds, true))></td><td><strong>{{ $fullName }}</strong></td><td class="module-mono">{{ $farmer->ffrs ?: '—' }}</td><td>{{ $farmer->gender ?: '—' }}</td><td>{{ $location }}</td><td class="module-numeric">{{ $farmer->farm_area_ha !== null ? number_format((float) $farmer->farm_area_ha, 2).' ha' : '—' }}</td></tr>
         @empty<tr><td colspan="6"><div class="module-empty"><strong>No farmers available</strong><span>Add farmer profiles to this municipality before assigning cooperative members.</span></div></td></tr>@endforelse
       </tbody>
     </table>
@@ -76,12 +76,102 @@
 <script>
 (() => {
   const modal=document.getElementById('memberModal'); const backdrop=document.getElementById('memberModalBackdrop'); const search=document.getElementById('memberSearch'); const checkboxes=[...document.querySelectorAll('[data-member-checkbox]')]; const rows=[...document.querySelectorAll('[data-member-row]')]; const list=document.getElementById('selectedMemberList'); const inputs=document.getElementById('membershipInputs'); const count=document.getElementById('selectedMemberCount'); const area=document.getElementById('selectedAreaTotal'); const modalCount=document.getElementById('modalSelectionCount'); const visibleCount=document.getElementById('visibleFarmerCount');
-  const open=()=>{modal.classList.add('is-open');backdrop.classList.add('is-open');document.body.classList.add('member-modal-open');setTimeout(()=>search.focus(),50)}; const close=()=>{modal.classList.remove('is-open');backdrop.classList.remove('is-open');document.body.classList.remove('member-modal-open')}; const selected=()=>checkboxes.filter(box=>box.checked);
-  const updateCounts=()=>{modalCount.textContent=selected().length};
-  const render=()=>{const members=selected();inputs.innerHTML='';list.innerHTML='';let totalArea=0;members.forEach(box=>{const input=document.createElement('input');input.type='hidden';input.name='farmer_ids[]';input.value=box.value;inputs.appendChild(input);totalArea+=Number(box.dataset.area||0);const card=document.createElement('article');card.className='member-card';card.dataset.selectedMember=box.value;card.innerHTML=`<div class="member-card-copy"><strong>${box.dataset.name}</strong><small>FFRS ${box.dataset.ffrs} · ${box.dataset.location} · ${Number(box.dataset.area||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})} ha</small></div><button class="module-button module-button-danger module-button-small" type="button" data-remove-member="${box.value}">Remove</button>`;list.appendChild(card)});if(!members.length){const empty=document.createElement('div');empty.className='member-empty';empty.textContent='No farmers selected. Open the farmer picker to build this cooperative’s membership.';list.appendChild(empty)}count.textContent=members.length;area.innerHTML=`${totalArea.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})} <small>ha</small>`;updateCounts();bindRemove()};
-  const bindRemove=()=>document.querySelectorAll('[data-remove-member]').forEach(button=>button.onclick=()=>{const box=checkboxes.find(item=>item.value===button.dataset.removeMember);if(box)box.checked=false;render()});
-  const filter=()=>{const query=(search.value||'').trim().toLocaleLowerCase();let visible=0;rows.forEach(row=>{row.hidden=!row.dataset.search.includes(query);if(!row.hidden)visible++});visibleCount.textContent=visible};
-  document.getElementById('openMemberPicker').addEventListener('click',open);document.getElementById('openMemberPickerSecondary').addEventListener('click',open);document.getElementById('closeMemberPicker').addEventListener('click',close);backdrop.addEventListener('click',close);search.addEventListener('input',filter);checkboxes.forEach(box=>box.addEventListener('change',updateCounts));document.getElementById('applyMemberSelection').addEventListener('click',()=>{render();close()});document.getElementById('clearMemberSelection').addEventListener('click',()=>{checkboxes.forEach(box=>box.checked=false);updateCounts()});document.getElementById('selectVisibleMembers').addEventListener('click',()=>{rows.filter(row=>!row.hidden).forEach(row=>row.querySelector('[data-member-checkbox]').checked=true);updateCounts()});document.addEventListener('keydown',event=>{if(event.key==='Escape'&&modal.classList.contains('is-open'))close()});bindRemove();updateCounts();
+  let opener = null;
+  let appliedIds = new Set([...inputs.querySelectorAll('input')].map(input => input.value));
+  const selected = () => checkboxes.filter(box => box.checked);
+  const updateCounts = () => { modalCount.textContent = selected().length; };
+  const restoreApplied = () => {
+    checkboxes.forEach(box => { box.checked = appliedIds.has(box.value); });
+    updateCounts();
+  };
+  const open = event => {
+    opener = event.currentTarget;
+    restoreApplied();
+    modal.classList.add('is-open');
+    backdrop.classList.add('is-open');
+    document.body.classList.add('member-modal-open');
+    document.querySelector('.module-page').inert = true;
+    search.focus();
+  };
+  const close = () => {
+    restoreApplied();
+    modal.classList.remove('is-open');
+    backdrop.classList.remove('is-open');
+    document.body.classList.remove('member-modal-open');
+    document.querySelector('.module-page').inert = false;
+    opener?.focus();
+  };
+  const render = () => {
+    const members = selected();
+    appliedIds = new Set(members.map(box => box.value));
+    inputs.replaceChildren();
+    list.replaceChildren();
+    let totalArea = 0;
+    members.forEach(box => {
+      const input = document.createElement('input');
+      input.type = 'hidden'; input.name = 'farmer_ids[]'; input.value = box.value;
+      inputs.appendChild(input);
+      const memberArea = Number(box.dataset.area || 0);
+      totalArea += memberArea;
+      const card = document.createElement('article');
+      card.className = 'member-card'; card.dataset.selectedMember = box.value;
+      const copy = document.createElement('div'); copy.className = 'member-card-copy';
+      const name = document.createElement('strong'); name.textContent = box.dataset.name;
+      const details = document.createElement('small');
+      details.textContent = `FFRS ${box.dataset.ffrs} · ${box.dataset.location} · ${memberArea.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ha`;
+      copy.append(name, details);
+      const remove = document.createElement('button');
+      remove.className = 'module-button module-button-danger module-button-small';
+      remove.type = 'button'; remove.dataset.removeMember = box.value;
+      remove.textContent = 'Remove'; remove.setAttribute('aria-label', `Remove ${box.dataset.name}`);
+      card.append(copy, remove); list.appendChild(card);
+    });
+    if (!members.length) {
+      const empty = document.createElement('div'); empty.className = 'member-empty';
+      empty.textContent = 'No farmers selected. Open the farmer picker to build this cooperative’s membership.';
+      list.appendChild(empty);
+    }
+    count.textContent = members.length;
+    area.textContent = `${totalArea.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ha`;
+    updateCounts(); bindRemove();
+  };
+  const bindRemove = () => document.querySelectorAll('[data-remove-member]').forEach(button => {
+    button.onclick = () => {
+      const box = checkboxes.find(item => item.value === button.dataset.removeMember);
+      if (box) box.checked = false;
+      render();
+      document.getElementById('openMemberPickerSecondary').focus();
+    };
+  });
+  const filter = () => {
+    const query = (search.value || '').trim().toLocaleLowerCase();
+    let visible = 0;
+    rows.forEach(row => { row.hidden = !row.dataset.search.includes(query); if (!row.hidden) visible++; });
+    visibleCount.textContent = visible;
+  };
+  document.getElementById('openMemberPicker').addEventListener('click', open);
+  document.getElementById('openMemberPickerSecondary').addEventListener('click', open);
+  document.getElementById('closeMemberPicker').addEventListener('click', close);
+  backdrop.addEventListener('click', close);
+  search.addEventListener('input', filter);
+  checkboxes.forEach(box => box.addEventListener('change', updateCounts));
+  document.getElementById('applyMemberSelection').addEventListener('click', () => { render(); close(); });
+  document.getElementById('clearMemberSelection').addEventListener('click', () => {
+    checkboxes.forEach(box => { box.checked = false; }); updateCounts();
+  });
+  document.getElementById('selectVisibleMembers').addEventListener('click', () => {
+    rows.filter(row => !row.hidden).forEach(row => { row.querySelector('[data-member-checkbox]').checked = true; }); updateCounts();
+  });
+  document.addEventListener('keydown', event => {
+    if (!modal.classList.contains('is-open')) return;
+    if (event.key === 'Escape') { event.preventDefault(); close(); return; }
+    if (event.key !== 'Tab') return;
+    const controls = [...modal.querySelectorAll('button, input, select, a[href], [tabindex]')].filter(element => !element.disabled && element.tabIndex >= 0 && element.getClientRects().length);
+    const first = controls[0], last = controls[controls.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+  });
+  bindRemove(); updateCounts();
 })();
 </script>
 @endpush

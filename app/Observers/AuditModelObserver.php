@@ -9,6 +9,7 @@ use App\Models\Farmer;
 use App\Models\FarmersCooperative;
 use App\Models\FarmPlot;
 use App\Models\Municipality;
+use App\Models\Province;
 use App\Models\RiceSeedDistribution;
 use App\Models\User;
 use App\Support\AuditTrail;
@@ -82,11 +83,29 @@ class AuditModelObserver
             sprintf('%s %s “%s”.', auth()->user()?->name ?? 'System', $action, $this->recordLabel($model)),
             [
                 'auditable' => $model,
+                // Reassignment history contains data from both scopes. Only the
+                // System Owner can review this cross-province administrative event.
+                'owner_only' => $event === 'updated' && ($model->wasChanged('province_id') || $this->changedMunicipalityProvince($model)),
                 'old_values' => $oldValues,
                 'new_values' => $newValues,
                 'metadata' => $metadata,
             ]
         );
+    }
+
+    private function changedMunicipalityProvince(Model $model): bool
+    {
+        if (! $model->wasChanged('municipality_id')) {
+            return false;
+        }
+        $before = $model->getRawOriginal('municipality_id');
+        $after = $model->getAttribute('municipality_id');
+        if (! $before || ! $after) {
+            return true;
+        }
+        $provinces = Municipality::query()->whereIn('id', [$before, $after])->pluck('province_id', 'id');
+
+        return ($provinces[$before] ?? null) !== ($provinces[$after] ?? null);
     }
 
     private function moduleName(Model $model): string
@@ -101,6 +120,7 @@ class AuditModelObserver
             $model instanceof BackupFile => 'Backup files',
             $model instanceof User => 'User management',
             $model instanceof Municipality => 'Municipalities',
+            $model instanceof Province => 'Provinces',
             default => class_basename($model),
         };
     }

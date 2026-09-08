@@ -10,123 +10,77 @@ use Illuminate\Validation\ValidationException;
 
 class MunicipalityAccess
 {
-    public function scope(
-        Builder $query,
-        User $user,
-        ?string $qualifiedColumn = null
-    ): Builder {
-        if ($user->canAccessAllMunicipalities()) {
+    public function scope(Builder $query, User $user, ?string $qualifiedColumn = null): Builder
+    {
+        if (! $user->hasUsableScope()) {
+            return $query->whereRaw('1 = 0');
+        }
+        if ($user->isSystemOwner()) {
             return $query;
         }
+        $column = $qualifiedColumn ?: $query->getModel()->qualifyColumn('municipality_id');
 
-        $municipalityId = $this->assignedMunicipalityId($user);
-        $column = $qualifiedColumn
-            ?: $query->getModel()->qualifyColumn('municipality_id');
-
-        return $query->where($column, $municipalityId);
+        return $query->whereIn($column, $this->scopeMunicipalities(Municipality::query(), $user)->select('municipalities.id'));
     }
 
-    public function applyOptionalFilter(
-        Builder $query,
-        User $user,
-        mixed $requestedMunicipalityId,
-        ?string $qualifiedColumn = null
-    ): Builder {
+    public function scopeMunicipalities(Builder $query, User $user): Builder
+    {
+        if (! $user->hasUsableScope()) {
+            return $query->whereRaw('1 = 0');
+        }
+        if ($user->isSystemOwner()) {
+            return $query;
+        }
+        if ($user->requiresProvince()) {
+            return $query->where('municipalities.province_id', $user->province_id);
+        }
+
+        return $query->whereKey($user->municipality_id);
+    }
+
+    public function applyOptionalFilter(Builder $query, User $user, mixed $requestedMunicipalityId, ?string $qualifiedColumn = null): Builder
+    {
         $this->scope($query, $user, $qualifiedColumn);
-
-        if (! $user->canAccessAllMunicipalities()) {
+        if (! $user->canAccessAllMunicipalities() || $requestedMunicipalityId === null || $requestedMunicipalityId === '') {
             return $query;
         }
+        $municipalityId = $this->validateActiveMunicipality($user, $requestedMunicipalityId);
 
-        if ($requestedMunicipalityId === null || $requestedMunicipalityId === '') {
-            return $query;
-        }
-
-        $municipalityId = $this->validateActiveMunicipality(
-            $requestedMunicipalityId
-        );
-        $column = $qualifiedColumn
-            ?: $query->getModel()->qualifyColumn('municipality_id');
-
-        return $query->where($column, $municipalityId);
+        return $query->where($qualifiedColumn ?: $query->getModel()->qualifyColumn('municipality_id'), $municipalityId);
     }
 
-    public function resolveForWrite(
-        User $user,
-        mixed $requestedMunicipalityId = null
-    ): int {
+    public function resolveForWrite(User $user, mixed $requestedMunicipalityId = null): int
+    {
+        if (! $user->hasUsableScope()) {
+            throw ValidationException::withMessages(['municipality_id' => 'Your account needs an active province or municipality assignment.']);
+        }
         if ($user->canAccessAllMunicipalities()) {
-            return $this->validateActiveMunicipality(
-                $requestedMunicipalityId
-            );
+            return $this->validateActiveMunicipality($user, $requestedMunicipalityId);
+        }
+        if ($requestedMunicipalityId !== null && $requestedMunicipalityId !== '' && (int) $requestedMunicipalityId !== $user->municipality_id) {
+            throw ValidationException::withMessages(['municipality_id' => 'You cannot save records for another municipality.']);
         }
 
-        $municipalityId = $this->assignedMunicipalityId($user);
-
-        if (
-            $requestedMunicipalityId !== null
-            && $requestedMunicipalityId !== ''
-            && (int) $requestedMunicipalityId !== $municipalityId
-        ) {
-            throw ValidationException::withMessages([
-                'municipality_id' => 'You cannot save records for another municipality.',
-            ]);
-        }
-
-        return $municipalityId;
+        return $this->validateActiveMunicipality($user, $user->municipality_id);
     }
 
     public function choices(User $user): Collection
     {
-        $query = Municipality::query()
-            ->active()
-            ->orderBy('name');
-
-        if (! $user->canAccessAllMunicipalities()) {
-            $query->whereKey($this->assignedMunicipalityId($user));
-        }
-
-        return $query->get(['id', 'name', 'province']);
+        return $this->scopeMunicipalities(Municipality::query()->active(), $user)
+            ->whereHas('supervisingProvince', fn (Builder $query) => $query->active())
+            ->orderBy('name')->get(['id', 'name', 'province', 'province_id']);
     }
 
-    private function assignedMunicipalityId(User $user): int
+    private function validateActiveMunicipality(User $user, mixed $municipalityId): int
     {
-        if (! $user->municipality_id) {
-            throw ValidationException::withMessages([
-                'municipality_id' => 'Your account is not assigned to a municipality.',
-            ]);
+        if (! filter_var($municipalityId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]])) {
+            throw ValidationException::withMessages(['municipality_id' => 'Please select an active municipality.']);
         }
-
-        return $this->validateActiveMunicipality($user->municipality_id);
-    }
-
-    private function validateActiveMunicipality(
-        mixed $municipalityId
-    ): int {
-        if (
-            $municipalityId === null
-            || $municipalityId === ''
-            || ! filter_var(
-                $municipalityId,
-                FILTER_VALIDATE_INT,
-                ['options' => ['min_range' => 1]]
-            )
-        ) {
-            throw ValidationException::withMessages([
-                'municipality_id' => 'Please select an active municipality.',
-            ]);
-        }
-
         $municipalityId = (int) $municipalityId;
-        $exists = Municipality::query()
-            ->active()
-            ->whereKey($municipalityId)
-            ->exists();
-
-        if (! $exists) {
-            throw ValidationException::withMessages([
-                'municipality_id' => 'The selected municipality is unavailable.',
-            ]);
+        $available = $this->scopeMunicipalities(Municipality::query()->active(), $user)->whereKey($municipalityId)
+            ->whereHas('supervisingProvince', fn (Builder $query) => $query->active())->exists();
+        if (! $available) {
+            throw ValidationException::withMessages(['municipality_id' => 'The selected municipality is unavailable.']);
         }
 
         return $municipalityId;

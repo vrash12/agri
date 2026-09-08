@@ -18,6 +18,8 @@
     request('search'), request('municipality_id'), request('folder'), request('uploaded_by'),
     request('date_preset'), request('date_from'), request('date_to'), request('size_preset'),
     request('min_mb'), request('max_mb'), count((array) request('exts', [])) ? 'types' : null,
+    request('search_field', 'all') !== 'all' ? 'search field' : null,
+    request('search_mode', 'contains') !== 'contains' ? 'match mode' : null,
   ])->filter(fn ($value) => filled($value))->count();
   $fileIcon = '<svg viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M14 3v5h5"/></svg>';
 @endphp
@@ -31,9 +33,9 @@
 
   <header class="module-header">
     <div>
-      <div class="module-eyebrow">Secure document repository</div>
+      <div class="module-eyebrow">{{ ($canChooseMunicipality ?? false) ? 'All accessible municipalities' : (auth()->user()->municipality?->name ?? 'Municipal office') }} · File repository</div>
       <h1>Backup folder</h1>
-      <p>Store exports, database snapshots, reports, and supporting files with municipality ownership, integrity hashes, and controlled download access.</p>
+      <p>Find, upload, preview, and download files for your office.</p>
     </div>
     <div class="module-actions">
       <a class="module-button" href="#backupFiles">
@@ -51,10 +53,10 @@
     </div>
   </header>
 
-  <section class="module-kpis" aria-label="Backup repository summary">
+  <section class="module-kpis" aria-label="Backup repository summary" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
     <article class="module-kpi"><div class="module-kpi-top"><span class="module-kpi-label">Matching files</span><span class="module-kpi-icon"><svg viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M14 3v5h5"/></svg></span></div><strong>{{ number_format($filteredFileCount) }}</strong><small>Across {{ number_format($filteredFolderCount) }} folder{{ $filteredFolderCount === 1 ? '' : 's' }}</small></article>
     <article class="module-kpi"><div class="module-kpi-top"><span class="module-kpi-label">Storage represented</span><span class="module-kpi-icon module-kpi-icon-blue"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v7c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12v7c0 1.7 3.6 3 8 3s8-1.3 8-3v-7"/></svg></span></div><strong>{{ $formatBytes($filteredBytes) }}</strong><small>Combined size of the current result set</small></article>
-    <article class="module-kpi"><div class="module-kpi-top"><span class="module-kpi-label">Integrity coverage</span><span class="module-kpi-icon {{ $integrityCoverage < 100 && $filteredFileCount ? 'module-kpi-icon-amber' : '' }}"><svg viewBox="0 0 24 24"><path d="m12 3 8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4Z"/><path d="m9 12 2 2 4-5"/></svg></span></div><strong>{{ number_format($integrityCoverage, 1) }}<small>%</small></strong><small>{{ number_format($hashedFileCount) }} file{{ $hashedFileCount === 1 ? '' : 's' }} with SHA-256</small></article>
+
     <article class="module-kpi"><div class="module-kpi-top"><span class="module-kpi-label">Latest upload</span><span class="module-kpi-icon module-kpi-icon-amber"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg></span></div><strong class="backup-kpi-date">{{ $latestUploadAt ? \Illuminate\Support\Carbon::parse($latestUploadAt)->format('M d, Y') : '—' }}</strong><small>{{ $latestLabel }}</small></article>
   </section>
 
@@ -90,13 +92,15 @@
           <div class="module-field"><label for="backup_municipality">Municipality</label><select class="module-input" id="backup_municipality" name="municipality_id"><option value="">All municipalities</option>@foreach(($municipalities ?? []) as $municipality)<option value="{{ $municipality->id }}" @selected((string) ($selectedMunicipalityId ?? '') === (string) $municipality->id)>{{ $municipality->name }}</option>@endforeach</select></div>
         @endif
         <div class="module-field"><label for="backup_folder_filter">Folder</label><select class="module-input" id="backup_folder_filter" name="folder"><option value="">All folders</option>@foreach($folders as $folder)<option value="{{ $folder }}" @selected(request('folder') === $folder)>{{ $folder }}</option>@endforeach</select></div>
-        <div class="module-field"><label for="backup_sort">Sort by</label><select class="module-input" id="backup_sort" name="sort"><option value="newest" @selected(request('sort','newest')==='newest')>Newest first</option><option value="oldest" @selected(request('sort')==='oldest')>Oldest first</option><option value="name_asc" @selected(request('sort')==='name_asc')>Filename A–Z</option><option value="name_desc" @selected(request('sort')==='name_desc')>Filename Z–A</option><option value="size_desc" @selected(request('sort')==='size_desc')>Largest first</option><option value="size_asc" @selected(request('sort')==='size_asc')>Smallest first</option></select></div>
-        <div class="module-field"><label for="backup_per_page">Rows per page</label><select class="module-input" id="backup_per_page" name="per_page">@foreach([10,20,50,100] as $amount)<option value="{{ $amount }}" @selected((int) request('per_page',20) === $amount)>{{ $amount }} rows</option>@endforeach</select></div>
       </div>
 
       <details class="backup-advanced" @if($activeFilterCount > collect([request('search'),request('municipality_id'),request('folder')])->filter()->count()) open @endif>
-        <summary>Advanced filters</summary>
+        <summary>More filters @if($activeFilterCount > collect([request('search'), request('municipality_id'), request('folder')])->filter()->count())<span>Some filters are active</span>@endif</summary>
         <div class="backup-advanced-grid">
+        <div class="module-field"><label for="backup_per_page">Rows per page</label><select class="module-input" id="backup_per_page" name="per_page">@foreach([10,20,50,100] as $amount)<option value="{{ $amount }}" @selected((int) request('per_page',20) === $amount)>{{ $amount }} rows</option>@endforeach</select></div>
+
+        <div class="module-field"><label for="backup_sort">Sort by</label><select class="module-input" id="backup_sort" name="sort"><option value="newest" @selected(request('sort','newest')==='newest')>Newest first</option><option value="oldest" @selected(request('sort')==='oldest')>Oldest first</option><option value="name_asc" @selected(request('sort')==='name_asc')>Filename A–Z</option><option value="name_desc" @selected(request('sort')==='name_desc')>Filename Z–A</option><option value="size_desc" @selected(request('sort')==='size_desc')>Largest first</option><option value="size_asc" @selected(request('sort')==='size_asc')>Smallest first</option></select></div>
+
           <div class="module-field"><label for="search_field">Search field</label><select class="module-input" id="search_field" name="search_field"><option value="all" @selected(request('search_field','all')==='all')>All searchable fields</option><option value="name" @selected(request('search_field')==='name')>Filename only</option><option value="folder" @selected(request('search_field')==='folder')>Folder only</option><option value="notes" @selected(request('search_field')==='notes')>Notes only</option><option value="sha256" @selected(request('search_field')==='sha256')>SHA-256 only</option></select></div>
           <div class="module-field"><label for="search_mode">Match mode</label><select class="module-input" id="search_mode" name="search_mode"><option value="contains" @selected(request('search_mode','contains')==='contains')>Contains</option><option value="starts" @selected(request('search_mode')==='starts')>Starts with</option><option value="ends" @selected(request('search_mode')==='ends')>Ends with</option><option value="exact" @selected(request('search_mode')==='exact')>Exact match</option></select></div>
           <div class="module-field"><label for="backup_uploader">Uploaded by</label><select class="module-input" id="backup_uploader" name="uploaded_by"><option value="">Any uploader</option>@foreach($uploaders as $uploader)<option value="{{ $uploader->id }}" @selected((string) request('uploaded_by') === (string) $uploader->id)>{{ $uploader->name }}</option>@endforeach</select></div>
@@ -117,7 +121,7 @@
     <div class="module-table-tools"><div><strong>Repository files</strong><span>Open a file for preview or editing; download preserves its original filename.</span></div><span>{{ $formatBytes($filteredBytes) }} in results</span></div>
     <div class="module-table-scroll">
       <table class="module-table backup-table">
-        <thead><tr><th>File</th><th>Folder and scope</th><th>File details</th><th>Uploaded</th><th>Integrity</th><th>Notes</th><th style="text-align:right">Actions</th></tr></thead>
+        <thead><tr><th>File</th><th>Folder and scope</th><th>File details</th><th>Uploaded</th><th style="text-align:right">Actions</th></tr></thead>
         <tbody>
           @forelse($files as $file)
             @php
@@ -127,32 +131,32 @@
             <tr>
               <td><div class="backup-file-cell"><span class="backup-file-icon">{!! $fileIcon !!}<b>{{ strtoupper(substr($extension,0,5)) }}</b></span><span><strong title="{{ $file->original_name }}">{{ $file->original_name }}</strong><small class="module-mono">ID {{ $file->id }} · {{ $extension }}</small></span></div></td>
               <td><strong>{{ $file->folder ?: 'Root' }}</strong><small>{{ optional($file->municipality)->name ?: 'Provincial / unassigned' }}</small></td>
-              <td><strong>{{ $formatBytes($file->size) }}</strong><small>{{ $file->mime ?: 'Unknown MIME type' }}</small></td>
+              <td><strong>{{ $formatBytes($file->size) }}</strong><details class="backup-file-details"><summary>File details</summary><dl><dt>File type</dt><dd>{{ $file->mime ?: 'Unknown file type' }}</dd><dt>Notes</dt><dd>{{ $file->notes ?: 'No notes' }}</dd><dt>Integrity fingerprint (SHA-256)</dt><dd class="module-mono">{{ $file->sha256 ?: 'Unavailable' }}</dd></dl></details></td>
               @php($localUploadedAt = \App\Support\LocalTime::fromUtc($file->created_at))
               <td><strong>{{ $localUploadedAt?->format('M d, Y') ?: '—' }}</strong><small>{{ optional($file->uploader)->name ?: 'Unknown uploader' }} · {{ $localUploadedAt?->format('h:i A') ?: '—' }}</small></td>
-              <td>@if($file->sha256)<span class="module-badge module-badge-green">SHA-256 ready</span><small class="module-mono" title="{{ $file->sha256 }}">{{ substr($file->sha256,0,12) }}…</small>@else<span class="module-badge module-badge-amber">Hash unavailable</span><small>Integrity fingerprint missing</small>@endif</td>
-              <td><span class="backup-notes" title="{{ $file->notes }}">{{ $file->notes ?: 'No notes' }}</span><small class="module-mono" title="{{ $file->path }}">{{ $file->path }}</small></td>
-              <td><div class="module-row-actions"><a class="module-button module-button-small" href="{{ route('backups.preview', $file) }}">Open</a><a class="module-button module-button-small" href="{{ route('backups.download', $file) }}">Download</a>@can('delete',$file)<details class="module-action-menu"><summary aria-label="More actions">⋯</summary><div class="module-action-menu-list"><a href="{{ route('backups.preview', [$file, 'mode' => 'edit']) }}">Open editor</a><button type="button" class="js-copy-hash" data-hash="{{ $file->sha256 }}" @disabled(!$file->sha256)>Copy SHA-256</button><form method="POST" action="{{ route('backups.destroy', $file) }}" onsubmit="return confirm('Delete this file from backup storage?');">@csrf @method('DELETE')<button class="danger" type="submit">Delete file</button></form></div></details>@endcan</div></td>
+              <td><div class="module-row-actions"><a class="module-button module-button-small" href="{{ route('backups.preview', $file) }}">Open</a><a class="module-button module-button-small" href="{{ route('backups.download', $file) }}">Download</a>@can('delete',$file)<details class="module-action-menu"><summary aria-label="More actions">⋯</summary><div class="module-action-menu-list"><a href="{{ route('backups.preview', [$file, 'mode' => 'edit']) }}">Open editor</a><button type="button" class="js-copy-hash" data-hash="{{ $file->sha256 }}" @disabled(!$file->sha256)>Copy SHA-256</button><form method="POST" action="{{ route('backups.destroy', $file) }}" data-file-name="{{ $file->original_name }}" onsubmit="return confirm('Delete ' + this.dataset.fileName + '? This permanently removes the stored file.');">@csrf @method('DELETE')<button class="danger" type="submit">Delete file</button></form></div></details>@endcan</div></td>
             </tr>
           @empty
-            <tr><td colspan="7"><div class="module-empty"><span class="module-empty-icon"><svg viewBox="0 0 24 24"><path d="M3 7h7l2 2h9v11H3V7Z"/></svg></span><strong>No backup files match</strong><span>{{ $activeFilterCount ? 'Clear or adjust the repository filters.' : 'No backup files have been uploaded yet.' }}</span>@can('create', \App\Models\BackupFile::class)<button class="module-button module-button-primary" type="button" id="emptyBackupUpload">Upload files</button>@endcan</div></td></tr>
+            <tr><td colspan="5"><div class="module-empty"><span class="module-empty-icon"><svg viewBox="0 0 24 24"><path d="M3 7h7l2 2h9v11H3V7Z"/></svg></span><strong>No backup files match</strong><span>{{ $activeFilterCount ? 'Clear or adjust the repository filters.' : 'No backup files have been uploaded yet.' }}</span>@can('create', \App\Models\BackupFile::class)<button class="module-button module-button-primary" type="button" id="emptyBackupUpload">Upload files</button>@endcan</div></td></tr>
           @endforelse
         </tbody>
       </table>
     </div>
     @include('partials.pagination', ['paginator' => $files, 'label' => 'file'])
   </section>
+  <details class="module-more"><summary>Repository integrity details</summary><div class="module-more-content"><p>{{ number_format($hashedFileCount) }} of {{ number_format($filteredFileCount) }} matching files have a SHA-256 fingerprint ({{ number_format($integrityCoverage, 1) }}%). Open a file's details to inspect its fingerprint.</p><p>This is a file repository. Uploading a file does not schedule backups or verify that a database snapshot can be restored.</p></div></details>
 </div>
 @endsection
 
 @push('styles')
 <style>
-  .backup-page{scroll-behavior:smooth}.backup-kpi-date{font-size:18px!important;line-height:1.15!important}.backup-upload-panel{scroll-margin-top:16px}.backup-upload-panel>summary span,.backup-advanced>summary span{margin-left:auto;color:var(--module-muted);font-size:9px;font-weight:650}.backup-upload-panel>summary:after{margin-left:8px}
-  .backup-upload-form{padding-top:12px}.backup-dropzone>div{display:grid;gap:3px;width:100%}.backup-dropzone strong{color:var(--module-ink);font-size:11px}.backup-dropzone small{color:var(--module-muted);font-size:9px}.backup-dropzone input{margin-top:6px}.backup-upload-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin-top:12px}.backup-notes-field{grid-column:1/-1}.backup-upload-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding-top:11px;border-top:1px solid #edf1ee}.backup-upload-actions span{color:var(--module-muted);font-size:9px}
-  .backup-advanced{margin-top:12px;border:1px solid var(--module-border);border-radius:8px;background:#fbfcfb}.backup-advanced>summary{padding:10px 12px;color:var(--module-ink);font-size:10px;font-weight:850;cursor:pointer}.backup-advanced-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:0 12px 12px}.backup-advanced-grid .module-field{grid-column:span 1}.backup-type-field{grid-column:1/-1}.backup-type-field>label{display:block;margin-bottom:6px;color:#5d6a62;font-size:9px;font-weight:850;text-transform:uppercase}.backup-type-options{display:flex;gap:6px;flex-wrap:wrap}.backup-type-options label{cursor:pointer}.backup-type-options input{position:absolute;opacity:0;pointer-events:none}.backup-type-options span{display:block;padding:5px 8px;border:1px solid var(--module-border);border-radius:999px;color:var(--module-muted);background:#fff;font-size:8px;font-weight:850}.backup-type-options input:checked+span{color:var(--module-green);border-color:#8fb09c;background:var(--module-green-soft)}
-  .backup-table{min-width:1160px}.backup-file-cell{display:flex;align-items:center;gap:10px;min-width:210px}.backup-file-cell>span:last-child{min-width:0}.backup-file-cell strong{display:block;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.backup-file-icon{position:relative;width:37px;height:40px;display:grid;place-items:center;flex:0 0 auto;color:#416b50}.backup-file-icon svg{width:32px;height:36px;fill:#edf5ef;stroke:currentColor;stroke-width:1.4}.backup-file-icon b{position:absolute;bottom:7px;font-size:6px;letter-spacing:.03em}.backup-notes{display:block;max-width:190px;overflow:hidden;color:var(--module-ink);font-weight:750;text-overflow:ellipsis;white-space:nowrap}.module-action-menu-list button:disabled{opacity:.45;cursor:not-allowed}
+  .backup-page{scroll-behavior:smooth}.backup-kpi-date{font-size:18px!important;line-height:1.15!important}.backup-upload-panel{scroll-margin-top:16px}.backup-upload-panel>summary span,.backup-advanced>summary span{margin-left:auto;color:var(--module-muted);font-size:12px;font-weight:700}.backup-upload-panel>summary:after{margin-left:8px}
+  .backup-upload-form{padding-top:12px}.backup-dropzone>div{display:grid;gap:3px;width:100%}.backup-dropzone strong{color:var(--module-ink);font-size:12px}.backup-dropzone small{color:var(--module-muted);font-size:12px}.backup-dropzone input{margin-top:6px}.backup-upload-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin-top:12px}.backup-notes-field{grid-column:1/-1}.backup-upload-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding-top:11px;border-top:1px solid #edf1ee}.backup-upload-actions span{color:var(--module-muted);font-size:12px}
+  .backup-advanced{margin-top:12px;border:1px solid var(--module-border);border-radius:8px;background:#fbfcfb}.backup-advanced>summary{padding:10px 12px;color:var(--module-ink);font-size:12px;font-weight:700;cursor:pointer}.backup-advanced-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:0 12px 12px}.backup-advanced-grid .module-field{grid-column:span 1}.backup-type-field{grid-column:1/-1}.backup-type-field>label{display:block;margin-bottom:6px;color:#5d6a62;font-size:12px;font-weight:700;text-transform:none}.backup-type-options{display:flex;gap:6px;flex-wrap:wrap}.backup-type-options label{cursor:pointer}.backup-type-options input{position:absolute;opacity:0;pointer-events:none}.backup-type-options span{display:block;padding:5px 8px;border:1px solid var(--module-border);border-radius:999px;color:var(--module-muted);background:#fff;font-size:12px;font-weight:700}.backup-type-options input:checked+span{color:var(--module-green);border-color:#8fb09c;background:var(--module-green-soft)}
+  .backup-table{min-width:850px}.backup-file-cell{display:flex;align-items:center;gap:10px;min-width:210px}.backup-file-cell>span:last-child{min-width:0}.backup-file-cell strong{display:block;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.backup-file-icon{position:relative;width:37px;height:40px;display:grid;place-items:center;flex:0 0 auto;color:#416b50}.backup-file-icon svg{width:32px;height:36px;fill:#edf5ef;stroke:currentColor;stroke-width:1.4}.backup-file-icon b{position:absolute;bottom:7px;font-size:12px;letter-spacing:.03em}.backup-notes{display:block;max-width:190px;overflow:hidden;color:var(--module-ink);font-weight:700;text-overflow:ellipsis;white-space:nowrap}.module-action-menu-list button:disabled{opacity:.45;cursor:not-allowed}
   @media(max-width:980px){.backup-advanced-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
   @media(max-width:650px){.backup-upload-fields,.backup-advanced-grid{grid-template-columns:1fr}.backup-upload-actions{align-items:stretch;flex-direction:column}.backup-upload-actions .module-button{width:100%}}
+  .backup-file-details {max-width:260px;margin-top:6px}.backup-file-details summary{color:var(--ui-primary);min-height:38px;display:flex;align-items:center;font-size:14px;cursor:pointer}.backup-file-details dl{margin:0;white-space:normal;overflow-wrap:anywhere}.backup-file-details dt{margin-top:8px;font-size:12px;color:var(--ui-text-muted)}.backup-file-details dd{margin:2px 0 0;font-size:14px}.backup-advanced>summary{display:flex;align-items:center;min-height:44px;font-size:14px;gap:12px}.backup-type-options span{min-height:44px;display:flex;align-items:center;font-size:14px}.backup-type-options input:focus-visible+span{outline:3px solid var(--ui-focus);outline-offset:3px}.backup-file-icon b{display:none}.backup-dropzone strong{font-size:14px}.backup-dropzone input{font-size:14px;max-width:100%;min-height:44px}
 </style>
 @endpush
 
@@ -160,7 +164,7 @@
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     const panel = document.getElementById('backupUpload');
-    function openUpload() { if (!panel) return; panel.open = true; panel.scrollIntoView({behavior:'smooth', block:'start'}); setTimeout(() => document.getElementById('backupFilesInput')?.focus(), 350); }
+    function openUpload() { if (!panel) return; panel.open = true; panel.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block:'start'}); setTimeout(() => document.getElementById('backupFilesInput')?.focus(), 350); }
     document.getElementById('openBackupUpload')?.addEventListener('click', openUpload);
     document.getElementById('emptyBackupUpload')?.addEventListener('click', openUpload);
 

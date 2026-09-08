@@ -5,7 +5,7 @@
 @push('styles')
   @include('partials.operations-ui-styles')
   <style>
-    .assistance-sector-switch{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--module-border);border-radius:10px;background:#fff}.assistance-sector-switch>span{margin-right:3px;color:var(--module-muted);font-size:8px;font-weight:900;letter-spacing:.05em;text-transform:uppercase}.assistance-sector-link{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid #dce5df;border-radius:8px;color:#4f5e55;background:#fafcfb;font-size:9px;font-weight:850;text-decoration:none}.assistance-sector-link:hover{border-color:#9eb6a7;color:var(--module-green)}.assistance-sector-link.is-active{color:#fff;border-color:#17643a;background:#17643a}.assistance-sector-link.is-fisheries.is-active{border-color:#2f7891;background:#2f7891}.assistance-sector-dot{width:7px;height:7px;border-radius:50%;background:#8ea097}.assistance-sector-link.is-fisheries .assistance-sector-dot{background:#4b91aa}.assistance-sector-link.is-active .assistance-sector-dot{background:#fff}.module-badge-fisheries{color:#236b85;background:#e8f5f9}.module-page>.module-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}@media(max-width:900px){.module-page>.module-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.module-page>.module-kpis{grid-template-columns:1fr}}
+    .assistance-sector-switch{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--module-border);border-radius:10px;background:#fff}.assistance-sector-switch>span{margin-right:3px;color:var(--module-muted);font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:none}.assistance-sector-link{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid #dce5df;border-radius:8px;color:#4f5e55;background:#fafcfb;font-size:12px;font-weight:700;text-decoration:none}.assistance-sector-link:hover{border-color:#9eb6a7;color:var(--module-green)}.assistance-sector-link.is-active{color:#fff;border-color:#17643a;background:#17643a}.assistance-sector-link.is-fisheries.is-active{border-color:#2f7891;background:#2f7891}.assistance-sector-dot{width:7px;height:7px;border-radius:50%;background:#8ea097}.assistance-sector-link.is-fisheries .assistance-sector-dot{background:#4b91aa}.assistance-sector-link.is-active .assistance-sector-dot{background:#fff}.module-badge-fisheries{color:#236b85;background:#e8f5f9}.module-page>.module-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}@media(max-width:900px){.module-page>.module-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.module-page>.module-kpis{grid-template-columns:1fr}}
   </style>
 @endpush
 
@@ -69,12 +69,7 @@
       <strong>{{ number_format((int) ($uniqueRecipients ?? 0)) }}</strong>
       <small>Distinct linked farmer profiles</small>
     </article>
-    <article class="module-kpi">
-      <div class="module-kpi-top"><span class="module-kpi-label">Average weighted release</span><span class="module-kpi-icon"><svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"></path></svg></span></div>
-      <strong>{{ number_format((float) ($averageKgs ?? 0), 2) }} <small>kg</small></strong>
-      <small>Latest release: {{ $fmtDate($latestReceived) }}</small>
-    </article>
-    <article class="module-kpi">
+<article class="module-kpi">
       <div class="module-kpi-top"><span class="module-kpi-label">Fisheries releases</span><span class="module-kpi-icon module-kpi-icon-blue"><svg viewBox="0 0 24 24"><path d="M4 12c3-4 7-6 12-4l4-3v6l-4-3c-5 2-9 0-12 4Z"></path><circle cx="14" cy="7.5" r=".5"></circle><path d="M4 12c3 4 7 6 12 4l4 3v-6l-4 3"></path></svg></span></div>
       <strong>{{ number_format((int) ($fisheriesRecords ?? 0)) }}</strong>
       <small>Fisheries records matching this view</small>
@@ -99,6 +94,10 @@
         @endif
         <div class="module-field"><label for="riceAssistanceSector">Assistance sector</label><select class="module-input" id="riceAssistanceSector" name="assistance_sector"><option value="">All sectors</option>@foreach(($assistanceSectorOptions ?? []) as $value => $label)<option value="{{ $value }}" @selected($selectedSector === $value)>{{ $label }}</option>@endforeach</select></div>
         <div class="module-field"><label for="riceInputCategory">Assistance category</label><select class="module-input" id="riceInputCategory" name="input_category"><option value="">All categories</option>@foreach(($inputCategoryOptions ?? []) as $value => $label)<option value="{{ $value }}" @selected(request('input_category') === $value)>{{ $label }}</option>@endforeach</select></div>
+      </div>
+      <details class="module-more" @if(collect(['seed_variety_claimed', 'received_from', 'received_to', 'gender', 'kgs_min', 'kgs_max'])->contains(fn ($key) => filled(request($key))) || (int) $perPage !== 10) open @endif>
+        <summary>More filters @if(collect(['seed_variety_claimed', 'received_from', 'received_to', 'gender', 'kgs_min', 'kgs_max'])->contains(fn ($key) => filled(request($key))) || (int) $perPage !== 10)<span class="module-badge">Active filters</span>@endif</summary>
+        <div class="module-more-content"><div class="module-filter-grid">
         <div class="module-field"><label for="riceVariety">Item, species, or variety</label><input class="module-input" id="riceVariety" name="seed_variety_claimed" value="{{ request('seed_variety_claimed') }}" placeholder="Any agriculture or fisheries item"></div>
         <div class="module-field"><label for="riceFrom">Received from</label><input class="module-input" id="riceFrom" type="date" name="received_from" value="{{ request('received_from') }}"></div>
         <div class="module-field"><label for="riceTo">Received to</label><input class="module-input" id="riceTo" type="date" name="received_to" value="{{ request('received_to') }}"></div>
@@ -107,48 +106,18 @@
         <div class="module-field"><label for="riceKgMax">Maximum quantity</label><input class="module-input" id="riceKgMax" type="number" min="0" step="0.01" name="kgs_max" value="{{ request('kgs_max') }}" placeholder="Any"></div>
         <div class="module-field"><label for="ricePerPage">Rows per page</label><select class="module-input" id="ricePerPage" name="per_page">@foreach([10,20,50,100] as $n)<option value="{{ $n }}" @selected((int) $perPage === $n)>{{ $n }} rows</option>@endforeach</select></div>
       </div>
+        </div>
+      </details>
       <div class="module-filter-actions"><span>@if($hasFilters)<span class="module-active-filter">Totals and charts reflect these filters</span>@else Totals and charts reflect all accessible records @endif</span><div class="module-filter-buttons">@if($hasFilters)<a class="module-button" href="{{ route('rice-seed-distributions.index') }}">Clear filters</a>@endif<button class="module-button module-button-primary" type="submit">Apply filters</button></div></div>
     </form>
   </section>
-
-  <section class="module-analytics-grid" aria-label="Agriculture and fisheries assistance analytics">
-    <article class="module-chart">
-      <div class="module-chart-head"><h3>Monthly weight-based trend</h3><p>Kilograms distributed during {{ $trendYear }}</p></div>
-      <div class="module-chart-body"><canvas id="riceMonthlyChart"></canvas>@if(collect($charts['monthly_values'] ?? [])->sum() <= 0)<div class="module-chart-empty">No releases recorded for {{ $trendYear }}.</div>@endif</div>
-    </article>
-    <article class="module-chart">
-      <div class="module-chart-head"><h3>Leading rice seed varieties</h3><p>Top rice varieties released in kilograms</p></div>
-      <div class="module-chart-body"><canvas id="riceVarietyChart"></canvas>@if(collect($charts['seed_variety_values'] ?? [])->sum() <= 0)<div class="module-chart-empty">No seed variety data for this view.</div>@endif</div>
-    </article>
-  </section>
-
-  <details class="module-more">
-    <summary>Open detailed program analytics</summary>
-    <div class="module-more-content">
-      <div class="module-analytics-grid">
-        @foreach([
-          ['riceInputCategoryChart','Assistance category mix','Release records by assistance type'],
-          ['riceLocationChart','Top farm locations','Kilograms by farm location'],
-          ['riceAreaChart','Farm area by municipality','Total recorded hectares'],
-          ['riceGenderChart','Recipient gender','Distribution record count'],
-          ['riceAgeChart','Recipient age groups','Distribution record count'],
-          ['riceCropChart','Crop establishment','Direct and transplanted methods'],
-          ['riceYieldChart','Leading planted varieties','Total production bags'],
-          ['riceClassChart','Seed class','Distribution record count'],
-          ['riceEligibilityChart','Eligibility groups','Tagged recipient records']
-        ] as [$id,$title,$subtitle])
-          <article class="module-chart"><div class="module-chart-head"><h3>{{ $title }}</h3><p>{{ $subtitle }}</p></div><div class="module-chart-body"><canvas id="{{ $id }}"></canvas></div></article>
-        @endforeach
-      </div>
-    </div>
-  </details>
 
   <section class="module-panel">
     <div class="module-table-tools"><div><strong>Distribution register</strong><span>{{ number_format($records->total()) }} {{ Str::plural('record', $records->total()) }} · open details for monitoring fields</span></div></div>
     @if($records->isNotEmpty())
       <div class="module-table-scroll">
         <table class="module-table">
-          <thead><tr><th>Recipient</th><th>FFRS / RSBSA</th><th>Farm location</th><th>Input issued</th><th class="module-numeric">Release</th><th>Claim details</th><th>Eligibility</th><th><span class="sr-only">Actions</span></th></tr></thead>
+          <thead><tr><th>Recipient</th><th>Farm location</th><th>Input issued</th><th class="module-numeric">Release</th><th><span class="sr-only">Actions</span></th></tr></thead>
           <tbody>
             @foreach($records as $record)
               @php
@@ -163,17 +132,15 @@
                 $unitLabel = $unitShortLabels[$unit] ?? $unit;
               @endphp
               <tr>
-                <td><div class="module-person"><span class="module-avatar">{{ $initials ?: 'FR' }}</span><span class="module-person-copy"><strong>{{ $name ?: 'Unnamed recipient' }}</strong><small>{{ $record->gender ?: 'Gender not recorded' }}</small></span></div></td>
-                <td class="module-mono"><strong>{{ $record->ffrs ?: 'Not assigned' }}</strong></td>
+                <td><div class="module-person"><span class="module-avatar">{{ $initials ?: 'FR' }}</span><span class="module-person-copy"><strong>{{ $name ?: 'Unnamed recipient' }}</strong><small>FFRS {{ $record->ffrs ?: 'not assigned' }}</small></span></div></td>
                 <td><strong>{{ $record->farm_municipality ?: 'Municipality not recorded' }}</strong><small>{{ $record->farm_location ?: 'Farm location not recorded' }}</small></td>
                 <td><strong>{{ $record->seed_variety_claimed ?: 'Not recorded' }}</strong><small><span class="module-badge {{ $categoryBadge }}">{{ $categoryLabel }}</span> · {{ $record->assistanceSectorLabel() }}@if(str_contains($category, 'seed')) · {{ $record->seed_class ?: 'Class not recorded' }}@endif</small></td>
                 <td class="module-numeric"><strong>{{ number_format((float) $record->kgs_received, 2) }} {{ $unitLabel }}</strong><small>{{ $fmtDate($record->date_received) }}</small></td>
-                <td><strong>{{ $record->claimed_area_ha !== null ? number_format((float) $record->claimed_area_ha, 2).' ha' : '—' }}</strong><small>{{ $record->claimed_seeds_kg !== null ? number_format((float) $record->claimed_seeds_kg, 2).' kg claimed' : 'Claimed seeds not recorded' }}</small></td>
-                <td><div class="module-badges">@forelse($eligibility as $tag)<span class="module-badge module-badge-green">{{ $tag }}</span>@empty<span class="module-badge">None</span>@endforelse</div></td>
                 <td><div class="module-row-actions"><button class="module-button module-button-small" type="button" data-row-detail="rice-detail-{{ $record->id }}" aria-expanded="false">Details</button>@if($canManageOperations)<a class="module-button module-button-small" href="{{ route('rice-seed-distributions.edit', $record) }}">Edit</a><form method="POST" action="{{ route('rice-seed-distributions.destroy', $record) }}" onsubmit="return confirm('Delete this distribution record?')">@csrf @method('DELETE')<button class="module-button module-button-danger module-button-small" type="submit">Delete</button></form>@endif</div></td>
               </tr>
               <tr class="module-detail-row" id="rice-detail-{{ $record->id }}" hidden>
-                <td colspan="8"><dl class="module-detail-grid">
+                <td colspan="5"><dl class="module-detail-grid">
+                  <div><dt>Gender</dt><dd>{{ $record->gender ?: 'Not recorded' }}</dd></div><div><dt>Claimed area</dt><dd>{{ $record->claimed_area_ha !== null ? number_format((float) $record->claimed_area_ha, 2).' ha' : 'Not recorded' }}</dd></div><div><dt>Claimed seeds</dt><dd>{{ $record->claimed_seeds_kg !== null ? number_format((float) $record->claimed_seeds_kg, 2).' kg' : 'Not recorded' }}</dd></div><div><dt>Eligibility</dt><dd>{{ $eligibility->implode(', ') ?: 'None recorded' }}</dd></div>
                   <div><dt>Contact</dt><dd>{{ $record->contact_number ?: '—' }}</dd></div><div><dt>Date of birth</dt><dd>{{ $fmtDate($record->date_of_birth) }}</dd></div><div><dt>Farm area</dt><dd>{{ $record->farm_area_ha !== null ? number_format((float) $record->farm_area_ha, 2).' ha' : '—' }}</dd></div><div><dt>Ecosystem</dt><dd>{{ $record->ecosystem ?: '—' }}</dd></div><div><dt>Ecosystem source</dt><dd>{{ $record->ecosystem_source ?: '—' }}</dd></div>
                   <div><dt>Assistance sector</dt><dd>{{ $record->assistanceSectorLabel() }}</dd></div><div><dt>Lot / batch</dt><dd>{{ $record->lot_series ?: '—' }}</dd></div><div><dt>Release notes</dt><dd>{{ $record->input_notes ?: '—' }}</dd></div><div><dt>Sowing schedule</dt><dd>{{ $record->date_of_sowing_label ?: 'Not applicable / not recorded' }}</dd></div><div><dt>Average bag weight</dt><dd>{{ $record->avg_weight_per_bag_kg !== null ? $record->avg_weight_per_bag_kg.' kg' : '—' }}</dd></div><div><dt>Production</dt><dd>{{ $record->total_production_bags !== null ? number_format($record->total_production_bags).' bags' : '—' }}</dd></div><div><dt>Harvested area</dt><dd>{{ $record->avg_area_harvested_ha !== null ? number_format((float) $record->avg_area_harvested_ha, 2).' ha' : '—' }}</dd></div>
                   <div><dt>Variety planted</dt><dd>{{ $record->seed_variety_planted ?: '—' }}</dd></div><div><dt>Province</dt><dd>{{ $record->farm_province ?: '—' }}</dd></div>
@@ -188,11 +155,75 @@
     @endif
     @include('partials.pagination', ['paginator' => $records, 'label' => 'distribution record'])
   </section>
+  <details class="module-more" id="assistanceReports">
+    <summary>Reports — assistance totals and trends</summary>
+    <div class="module-more-content">
+      <p class="module-hint" data-report-status role="status">Charts load when you open Reports. Figures are also available in tables.</p>
+      <p class="module-hint">Average weight-based release: {{ number_format((float) ($averageKgs ?? 0), 2) }} kg. Fisheries release records: {{ number_format((int) ($fisheriesRecords ?? 0)) }}. Latest release: {{ $fmtDate($latestReceived) }}.</p>
+      <div class="module-analytics-grid">
+        <article class="module-chart">
+          <div class="module-chart-head"><h3>Monthly weight-based trend</h3></div>
+          <div class="module-chart-body"><canvas id="riceMonthlyChart" aria-hidden="true"></canvas></div>
+          @include('partials.operational-report-figures', ['reportTitle' => 'Monthly weight-based trend', 'reportLabels' => $charts['monthly_labels'] ?? [], 'reportValues' => $charts['monthly_values'] ?? [], 'reportUnit' => 'Kilograms in '. $trendYear, 'reportDecimals' => 2])
+        </article>
+        <article class="module-chart">
+          <div class="module-chart-head"><h3>Leading rice seed varieties</h3></div>
+          <div class="module-chart-body"><canvas id="riceVarietyChart" aria-hidden="true"></canvas></div>
+          @include('partials.operational-report-figures', ['reportTitle' => 'Leading rice seed varieties', 'reportLabels' => $charts['seed_variety_labels'] ?? [], 'reportValues' => $charts['seed_variety_values'] ?? [], 'reportUnit' => 'Kilograms', 'reportDecimals' => 2])
+        </article>
+        <article class="module-chart">
+          <div class="module-chart-head"><h3>Assistance category mix</h3></div>
+          <div class="module-chart-body"><canvas id="riceInputCategoryChart" aria-hidden="true"></canvas></div>
+          @include('partials.operational-report-figures', ['reportTitle' => 'Assistance category mix', 'reportLabels' => $charts['input_category_labels'] ?? [], 'reportValues' => $charts['input_category_values'] ?? [], 'reportUnit' => 'Release records', 'reportDecimals' => 0])
+        </article>
+        <article class="module-chart">
+          <div class="module-chart-head"><h3>Top farm locations</h3></div>
+          <div class="module-chart-body"><canvas id="riceLocationChart" aria-hidden="true"></canvas></div>
+          @include('partials.operational-report-figures', ['reportTitle' => 'Top farm locations', 'reportLabels' => $charts['toploc_labels'] ?? [], 'reportValues' => $charts['toploc_values'] ?? [], 'reportUnit' => 'Kilograms', 'reportDecimals' => 2])
+        </article>
+        <article class="module-chart">
+          <div class="module-chart-head"><h3>Farm area by municipality</h3></div>
+          <div class="module-chart-body"><canvas id="riceAreaChart" aria-hidden="true"></canvas></div>
+          @include('partials.operational-report-figures', ['reportTitle' => 'Farm area by municipality', 'reportLabels' => $charts['area_mun_labels'] ?? [], 'reportValues' => $charts['area_mun_values'] ?? [], 'reportUnit' => 'Hectares', 'reportDecimals' => 2])
+        </article>
+        <article class="module-chart">
+          <div class="module-chart-head"><h3>Recipient gender</h3></div>
+          <div class="module-chart-body"><canvas id="riceGenderChart" aria-hidden="true"></canvas></div>
+          @include('partials.operational-report-figures', ['reportTitle' => 'Recipient gender', 'reportLabels' => $charts['gender_labels'] ?? [], 'reportValues' => $charts['gender_values'] ?? [], 'reportUnit' => 'Release records', 'reportDecimals' => 0])
+        </article>
+        <article class="module-chart">
+          <div class="module-chart-head"><h3>Recipient age groups</h3></div>
+          <div class="module-chart-body"><canvas id="riceAgeChart" aria-hidden="true"></canvas></div>
+          @include('partials.operational-report-figures', ['reportTitle' => 'Recipient age groups', 'reportLabels' => $charts['age_labels'] ?? [], 'reportValues' => $charts['age_values'] ?? [], 'reportUnit' => 'Release records', 'reportDecimals' => 0])
+        </article>
+        <article class="module-chart">
+          <div class="module-chart-head"><h3>Crop establishment</h3></div>
+          <div class="module-chart-body"><canvas id="riceCropChart" aria-hidden="true"></canvas></div>
+          @include('partials.operational-report-figures', ['reportTitle' => 'Crop establishment', 'reportLabels' => $charts['crop_est_labels'] ?? [], 'reportValues' => $charts['crop_est_values'] ?? [], 'reportUnit' => 'Release records', 'reportDecimals' => 0])
+        </article>
+        <article class="module-chart">
+          <div class="module-chart-head"><h3>Leading planted varieties</h3></div>
+          <div class="module-chart-body"><canvas id="riceYieldChart" aria-hidden="true"></canvas></div>
+          @include('partials.operational-report-figures', ['reportTitle' => 'Leading planted varieties', 'reportLabels' => $charts['yield_variety_labels'] ?? [], 'reportValues' => $charts['yield_variety_values'] ?? [], 'reportUnit' => 'Production bags', 'reportDecimals' => 0])
+        </article>
+        <article class="module-chart">
+          <div class="module-chart-head"><h3>Seed class</h3></div>
+          <div class="module-chart-body"><canvas id="riceClassChart" aria-hidden="true"></canvas></div>
+          @include('partials.operational-report-figures', ['reportTitle' => 'Seed class', 'reportLabels' => $charts['seed_class_labels'] ?? [], 'reportValues' => $charts['seed_class_values'] ?? [], 'reportUnit' => 'Release records', 'reportDecimals' => 0])
+        </article>
+        <article class="module-chart">
+          <div class="module-chart-head"><h3>Eligibility groups</h3></div>
+          <div class="module-chart-body"><canvas id="riceEligibilityChart" aria-hidden="true"></canvas></div>
+          @include('partials.operational-report-figures', ['reportTitle' => 'Eligibility groups', 'reportLabels' => $charts['elig_labels'] ?? [], 'reportValues' => $charts['elig_values'] ?? [], 'reportUnit' => 'Tagged release records', 'reportDecimals' => 0])
+        </article>
+      </div>
+    </div>
+  </details>
+
 </div>
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
 (() => {
   document.querySelectorAll('[data-row-detail]').forEach(button => {
@@ -206,10 +237,10 @@
     });
   });
 
-  if (typeof Chart === 'undefined') return;
+  document.getElementById('assistanceReports').renderOperationalCharts = () => {
   const charts = @json($charts);
   const grid = 'rgba(23,33,27,.07)';
-  const ticks = { color:'#68756d', font:{ size:9, weight:'600' } };
+  const ticks = { color:'#68756d', font:{ size:12, weight:'600' } };
   const baseOptions = { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false }, tooltip:{ backgroundColor:'#17211b', padding:9, cornerRadius:6 } }, scales:{ x:{ grid:{ display:false }, ticks }, y:{ beginAtZero:true, grid:{ color:grid }, ticks } } };
   const create = (id, type, labels, data, options = {}, color = '#17643a') => {
     const canvas = document.getElementById(id); if (!canvas) return;
@@ -217,15 +248,17 @@
   };
   create('riceMonthlyChart','line',charts.monthly_labels,charts.monthly_values);
   create('riceVarietyChart','bar',charts.seed_variety_labels,charts.seed_variety_values,{ ...baseOptions, indexAxis:'y' },'#3f8659');
-  create('riceInputCategoryChart','doughnut',charts.input_category_labels,charts.input_category_values,{ responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:9}}}} },['#17643a','#d5a034','#3575b5','#7b68a6','#8d9690','#9c6549','#2f7891','#4b91aa','#5c7f91','#70a5ae','#5c8795']);
+  create('riceInputCategoryChart','doughnut',charts.input_category_labels,charts.input_category_values,{ responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:12}}}} },['#17643a','#d5a034','#3575b5','#7b68a6','#8d9690','#9c6549','#2f7891','#4b91aa','#5c7f91','#70a5ae','#5c8795']);
   create('riceLocationChart','bar',charts.toploc_labels,charts.toploc_values,{ ...baseOptions, indexAxis:'y' },'#b47a19');
   create('riceAreaChart','bar',charts.area_mun_labels,charts.area_mun_values,{ ...baseOptions, indexAxis:'y' },'#3575b5');
-  create('riceGenderChart','doughnut',charts.gender_labels,charts.gender_values,{ responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:9}}}} },['#3575b5','#d5a034','#85928a']);
+  create('riceGenderChart','doughnut',charts.gender_labels,charts.gender_values,{ responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:12}}}} },['#3575b5','#d5a034','#85928a']);
   create('riceAgeChart','bar',charts.age_labels,charts.age_values,{},'#588d6a');
-  create('riceCropChart','doughnut',charts.crop_est_labels,charts.crop_est_values,{ responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:9}}}} },['#17643a','#d5a034']);
+  create('riceCropChart','doughnut',charts.crop_est_labels,charts.crop_est_values,{ responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:12}}}} },['#17643a','#d5a034']);
   create('riceYieldChart','bar',charts.yield_variety_labels,charts.yield_variety_values,{ ...baseOptions, indexAxis:'y' },'#6b75aa');
-  create('riceClassChart','doughnut',charts.seed_class_labels,charts.seed_class_values,{ responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:9}}}} },['#17643a','#d5a034','#8d9690']);
+  create('riceClassChart','doughnut',charts.seed_class_labels,charts.seed_class_values,{ responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:12}}}} },['#17643a','#d5a034','#8d9690']);
   create('riceEligibilityChart','bar',charts.elig_labels,charts.elig_values,{},'#4d8762');
+  };
 })();
 </script>
+@include('partials.operational-report-loader', ['reportId' => 'assistanceReports'])
 @endpush

@@ -415,6 +415,7 @@ class MunicipalityBoundaryController extends Controller
             $boundary,
             $request->input('_record_version'),
             function (MunicipalityBoundary $current) use ($validated, $payload, $request): MunicipalityBoundary {
+                $this->authorize('update', $current);
                 $current->update(array_merge($payload, [
                     'name' => $validated['name'] ?? $current->name,
                     'color' => strtoupper($validated['color'] ?? $current->color),
@@ -450,6 +451,7 @@ class MunicipalityBoundaryController extends Controller
             $boundary,
             $request->input('_record_version'),
             function (MunicipalityBoundary $current) use ($request, &$replacedBoundaries): MunicipalityBoundary {
+                $this->authorize('activate', $current);
                 $replacedBoundaries = MunicipalityBoundary::query()
                     ->where('municipality_id', $current->municipality_id)
                     ->where('status', MunicipalityBoundary::STATUS_ACTIVE)
@@ -503,6 +505,7 @@ class MunicipalityBoundaryController extends Controller
             $boundary,
             $request->input('_record_version'),
             function (MunicipalityBoundary $current) use ($request): MunicipalityBoundary {
+                $this->authorize('archive', $current);
                 $current->update([
                     'status' => MunicipalityBoundary::STATUS_ARCHIVED,
                     'archived_at' => now(),
@@ -572,7 +575,7 @@ class MunicipalityBoundaryController extends Controller
         string $event,
         array $metadata = []
     ): JsonResponse {
-        $municipalityId = (int) $validated['municipality_id'];
+        $municipalityId = $this->municipalityAccess->resolveForWrite($request->user(), $validated['municipality_id']);
         $status = $validated['status'];
         $this->assertNoOverlap($geometry, $municipalityId);
 
@@ -661,7 +664,7 @@ class MunicipalityBoundaryController extends Controller
         foreach ($query->get() as $other) {
             if ($this->geometry->overlaps($geometry, $other->geojson)) {
                 throw ValidationException::withMessages([
-                    'geojson' => 'This boundary overlaps the active official boundary for '.$other->municipality->name.'. Resolve the overlap before saving.',
+                    'geojson' => 'This boundary overlaps another active municipality boundary. Ask the System Owner to review the overlap before saving.',
                 ]);
             }
         }

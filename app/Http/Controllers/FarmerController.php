@@ -635,8 +635,6 @@ class FarmerController extends Controller
             $rules['municipality_id'] = [
                 'required',
                 'integer',
-                Rule::exists('municipalities', 'id')
-                    ->where(fn ($query) => $query->where('is_active', true)),
             ];
         }
 
@@ -651,7 +649,7 @@ class FarmerController extends Controller
 
         $data['municipality_id'] = $municipality->id;
         $data['farm_municipality'] = $municipality->name;
-        $data['farm_province'] = $municipality->province ?: 'Tarlac';
+        $data['farm_province'] = $municipality->province ?: $municipality->supervisingProvince?->name;
 
         foreach (
             ['is_arb', 'is_4ps', 'is_ip', 'is_pwd', 'is_sc', 'is_ofw']
@@ -768,8 +766,6 @@ class FarmerController extends Controller
             $rules['municipality_id'] = [
                 'required',
                 'integer',
-                Rule::exists('municipalities', 'id')
-                    ->where(fn ($query) => $query->where('is_active', true)),
             ];
         }
 
@@ -912,7 +908,7 @@ class FarmerController extends Controller
 
                         'farm_location' => $farmLocation ?: 'UNKNOWN',
                         'farm_municipality' => $municipality->name,
-                        'farm_province' => $municipality->province ?: 'Tarlac',
+                        'farm_province' => $municipality->province ?: $municipality->supervisingProvince?->name,
 
                         'ecosystem' => null,
                         'ecosystem_source' => null,
@@ -1010,7 +1006,7 @@ class FarmerController extends Controller
                 $data['farm_area_ha'] = $farmArea;
                 $data['municipality_id'] = $municipality->id;
                 $data['farm_municipality'] = $municipality->name;
-                $data['farm_province'] = $municipality->province ?: 'Tarlac';
+                $data['farm_province'] = $municipality->province ?: $municipality->supervisingProvince?->name;
 
                 $existing = Farmer::query()
                     ->where('municipality_id', $municipality->id)
@@ -1276,35 +1272,17 @@ class FarmerController extends Controller
         User $user,
         string $column = 'municipality_id'
     ): Builder {
-        if ($user->isProvincialUser()) {
-            return $query;
-        }
-
-        if (! $user->municipality_id) {
-            abort(403, 'Your account is not assigned to a municipality.');
-        }
-
-        return $query->where($column, $user->municipality_id);
+        return $this->municipalityAccess->scope($query, $user, $column);
     }
 
     /**
-     * Prevent a municipal user from opening another municipality's farmer.
+     * Reuse the record policy for every direct farmer workflow.
      */
     private function ensureFarmerIsAccessible(
         Farmer $farmer,
         User $user
     ): void {
-        if ($user->isProvincialUser()) {
-            return;
-        }
-
-        if (
-            ! $user->municipality_id
-            || (int) $farmer->municipality_id
-                !== (int) $user->municipality_id
-        ) {
-            abort(403, 'You cannot access farmers from another municipality.');
-        }
+        abort_unless($user->can('view', $farmer), 403);
     }
 
     /**
@@ -1314,20 +1292,9 @@ class FarmerController extends Controller
         Request $request,
         User $user
     ): Municipality {
-        if ($user->isProvincialUser()) {
-            return Municipality::query()
-                ->whereKey((int) $request->input('municipality_id'))
-                ->where('is_active', true)
-                ->firstOrFail();
-        }
-
-        if (! $user->municipality_id) {
-            abort(403, 'Your account is not assigned to a municipality.');
-        }
-
         return Municipality::query()
-            ->whereKey($user->municipality_id)
-            ->where('is_active', true)
+            ->whereKey($this->municipalityAccess->resolveForWrite($user, $request->input('municipality_id')))
+            ->active()
             ->firstOrFail();
     }
 

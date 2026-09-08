@@ -5,13 +5,12 @@
 @section('content')
 @include('partials.operations-ui-styles')
 <div class="module-page">
-  @include('farmers.partials.workspace-nav')
 
   <header class="module-header">
     <div>
       <div class="module-eyebrow">Farmer registry</div>
       <h1>Add farmer profile</h1>
-      <p>Create the farmer's core registry record first. Distribution history and mapped farm boundaries can be added after the profile is saved.</p>
+      <p>Enter the farmer's details. Add assistance and parcels after saving.</p>
     </div>
     <div class="module-actions">
       <a class="module-button" href="{{ route('farmers.index') }}">
