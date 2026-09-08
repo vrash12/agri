@@ -237,6 +237,7 @@
     selectedBoundary: null,
     editorMode: null,
     editableOverlay: null,
+    originalEditorCoordinates: new Map(),
     draftPoints: [],
     draftOverlay: null,
     mapClick: null,
@@ -725,6 +726,10 @@
     el('editorStatusField').hidden = true;
     el('replaceConfirmed').checked = false;
     state.editableOverlay = new google.maps.Polygon({paths: googlePaths(polygons[0]), strokeColor: boundary.color, strokeWeight: 4, fillColor: boundary.color, fillOpacity: .24, editable: true, zIndex: 20});
+    // Keep source coordinates for untouched vertices: map normalization must not move shared borders.
+    state.editableOverlay.getPath().getArray().forEach((point, index) => {
+      state.originalEditorCoordinates.set(point.lng() + ':' + point.lat(), polygons[0][0][index].slice(0, 2));
+    });
     state.editableOverlay.setMap(state.map);
     updateDrawState();
     focusOverlay([state.editableOverlay]);
@@ -751,14 +756,22 @@
     if (state.editableOverlay) state.editableOverlay.setMap(null);
     state.draftOverlay = null;
     state.editableOverlay = null;
+    state.originalEditorCoordinates.clear();
     state.draftPoints = [];
     state.editorMode = null;
     if (el('boundaryEditor')) el('boundaryEditor').hidden = true;
   }
 
-  function pointsToGeoJson(points) {
-    const coordinates = points.map(point => [Number(point.lng().toFixed(7)), Number(point.lat().toFixed(7))]);
-    if (coordinates.length) coordinates.push(coordinates[0]);
+  function pointsToGeoJson(points, originalCoordinates) {
+    const coordinates = points.map(point => {
+      const original = originalCoordinates?.get(point.lng() + ':' + point.lat());
+      return original ? original.slice() : [point.lng(), point.lat()];
+    });
+    if (coordinates.length) {
+      const first = coordinates[0];
+      const last = coordinates[coordinates.length - 1];
+      if (first[0] !== last[0] || first[1] !== last[1]) coordinates.push(first.slice());
+    }
     return {type: 'Polygon', coordinates: [coordinates]};
   }
 
@@ -774,9 +787,12 @@
     const body = {
       name: name,
       color: el('editorColor').value,
-      geojson: pointsToGeoJson(points),
       replace_confirmed: el('replaceConfirmed').checked ? 1 : 0,
     };
+    const geometry = pointsToGeoJson(points, editing ? state.originalEditorCoordinates : null);
+    if (!editing || JSON.stringify(geometry) !== JSON.stringify(state.selectedBoundary.geojson)) {
+      body.geojson = geometry;
+    }
     let url = settings.storeUrl;
     let method = 'POST';
     if (editing) {

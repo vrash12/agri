@@ -406,16 +406,18 @@ class MunicipalityBoundaryController extends Controller
             ]);
         }
 
-        $this->assertNoOverlap($newGeometry, $boundary->municipality_id, $boundary->id);
         $before = $this->auditSnapshot($boundary);
-        $payload = $this->geometryPayload($newGeometry);
+        $payload = $geometryChanged ? $this->geometryPayload($newGeometry) : [];
 
         /** @var MunicipalityBoundary $updated */
         $updated = $this->concurrentWrite->execute(
             $boundary,
             $request->input('_record_version'),
-            function (MunicipalityBoundary $current) use ($validated, $payload, $request): MunicipalityBoundary {
+            function (MunicipalityBoundary $current) use ($validated, $payload, $request, $newGeometry, $geometryChanged): MunicipalityBoundary {
                 $this->authorize('update', $current);
+                if ($geometryChanged) {
+                    $this->assertNoOverlap($newGeometry, $current->municipality_id, $current->id);
+                }
                 $current->update(array_merge($payload, [
                     'name' => $validated['name'] ?? $current->name,
                     'color' => strtoupper($validated['color'] ?? $current->color),

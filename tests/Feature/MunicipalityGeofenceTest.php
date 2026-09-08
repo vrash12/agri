@@ -201,6 +201,62 @@ class MunicipalityGeofenceTest extends TestCase
             ->assertJsonValidationErrors('geojson');
     }
 
+    public function test_name_and_color_changes_preserve_saved_geometry_even_with_an_existing_conflict(): void
+    {
+        $boundary = $this->createBoundary($this->first, 120.50123456789, 15.40123456789);
+        $neighbor = $this->createBoundary($this->second, 120.60, 15.50);
+        $geometryFields = ['geojson', 'area_ha', 'centroid_lat', 'centroid_lng', 'min_lat', 'max_lat', 'min_lng', 'max_lng', 'vertex_count'];
+        // Legacy/imported conflicts must not prevent harmless name or styling changes.
+        $neighbor->forceFill($boundary->only($geometryFields))->save();
+        $originalGeometry = $boundary->only($geometryFields);
+
+        foreach ([[], ['geojson' => $boundary->geojson]] as $geometryInput) {
+            $this->actingAs($this->superAdmin)
+                ->putJson(route('municipality-boundaries.update', $boundary), $geometryInput + [
+                    'name' => 'Reviewed boundary', 'color' => '#FACC15',
+                    '_record_version' => ConcurrentWrite::version($boundary->refresh()),
+                ])
+                ->assertOk()->assertJsonPath('boundary.color', '#FACC15');
+            $this->assertSame($originalGeometry, $boundary->refresh()->only($geometryFields));
+        }
+    }
+
+    public function test_geometry_edits_still_reject_actual_overlap_and_require_confirmation(): void
+    {
+        $boundary = $this->createBoundary($this->first, 120.50, 15.40);
+        $this->createBoundary($this->second, 120.53, 15.40);
+        $original = $boundary->getAttributes();
+        $body = [
+            'geojson' => $this->geoJsonSquare(120.525, 15.40, 0.02),
+            '_record_version' => ConcurrentWrite::version($boundary),
+        ];
+        $this->actingAs($this->superAdmin)
+            ->putJson(route('municipality-boundaries.update', $boundary), $body)
+            ->assertUnprocessable()->assertJsonValidationErrors('replace_confirmed');
+        $this->putJson(route('municipality-boundaries.update', $boundary), $body + ['replace_confirmed' => true])
+            ->assertUnprocessable()->assertJsonValidationErrors('geojson');
+        $this->assertSame($original, $boundary->fresh()->getAttributes());
+    }
+
+    public function test_safe_geometry_edit_retains_shared_edge_and_updates_measurements(): void
+    {
+        $boundary = $this->createBoundary($this->first, 120.50123456789, 15.40123456789);
+        $this->createBoundary($this->second, 120.52123456789, 15.40123456789);
+        $geometry = $boundary->geojson;
+        // Move the opposite edge; the shared border must remain exactly where it was.
+        $geometry['coordinates'][0][0][0] -= 0.001;
+        $geometry['coordinates'][0][3][0] -= 0.001;
+        $geometry['coordinates'][0][4] = $geometry['coordinates'][0][0];
+        $oldArea = $boundary->area_ha;
+        $this->actingAs($this->superAdmin)
+            ->putJson(route('municipality-boundaries.update', $boundary), [
+                'geojson' => $geometry, 'replace_confirmed' => true,
+                '_record_version' => ConcurrentWrite::version($boundary),
+            ])->assertOk();
+        $this->assertSame($geometry, $boundary->fresh()->geojson);
+        $this->assertGreaterThan($oldArea, $boundary->fresh()->area_ha);
+    }
+
     public function test_outside_parcel_is_blocked_and_partial_parcel_returns_warning(): void
     {
         $this->createBoundary($this->first, 120.50, 15.40, 0.02);

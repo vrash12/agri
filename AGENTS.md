@@ -541,6 +541,8 @@ Functions:
 
 `App\Support\GeoGeometry` is the authoritative geometry implementation and `App\Support\MunicipalityBoundaryGuard` is the farm-plot enforcement boundary. Do not copy point-in-polygon or overlap logic into controllers or JavaScript. A missing active boundary does not block existing parcel work; the review workspace reports those parcels as unconfigured until the Super Admin activates an official boundary.
 
+The boundary editor preserves full source precision for untouched vertices and does not round edited coordinates before saving. Rounding a shared border independently can create false overlaps. Name/color-only edits omit geometry; the controller preserves geometry and its measurements when unchanged, while changed shapes require normal confirmation and overlap checks after the record-version check. Regression commands: `node --test tests/JavaScript/municipality-boundary-editor.test.cjs` and the isolated `MunicipalityGeofenceTest` / `ProvinceAccessIsolationTest` suites.
+
 ## 6. Route inventory
 
 As of 2026-09-03, `php artisan route:list --json` reports 88 routes protected by Laravel authentication, including the Sanctum endpoint:

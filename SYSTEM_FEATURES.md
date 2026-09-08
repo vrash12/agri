@@ -194,6 +194,7 @@ Implementation status and remaining staff/staging checks are documented in [DESI
 - Configurable maximum geometry size.
 - Detection of overlapping active municipality boundaries.
 - Shared municipality edges are allowed when they do not create an actual overlap.
+- Changing a boundary's name or color preserves its saved shape. Vertex edits retain untouched shared-border coordinates at their original precision, preventing rounding from creating false overlap errors; genuine overlaps remain blocked.
 - Optimistic locking and municipality-level mutation locks for concurrent edits.
 - Explicit, idempotent reference imports cover all 18 Tarlac workspaces (17 municipalities and Tarlac City), the Bulacan province evaluation workspace, Baguio City, and all thirteen Benguet municipalities.
 - Reference files must be imported into each deployment's database before their boundaries appear on maps; deploying the code alone does not activate geofences. The Bulacan importer recognizes the legacy workspace code without renaming or replacing its existing records.
