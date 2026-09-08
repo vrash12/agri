@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Support\AuditTrail;
 use App\Support\GeoGeometry;
 use App\Support\ReferenceBoundaryAccess;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -34,42 +35,30 @@ class BulacanProvinceBoundarySeeder extends Seeder
     {
         $this->assertRequiredSchema();
 
-        $actor = ReferenceBoundaryAccess::actor('Bulacan');
-
-        $municipality = Municipality::query()->firstOrCreate(
-            ['code' => 'BULACAN'],
-            [
-                'name' => 'Bulacan',
-                'province' => 'Bulacan',
-                'province_id' => ReferenceBoundaryAccess::provinceId('Bulacan'),
-                'is_active' => true,
-            ]
-        );
-
-        if (! $municipality->is_active) {
-            throw new RuntimeException('The Bulacan workspace exists but is inactive. Activate it before importing its boundary.');
-        }
-
         $geometryService = app(GeoGeometry::class);
         [$boundaryGeometry, $metadata] = $this->loadBoundary($geometryService);
         $audit = null;
+        $actor = null;
+        $municipality = null;
 
         Cache::lock('municipality-boundaries:activation', 120)->block(15, function () use (
-            $actor,
-            $municipality,
+            &$actor,
+            &$municipality,
             $boundaryGeometry,
             $metadata,
             $geometryService,
             &$audit
         ): void {
             DB::transaction(function () use (
-                $actor,
-                $municipality,
+                &$actor,
+                &$municipality,
                 $boundaryGeometry,
                 $metadata,
                 $geometryService,
                 &$audit
             ): void {
+                $actor = ReferenceBoundaryAccess::actor('Bulacan');
+                $municipality = $this->resolveMunicipality();
                 $boundaries = MunicipalityBoundary::query()->lockForUpdate()->get();
 
                 foreach ($boundaries->where('status', MunicipalityBoundary::STATUS_ACTIVE) as $existing) {
@@ -100,6 +89,10 @@ class BulacanProvinceBoundarySeeder extends Seeder
                     fn (MunicipalityBoundary $boundary): bool => (int) $boundary->municipality_id === (int) $municipality->id
                         && $boundary->name === self::BOUNDARY_NAME
                 ) ?? new MunicipalityBoundary();
+                // Repeated imports preserve the saved styling and database-rounded metadata.
+                if ($record->exists && $record->isActive() && $record->geojson === $boundaryGeometry) {
+                    return;
+                }
                 $before = $record->exists ? $this->snapshot($record) : null;
 
                 $record->fill([
@@ -142,6 +135,34 @@ class BulacanProvinceBoundarySeeder extends Seeder
 
         $this->command?->info('Ready: the Bulacan province planning/reference geofence is active.');
         $this->command?->warn('This province boundary is approximate and requires Bulacan LGU/NAMRIA verification before official use.');
+    }
+
+    private function resolveMunicipality(): Municipality
+    {
+        $provinceId = ReferenceBoundaryAccess::provinceId('Bulacan');
+        // Production may retain the original BUL code; preserve its record and ownership.
+        $matches = Municipality::query()->where(function (Builder $query): void {
+            $query->whereIn(DB::raw('UPPER(TRIM(code))'), ['BUL', 'BULACAN', self::PSGC_CODE])
+                ->orWhereIn(DB::raw('LOWER(TRIM(name))'), ['bulacan', 'bulacan province']);
+        })->lockForUpdate()->get();
+        if ($matches->count() > 1) {
+            throw new RuntimeException('Multiple Bulacan workspaces match the name or code. Resolve the ambiguity before importing.');
+        }
+        if ($municipality = $matches->first()) {
+            if ($municipality->province_id !== $provinceId || mb_strtolower(trim((string) $municipality->province)) !== 'bulacan') {
+                throw new RuntimeException('The Bulacan workspace is assigned to a different province. Review its identity before importing.');
+            }
+            if (! $municipality->is_active) {
+                throw new RuntimeException('The Bulacan workspace exists but is inactive. Activate it before importing its boundary.');
+            }
+
+            return $municipality;
+        }
+
+        return Municipality::withoutEvents(fn (): Municipality => Municipality::query()->create([
+            'code' => 'BULACAN', 'name' => 'Bulacan', 'province' => 'Bulacan',
+            'province_id' => $provinceId, 'is_active' => true,
+        ]));
     }
 
     private function assertRequiredSchema(): void

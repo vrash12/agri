@@ -2,6 +2,8 @@
 
 Reference imports require an active System Owner or an active Super Admin assigned to the target province. `ReferenceBoundaryAccess` checks this assignment and gives new workspaces an explicit `province_id`. Apply the province-supervision migration and account setup described in `PROVINCE_SUPERVISION.md` before running these imports. These seeders are explicit maintenance commands and must not run automatically during deployment.
 
+Deploying the source files does not insert geofence records. Back up the target database and explicitly apply the requested reference imports there. The Bulacan importer reuses the legacy `BUL` workspace or an unambiguous matching name/code, preserves its ID and assignment, and rejects inactive, ambiguous, or foreign-province matches. Workspace creation rolls back with any rejected boundary; re-importing an unchanged active reference preserves its style and audit history.
+
 `tarlac_reference_boundaries.geojson` and `tarlac_extended_reference_boundaries.geojson` contain the six municipality features used by `TarlacMunicipalityDemoSeeder`.
 
 - Dataset: geoBoundaries `gbOpen` Philippines ADM3 (municipalities)
