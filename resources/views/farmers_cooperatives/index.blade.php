@@ -4,15 +4,66 @@
 
 @push('styles')
   @include('partials.operations-ui-styles')
+  <style>
+    .cooperative-directory .module-filter-grid { grid-template-columns:minmax(0,2fr) repeat(2,minmax(0,1fr)); gap:16px; }
+    .cooperative-directory .module-field { grid-column:auto; }
+    .cooperative-display-options { margin-top:16px; }
+    .cooperative-display-options > summary { display:flex; align-items:center; gap:8px; width:fit-content; min-height:44px; color:var(--ui-primary); font-weight:500; }
+    .cooperative-display-options > summary::after { content:'+'; }
+    .cooperative-display-options[open] > summary::after { content:'−'; }
+    .cooperative-display-options .module-filter-grid { grid-template-columns:repeat(2,minmax(0,1fr)); max-width:560px; padding-top:8px; }
+    .cooperative-directory .module-filter-summary { padding:12px 16px; border-top:1px solid var(--ui-border); }
+    .cooperative-directory .module-table { min-width:760px; }
+    .cooperative-directory .module-table caption { padding:12px 16px; color:var(--ui-text-muted); font-size:13px; text-align:left; border-bottom:1px solid var(--ui-border); }
+    .cooperative-directory .module-person { min-width:160px; align-items:flex-start; }
+    .cooperative-directory .module-person-copy strong,.cooperative-directory .module-person-copy small { white-space:normal; overflow-wrap:anywhere; }
+    .cooperative-directory .module-table td { overflow-wrap:anywhere; }
+    .cooperative-profile-notes { margin-top:8px; }
+    .cooperative-profile-notes summary { min-height:44px; display:flex; align-items:center; color:var(--ui-primary); text-decoration:underline; text-underline-offset:3px; }
+    .cooperative-profile-notes p { margin:4px 0; }
+    .cooperative-directory .module-row-actions { flex-wrap:wrap; justify-content:flex-start; min-width:150px; }
+    .cooperative-directory .module-row-actions .module-button { font-size:13px; min-height:44px; }
+    .cooperative-more { width:100%; }
+    .cooperative-more > summary { min-height:44px; width:fit-content; padding:8px 0; color:var(--ui-primary); font-weight:500; }
+    .cooperative-more-actions { display:flex; flex-wrap:wrap; gap:8px; }
+    .cooperative-more-actions form { margin:0; }
+    .cooperative-mobile-label { display:none; }
+    .cooperative-directory .module-empty strong { font-size:18px; }
+    .cooperative-directory .module-empty > span { font-size:14px; }
+    @media(max-width:1100px) {
+      .cooperative-directory .module-filter-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .cooperative-directory .module-field-search { grid-column:1/-1; }
+    }
+    @media(max-width:1100px) {
+      .cooperative-directory .module-filter-grid,.cooperative-display-options .module-filter-grid { grid-template-columns:1fr; }
+      .cooperative-directory .module-table { display:block; min-width:0; }
+      .cooperative-directory .module-table caption { display:block; }
+      .cooperative-directory .module-table thead { position:absolute; width:1px; height:1px; padding:0; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+      .cooperative-directory .module-table tbody { display:block; }
+      .cooperative-directory .module-table tr { display:block; padding:16px; border-bottom:1px solid var(--ui-border); }
+      .cooperative-directory .module-table tr:last-child { border-bottom:0; }
+      .cooperative-directory .module-table td { display:block; padding:8px 0; border:0; }
+      .cooperative-directory .module-table td:first-child { padding-top:0; }
+      .cooperative-mobile-label { display:block; margin-bottom:4px; color:var(--ui-text-muted); font-size:12px; font-weight:500; }
+      .cooperative-directory .module-row-actions { padding-top:8px; border-top:1px solid var(--ui-border); }
+      .cooperative-directory .module-row-actions > .module-button { flex:1 1 auto; }
+    }
+  </style>
 @endpush
 
 @php
-  $hasFilters = filled($q ?? '')
-      || filled($selectedMunicipalityId ?? '')
-      || filled($status ?? '')
-      || ($sort ?? 'name') !== 'name'
-      || (int) ($perPage ?? 10) !== 10;
+  $hasFilters = filled($q ?? '') || in_array($status ?? '', ['with_members', 'empty'], true);
+  $displayOptionsActive = ($sort ?? 'name') !== 'name' || (int) ($perPage ?? 10) !== 10;
   $canManageOperations = auth()->user()->canManageOperationalData();
+  $scopeQuery = ($canChooseMunicipality ?? false) && filled($selectedMunicipalityId ?? '')
+      ? ['municipality_id' => $selectedMunicipalityId] : [];
+  $directoryQuery = array_filter(array_merge($scopeQuery, [
+      'q' => $q ?? '', 'status' => $status ?? '', 'sort' => $sort ?? 'name', 'per_page' => $perPage ?? 10,
+  ]), fn ($value) => filled($value));
+  $clearFiltersUrl = route('farmers-cooperatives.index', $scopeQuery);
+  $scopeName = ($canChooseMunicipality ?? false)
+      ? (collect($municipalities ?? [])->firstWhere('id', $selectedMunicipalityId)?->name ?? auth()->user()->scopeLabel())
+      : auth()->user()->scopeLabel();
 @endphp
 
 @section('content')
@@ -21,10 +72,11 @@
     <div>
       <div class="module-eyebrow">Organization management</div>
       <h1>Farmers cooperatives</h1>
-      <p>Maintain cooperative profiles, organize membership, and prepare member workbooks for field coordination.</p>
+      <p>Find a cooperative, manage its members, or export a member list.</p>
+      <p class="module-scope-note">Office scope: <strong>{{ $scopeName }}</strong></p>
     </div>
     <div class="module-actions">
-      @if($canManageOperations)<a class="module-button module-button-primary" href="{{ route('farmers-cooperatives.create') }}">
+      @if($canManageOperations)<a class="module-button module-button-primary" href="{{ route('farmers-cooperatives.create', $scopeQuery) }}">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
         New cooperative
       </a>@else<span class="module-badge module-badge-green">Read-only oversight</span>@endif
@@ -34,7 +86,7 @@
   @if(session('success'))<div class="module-alert">{{ session('success') }}</div>@endif
   @if(session('error'))<div class="module-alert module-alert-error">{{ session('error') }}</div>@endif
 
-  <section class="module-kpis" aria-label="Cooperative summary">
+  <section class="module-kpis module-kpis-compact" aria-label="Cooperative summary for the current office and filters">
     <article class="module-kpi">
       <div class="module-kpi-top"><span class="module-kpi-label">Cooperatives</span><span class="module-kpi-icon"><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"></circle><circle cx="16" cy="8" r="3"></circle><path d="M2 20a6 6 0 0 1 12 0M10 20a6 6 0 0 1 12 0"></path></svg></span></div>
       <strong>{{ number_format((int) ($totalCooperatives ?? 0)) }}</strong>
@@ -57,10 +109,9 @@
     </article>
   </section>
 
-  <section class="module-panel">
+  <section class="module-panel cooperative-directory" aria-labelledby="cooperativeDirectoryTitle">
     <div class="module-panel-head">
-      <div><h2>Find a cooperative</h2><p>Search office records and narrow the membership state.</p></div>
-      @if($hasFilters)<span class="module-panel-tag">Filtered view</span>@endif
+      <div><h2 id="cooperativeDirectoryTitle">Cooperative directory</h2><p>{{ number_format($records->total()) }} {{ Str::plural('cooperative', $records->total()) }}{{ $hasFilters ? ' matching your filters' : ' in this office scope' }}</p></div>
     </div>
     <form class="module-filter" method="GET" action="{{ route('farmers-cooperatives.index') }}">
       <div class="module-filter-grid">
@@ -90,6 +141,10 @@
             <option value="empty" @selected(($status ?? '') === 'empty')>Needs membership</option>
           </select>
         </div>
+      </div>
+      <details class="cooperative-display-options" @if($displayOptionsActive) open @endif>
+        <summary>Display options</summary>
+        <div class="module-filter-grid">
         <div class="module-field">
           <label for="cooperativeSort">Sort by</label>
           <select class="module-input" id="cooperativeSort" name="sort">
@@ -104,47 +159,58 @@
             @foreach([10,20,50,100] as $n)<option value="{{ $n }}" @selected((int) $perPage === $n)>{{ $n }} rows</option>@endforeach
           </select>
         </div>
-      </div>
+        </div>
+      </details>
       <div class="module-filter-actions">
-        <span>@if($hasFilters)<span class="module-active-filter">Filters are active</span>@else Showing records available to your account @endif</span>
+        <span>Search by name, chairperson, address, or contact number.</span>
         <div class="module-filter-buttons">
-          @if($hasFilters)<a class="module-button" href="{{ route('farmers-cooperatives.index') }}">Clear filters</a>@endif
+          @if($hasFilters)<a class="module-button" href="{{ $clearFiltersUrl }}">Clear filters</a>@endif
           <button class="module-button module-button-primary" type="submit">Apply filters</button>
         </div>
       </div>
     </form>
-  </section>
-
-  <section class="module-panel">
-    <div class="module-table-tools">
-      <div><strong>Cooperative directory</strong><span>{{ number_format($records->total()) }} {{ Str::plural('result', $records->total()) }}</span></div>
-    </div>
+    @if($hasFilters)
+      <div class="module-filter-summary" aria-label="Applied filters">
+        <span>Filtered by:</span>
+        @if(filled($q ?? ''))
+          <a class="module-filter-chip" href="{{ route('farmers-cooperatives.index', \Illuminate\Support\Arr::except($directoryQuery, ['q'])) }}" aria-label="Remove search filter: {{ $q }}"><span>Search: {{ $q }}</span><span aria-hidden="true">×</span></a>
+        @endif
+        @if(in_array($status ?? '', ['with_members', 'empty'], true))
+          <a class="module-filter-chip" href="{{ route('farmers-cooperatives.index', \Illuminate\Support\Arr::except($directoryQuery, ['status'])) }}" aria-label="Remove membership filter"><span>{{ $status === 'empty' ? 'Needs membership' : 'With assigned members' }}</span><span aria-hidden="true">×</span></a>
+        @endif
+      </div>
+    @endif
     @if($records->isNotEmpty())
       <div class="module-table-scroll">
-        <table class="module-table">
-          <thead><tr><th>Cooperative</th><th>Chairperson / contact</th><th>Address</th><th>Members</th><th>Machinery</th><th><span class="sr-only">Actions</span></th></tr></thead>
-          <tbody>
+        <table class="module-table" role="table">
+          <caption>Profiles and membership · {{ match ($sort ?? 'name') { 'members' => 'Most members first', 'newest' => 'Newest profiles first', default => 'Name A–Z' } }}</caption>
+          <thead role="rowgroup"><tr role="row"><th scope="col" role="columnheader">Cooperative</th><th scope="col" role="columnheader">Chairperson / contact</th><th scope="col" role="columnheader">Address</th><th scope="col" role="columnheader">Members</th><th scope="col" role="columnheader">Machinery</th><th scope="col" role="columnheader">Actions</th></tr></thead>
+          <tbody role="rowgroup">
             @foreach($records as $record)
               @php
                 $initials = collect(preg_split('/\s+/', trim($record->name)))->filter()->take(2)->map(fn ($word) => mb_strtoupper(mb_substr($word, 0, 1)))->implode('');
               @endphp
-              <tr>
-                <td><div class="module-person"><span class="module-avatar">{{ $initials ?: 'CO' }}</span><span class="module-person-copy"><strong>{{ $record->name }}</strong><small>{{ $record->municipality?->name ?? 'Municipality unavailable' }}</small></span></div>@if(filled($record->description))<details style="margin-top:8px"><summary>Profile notes</summary><p>{{ $record->description }}</p></details>@endif</td>
-                <td><strong>{{ $record->chairperson ?: 'Not recorded' }}</strong><small>{{ $record->contact_number ?: 'No contact recorded' }}</small></td>
-                <td><span title="{{ $record->address }}">{{ $record->address ?: 'Not recorded' }}</span></td>
-                <td><span class="module-badge {{ (int) $record->farmers_count > 0 ? 'module-badge-green' : 'module-badge-amber' }}">{{ number_format((int) $record->farmers_count) }} {{ Str::plural('member', (int) $record->farmers_count) }}</span></td>
-                <td><a class="module-badge {{ (int) $record->machineries_count > 0 ? 'module-badge-blue' : '' }}" style="text-decoration:none" href="{{ route('machinery-inventory.index', ['holder_type' => 'cooperative', 'q' => $record->name, 'municipality_id' => $record->municipality_id]) }}">{{ number_format((int) $record->machineries_count) }} {{ Str::plural('asset', (int) $record->machineries_count) }}</a></td>
-                <td>
+              <tr role="row">
+                <td role="cell"><div class="module-person"><span class="module-avatar" aria-hidden="true">{{ $initials ?: 'CO' }}</span><span class="module-person-copy"><strong>{{ $record->name }}</strong><small>{{ $record->municipality?->name ?? 'Municipality unavailable' }}</small></span></div>@if(filled($record->description))<details class="cooperative-profile-notes"><summary>Profile notes</summary><p>{{ $record->description }}</p></details>@endif</td>
+                <td role="cell"><span class="cooperative-mobile-label" aria-hidden="true">Chairperson / contact</span><strong>{{ $record->chairperson ?: 'Not recorded' }}</strong><small>{{ $record->contact_number ?: 'No contact recorded' }}</small></td>
+                <td role="cell"><span class="cooperative-mobile-label" aria-hidden="true">Address</span>{{ $record->address ?: 'Not recorded' }}</td>
+                <td role="cell"><span class="cooperative-mobile-label" aria-hidden="true">Members</span><span class="module-badge {{ (int) $record->farmers_count > 0 ? 'module-badge-green' : 'module-badge-amber' }}">{{ number_format((int) $record->farmers_count) }} {{ Str::plural('member', (int) $record->farmers_count) }}</span></td>
+                <td role="cell"><span class="cooperative-mobile-label" aria-hidden="true">Machinery</span><a class="module-button module-button-small" href="{{ route('machinery-inventory.index', ['holder_type' => 'cooperative', 'q' => $record->name, 'municipality_id' => $record->municipality_id]) }}" aria-label="View machinery for {{ $record->name }}">{{ number_format((int) $record->machineries_count) }} {{ Str::plural('asset', (int) $record->machineries_count) }}</a></td>
+                <td role="cell">
                   <div class="module-row-actions">
-                    @if($canManageOperations)<a class="module-button module-button-primary module-button-small" href="{{ route('farmers-cooperatives.assign-farmers', $record) }}">Manage members</a>@endif
-                    <details class="module-action-menu">
-                      <summary aria-label="More actions">•••</summary>
-                      <div class="module-action-menu-list">
-                        <a href="{{ route('farmers-cooperatives.export-excel', $record) }}">Export member list</a>
-                        @if($canManageOperations)<a href="{{ route('farmers-cooperatives.edit', $record) }}">Edit profile</a>
-                        <form method="POST" action="{{ route('farmers-cooperatives.destroy', $record) }}" onsubmit="return confirm('Delete this cooperative?')">@csrf @method('DELETE')<button class="danger" type="submit">Delete cooperative</button></form>@endif
+                    @if($canManageOperations)
+                    <a class="module-button module-button-small" href="{{ route('farmers-cooperatives.assign-farmers', $record) }}" aria-label="Manage members of {{ $record->name }}">Manage members</a>
+                    <a class="module-button module-button-small" href="{{ route('farmers-cooperatives.edit', $record) }}" aria-label="Edit profile of {{ $record->name }}">Edit profile</a>
+                    <details class="cooperative-more">
+                      <summary aria-label="More actions for {{ $record->name }}">More actions</summary>
+                      <div class="cooperative-more-actions">
+                        <a class="module-button module-button-small" href="{{ route('farmers-cooperatives.export-excel', $record) }}">Export member list</a>
+                        <form method="POST" action="{{ route('farmers-cooperatives.destroy', $record) }}" data-cooperative-name="{{ $record->name }}" onsubmit="return confirm('Delete ' + this.dataset.cooperativeName + '? This removes the cooperative profile and its membership links. Farmer records are kept.')">@csrf @method('DELETE')<button class="module-button module-button-small module-button-danger" type="submit">Delete cooperative</button></form>
                       </div>
                     </details>
+                    @else
+                    <a class="module-button module-button-small" href="{{ route('farmers-cooperatives.export-excel', $record) }}" aria-label="Export member list for {{ $record->name }}">Export member list</a>
+                    @endif
                   </div>
                 </td>
               </tr>
@@ -155,8 +221,10 @@
     @else
       <div class="module-empty">
         <span class="module-empty-icon"><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"></circle><circle cx="16" cy="8" r="3"></circle><path d="M2 20a6 6 0 0 1 12 0M10 20a6 6 0 0 1 12 0"></path></svg></span>
-        <strong>No cooperatives found</strong><span>{{ $hasFilters ? 'Try clearing the current search or membership filters.' : 'Create the first cooperative profile for this office.' }}</span>
-        @if(!$hasFilters && $canManageOperations)<a class="module-button module-button-primary" href="{{ route('farmers-cooperatives.create') }}">New cooperative</a>@endif
+        <strong>{{ $hasFilters ? 'No cooperatives match these filters' : 'No cooperatives recorded yet' }}</strong>
+        <span>{{ $hasFilters ? 'Clear the search and membership filters to see other profiles in this office scope.' : ($canManageOperations ? 'Create a cooperative profile, then add its registered farmers.' : 'Cooperative profiles will appear here when staff record them.') }}</span>
+        @if($hasFilters)<a class="module-button" href="{{ $clearFiltersUrl }}">Clear filters</a>
+        @elseif($canManageOperations)<a class="module-button module-button-primary" href="{{ route('farmers-cooperatives.create', $scopeQuery) }}">New cooperative</a>@endif
       </div>
     @endif
     @include('partials.pagination', ['paginator' => $records, 'label' => 'cooperative'])
@@ -167,8 +235,15 @@
 @push('scripts')
 <script>
   document.addEventListener('click', event => {
-    document.querySelectorAll('.module-action-menu[open]').forEach(menu => {
+    document.querySelectorAll('.cooperative-more[open]').forEach(menu => {
       if (!menu.contains(event.target)) menu.removeAttribute('open');
+    });
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    document.querySelectorAll('.cooperative-more[open]').forEach(menu => {
+      if (menu.contains(document.activeElement)) menu.querySelector('summary').focus();
+      menu.removeAttribute('open');
     });
   });
 </script>

@@ -1040,7 +1040,6 @@
         'provincial_vet' => 'Provincial Veterinary Office',
         'municipal_head' => 'Head Agriculturist',
         'municipal_staff' => 'Municipal Staff',
-        'head_admin' => 'Head Admin',
         'admin' => 'Admin',
       ];
 

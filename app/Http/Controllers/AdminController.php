@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -154,7 +155,11 @@ class AdminController extends Controller
             'province_id' => [Rule::requiredIf($provincial), 'nullable', 'integer'],
             'municipality_id' => [Rule::requiredIf($municipal), 'nullable', 'integer'],
             'is_active' => ['nullable', 'boolean'],
-            'password' => [! $account || ($account->isSuperAdmin() && ! $account->is_active && ! empty($input['is_active'])) ? 'required' : 'nullable', 'string', 'min:8', 'confirmed'],
+            // Length plus a breach check, rather than composition rules that push
+            // staff toward predictable substitutions. The breach lookup is
+            // k-anonymous and passes if the service cannot be reached, so an office
+            // without internet can still create accounts.
+            'password' => [! $account || ($account->isSuperAdmin() && ! $account->is_active && ! empty($input['is_active'])) ? 'required' : 'nullable', 'string', Password::min(12)->uncompromised(), 'confirmed'],
         ])->validate();
 
         if ($provincial) {

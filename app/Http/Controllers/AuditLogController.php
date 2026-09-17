@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\Municipality;
 use App\Models\User;
 use App\Support\AuditTrail;
+use App\Support\CsvExport;
 use App\Support\LocalTime;
 use App\Support\MunicipalityAccess;
 use Illuminate\Database\Eloquent\Builder;
@@ -40,7 +41,7 @@ class AuditLogController extends Controller
                 ->where('created_at', '>=', LocalTime::utcStartOfLocalDay(LocalTime::now()->subDays(6)))
                 ->count(),
             'alerts' => (clone $query)
-                ->whereIn('event', ['deleted', 'login_failed', 'login_blocked'])
+                ->whereIn('event', ['deleted', 'login_failed', 'login_blocked', 'login_throttled', 'login_failures_suppressed'])
                 ->count(),
         ];
 
@@ -158,7 +159,7 @@ class AuditLogController extends Controller
                     ->orderBy('id')
                     ->chunkById(500, function ($logs) use ($output): void {
                         foreach ($logs as $log) {
-                            fputcsv($output, array_map([$this, 'csvValue'], [
+                            fputcsv($output, array_map([CsvExport::class, 'value'], [
                                 $log->id,
                                 LocalTime::fromUtc($log->created_at)?->format('Y-m-d H:i:s P'),
                                 $log->event_label,
@@ -290,10 +291,4 @@ class AuditLogController extends Controller
     }
 
     /** @param  mixed  $value */
-    private function csvValue($value): string
-    {
-        $value = (string) ($value ?? '');
-
-        return preg_match('/^[=+\-@]/', $value) ? "'".$value : $value;
-    }
 }

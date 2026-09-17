@@ -101,7 +101,8 @@ For every new endpoint or action, verify:
 7. protection against mass assignment, SQL injection, spreadsheet formula injection, XSS, path traversal, and insecure direct-object references;
 8. exclusion of passwords, secrets, private tokens, birth dates, contact data, and protected paths from public responses and audit metadata;
 9. safe failure behavior that does not reveal whether another municipality's protected record exists;
-10. an audit event for sensitive, administrative, destructive, or export actions when appropriate.
+10. an audit event for sensitive, administrative, destructive, or export actions when appropriate;
+11. response headers, when the endpoint returns anything a browser renders. `App\Http\Middleware\SecurityHeaders` covers the application; a route that returns stored or uploaded bytes sets its own stricter policy and never echoes a caller-supplied content type.
 
 ### User-experience standard
 
@@ -215,10 +216,12 @@ All accounts must be active. Provincial roles require an existing active provinc
 2. Laravel attempts session authentication and regenerates the session ID after success.
 3. The controller rejects unknown roles, inactive users, municipal users without a municipality, and users assigned to a missing/inactive municipality.
 4. Successful and failed/blocked sign-ins are written to the audit trail when the `audit_logs` table is available.
-5. `last_login_at` is updated. Agriculture roles are redirected to the municipality-aware dashboard, while `provincial_vet` goes directly to Animal Health.
-6. Logout is audited, the session is invalidated, and the CSRF token is regenerated.
-7. Authenticated sessions have a 15-minute idle limit. Browser activity is shared across tabs and sends a throttled heartbeat only while the user is active.
-8. The interface warns during the final minute, then automatically signs the account out. The server independently rejects stale requests, invalidates the session, and records a `session_timeout` audit event.
+5. Every unsuccessful sign-in, whether the password was wrong or the account was blocked, counts toward a lockout of five attempts per email address and client address. A locked address is refused for five minutes before the password is checked, and the lockout is audited once as `login_throttled` so a flood cannot fill the audit trail. A completed sign-in clears the counter. The route additionally caps one client address at 30 sign-in requests per minute, which is generous enough for an office sharing a single public address.
+6. Unsuccessful sign-in entries are capped at 20 per client address per 15 minutes. Past that ceiling one `login_failures_suppressed` entry records that the rest of the window was suppressed, so an address working through many email addresses cannot bury genuine entries. Successful sign-ins, logouts, and session timeouts are never suppressed.
+7. `last_login_at` is updated. Agriculture roles are redirected to the municipality-aware dashboard, while `provincial_vet` goes directly to Animal Health.
+8. Logout is audited, the session is invalidated, and the CSRF token is regenerated.
+9. Authenticated sessions have a 15-minute idle limit. Browser activity is shared across tabs and sends a throttled heartbeat only while the user is active.
+10. The interface warns during the final minute, then automatically signs the account out. The server independently rejects stale requests, invalidates the session, and records a `session_timeout` audit event.
 
 There is currently no user-facing registration, forgotten-password, email-verification, or password-reset workflow.
 
@@ -429,12 +432,14 @@ This is a protected file repository, not an automated database-backup scheduler.
 
 Functions:
 
-- upload one or more files up to 50 MB each to private local storage;
-- assign every uploaded file to a municipality and record uploader, folder, notes, MIME type, size, and SHA-256 hash;
+- upload one or more files up to 50 MB each to private local storage, refusing markup and executable extensions such as `.html`, `.svg`, `.js`, `.php`, and `.exe`;
+- restrict the destination folder to letters, numbers, spaces, dashes, underscores, and `/`, so an uploaded path cannot climb out of the backups directory;
+- assign every uploaded file to a municipality and record uploader, folder, notes, size, SHA-256 hash, and the MIME type detected from the file itself rather than the type claimed by the uploading browser;
 - search by filename/folder/notes/hash with contains, starts-with, ends-with, or exact modes;
 - filter by municipality, folder, uploader, extension, date, and size;
 - sort and display filtered file/folder/hash totals;
 - authorize preview, inline streaming, download, edit, and deletion;
+- stream a stored file inline only when its extension is on the module's allow-list of inert types (PDF, common images, audio, video, and text formats served as `text/plain`); everything else, including records saved before that rule existed, is sent as an attachment with `application/octet-stream`, so a stored file cannot execute script in the application's origin;
 - preview PDFs, images, text, spreadsheets, and supported document formats in the browser;
 - edit text-like files and `.xlsx` files in place, then recompute file size and SHA-256;
 - physically delete the stored file when its database record is deleted.
@@ -451,6 +456,7 @@ Functions:
 
 - list, search, filter, paginate, create, edit, activate/deactivate, change role, reset password, and delete accounts;
 - hash every new or changed password with Laravel `Hash`;
+- require at least 12 characters and refuse passwords found in a known breach corpus, using Laravel's k-anonymous `uncompromised()` check. `AppServiceProvider` binds that verifier with a three-second timeout, and an unreachable service is treated as "not breached" so an office without connectivity can still create accounts. Composition rules are deliberately not used; length and the breach check are the controls;
 - require at least eight characters and confirmation in account forms;
 - require an active municipality for municipal roles and clear `municipality_id` for provincial roles;
 - let province Super Admins create `provincial_vet` accounts assigned to their province without a municipality; these accounts are restricted to province-wide Animal Health routes and policies;
@@ -478,6 +484,8 @@ System Owner and province-scoped Super Admin functions:
 Audit timestamps are stored in UTC and displayed in `APP_DISPLAY_TIMEZONE` through `App\Support\LocalTime`. Audit date filters are interpreted as local Philippine calendar days and converted to UTC query boundaries. Keep `config('app.timezone')` set to UTC; changing the storage timezone would reinterpret existing records and mix timestamp conventions.
 
 `AuditModelObserver` records created, updated, and deleted events for machinery, farmers, plots, distributions, animal-health services, cooperatives, backups, users, and municipalities. Authentication, exports, and cooperative membership changes add explicit events through `App\Support\AuditTrail`.
+
+A new event name must be added to `AuditLog::EVENT_LABELS`, to the tone match in `getEventToneAttribute()`, to the alert list in `AuditLogController`, and to `$eventOrder` in `resources/views/audit_logs/index.blade.php`. Otherwise the audit screen shows the raw key, the entry is not coloured as an alert, and the alert total silently undercounts. The authentication events are `login`, `logout`, `session_timeout`, `login_failed`, `login_blocked`, `login_throttled`, and `login_failures_suppressed`.
 
 Audit failures are reported but do not interrupt the user's main operation. Passwords, tokens, secrets, remember tokens, farmer public tokens, profile-photo paths, and other protected fields are removed from persisted before/after values. Preserve this behavior.
 
@@ -605,6 +613,7 @@ Distribution records intentionally keep a farmer snapshot in addition to `farmer
 - `app/Support/GeoGeometry.php`: GeoJSON normalization, validation, simplification, measurement, overlap, containment, and near-boundary calculations
 - `app/Support/MunicipalityBoundaryGuard.php`: active-boundary lookup and parcel write enforcement
 - `app/Support/MunicipalityBoundaryImporter.php`: KML, KMZ, and GeoJSON boundary parsing
+- `app/Http/Middleware/SecurityHeaders.php`: content-security, framing, referrer, permissions, and transport headers for every response; its source lists must gain any new CDN or provider host added to a Blade view
 - `app/Http/Middleware/SynchronizeMutatingRequests.php`: per-account and per-record/cache mutexes for state-changing requests
 - `app/Http/Middleware/EnforceIdleSession.php`: server-side 15-minute inactivity enforcement and timeout auditing
 - `app/Http/Middleware/RestrictProvincialVeterinaryAccess.php`: route-level Animal Health-only boundary for `provincial_vet`
@@ -614,13 +623,17 @@ Distribution records intentionally keep a farmer snapshot in addition to `farmer
 - `resources/views/layouts/app.blade.php`: shared shell, responsive navigation, and role-aware module links
 - `resources/views/partials/operations-ui-styles.blade.php`: shared operational-module design system
 - `resources/views/vendor/pagination`: application-wide pagination templates
-- `resources/views/farmers/partials/maps-*`: authenticated plotting workspace CSS/JavaScript
+- `public/js/farmers-maps.js`: the authenticated plotting workspace script, loaded by `resources/views/farmers/partials/maps-scripts.blade.php`. It is a plain file rather than a Blade template so editors and linters can read it and the template compiler cannot swallow part of it, and it stays a classic script because it shares `var` declarations across what used to be two `<script>` blocks and exports its API to the rest of the page as `window.__*`. Everything the server decides reaches it through the `window.__*` config block in `resources/views/farmers/maps.blade.php`; never reintroduce a Blade directive or `{{ }}` into the script itself. Adding a new server value means adding it to that block.
+- `resources/views/farmers/partials/maps-*`: authenticated plotting workspace CSS and the loader for the script above
+- `app/Support/CsvExport.php`: the single spreadsheet-formula guard for CSV exports. It replaced three byte-identical private copies; a new export must use it rather than growing a fourth.
+- `resources/views/components/module/field.blade.php`: the `<x-module.field>` form-field component. See DESIGN_SYSTEM.md section 13 for its contract and the list of forms still to migrate.
+- `app/Http/Requests`: form requests for the farmer, farm parcel, assistance release, and municipality geofence write endpoints. Each runs its policy in `authorize()`, which Laravel checks before the rules, so an unauthorized account is refused rather than handed a description of the form.
 - `database/migrations`: incremental schema changes; see the warning below
 - `tests/Feature`: role, municipality isolation, dashboard, QR map, machinery, user-management, and audit coverage
 
-`app/Models/FarmerPlot.php` is a duplicate legacy model for the same table. Active code uses `App\Models\FarmPlot`. Do not introduce new references to `FarmerPlot`; remove it only after confirming no external code depends on it.
+`App\Models\FarmPlot` is the only model for the farm parcel table. The duplicate legacy `FarmerPlot` model was removed after confirming no route, view, job, test, CLI, or seeder referenced it; do not reintroduce a second model for that table.
 
-`App\Http\Middleware\EnsureHeadAdmin` checks the obsolete `head_admin` role and is not used by current routes. Current authorization must go through policies and the five supported `User` role constants.
+`EnsureHeadAdmin` and its `head_admin` route-middleware alias were removed, along with the obsolete role label in the layout; no route used them and `head_admin` is not a supported role. Authorization goes through policies and the supported `User` role constants.
 
 ## 9. Database and migration warning
 
@@ -663,7 +676,11 @@ The Bulacan import resolves the legacy `BUL` code, `BULACAN`, PSGC code, or unam
 
 `BenguetRemainingMunicipalityBoundarySeeder` explicitly imports Bakun, Bokod, Buguias, Itogon, Kabayan, Kapangan, Kibungan, Mankayan, Sablan, and Tuba from a separate pinned ADM3 revision `9469f09` snapshot. Together with La Trinidad, Atok, and Tublay, these cover all thirteen Benguet municipalities; Baguio City retains its separate city reference. Source identities, geographic extents, and areas were checked against PSA/GeoRiskPH references. It reuses unambiguous active workspaces or creates only the missing municipality workspaces, preserves existing boundaries and archived history, and creates no users or operational records. All ten references share one atomic import. See `database/seeders/data/README.md` for provenance, metrics, checksum, and the explicit command.
 
-The Benguet, remaining-Benguet, and remaining-Tarlac seeders delegate to `App\Support\ReferenceMunicipalityBoundaryImporter`. This service validates the complete pinned source before writing, resolves unambiguous active workspaces, and imports the entire set under the shared activation lock and one retried transaction. It refuses ambiguous identities, wrong provinces, inactive workspaces, overlaps, and different active or changed/deactivated reference boundaries. Successful application clears each target's boundary cache; new boundaries receive attributed import audit events through the existing best-effort audit mechanism. Repeated imports do not duplicate boundaries or events. These seeders are intentionally excluded from `DatabaseSeeder` and automatic production deployment.
+`BulacanMunicipalityBoundarySeeder` explicitly imports all twenty-four Bulacan workspaces from a separate pinned ADM3 revision `9469f09` snapshot: the 21 municipalities plus the component cities of Malolos, Meycauayan, and San Jose del Monte. Source identities were confirmed by exact name and by geographic extent against the PSA/GeoRiskPH Bulacan layer, which distinguishes them from the San Miguel, San Rafael, San Ildefonso, and Santa Maria municipalities in other provinces. Two workspace names deliberately differ from the source `shapeName` through the importer's `workspace_name` identity field: **Bulakan**, because the source and PSA spell that municipality `Bulacan`, which is identical to the legacy Bulacan province workspace; and **Malolos City**, **Meycauayan City**, and **San Jose del Monte City**, which follow the existing `Tarlac City` and `Baguio City` wording rather than the source's `City of Malolos` form.
+
+Because a province polygon contains every municipality inside it, the province-level and municipality-level Bulacan references cannot both stay active under the overlap rule. This seeder therefore archives exactly one named reference — `Bulacan Province Planning Reference · geoBoundaries 2020`, and only while it is active and owned by a Bulacan municipality — with an `archived` audit event carrying `reason: superseded_by_municipality_references`. The province workspace keeps its ID, code, name, province assignment, and archived history, and re-running `BulacanProvinceBoundarySeeder` restores the province-level view. An identically named boundary in another province is never archived. Every other conflict still stops the whole import, and the supersession rolls back with it because archival, workspace creation, and boundary writes share one activation lock and one transaction. See `database/seeders/data/README.md` for provenance, metrics, checksum, and the explicit command.
+
+The Benguet, remaining-Benguet, remaining-Tarlac, and Bulacan municipality seeders delegate to `App\Support\ReferenceMunicipalityBoundaryImporter`. This service validates the complete pinned source before writing, resolves unambiguous active workspaces, and imports the entire set under the shared activation lock and one retried transaction. It refuses ambiguous identities, wrong provinces, inactive workspaces, overlaps, and different active or changed/deactivated reference boundaries. An identity may set `workspace_name` when the workspace must not carry the source `shapeName`, and a caller may name one coarser active reference in the same province to archive as superseded inside the same transaction; nothing else is ever archived automatically. Successful application clears each target's boundary cache; new boundaries receive attributed import audit events through the existing best-effort audit mechanism. Repeated imports do not duplicate boundaries or events. These seeders are intentionally excluded from `DatabaseSeeder` and automatic production deployment.
 
 Run the demo seeder only when demonstration data is intentionally required; run each reference importer explicitly for its intended workspace:
 
@@ -674,9 +691,10 @@ php artisan db:seed --class=BaguioCityBoundarySeeder
 php artisan db:seed --class=BenguetMunicipalityBoundarySeeder
 php artisan db:seed --class=BenguetRemainingMunicipalityBoundarySeeder
 php artisan db:seed --class=TarlacRemainingMunicipalityBoundarySeeder
+php artisan db:seed --class=BulacanMunicipalityBoundarySeeder
 ```
 
-These seeders use a global boundary-activation lock and retried database transactions, validate geometry and published-area tolerances, refuse unknown overlaps, and record boundary lifecycle events against an active System Owner or a Super Admin assigned to the target province through `ReferenceBoundaryAccess`. New reference workspaces receive an explicit `province_id`; inactive or mismatched supervision is rejected. The Baguio, Benguet, and remaining-Tarlac importers preserve existing different active boundaries and require explicit review instead of replacing them. `TarlacMunicipalityDemoSeeder` and `BulacanProvinceBoundarySeeder` retain their documented archival behavior. Never add these named seeders to automatic production deployment seeding.
+These seeders use a global boundary-activation lock and retried database transactions, validate geometry and published-area tolerances, refuse unknown overlaps, and record boundary lifecycle events against an active System Owner or a Super Admin assigned to the target province through `ReferenceBoundaryAccess`. New reference workspaces receive an explicit `province_id`; inactive or mismatched supervision is rejected. The Baguio, Benguet, and remaining-Tarlac importers preserve existing different active boundaries and require explicit review instead of replacing them. `TarlacMunicipalityDemoSeeder`, `BulacanProvinceBoundarySeeder`, and `BulacanMunicipalityBoundarySeeder` retain their documented archival behavior. Never add these named seeders to automatic production deployment seeding.
 
 ### Province supervision deployment
 
@@ -686,7 +704,11 @@ Audit `province_id` is a durable snapshot derived from record ownership, with ac
 
 ## 10. Environment, maps, and storage
 
-Never commit `.env`, API keys, production database credentials, password lists, SQL dumps containing personal data, or real farmer documents.
+Never commit `.env`, API keys, production database credentials, password lists, SQL dumps containing personal data, or real farmer documents. A credential that reaches a commit is exposed to everyone who has ever cloned the repository; removing the file afterwards does not undo that, so rotate the credential first and treat history rewriting as a separate decision.
+
+Session payloads are encrypted at rest with the application key through `SESSION_ENCRYPT`, which defaults to true. Turning it on or off invalidates every stored session and signs everyone out once, so schedule that deployment outside office hours.
+
+Browser-facing security settings live in `config/security.php` and `App\Http\Middleware\SecurityHeaders`. On any host reachable over HTTPS set `SESSION_SECURE_COOKIE=true`, so the session cookie is never sent over a plain connection, and leave `SECURITY_HSTS_MAX_AGE` at its default only once HTTPS works on every hostname the office uses. If a screen breaks after a deployment because the content-security policy blocked a resource, set `SECURITY_CSP_REPORT_ONLY=true` to restore the screen while violations are still reported, add the missing host to `SecurityHeaders`, then switch enforcement back on. `TrustHosts` remains disabled in `App\Http\Kernel`; enable it with the deployment's real hostnames if the site is ever served behind a proxy that forwards an untrusted `Host` header.
 
 Minimum application settings include:
 
@@ -742,6 +764,8 @@ php artisan optimize:clear
 php artisan config:cache
 ```
 
+Municipality snapshot 502 responses distinguish provider access denial (HTTP 401/403), quota limits (429), invalid requests (400), connection failures, and lock contention. Provider failures log only the upstream HTTP status; connection failures never log the raw exception URL or key. Failed images are not cached. On production, check that the effective `GOOGLE_MAPS_STATIC_API_KEY` belongs to a project with Maps Static API and billing enabled. Verify its application restriction against the actual server request: the proxy sends `APP_URL` plus `/` as its Referer; IP restrictions must match the hosting server's outbound IP. Do not remove key restrictions as a workaround. The browser map working does not verify Static API access. After changing `.env`, rebuild the configuration cache with the commands above and retry the download. No database migration is needed for these diagnostics.
+
 The weather module uses Open-Meteo and does not require an API key. Optional provider URL and advisory thresholds are defined in `config/weather.php`. Keep the cache enabled in production to limit outbound requests and improve responsiveness. Atomic cache locks are also part of request and record synchronization; do not set `CACHE_DRIVER=array` outside isolated tests.
 
 Google Cloud must have Maps JavaScript API and Maps Static API enabled as required by the authenticated plotting, public QR map, and export UI, billing enabled, and an HTTP referrer restriction matching the deployed domain (for production, include `https://agritarlac.online/*`). The browser key is necessarily visible to public-map visitors, so it must be restricted to approved websites and only the required browser APIs.
@@ -778,6 +802,29 @@ Production/Hostinger requirements:
 - run only reviewed pending migrations after taking a backup;
 - run `php artisan optimize:clear`, then cache configuration/routes/views after configuration is correct;
 - verify login, every role, municipality isolation, uploads/downloads, maps, imports, exports, and the public QR route over HTTPS.
+
+### Database backup and restore
+
+Because this repository has no complete migration history, the dump is the only route back from a lost database. `php artisan db:backup` writes a verified, gzipped logical dump through `App\Support\DatabaseBackup`, reading inside one consistent snapshot so a dump taken during office hours is a coherent point in time. It is produced in PHP rather than by `mysqldump`, so it does not depend on a matching client version or on shell access being available.
+
+`App\Console\Kernel` schedules it daily at `BACKUP_DATABASE_SCHEDULE_AT`, which only runs where Laravel's scheduler is actually invoked. On a server add the one cron entry Laravel needs, and confirm it is running:
+
+```bash
+* * * * * cd /path/to/agri-ms && php artisan schedule:run >> /dev/null 2>&1
+php artisan schedule:list
+php artisan db:backup            # take one immediately and confirm it appears
+```
+
+Dumps land in `BACKUP_DATABASE_PATH` (`storage/app/backups/database` by default), which `storage/app/.gitignore` already excludes from source control. They contain farmer personal data, so they must never be committed, served from a public path, or emailed. Point `BACKUP_DATABASE_PATH` at separate storage on a server and copy the dumps off the machine as well: a backup on the same disk as the database does not survive the failure it exists for. `BACKUP_DATABASE_KEEP` controls how many are retained.
+
+To restore, work on a scratch database first and never straight over a live one. The dump begins with `DROP TABLE IF EXISTS` for every table, so pointing it at the wrong database destroys that database:
+
+```bash
+gzip -dk storage/app/backups/database/ag_system-YYYYmmdd-HHMMSS.sql.gz
+mysql --user=... --password ag_system_restorecheck < storage/app/backups/database/ag_system-YYYYmmdd-HHMMSS.sql
+```
+
+Then compare the restored copy against what you expect — table list, and row counts for `farmers`, `municipalities`, `municipality_boundaries`, `users`, and `audit_logs` — before considering the backup proven. A backup nobody has restored is only a promise of a backup, so repeat this check periodically and after any schema change. The procedure above was verified against this database: all 15 tables and all 2,106 rows restored, with accented municipality names and geofence GeoJSON byte-identical to the original.
 
 ## 12. Testing
 

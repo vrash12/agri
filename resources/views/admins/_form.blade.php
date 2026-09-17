@@ -182,13 +182,13 @@
             id="password"
             name="password"
             type="password"
-            minlength="8"
+            minlength="12"
             autocomplete="new-password"
             {{ $editing ? '' : 'required' }}
           >
           <button type="button" class="password-peek" data-password-target="password" aria-label="Show password" aria-pressed="false">Show</button>
         </div>
-        <small>Use at least 8 characters.</small>
+        <small>Use at least 12 characters. A few ordinary words together are easier to remember and harder to guess than one short word with symbols. Passwords found in known data breaches are refused.</small>
       </div>
 
       <div class="user-field">
@@ -199,7 +199,7 @@
             id="password_confirmation"
             name="password_confirmation"
             type="password"
-            minlength="8"
+            minlength="12"
             autocomplete="new-password"
             {{ $editing ? '' : 'required' }}
           >

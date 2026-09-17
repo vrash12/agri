@@ -201,6 +201,69 @@ The shared `ReferenceMunicipalityBoundaryImporter` validates the complete pinned
 
 Successful imports clear the target boundary caches and attribute each new boundary through the existing best-effort audit mechanism, including whether its workspace was created. Repeated runs create no duplicate workspaces, boundaries, or import events. No users, farmers, parcels, assistance releases, or other operational records are created. Normal municipality isolation and parcel geofence validation apply once active, along with the existing geofence visibility and opacity controls. These approximate planning boundaries require LGU/NAMRIA verification before official use. This named seeder is excluded from `DatabaseSeeder` and automatic production deployment.
 
+## Bulacan municipality and component-city reference boundaries
+
+`bulacan_municipality_reference_boundaries.geojson` contains exactly the twenty-four features used by `BulacanMunicipalityBoundarySeeder`: the 21 Bulacan municipalities and the component cities of Malolos, Meycauayan, and San Jose del Monte. These are municipality-level boundaries. They replace the single province-level ADM2 reference imported by `BulacanProvinceBoundarySeeder`, which covered the same land.
+
+- Dataset: geoBoundaries `gbOpen` Philippines ADM3; boundary year 2020
+- Pinned revision: `9469f09`
+- Upstream sources: NAMRIA, Philippine Statistics Authority, and OCHA Philippines
+- License: CC BY 3.0 IGO
+- [Dataset metadata](https://www.geoboundaries.org/api/current/gbOpen/PHL/ADM3/)
+- [Pinned simplified source](https://media.githubusercontent.com/media/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/PHL/ADM3/geoBoundaries-PHL-ADM3_simplified.geojson)
+- [PSA Bulacan identity reference](https://psa.gov.ph/classification/psgc/citimuni/0301400000)
+- [GeoRiskPH/PSA boundary and area reference](https://ulap-nga.georisk.gov.ph/arcgis/rest/services/PSA/Municipal/MapServer/0), filtered by `prov_name='Bulacan'`
+- Retrieved: 2026-09-16
+- Line-ending-normalized SHA-256: `d58ea603bba4cc74c86e9949df9f0dad3fba3c4b54695de326a3af4e62682a16`
+
+| Workspace | PSGC | Legacy PSGC | geoBoundaries shape ID | Reference hectares | Computed hectares | Vertices |
+| --- | --- | --- | --- | ---: | ---: | ---: |
+| Angat | `0301401000` | `031401000` | `30758251B11674695503139` | 4,940.828980 | 4,983.1707 | 111 |
+| Balagtas | `0301402000` | `031402000` | `30758251B61200223936905` | 2,148.062701 | 2,155.2708 | 48 |
+| Baliuag | `0301403000` | `031403000` | `30758251B80677147871069` | 4,575.989446 | 4,606.7741 | 78 |
+| Bocaue | `0301404000` | `031404000` | `30758251B34406453293214` | 2,635.251149 | 2,673.4538 | 53 |
+| Bulakan (source `Bulacan`) | `0301405000` | `031405000` | `30758251B88033392671893` | 7,233.712005 | 7,260.2178 | 86 |
+| Bustos | `0301406000` | `031406000` | `30758251B3009870248876` | 3,986.503138 | 4,006.5884 | 56 |
+| Calumpit | `0301407000` | `031407000` | `30758251B47768966638997` | 4,680.052201 | 4,673.9360 | 44 |
+| Guiguinto | `0301408000` | `031408000` | `30758251B84945919751232` | 2,231.750386 | 2,235.2634 | 50 |
+| Hagonoy | `0301409000` | `031409000` | `30758251B93181595327102` | 8,339.439846 | 8,385.4393 | 86 |
+| Malolos City (source `City of Malolos`) | `0301410000` | `031410000` | `30758251B20138524188329` | 7,083.791752 | 7,154.8520 | 134 |
+| Marilao | `0301411000` | `031411000` | `30758251B11566455240441` | 2,834.295875 | 2,841.8601 | 92 |
+| Meycauayan City (source `City of Meycauayan`) | `0301412000` | `031412000` | `30758251B3506482067844` | 3,178.264801 | 3,176.9986 | 100 |
+| Norzagaray | `0301413000` | `031413000` | `30758251B28396415682182` | 29,738.026156 | 29,959.1417 | 169 |
+| Obando | `0301414000` | `031414000` | `30758251B34403699619291` | 1,620.758216 | 1,640.1569 | 30 |
+| Pandi | `0301415000` | `031415000` | `30758251B75610884117479` | 5,041.772126 | 5,065.4792 | 62 |
+| Paombong | `0301416000` | `031416000` | `30758251B84355932760435` | 4,528.503145 | 4,520.8565 | 80 |
+| Plaridel | `0301417000` | `031417000` | `30758251B39966399473469` | 3,574.236485 | 3,608.6756 | 50 |
+| Pulilan | `0301418000` | `031418000` | `30758251B69399459557735` | 4,264.445362 | 4,292.6645 | 54 |
+| San Ildefonso | `0301419000` | `031419000` | `30758251B21292953325397` | 16,657.582365 | 16,788.4970 | 137 |
+| San Jose del Monte City (source `City of San Jose del Monte`) | `0301420000` | `031420000` | `30758251B35007836972970` | 10,785.680259 | 10,833.2909 | 133 |
+| San Miguel | `0301421000` | `031421000` | `30758251B36193121708082` | 23,194.039833 | 23,326.5279 | 126 |
+| San Rafael | `0301422000` | `031422000` | `30758251B96236511516175` | 10,165.635513 | 10,219.3843 | 151 |
+| Santa Maria | `0301423000` | `031423000` | `30758251B94770277751528` | 7,911.849411 | 7,953.5291 | 66 |
+| Doña Remedios Trinidad | `0301424000` | `031424000` | `30758251B33129254568465` | 97,549.082447 | 99,666.0493 | 167 |
+
+Source features were selected by exact name and by geographic extent against the Bulacan government reference, preventing confusion with the municipalities named San Miguel, San Rafael, San Ildefonso, and Santa Maria in other provinces. Every bounding box has at least 98.8% intersection-over-union with its reference extent, while the closest non-matching candidate reaches only 48%. Computed areas differ by less than 2.18%; the importer rejects deviations over 3%. Doña Remedios Trinidad has the largest deviation at 2.17% because its mountainous perimeter loses the most detail in the simplified source. All 24 geometries pass pairwise overlap checks against each other and against the 18 Tarlac, 13 Benguet, and Baguio City references; shared borders create no overlapping interiors.
+
+Two workspace names deliberately differ from the source `shapeName`, through the importer's `workspace_name` identity field:
+
+- **Bulakan** — the source and PSA spell this municipality `Bulacan`, which is identical to the legacy
+Bulacan province workspace. The LGU's own spelling keeps the municipality workspace separate, so the province record is never renamed, reassigned, or reused for municipality geometry.
+- **Malolos City**, **Meycauayan City**, **San Jose del Monte City** — the source writes these as
+`City of Malolos` and so on; the workspaces follow the existing `Tarlac City` and `Baguio City` wording.
+
+Run this boundary-only import explicitly against the intended environment:
+
+```bash
+php artisan db:seed --class=BulacanMunicipalityBoundarySeeder
+```
+
+An active System Owner or assigned Bulacan Super Admin is required for attribution. The import reuses unambiguous active Bulacan workspaces or creates them with uppercase underscore-separated codes such as `SAN_ILDEFONSO`, `DONA_REMEDIOS_TRINIDAD`, and `SAN_JOSE_DEL_MONTE_CITY`. Names, name aliases, and PSGC codes are matched conservatively: an ambiguous match, wrong province, or inactive workspace stops the import without reassigning or renaming anything.
+
+A province polygon contains every municipality inside it, so the province-level and municipality-level references cannot both stay active under the overlap rule. This import therefore archives exactly one named reference — `Bulacan Province Planning Reference · geoBoundaries 2020`, and only when it is active and owned by a Bulacan municipality — records an `archived` audit event with `reason: superseded_by_municipality_references`, and clears that workspace's boundary cache. Its workspace, code, province assignment, and archived history are otherwise untouched, and re-running `BulacanProvinceBoundarySeeder` restores the province-level view. An identically named boundary in another province is not archived. Every other conflict — including an unrelated overlapping active boundary — still stops the whole import, and the archival rolls back with it because the supersession, all workspace creation, and all boundary writes share one activation lock and one transaction.
+
+Successful imports clear each target boundary cache and attribute every new reference through the existing best-effort audit mechanism, including whether its workspace was created. Repeated runs create no duplicate workspaces, boundaries, or import events. No users, farmers, parcels, assistance releases, or other operational records are created. Normal municipality isolation and parcel geofence validation apply once active. These approximate planning boundaries require LGU/NAMRIA verification before official use. This named seeder is intentionally excluded from `DatabaseSeeder` and automatic production deployment.
+
 ## Synthetic demonstration records
 
 The farmer and assistance records produced by the named demo seeder are synthetic. Do not use them as beneficiaries, official distribution transactions, or evidence of assistance delivery.

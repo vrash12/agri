@@ -5,7 +5,39 @@
 @push('styles')
   @include('partials.operations-ui-styles')
   <style>
-    .assistance-sector-switch{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--module-border);border-radius:10px;background:#fff}.assistance-sector-switch>span{margin-right:3px;color:var(--module-muted);font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:none}.assistance-sector-link{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid #dce5df;border-radius:8px;color:#4f5e55;background:#fafcfb;font-size:12px;font-weight:700;text-decoration:none}.assistance-sector-link:hover{border-color:#9eb6a7;color:var(--module-green)}.assistance-sector-link.is-active{color:#fff;border-color:#17643a;background:#17643a}.assistance-sector-link.is-fisheries.is-active{border-color:#2f7891;background:#2f7891}.assistance-sector-dot{width:7px;height:7px;border-radius:50%;background:#8ea097}.assistance-sector-link.is-fisheries .assistance-sector-dot{background:#4b91aa}.assistance-sector-link.is-active .assistance-sector-dot{background:#fff}.module-badge-fisheries{color:#236b85;background:#e8f5f9}.module-page>.module-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}@media(max-width:900px){.module-page>.module-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.module-page>.module-kpis{grid-template-columns:1fr}}
+    .assistance-sector-switch{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-panel);background:var(--ui-surface)}
+    .assistance-sector-link{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:8px 16px;border:1px solid transparent;border-radius:var(--ui-radius-control);color:var(--ui-text-muted);font-size:14px;font-weight:500;text-decoration:none}
+    .assistance-sector-link:hover{background:var(--ui-surface-subtle);color:var(--ui-primary)}
+    .assistance-sector-link.is-active{color:var(--ui-primary);border-color:var(--ui-primary);background:var(--ui-accent-soft);font-weight:700}
+    .assistance-page .module-badge-fisheries{color:var(--ui-info);background:var(--ui-info-soft)}
+    .assistance-page>.module-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .assistance-search-fields{display:grid;grid-template-columns:minmax(240px,2fr) repeat(2,minmax(180px,1fr));gap:16px;margin-bottom:16px}
+    .assistance-search-fields .module-field{grid-column:auto}
+    .assistance-search-fields.is-municipal{grid-template-columns:minmax(240px,2fr) minmax(180px,1fr)}
+    .assistance-page .module-filter-summary{padding:12px 16px;border-top:1px solid var(--ui-border);background:var(--ui-surface-subtle)}
+    .assistance-page .module-person-copy strong,.assistance-page .module-person-copy small{white-space:normal;overflow-wrap:anywhere}
+    .assistance-page .module-row-actions{flex-wrap:wrap;white-space:normal}
+    .assistance-page .module-detail-grid dd{font-size:14px;font-weight:400}
+    .assistance-detail-actions{display:flex;justify-content:flex-end;padding:0 16px 16px}
+    @media(max-width:1000px){.assistance-search-fields,.assistance-search-fields.is-municipal{grid-template-columns:repeat(2,minmax(0,1fr))}.assistance-search-fields .module-field-search{grid-column:1/-1}}
+    @media(max-width:900px){.assistance-page>.module-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:760px){
+      .assistance-register .module-table{display:block;min-width:0}
+      .assistance-register .module-table thead{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+      .assistance-register .module-table tbody{display:block}
+      .assistance-register .assistance-record{display:grid;grid-template-columns:1fr 1fr;padding:16px;gap:12px;border-top:1px solid var(--ui-border)}
+      .assistance-register .assistance-record:first-child{border-top:0}
+      .assistance-register .assistance-record td{display:block;min-width:0;border:0;padding:0;text-align:left;overflow-wrap:anywhere}
+      .assistance-record td[data-label]::before{content:attr(data-label);display:block;margin-bottom:4px;color:var(--ui-text-muted);font-size:12px;font-weight:500}
+      .assistance-register .assistance-recipient,.assistance-register .assistance-actions{grid-column:1/-1}
+      .assistance-register .module-person{min-width:0}
+      .assistance-register .module-row-actions{justify-content:flex-start}
+      .assistance-register .module-button-small{min-height:44px}
+      .assistance-register .module-detail-row:not([hidden]),.assistance-register .module-detail-row>td{display:block}
+      .assistance-register .module-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .assistance-register .module-detail-grid div{border-right:0}
+    }
+    @media(max-width:560px){.assistance-search-fields,.assistance-search-fields.is-municipal{grid-template-columns:1fr}.assistance-sector-link{flex:1 1 100%}.assistance-register .assistance-record{grid-template-columns:1fr}}
   </style>
 @endpush
 
@@ -13,12 +45,12 @@
   $charts = $charts ?? [];
   $latestReceived = $stats['latestReceived'] ?? null;
   $trendYear = $stats['trendYear'] ?? now()->year;
-  $hasFilters = collect([
-      'q', 'municipality_id', 'assistance_sector', 'input_category', 'seed_variety_claimed', 'received_from',
-      'received_to', 'gender', 'kgs_min', 'kgs_max'
-  ])->contains(fn ($key) => filled(request($key))) || (int) ($perPage ?? 10) !== 10;
+  $filterLabels = ['q' => 'Search', 'input_category' => 'Category', 'seed_variety_claimed' => 'Item', 'received_from' => 'From', 'received_to' => 'To', 'gender' => 'Gender', 'kgs_min' => 'Minimum quantity', 'kgs_max' => 'Maximum quantity', 'last_name' => 'Last name', 'first_name' => 'First name', 'middle_name' => 'Middle name', 'ffrs' => 'FFRS', 'farm_location' => 'Farm location', 'is_arb' => 'ARB', 'is_4ps' => '4Ps', 'is_ip' => 'IP', 'is_pwd' => 'PWD', 'is_sc' => 'SC', 'is_ofw' => 'OFW', 'farm_area_min' => 'Minimum farm area', 'farm_area_max' => 'Maximum farm area', 'dob_from' => 'Birth date from', 'dob_to' => 'Birth date to'];
+  $activeFilters = collect($filterLabels)->filter(fn ($label, $key) => is_scalar(request($key)) && filled(request($key)));
+  $hasFilters = $activeFilters->isNotEmpty();
+  $hasMoreFilters = collect(['seed_variety_claimed', 'received_from', 'received_to', 'gender', 'kgs_min', 'kgs_max'])->contains(fn ($key) => filled(request($key))) || (int) ($perPage ?? 10) !== 10;
   $fmtDate = function ($value, $format = 'M d, Y') {
-      if (blank($value)) return 'No releases yet';
+      if (blank($value)) return 'Not recorded';
       try { return \Illuminate\Support\Carbon::parse($value)->format($format); }
       catch (\Throwable $e) { return 'Not recorded'; }
   };
@@ -26,15 +58,20 @@
   $unitShortLabels = ['kg' => 'kg', 'sack' => 'sacks', 'pack' => 'packs', 'g' => 'g', 'l' => 'L', 'ml' => 'mL', 'bottle' => 'bottles', 'piece' => 'pieces', 'set' => 'sets', 'roll' => 'rolls', 'box' => 'boxes', 'bundle' => 'bundles'];
   $selectedSector = in_array(request('assistance_sector'), ['agriculture', 'fisheries'], true) ? request('assistance_sector') : '';
   $sectorQuery = collect(request()->query())->except(['page', 'input_category'])->all();
+  $workspaceQuery = array_filter(['municipality_id' => ($canChooseMunicipality ?? false) ? ($selectedMunicipalityId ?? null) : null, 'assistance_sector' => $selectedSector ?: null]);
+  $scopeName = ($canChooseMunicipality ?? false)
+      ? (($municipalities ?? collect())->firstWhere('id', $selectedMunicipalityId ?? null)?->name ?? auth()->user()->scopeLabel())
+      : auth()->user()->scopeLabel();
 @endphp
 
 @section('content')
-<div class="module-page">
+<div class="module-page assistance-page">
   <header class="module-header">
     <div>
       <div class="module-eyebrow">Agriculture and fisheries operations</div>
       <h1>Assistance distribution</h1>
-      <p>Track crop inputs plus tilapia/hito fingerlings, fish feed, fishing gear, and aquaculture supplies released by each municipality.</p>
+      <p>{{ $canManageOperations ? 'Find a recipient, review past assistance, or record a new release.' : 'Review recipients and assistance released across your assigned area.' }}</p>
+      <p class="module-scope-note">Viewing: <strong>{{ $scopeName }}</strong>@unless($canChooseMunicipality ?? false) · Assigned municipality @endunless</p>
     </div>
     <div class="module-actions">
       @if($canManageOperations)<a class="module-button" href="{{ route('rice-seed-distributions.import.form') }}"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"></path></svg>Import NRP workbook</a>@endif
@@ -47,13 +84,12 @@
   @if(session('error'))<div class="module-alert module-alert-error">{{ session('error') }}</div>@endif
 
   <nav class="assistance-sector-switch" aria-label="Assistance sector">
-    <span>Workspace</span>
-    <a class="assistance-sector-link {{ $selectedSector === '' ? 'is-active' : '' }}" href="{{ route('rice-seed-distributions.index', collect($sectorQuery)->except('assistance_sector')->all()) }}"><i class="assistance-sector-dot"></i>All assistance</a>
-    <a class="assistance-sector-link {{ $selectedSector === 'agriculture' ? 'is-active' : '' }}" href="{{ route('rice-seed-distributions.index', array_merge($sectorQuery, ['assistance_sector' => 'agriculture'])) }}"><i class="assistance-sector-dot"></i>Crops &amp; farm inputs</a>
-    <a class="assistance-sector-link is-fisheries {{ $selectedSector === 'fisheries' ? 'is-active' : '' }}" href="{{ route('rice-seed-distributions.index', array_merge($sectorQuery, ['assistance_sector' => 'fisheries'])) }}"><i class="assistance-sector-dot"></i>Fisheries assistance</a>
+    <a class="assistance-sector-link {{ $selectedSector === '' ? 'is-active' : '' }}" @if($selectedSector === '') aria-current="page" @endif href="{{ route('rice-seed-distributions.index', collect($sectorQuery)->except('assistance_sector')->all()) }}">All assistance</a>
+    <a class="assistance-sector-link {{ $selectedSector === 'agriculture' ? 'is-active' : '' }}" @if($selectedSector === 'agriculture') aria-current="page" @endif href="{{ route('rice-seed-distributions.index', array_merge($sectorQuery, ['assistance_sector' => 'agriculture'])) }}">Crops &amp; farm inputs</a>
+    <a class="assistance-sector-link {{ $selectedSector === 'fisheries' ? 'is-active' : '' }}" @if($selectedSector === 'fisheries') aria-current="page" @endif href="{{ route('rice-seed-distributions.index', array_merge($sectorQuery, ['assistance_sector' => 'fisheries'])) }}">Fisheries assistance</a>
   </nav>
 
-  <section class="module-kpis" aria-label="Agriculture and fisheries assistance summary">
+  <section class="module-kpis module-kpis-compact" aria-label="Agriculture and fisheries assistance summary">
     <article class="module-kpi">
       <div class="module-kpi-top"><span class="module-kpi-label">Release records</span><span class="module-kpi-icon"><svg viewBox="0 0 24 24"><path d="M7 3h10v18H7zM10 7h4M10 11h4M10 15h4"></path></svg></span></div>
       <strong>{{ number_format((int) ($totalRecords ?? 0)) }}</strong>
@@ -69,22 +105,18 @@
       <strong>{{ number_format((int) ($uniqueRecipients ?? 0)) }}</strong>
       <small>Distinct linked farmer profiles</small>
     </article>
-<article class="module-kpi">
-      <div class="module-kpi-top"><span class="module-kpi-label">Fisheries releases</span><span class="module-kpi-icon module-kpi-icon-blue"><svg viewBox="0 0 24 24"><path d="M4 12c3-4 7-6 12-4l4-3v6l-4-3c-5 2-9 0-12 4Z"></path><circle cx="14" cy="7.5" r=".5"></circle><path d="M4 12c3 4 7 6 12 4l4 3v-6l-4 3"></path></svg></span></div>
-      <strong>{{ number_format((int) ($fisheriesRecords ?? 0)) }}</strong>
-      <small>Fisheries records matching this view</small>
-    </article>
     <article class="module-kpi">
       <div class="module-kpi-top"><span class="module-kpi-label">Fingerlings issued</span><span class="module-kpi-icon module-kpi-icon-blue"><svg viewBox="0 0 24 24"><path d="M3 12c4-5 10-6 15-2l3-2v8l-3-2c-5 4-11 3-15-2Z"></path><circle cx="15" cy="11" r=".6"></circle></svg></span></div>
       <strong>{{ number_format((float) ($fingerlingsReleased ?? 0), 0) }} <small>pcs</small></strong>
-      <small>Tilapia, hito, and other fingerlings by piece</small>
+      <small>{{ number_format((int) ($fisheriesRecords ?? 0)) }} fisheries releases · Fingerlings counted by piece</small>
     </article>
   </section>
 
   <section class="module-panel">
-    <div class="module-panel-head"><div><h2>Find distribution records</h2><p>Search beneficiaries or items, then narrow by municipality, sector, category, date, gender, and quantity.</p></div>@if($hasFilters)<span class="module-panel-tag">Filtered view</span>@endif</div>
+    <div class="module-panel-head"><div><h2>Find releases</h2><p>Search by name, FFRS, or item. Use More filters for dates and quantities.</p></div></div>
     <form class="module-filter" method="GET" action="{{ route('rice-seed-distributions.index') }}">
-      <div class="module-filter-grid">
+      <input type="hidden" name="assistance_sector" value="{{ $selectedSector }}">
+      <div class="assistance-search-fields {{ ($canChooseMunicipality ?? false) ? '' : 'is-municipal' }}">
         <div class="module-field module-field-search">
           <label for="riceSearch">Search recipient or item</label>
           <div class="module-search-wrap"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg><input class="module-input" id="riceSearch" type="search" name="q" value="{{ request('q') }}" placeholder="Name, FFRS, seed, fingerlings, feed, or gear"></div>
@@ -92,11 +124,10 @@
         @if($canChooseMunicipality ?? false)
           <div class="module-field"><label for="riceMunicipality">Municipality</label><select class="module-input" id="riceMunicipality" name="municipality_id"><option value="">All municipalities</option>@foreach(($municipalities ?? []) as $municipality)<option value="{{ $municipality->id }}" @selected((string) ($selectedMunicipalityId ?? '') === (string) $municipality->id)>{{ $municipality->name }}</option>@endforeach</select></div>
         @endif
-        <div class="module-field"><label for="riceAssistanceSector">Assistance sector</label><select class="module-input" id="riceAssistanceSector" name="assistance_sector"><option value="">All sectors</option>@foreach(($assistanceSectorOptions ?? []) as $value => $label)<option value="{{ $value }}" @selected($selectedSector === $value)>{{ $label }}</option>@endforeach</select></div>
         <div class="module-field"><label for="riceInputCategory">Assistance category</label><select class="module-input" id="riceInputCategory" name="input_category"><option value="">All categories</option>@foreach(($inputCategoryOptions ?? []) as $value => $label)<option value="{{ $value }}" @selected(request('input_category') === $value)>{{ $label }}</option>@endforeach</select></div>
       </div>
-      <details class="module-more" @if(collect(['seed_variety_claimed', 'received_from', 'received_to', 'gender', 'kgs_min', 'kgs_max'])->contains(fn ($key) => filled(request($key))) || (int) $perPage !== 10) open @endif>
-        <summary>More filters @if(collect(['seed_variety_claimed', 'received_from', 'received_to', 'gender', 'kgs_min', 'kgs_max'])->contains(fn ($key) => filled(request($key))) || (int) $perPage !== 10)<span class="module-badge">Active filters</span>@endif</summary>
+      <details class="module-more" id="assistanceMoreFilters" @if($hasMoreFilters) open @endif>
+        <summary>More filters @if($hasMoreFilters)<span class="module-badge">In use</span>@endif</summary>
         <div class="module-more-content"><div class="module-filter-grid">
         <div class="module-field"><label for="riceVariety">Item, species, or variety</label><input class="module-input" id="riceVariety" name="seed_variety_claimed" value="{{ request('seed_variety_claimed') }}" placeholder="Any agriculture or fisheries item"></div>
         <div class="module-field"><label for="riceFrom">Received from</label><input class="module-input" id="riceFrom" type="date" name="received_from" value="{{ request('received_from') }}"></div>
@@ -108,17 +139,30 @@
       </div>
         </div>
       </details>
-      <div class="module-filter-actions"><span>@if($hasFilters)<span class="module-active-filter">Totals and charts reflect these filters</span>@else Totals and charts reflect all accessible records @endif</span><div class="module-filter-buttons">@if($hasFilters)<a class="module-button" href="{{ route('rice-seed-distributions.index') }}">Clear filters</a>@endif<button class="module-button module-button-primary" type="submit">Apply filters</button></div></div>
+      <div class="module-filter-actions"><span>Totals and reports follow this view.</span><div class="module-filter-buttons">@if($hasFilters)<a class="module-button" href="{{ route('rice-seed-distributions.index', $workspaceQuery) }}">Clear filters</a>@endif<button class="module-button module-button-primary" type="submit">Apply filters</button></div></div>
     </form>
+    @if($hasFilters)
+      <div class="module-filter-summary" aria-label="Applied filters">
+        <strong>Filtered by:</strong>
+        @foreach($activeFilters as $key => $label)
+          @php
+            $filterValue = $key === 'input_category' ? ($inputCategoryOptions[request($key)] ?? request($key)) : request($key);
+            if (str_starts_with($key, 'is_') && in_array($filterValue, ['0', '1'], true)) $filterValue = $filterValue === '1' ? 'Yes' : 'No';
+          @endphp
+          <a class="module-filter-chip" href="{{ route('rice-seed-distributions.index', collect(request()->query())->except([$key, 'page'])->all()) }}" aria-label="Remove {{ $label }} filter: {{ $filterValue }}"><span>{{ $label }}: {{ $filterValue }}</span><span aria-hidden="true">×</span></a>
+        @endforeach
+      </div>
+    @endif
   </section>
 
-  <section class="module-panel">
-    <div class="module-table-tools"><div><strong>Distribution register</strong><span>{{ number_format($records->total()) }} {{ Str::plural('record', $records->total()) }} · open details for monitoring fields</span></div></div>
+  <section class="module-panel assistance-register">
+    <div class="module-table-tools"><div><strong>Release records</strong><span>{{ number_format($records->total()) }} {{ Str::plural('record', $records->total()) }} · Most recent releases first</span></div></div>
     @if($records->isNotEmpty())
       <div class="module-table-scroll">
-        <table class="module-table">
-          <thead><tr><th>Recipient</th><th>Farm location</th><th>Input issued</th><th class="module-numeric">Release</th><th><span class="sr-only">Actions</span></th></tr></thead>
-          <tbody>
+        <table class="module-table" role="table">
+          <caption class="sr-only">Assistance releases for {{ $scopeName }}. Select Details to review a release.</caption>
+          <thead role="rowgroup"><tr role="row"><th scope="col" role="columnheader">Recipient</th><th scope="col" role="columnheader">Farm location</th><th scope="col" role="columnheader">Input issued</th><th scope="col" class="module-numeric" role="columnheader">Release</th><th scope="col" role="columnheader"><span class="sr-only">Actions</span></th></tr></thead>
+          <tbody role="rowgroup">
             @foreach($records as $record)
               @php
                 $name = trim($record->last_name . ', ' . $record->first_name . ' ' . ($record->middle_name ?? '') . ' ' . ($record->ext_name ?? ''));
@@ -131,27 +175,29 @@
                 $unit = $record->quantity_unit ?: 'kg';
                 $unitLabel = $unitShortLabels[$unit] ?? $unit;
               @endphp
-              <tr>
-                <td><div class="module-person"><span class="module-avatar">{{ $initials ?: 'FR' }}</span><span class="module-person-copy"><strong>{{ $name ?: 'Unnamed recipient' }}</strong><small>FFRS {{ $record->ffrs ?: 'not assigned' }}</small></span></div></td>
-                <td><strong>{{ $record->farm_municipality ?: 'Municipality not recorded' }}</strong><small>{{ $record->farm_location ?: 'Farm location not recorded' }}</small></td>
-                <td><strong>{{ $record->seed_variety_claimed ?: 'Not recorded' }}</strong><small><span class="module-badge {{ $categoryBadge }}">{{ $categoryLabel }}</span> · {{ $record->assistanceSectorLabel() }}@if(str_contains($category, 'seed')) · {{ $record->seed_class ?: 'Class not recorded' }}@endif</small></td>
-                <td class="module-numeric"><strong>{{ number_format((float) $record->kgs_received, 2) }} {{ $unitLabel }}</strong><small>{{ $fmtDate($record->date_received) }}</small></td>
-                <td><div class="module-row-actions"><button class="module-button module-button-small" type="button" data-row-detail="rice-detail-{{ $record->id }}" aria-expanded="false">Details</button>@if($canManageOperations)<a class="module-button module-button-small" href="{{ route('rice-seed-distributions.edit', $record) }}">Edit</a><form method="POST" action="{{ route('rice-seed-distributions.destroy', $record) }}" onsubmit="return confirm('Delete this distribution record?')">@csrf @method('DELETE')<button class="module-button module-button-danger module-button-small" type="submit">Delete</button></form>@endif</div></td>
+              <tr class="assistance-record" role="row">
+                <td class="assistance-recipient" role="cell"><div class="module-person"><span class="module-avatar" aria-hidden="true">{{ $initials ?: 'FR' }}</span><span class="module-person-copy"><strong>{{ $name ?: 'Unnamed recipient' }}</strong><small>FFRS {{ $record->ffrs ?: 'not assigned' }}</small></span></div></td>
+                <td data-label="Farm location" role="cell"><strong>{{ $record->farm_municipality ?: 'Municipality not recorded' }}</strong><small>{{ $record->farm_location ?: 'Farm location not recorded' }}</small></td>
+                <td data-label="Input issued" role="cell"><strong>{{ $record->seed_variety_claimed ?: 'Not recorded' }}</strong><small><span class="module-badge {{ $categoryBadge }}">{{ $categoryLabel }}</span> · {{ $record->assistanceSectorLabel() }}@if(str_contains($category, 'seed')) · {{ $record->seed_class ?: 'Class not recorded' }}@endif</small></td>
+                <td class="module-numeric" data-label="Release" role="cell"><strong>{{ number_format((float) $record->kgs_received, 2) }} {{ $unitLabel }}</strong><small>{{ $fmtDate($record->date_received) }}</small></td>
+                <td class="assistance-actions" role="cell"><div class="module-row-actions"><button class="module-button module-button-small" type="button" data-row-detail="rice-detail-{{ $record->id }}" aria-controls="rice-detail-{{ $record->id }}" aria-expanded="false" aria-label="Details for {{ $name }}">Details</button>@if($canManageOperations)<a class="module-button module-button-small" href="{{ route('rice-seed-distributions.edit', $record) }}" aria-label="Edit release for {{ $name }}">Edit</a>@endif</div></td>
               </tr>
-              <tr class="module-detail-row" id="rice-detail-{{ $record->id }}" hidden>
-                <td colspan="5"><dl class="module-detail-grid">
+              <tr class="module-detail-row" id="rice-detail-{{ $record->id }}" role="row" hidden>
+                <td colspan="5" role="cell"><dl class="module-detail-grid">
                   <div><dt>Gender</dt><dd>{{ $record->gender ?: 'Not recorded' }}</dd></div><div><dt>Claimed area</dt><dd>{{ $record->claimed_area_ha !== null ? number_format((float) $record->claimed_area_ha, 2).' ha' : 'Not recorded' }}</dd></div><div><dt>Claimed seeds</dt><dd>{{ $record->claimed_seeds_kg !== null ? number_format((float) $record->claimed_seeds_kg, 2).' kg' : 'Not recorded' }}</dd></div><div><dt>Eligibility</dt><dd>{{ $eligibility->implode(', ') ?: 'None recorded' }}</dd></div>
                   <div><dt>Contact</dt><dd>{{ $record->contact_number ?: '—' }}</dd></div><div><dt>Date of birth</dt><dd>{{ $fmtDate($record->date_of_birth) }}</dd></div><div><dt>Farm area</dt><dd>{{ $record->farm_area_ha !== null ? number_format((float) $record->farm_area_ha, 2).' ha' : '—' }}</dd></div><div><dt>Ecosystem</dt><dd>{{ $record->ecosystem ?: '—' }}</dd></div><div><dt>Ecosystem source</dt><dd>{{ $record->ecosystem_source ?: '—' }}</dd></div>
                   <div><dt>Assistance sector</dt><dd>{{ $record->assistanceSectorLabel() }}</dd></div><div><dt>Lot / batch</dt><dd>{{ $record->lot_series ?: '—' }}</dd></div><div><dt>Release notes</dt><dd>{{ $record->input_notes ?: '—' }}</dd></div><div><dt>Sowing schedule</dt><dd>{{ $record->date_of_sowing_label ?: 'Not applicable / not recorded' }}</dd></div><div><dt>Average bag weight</dt><dd>{{ $record->avg_weight_per_bag_kg !== null ? $record->avg_weight_per_bag_kg.' kg' : '—' }}</dd></div><div><dt>Production</dt><dd>{{ $record->total_production_bags !== null ? number_format($record->total_production_bags).' bags' : '—' }}</dd></div><div><dt>Harvested area</dt><dd>{{ $record->avg_area_harvested_ha !== null ? number_format((float) $record->avg_area_harvested_ha, 2).' ha' : '—' }}</dd></div>
                   <div><dt>Variety planted</dt><dd>{{ $record->seed_variety_planted ?: '—' }}</dd></div><div><dt>Province</dt><dd>{{ $record->farm_province ?: '—' }}</dd></div>
-                </dl></td>
+                </dl>
+                @if($canManageOperations)<div class="assistance-detail-actions"><form method="POST" action="{{ route('rice-seed-distributions.destroy', $record) }}" onsubmit="return confirm('Delete this distribution record?')">@csrf @method('DELETE')<button class="module-button module-button-danger module-button-small" type="submit" aria-label="Delete release for {{ $name }}">Delete release</button></form></div>@endif
+                </td>
               </tr>
             @endforeach
           </tbody>
         </table>
       </div>
     @else
-      <div class="module-empty"><span class="module-empty-icon"><svg viewBox="0 0 24 24"><path d="M12 21V9M8 13c-3 0-5-2-5-5 3 0 5 2 5 5M16 11c3 0 5-2 5-5-3 0-5 2-5 5"></path></svg></span><strong>No distribution records found</strong><span>{{ $hasFilters ? 'Clear or adjust the current filters to find other releases.' : 'No agriculture or fisheries assistance has been recorded yet.' }}</span>@if(!$hasFilters && $canManageOperations)<a class="module-button module-button-primary" href="{{ route('rice-seed-distributions.create') }}">Record release</a>@endif</div>
+      <div class="module-empty"><span class="module-empty-icon"><svg viewBox="0 0 24 24"><path d="M12 21V9M8 13c-3 0-5-2-5-5 3 0 5 2 5 5M16 11c3 0 5-2 5-5-3 0-5 2-5 5"></path></svg></span><strong>{{ $hasFilters ? 'No matching releases' : 'No releases in this view yet' }}</strong><span>{{ $hasFilters ? 'Try a different name or item, or clear the filters to see other releases in this workspace.' : 'Releases recorded for this workspace will appear here.' }}</span>@if($hasFilters)<a class="module-button" href="{{ route('rice-seed-distributions.index', $workspaceQuery) }}">Clear filters</a>@elseif($canManageOperations)<a class="module-button module-button-primary" href="{{ route('rice-seed-distributions.create', $workspaceQuery) }}">Record release</a>@endif</div>
     @endif
     @include('partials.pagination', ['paginator' => $records, 'label' => 'distribution record'])
   </section>

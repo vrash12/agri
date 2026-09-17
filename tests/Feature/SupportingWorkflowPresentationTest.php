@@ -5,20 +5,25 @@ namespace Tests\Feature;
 use App\Models\AuditLog;
 use App\Models\BackupFile;
 use App\Models\Municipality;
+use App\Models\Province;
 use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\MessageBag;
 use Illuminate\Support\ViewErrorBag;
+use Tests\Support\PresentationProvinceSchema;
 use Tests\TestCase;
 
 class SupportingWorkflowPresentationTest extends TestCase
 {
+    use PresentationProvinceSchema;
+
     protected function setUp(): void
     {
         parent::setUp();
         config(['database.default' => 'sqlite', 'database.connections.sqlite.database' => ':memory:', 'session.driver' => 'array']);
         DB::purge('sqlite');
+        $this->createPresentationScope();
         $this->withViewErrors([]);
     }
 
@@ -102,7 +107,10 @@ class SupportingWorkflowPresentationTest extends TestCase
     {
         $municipality = new Municipality(['name' => 'Sample Municipality', 'is_active' => true]);
         $municipality->id = 1;
-        $user = new User(['name' => 'Sample Staff', 'email' => 'sample@example.test', 'role' => $role, 'municipality_id' => 1, 'is_active' => true]);
+        $user = new User([
+            'name' => 'Sample Staff', 'email' => 'sample@example.test', 'role' => $role,
+            'municipality_id' => 1, 'province_id' => $this->presentationProvinceId, 'is_active' => true,
+        ]);
         $user->id = $role === User::ROLE_SUPER_ADMIN ? 2 : 1;
         $user->setRelation('municipality', $municipality);
 
@@ -113,6 +121,10 @@ class SupportingWorkflowPresentationTest extends TestCase
     {
         return [
             'account' => $account, 'isMunicipalHeadManager' => $municipalManager, 'isOwnAccount' => false,
+            // The account form now names the managing administrator and offers the
+            // provinces they may assign, both added with province supervision.
+            'manager' => auth()->user() ?? $this->staff(User::ROLE_SUPER_ADMIN),
+            'provinces' => Province::query()->orderBy('name')->get(['id', 'name']),
             'municipalities' => collect([$this->staff(User::ROLE_MUNICIPAL_STAFF)->municipality]),
             'roleOptions' => [User::ROLE_MUNICIPAL_STAFF => 'Municipal Staff', User::ROLE_PROVINCIAL_STAFF => 'Provincial Staff'],
         ];

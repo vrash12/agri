@@ -4,13 +4,50 @@
 
 @push('styles')
   @include('partials.operations-ui-styles')
-  <style>.animal-health-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.animal-service-badge-vaccination{color:#17643a;background:#e7f4eb}.animal-service-badge-deworming{color:#8b641c;background:#fbf2dc}.animal-service-badge-vitamins{color:#2d6594;background:#e8f2fb}.animal-service-badge-treatment{color:#8e4440;background:#fbeceb}@media(max-width:1000px){.animal-health-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:650px){.animal-health-kpis{grid-template-columns:1fr}}</style>
+  <style>
+    .animal-service-badge-vaccination{color:var(--ui-primary);background:var(--ui-primary-soft)}
+    .animal-service-badge-deworming{color:var(--ui-warning);background:var(--ui-warning-soft)}
+    .animal-service-badge-vitamins{color:var(--ui-info);background:var(--ui-info-soft)}
+    .animal-service-badge-treatment{color:var(--ui-danger);background:var(--ui-danger-soft)}
+    .animal-health-register td{overflow-wrap:anywhere}
+    @media(max-width:1180px){
+      .animal-health-register{min-width:0}
+      .animal-health-register thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+      .animal-health-register tbody{display:block;padding:0 16px}
+      .animal-health-register tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;padding:20px 0;border-bottom:1px solid var(--module-border)}
+      .animal-health-register tr:last-child{border-bottom:0}
+      .animal-health-register td{display:block;min-width:0;padding:0;border:0}
+      .animal-health-register td::before{content:attr(data-label);display:block;margin-bottom:4px;color:var(--module-muted);font-size:12px;font-weight:500}
+      .animal-health-register .animal-record-actions{grid-column:1/-1;padding-top:12px;border-top:1px solid var(--module-border)}
+      .animal-health-register .animal-record-actions::before{display:none}
+      .animal-health-register .module-row-actions{justify-content:flex-end}
+      .animal-health-register .module-row-actions .module-button{min-height:44px}
+    }
+    @media(max-width:520px){
+      .animal-health-register tr{grid-template-columns:1fr;gap:12px}
+      .animal-health-register .module-row-actions{justify-content:flex-start}
+    }
+  </style>
 @endpush
 
 @php
-  $hasFilters = filled($q ?? '') || filled($barangay ?? '') || filled($petType ?? '') || filled($serviceType ?? '')
-      || filled($year ?? '') || filled($selectedMunicipalityId ?? '')
-      || (int) ($perPage ?? 20) !== 20;
+  $selectedMunicipality = collect($municipalities ?? [])->firstWhere('id', $selectedMunicipalityId ?? null);
+  $scopeName = ($canChooseMunicipality ?? false)
+      ? ($selectedMunicipality?->name ?? auth()->user()->scopeLabel())
+      : (auth()->user()->municipality?->name ?? 'Your assigned municipality');
+  $activeFilters = collect([
+      'q' => ['label' => 'Search', 'value' => $q ?? ''],
+      'service_type' => ['label' => 'Service', 'value' => $serviceType ?? '', 'display' => ($serviceTypeOptions ?? [])[$serviceType ?? ''] ?? null],
+      'pet_type' => ['label' => 'Species', 'value' => $petType ?? '', 'display' => ($petTypeOptions ?? [])[$petType ?? ''] ?? null],
+      'barangay' => ['label' => 'Barangay', 'value' => $barangay ?? ''],
+      'year' => ['label' => 'Year', 'value' => $year ?? ''],
+      'per_page' => ['label' => 'Rows per page', 'value' => (int) ($perPage ?? 20) !== 20 ? $perPage : ''],
+  ])->filter(fn ($filter) => filled($filter['value']));
+  $scopeQuery = ($canChooseMunicipality ?? false) && $selectedMunicipality
+      ? ['municipality_id' => $selectedMunicipality->id] : [];
+  $filterQuery = $scopeQuery + $activeFilters->map(fn ($filter) => $filter['value'])->all();
+  $clearFiltersUrl = route('anti-rabies-vaccinations.index', $scopeQuery);
+  $hasFilters = $activeFilters->isNotEmpty();
   $fmtDate = function ($value, $format = 'M d, Y') {
       if (blank($value)) return 'Not recorded';
       try { return \Illuminate\Support\Carbon::parse($value)->format($format); }
@@ -35,17 +72,19 @@
     </div>
   </header>
 
+  <p class="module-scope-note">Viewing: <strong>{{ $scopeName }}</strong> · Totals and records below use the same filters.</p>
+
   @if(session('success'))<div class="module-alert">{{ session('success') }}</div>@endif
   @if(session('error'))<div class="module-alert module-alert-error">{{ session('error') }}</div>@endif
 
-  <section class="module-kpis animal-health-kpis" aria-label="Animal health summary">
+  <section class="module-kpis module-kpis-compact" aria-label="Animal health summary">
     <article class="module-kpi">
       <div class="module-kpi-top"><span class="module-kpi-label">Services recorded</span><span class="module-kpi-icon module-kpi-icon-red"><svg viewBox="0 0 24 24"><path d="M8 4h8l2 4v10a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V8l2-4Z"></path><path d="M9 11h6M12 8v6"></path></svg></span></div>
       <strong>{{ number_format((int) ($totalServices ?? 0)) }}</strong><small>Records matching the current filters</small>
     </article>
     <article class="module-kpi">
       <div class="module-kpi-top"><span class="module-kpi-label">Animals served</span><span class="module-kpi-icon module-kpi-icon-amber"><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="2"></circle><circle cx="16" cy="8" r="2"></circle><circle cx="5" cy="13" r="2"></circle><circle cx="19" cy="13" r="2"></circle><path d="M8 19c0-3 2-5 4-5s4 2 4 5c-2 2-6 2-8 0Z"></path></svg></span></div>
-      <strong>{{ number_format((int) ($animalsServed ?? 0)) }}</strong><small>Individual animals across all records</small>
+      <strong>{{ number_format((int) ($animalsServed ?? 0)) }}</strong><small>Animals counted across matching services</small>
     </article>
     <article class="module-kpi">
       <div class="module-kpi-top"><span class="module-kpi-label">This month</span><span class="module-kpi-icon"><svg viewBox="0 0 24 24"><path d="M4 6h16v14H4zM8 3v6M16 3v6M4 10h16"></path></svg></span></div>
@@ -79,33 +118,40 @@
       </div>
         </div>
       </details>
-      <div class="module-filter-actions"><span>@if($hasFilters)<span class="module-active-filter">Summary and charts reflect these filters</span>@else Showing all animal-health records in your access scope @endif</span><div class="module-filter-buttons">@if($hasFilters)<a class="module-button" href="{{ route('anti-rabies-vaccinations.index') }}">Clear filters</a>@endif<button class="module-button module-button-primary" type="submit">Apply filters</button></div></div>
+      <div class="module-filter-actions"><span>@if($hasFilters)<span class="module-active-filter">Summary and charts reflect these filters</span>@else Showing all animal-health records for {{ $scopeName }} @endif</span><div class="module-filter-buttons">@if($hasFilters)<a class="module-button" href="{{ $clearFiltersUrl }}">Clear filters</a>@endif<button class="module-button module-button-primary" type="submit">Apply filters</button></div></div>
+      @if($hasFilters)
+        <div class="module-filter-summary" aria-label="Applied filters">
+          @foreach($activeFilters as $key => $filter)
+            <a class="module-filter-chip" href="{{ route('anti-rabies-vaccinations.index', \Illuminate\Support\Arr::except($filterQuery, [$key])) }}" aria-label="Remove {{ $filter['label'] }} filter: {{ $filter['display'] ?? $filter['value'] }}"><span>{{ $filter['label'] }}: {{ $filter['display'] ?? $filter['value'] }}</span><span aria-hidden="true">×</span></a>
+          @endforeach
+        </div>
+      @endif
     </form>
   </section>
 
   <section class="module-panel">
-    <div class="module-table-tools"><div><strong>Animal-health register</strong><span>{{ number_format($records->total()) }} {{ Str::plural('record', $records->total()) }} · newest services first</span></div></div>
+    <div class="module-table-tools"><div><strong id="animalRegisterTitle">Animal-health register</strong><span>{{ number_format($records->total()) }} {{ Str::plural('record', $records->total()) }} · newest services first</span></div></div>
     @if($records->isNotEmpty())
       <div class="module-table-scroll">
-        <table class="module-table">
-          <thead><tr><th>Service</th><th>Animal coverage</th><th>Owner / raiser</th><th>Details</th><th>Service date</th><th><span class="sr-only">Actions</span></th></tr></thead>
-          <tbody>
+        <table class="module-table animal-health-register" role="table" aria-labelledby="animalRegisterTitle">
+          <thead role="rowgroup"><tr role="row"><th scope="col" role="columnheader">Service</th><th scope="col" role="columnheader">Animal coverage</th><th scope="col" role="columnheader">Owner / raiser</th><th scope="col" role="columnheader">Details</th><th scope="col" role="columnheader">Service date</th><th scope="col" role="columnheader"><span class="sr-only">Actions</span></th></tr></thead>
+          <tbody role="rowgroup">
             @foreach($records as $record)
               @php $initials = mb_strtoupper(mb_substr($record->pet_name ?: $record->pet_type ?: 'A', 0, 2)); $serviceTypeValue = $record->service_type ?: 'vaccination'; @endphp
-              <tr>
-                <td><strong>{{ $record->service_name ?: 'Anti-rabies vaccination' }}</strong><small><span class="module-badge animal-service-badge-{{ $serviceTypeValue }}">{{ $record->serviceTypeLabel() }}</span></small></td>
-                <td><div class="module-person"><span class="module-avatar">{{ $initials }}</span><span class="module-person-copy"><strong>{{ number_format($record->animalsServed()) }} {{ $record->animalTypeLabel() }}</strong><small>{{ $record->pet_name ?: 'Group / name not specified' }}{{ $record->pet_breed ? ' · '.$record->pet_breed : '' }}</small></span></div></td>
-                <td><strong>{{ $record->owner_name }}</strong><small>{{ $record->barangay ?: 'Barangay not recorded' }}</small></td>
-                <td><strong>{{ $record->dosage ?: 'Dosage not recorded' }}</strong><small>{{ $record->administration_route ?: 'Route not recorded' }}{{ $record->diagnosis ? ' · '.$record->diagnosis : '' }}</small></td>
-                <td><strong>{{ $fmtDate($record->vaccination_date) }}</strong><small>{{ $record->next_service_date ? 'Follow-up '.$fmtDate($record->next_service_date, 'M d, Y') : 'No follow-up scheduled' }}</small></td>
-                <td>@if($canManageOperations)<div class="module-row-actions"><a class="module-button module-button-small" href="{{ route('anti-rabies-vaccinations.edit', $record) }}">Edit</a><form method="POST" action="{{ route('anti-rabies-vaccinations.destroy', $record) }}" onsubmit="return confirm('Delete this animal-health record?')">@csrf @method('DELETE')<button class="module-button module-button-danger module-button-small" type="submit">Delete</button></form></div>@else<span class="module-badge module-badge-green">Read only</span>@endif</td>
+              <tr role="row">
+                <td role="cell" data-label="Service"><strong>{{ $record->service_name ?: 'Anti-rabies vaccination' }}</strong><small><span class="module-badge animal-service-badge-{{ $serviceTypeValue }}">{{ $record->serviceTypeLabel() }}</span></small></td>
+                <td role="cell" data-label="Animal coverage"><div class="module-person"><span class="module-avatar" aria-hidden="true">{{ $initials }}</span><span class="module-person-copy"><strong>{{ number_format($record->animalsServed()) }} {{ $record->animalTypeLabel() }}</strong><small>{{ $record->pet_name ?: 'Group / name not specified' }}{{ $record->pet_breed ? ' · '.$record->pet_breed : '' }}</small></span></div></td>
+                <td role="cell" data-label="Owner / raiser"><strong>{{ $record->owner_name }}</strong><small>{{ $record->barangay ?: 'Barangay not recorded' }}</small></td>
+                <td role="cell" data-label="Details"><strong>{{ $record->dosage ?: 'Dosage not recorded' }}</strong><small>{{ $record->administration_route ?: 'Route not recorded' }}{{ $record->diagnosis ? ' · '.$record->diagnosis : '' }}</small></td>
+                <td role="cell" data-label="Service date"><strong>{{ $fmtDate($record->vaccination_date) }}</strong><small>{{ $record->next_service_date ? 'Follow-up '.$fmtDate($record->next_service_date, 'M d, Y') : 'No follow-up scheduled' }}</small></td>
+                <td role="cell" class="animal-record-actions">@if($canManageOperations)<div class="module-row-actions"><a class="module-button module-button-small" href="{{ route('anti-rabies-vaccinations.edit', $record) }}" aria-label="Edit service for {{ $record->owner_name }}">Edit</a><form method="POST" action="{{ route('anti-rabies-vaccinations.destroy', $record) }}" onsubmit="return confirm('Delete this animal-health record?')">@csrf @method('DELETE')<button class="module-button module-button-danger module-button-small" type="submit" aria-label="Delete service for {{ $record->owner_name }}">Delete</button></form></div>@else<span class="module-badge module-badge-green">Read only</span>@endif</td>
               </tr>
             @endforeach
           </tbody>
         </table>
       </div>
     @else
-      <div class="module-empty"><span class="module-empty-icon"><svg viewBox="0 0 24 24"><path d="M8 4h8l2 4v10a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V8l2-4Z"></path><path d="M9 11h6M12 8v6"></path></svg></span><strong>No animal-health records found</strong><span>{{ $hasFilters ? 'Clear or adjust the current filters to find other services.' : 'No vaccination, deworming, vitamins, or treatment records have been added yet.' }}</span>@if(!$hasFilters && $canManageOperations)<a class="module-button module-button-primary" href="{{ route('anti-rabies-vaccinations.create') }}">Record service</a>@endif</div>
+      <div class="module-empty"><span class="module-empty-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8l2 4v10a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V8l2-4Z"></path><path d="M9 11h6M12 8v6"></path></svg></span><strong>{{ $hasFilters ? 'No services match these filters' : 'No animal-health services recorded yet' }}</strong><span>{{ $hasFilters ? 'Try a different name, service, or year, or clear the filters to see more records.' : ($canManageOperations ? 'Record the first vaccination, deworming, vitamin, or treatment service for this office.' : 'Services will appear here when staff record them for this office.') }}</span>@if($hasFilters)<a class="module-button" href="{{ $clearFiltersUrl }}">Clear filters</a>@elseif($canManageOperations)<a class="module-button module-button-primary" href="{{ route('anti-rabies-vaccinations.create', $scopeQuery) }}">Record service</a>@endif</div>
     @endif
     @include('partials.pagination', ['paginator' => $records, 'label' => 'animal-health record'])
   </section>

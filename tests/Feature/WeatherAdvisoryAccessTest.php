@@ -6,11 +6,15 @@ use App\Models\Municipality;
 use App\Models\User;
 use App\Services\WeatherForecastService;
 use App\Support\MunicipalityAccess;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Collection;
+use Tests\Support\ProvinceScopedFixtures;
 use Tests\TestCase;
 
 class WeatherAdvisoryAccessTest extends TestCase
 {
+    use DatabaseTransactions, ProvinceScopedFixtures;
+
     public function test_a_municipal_user_cannot_switch_to_another_municipality(): void
     {
         $own = $this->municipality(31, 'Anao');
@@ -112,30 +116,49 @@ class WeatherAdvisoryAccessTest extends TestCase
         );
     }
 
+    /**
+     * `User::hasUsableScope()` looks the municipality and its supervising province
+     * up in the database, so these fixtures have to be real rows rather than
+     * fabricated models. The id argument only keeps the workspace codes distinct.
+     */
     private function municipality(int $id, string $name): Municipality
     {
-        $municipality = new Municipality([
-            'name' => $name,
-            'province' => 'Tarlac',
-            'is_active' => true,
-        ]);
-        $municipality->id = $id;
-        $municipality->exists = true;
+        // Municipality names are unique, and the target database may already hold
+        // these Tarlac workspaces, so reuse one when it is there. Any change made
+        // here is rolled back with the test's transaction.
+        $municipality = Municipality::withoutEvents(fn (): Municipality => Municipality::query()->firstOrCreate(
+            ['name' => $name],
+            [
+                'province' => 'Tarlac',
+                'province_id' => $this->supervisingProvinceId(),
+                'code' => 'WX'.$id.strtoupper(substr(md5(uniqid('', true)), 0, 6)),
+                'is_active' => true,
+            ]
+        ));
 
-        return $municipality;
+        // An existing row predating province supervision would fail the scope check.
+        if (! $municipality->province_id || ! $municipality->is_active) {
+            $municipality->forceFill([
+                'province_id' => $this->supervisingProvinceId(),
+                'is_active' => true,
+            ])->saveQuietly();
+        }
+
+        return $municipality->refresh();
     }
 
     private function user(string $role, ?Municipality $municipality = null): User
     {
-        $user = new User([
+        $user = User::withoutEvents(fn (): User => User::query()->create([
             'name' => 'Weather Access Tester',
-            'email' => strtolower(str_replace('_', '-', $role)) . '@example.test',
+            'email' => strtolower(str_replace('_', '-', $role)).'-'.uniqid().'@example.test',
+            'password' => 'unused-test-placeholder',
             'role' => $role,
             'municipality_id' => $municipality?->id,
+            // Provincial roles need an active province before they may sign in.
+            'province_id' => $this->supervisingProvinceId(),
             'is_active' => true,
-        ]);
-        $user->id = 501;
-        $user->exists = true;
+        ])->refresh());
         $user->setRelation('municipality', $municipality);
 
         return $user;

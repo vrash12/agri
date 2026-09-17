@@ -5,22 +5,30 @@ namespace Tests\Feature;
 use App\Models\Municipality;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Tests\Support\PresentationProvinceSchema;
 use Tests\TestCase;
 
 class SharedDesignPresentationTest extends TestCase
 {
+    use PresentationProvinceSchema;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         config(['database.default' => 'sqlite', 'database.connections.sqlite.database' => ':memory:', 'session.driver' => 'array']);
         DB::purge('sqlite');
+        $this->createPresentationScope();
     }
 
     /** @dataProvider navigationRoles */
     public function test_simplified_navigation_preserves_role_destinations(string $role, bool $backups, bool $accounts, bool $audit): void
     {
-        $user = new User(['name' => 'Sample Staff', 'role' => $role, 'municipality_id' => 1, 'is_active' => true]);
+        $user = new User([
+            'name' => 'Sample Staff', 'role' => $role, 'municipality_id' => 1,
+            // Provincial and oversight roles have no usable scope without one.
+            'province_id' => $this->presentationProvinceId, 'is_active' => true,
+        ]);
         $user->id = 1;
         $user->setRelation('municipality', new Municipality(['name' => 'Sample Municipality']));
         $this->actingAs($user);
@@ -59,9 +67,12 @@ class SharedDesignPresentationTest extends TestCase
         $user->setRelation('municipality', new Municipality(['name' => 'Baguio City', 'province' => 'Benguet']));
         $this->actingAs($user);
 
+        // The office label is the municipality alone now that the supervising
+        // province, not the legacy province string, decides scope. The point of
+        // this case is unchanged: the header must never name the wrong province.
         $this->view('layouts.app')
-            ->assertSee('Baguio City, Benguet')
-            ->assertDontSee('Baguio City, Tarlac');
+            ->assertSee('Baguio City')
+            ->assertDontSee('Tarlac');
     }
 
     public function test_login_keeps_native_credentials_and_error_recovery(): void

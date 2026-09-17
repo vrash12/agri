@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreFarmPlotRequest;
 use App\Models\Farmer;
 use App\Models\FarmPlot;
 use App\Support\ConcurrentWrite;
@@ -193,22 +194,9 @@ class FarmPlotController extends Controller
         ]);
     }
 
-    public function store(Request $request, Farmer $farmer)
+    public function store(StoreFarmPlotRequest $request, Farmer $farmer)
     {
-        $this->authorize('update', $farmer);
-
-        $data = $request->validate([
-            'name' => ['nullable', 'string', 'max:120'],
-            'color' => [
-                'nullable',
-                'string',
-                'max:16',
-                'regex:/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/',
-            ],
-            'polygon' => ['required', 'array', 'min:3'],
-            'polygon.*.lat' => ['required', 'numeric', 'between:-90,90'],
-            'polygon.*.lng' => ['required', 'numeric', 'between:-180,180'],
-        ]);
+        $data = $request->validated();
 
         $polygon = $this->normalizePolygon($data['polygon']);
         $geofence = $this->boundaryGuard->inspect(
@@ -242,22 +230,9 @@ class FarmPlotController extends Controller
         ], 201);
     }
 
-    public function update(Request $request, FarmPlot $plot)
+    public function update(StoreFarmPlotRequest $request, FarmPlot $plot)
     {
-        $this->authorize('update', $plot);
-
-        $data = $request->validate([
-            'name' => ['nullable', 'string', 'max:120'],
-            'color' => [
-                'nullable',
-                'string',
-                'max:16',
-                'regex:/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/',
-            ],
-            'polygon' => ['required', 'array', 'min:3'],
-            'polygon.*.lat' => ['required', 'numeric', 'between:-90,90'],
-            'polygon.*.lng' => ['required', 'numeric', 'between:-180,180'],
-        ]);
+        $data = $request->validated();
 
         $polygon = $this->normalizePolygon($data['polygon']);
         $geofence = $this->boundaryGuard->inspect(

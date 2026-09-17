@@ -16,7 +16,13 @@ final class OperationsViewFixtures
 {
     public static function user(string $role = User::ROLE_MUNICIPAL_STAFF): User
     {
-        $user = new User(['name' => 'Preview Staff', 'role' => $role, 'municipality_id' => 1, 'is_active' => true]);
+        // Province 1 is created by Tests\Support\PresentationProvinceSchema, which the
+        // rendering suites set up: provincial and oversight roles have no usable
+        // scope without it, so their navigation and actions would silently vanish.
+        $user = new User([
+            'name' => 'Preview Staff', 'role' => $role, 'municipality_id' => 1,
+            'province_id' => 1, 'is_active' => true,
+        ]);
         $user->id = 99;
         $user->setRelation('municipality', self::municipality());
 

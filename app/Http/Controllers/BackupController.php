@@ -8,6 +8,7 @@ use App\Support\ConcurrentWrite;
 use App\Support\LocalTime;
 use App\Support\MunicipalityAccess;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
@@ -20,8 +21,53 @@ class BackupController extends Controller
         $this->middleware('auth');
     }
 
-    private array $editableTextExts  = ['txt','log','sql','csv','json','xml','md'];
+    private array $editableTextExts = ['txt', 'log', 'sql', 'csv', 'json', 'xml', 'md'];
+
     private array $editableExcelExts = ['xlsx'];
+
+    /**
+     * The only content types this module will ever render inside the browser.
+     *
+     * The stored MIME is supplied by the uploading browser and is never echoed back;
+     * anything missing from this map is handed over as a download instead, so an
+     * uploaded file cannot execute script in this application's origin. Text formats
+     * are deliberately served as plain text rather than their own type, so markup
+     * inside them stays inert.
+     */
+    private const INLINE_CONTENT_TYPES = [
+        'pdf' => 'application/pdf',
+        'png' => 'image/png',
+        'jpg' => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'gif' => 'image/gif',
+        'webp' => 'image/webp',
+        'bmp' => 'image/bmp',
+        'mp3' => 'audio/mpeg',
+        'wav' => 'audio/wav',
+        'ogg' => 'audio/ogg',
+        'mp4' => 'video/mp4',
+        'webm' => 'video/webm',
+        'txt' => 'text/plain; charset=UTF-8',
+        'log' => 'text/plain; charset=UTF-8',
+        'sql' => 'text/plain; charset=UTF-8',
+        'csv' => 'text/plain; charset=UTF-8',
+        'json' => 'text/plain; charset=UTF-8',
+        'xml' => 'text/plain; charset=UTF-8',
+        'md' => 'text/plain; charset=UTF-8',
+    ];
+
+    /**
+     * Markup and executable formats that have no place in an office backup folder.
+     *
+     * Serving is already allow-listed above; refusing these on the way in keeps them
+     * out of storage and out of any future download path.
+     */
+    private const BLOCKED_UPLOAD_EXTENSIONS = [
+        'html', 'htm', 'xhtml', 'shtml', 'svg', 'svgz', 'js', 'mjs', 'jsx',
+        'php', 'phtml', 'php3', 'php4', 'php5', 'php7', 'phar', 'inc',
+        'exe', 'com', 'scr', 'bat', 'cmd', 'msi', 'dll', 'jar', 'hta',
+        'sh', 'bash', 'ps1', 'psm1', 'vbs', 'vbe', 'wsf', 'wsh', 'cgi', 'pl', 'py',
+    ];
 
     public function index(Request $request)
     {
@@ -30,7 +76,7 @@ class BackupController extends Controller
         $q = BackupFile::query()
             ->with(['uploader:id,name', 'municipality:id,name'])
             ->select([
-                'id','municipality_id','disk','folder','original_name','stored_name','path','size','mime','sha256','notes','uploaded_by','created_at'
+                'id', 'municipality_id', 'disk', 'folder', 'original_name', 'stored_name', 'path', 'size', 'mime', 'sha256', 'notes', 'uploaded_by', 'created_at',
             ]);
         $this->municipalityAccess->applyOptionalFilter(
             $q,
@@ -42,8 +88,8 @@ class BackupController extends Controller
         // BASIC SEARCH (field + mode)
         // --------------------------
         $search = trim((string) $request->get('search', ''));
-        $field  = (string) $request->get('search_field', 'all');      // all|name|folder|notes|sha256
-        $mode   = (string) $request->get('search_mode', 'contains');  // contains|starts|ends|exact
+        $field = (string) $request->get('search_field', 'all');      // all|name|folder|notes|sha256
+        $mode = (string) $request->get('search_mode', 'contains');  // contains|starts|ends|exact
 
         if ($search !== '') {
             $like = $this->buildLike($search, $mode);
@@ -58,15 +104,27 @@ class BackupController extends Controller
 
             $q->where(function ($w) use ($field, $apply) {
                 switch ($field) {
-                    case 'name':   $apply($w, 'original_name'); break;
-                    case 'folder': $apply($w, 'folder'); break;
-                    case 'notes':  $apply($w, 'notes'); break;
-                    case 'sha256': $apply($w, 'sha256'); break;
+                    case 'name':   $apply($w, 'original_name');
+                        break;
+                    case 'folder': $apply($w, 'folder');
+                        break;
+                    case 'notes':  $apply($w, 'notes');
+                        break;
+                    case 'sha256': $apply($w, 'sha256');
+                        break;
                     default:
-                        $w->where(function ($ww) use ($apply) { $apply($ww, 'original_name'); })
-                          ->orWhere(function ($ww) use ($apply) { $apply($ww, 'folder'); })
-                          ->orWhere(function ($ww) use ($apply) { $apply($ww, 'notes'); })
-                          ->orWhere(function ($ww) use ($apply) { $apply($ww, 'sha256'); });
+                        $w->where(function ($ww) use ($apply) {
+                            $apply($ww, 'original_name');
+                        })
+                          ->orWhere(function ($ww) use ($apply) {
+                              $apply($ww, 'folder');
+                          })
+                          ->orWhere(function ($ww) use ($apply) {
+                              $apply($ww, 'notes');
+                          })
+                          ->orWhere(function ($ww) use ($apply) {
+                              $apply($ww, 'sha256');
+                          });
                         break;
                 }
             });
@@ -90,17 +148,20 @@ class BackupController extends Controller
 
         // Multi extensions: exts[]=zip&exts[]=sql
         $exts = $request->input('exts', []);
-        if (!is_array($exts)) $exts = [];
+        if (! is_array($exts)) {
+            $exts = [];
+        }
         $exts = array_values(array_filter(array_map(function ($e) {
-            $e = strtolower(trim((string)$e));
+            $e = strtolower(trim((string) $e));
             $e = ltrim($e, '.');
+
             return preg_match('/^[a-z0-9]{1,12}$/', $e) ? $e : null;
         }, $exts)));
 
         if (count($exts) > 0) {
             $q->where(function ($w) use ($exts) {
                 foreach ($exts as $e) {
-                    $w->orWhere('original_name', 'like', '%.' . $e);
+                    $w->orWhere('original_name', 'like', '%.'.$e);
                 }
             });
         }
@@ -109,11 +170,15 @@ class BackupController extends Controller
         $datePreset = (string) $request->get('date_preset', '');
         [$dateFrom, $dateTo] = $this->resolveDateRange(
             $datePreset,
-            (string)$request->get('date_from', ''),
-            (string)$request->get('date_to', '')
+            (string) $request->get('date_from', ''),
+            (string) $request->get('date_to', '')
         );
-        if ($dateFrom) $q->whereDate('created_at', '>=', $dateFrom);
-        if ($dateTo)   $q->whereDate('created_at', '<=', $dateTo);
+        if ($dateFrom) {
+            $q->whereDate('created_at', '>=', $dateFrom);
+        }
+        if ($dateTo) {
+            $q->whereDate('created_at', '<=', $dateTo);
+        }
 
         // Size preset OR custom
         $sizePreset = (string) $request->get('size_preset', '');
@@ -153,12 +218,18 @@ class BackupController extends Controller
         // --------------------------
         $sort = (string) $request->get('sort', 'newest');
         switch ($sort) {
-            case 'oldest':     $q->orderBy('created_at', 'asc')->orderBy('id', 'asc'); break;
-            case 'name_asc':   $q->orderBy('original_name', 'asc')->orderBy('id', 'desc'); break;
-            case 'name_desc':  $q->orderBy('original_name', 'desc')->orderBy('id', 'desc'); break;
-            case 'size_asc':   $q->orderBy('size', 'asc')->orderBy('id', 'desc'); break;
-            case 'size_desc':  $q->orderBy('size', 'desc')->orderBy('id', 'desc'); break;
-            default:           $q->orderBy('created_at', 'desc')->orderBy('id', 'desc'); break;
+            case 'oldest':     $q->orderBy('created_at', 'asc')->orderBy('id', 'asc');
+                break;
+            case 'name_asc':   $q->orderBy('original_name', 'asc')->orderBy('id', 'desc');
+                break;
+            case 'name_desc':  $q->orderBy('original_name', 'desc')->orderBy('id', 'desc');
+                break;
+            case 'size_asc':   $q->orderBy('size', 'asc')->orderBy('id', 'desc');
+                break;
+            case 'size_desc':  $q->orderBy('size', 'desc')->orderBy('id', 'desc');
+                break;
+            default:           $q->orderBy('created_at', 'desc')->orderBy('id', 'desc');
+                break;
         }
 
         // Pagination
@@ -191,12 +262,12 @@ class BackupController extends Controller
             $request->query('municipality_id')
         );
         $uploaders = User::query()
-            ->select('id','name')
+            ->select('id', 'name')
             ->whereIn('id', $visibleUploaderIds)
             ->orderBy('name', 'asc')
             ->get();
 
-        $extPresets = ['zip','sql','pdf','xlsx','csv','png','jpg','jpeg','txt','log','json','xml','md'];
+        $extPresets = ['zip', 'sql', 'pdf', 'xlsx', 'csv', 'png', 'jpg', 'jpeg', 'txt', 'log', 'json', 'xml', 'md'];
 
         // Active filters summary for chips
         $active = [
@@ -241,11 +312,14 @@ class BackupController extends Controller
     {
         $this->authorize('create', BackupFile::class);
         $data = $request->validate([
-            'municipality_id' => ['nullable','integer'],
-            'files' => ['required','array','min:1'],
-            'files.*' => ['file','max:51200'], // 50MB each
-            'folder' => ['nullable','string','max:120'],
-            'notes' => ['nullable','string','max:2000'],
+            'municipality_id' => ['nullable', 'integer'],
+            'files' => ['required', 'array', 'min:1'],
+            'files.*' => ['file', 'max:51200', $this->blockedExtensionRule()], // 50MB each
+            // Bounded so the value cannot climb out of the backups directory.
+            'folder' => ['nullable', 'string', 'max:120', 'regex:/^[A-Za-z0-9][A-Za-z0-9 _-]*(\/[A-Za-z0-9][A-Za-z0-9 _-]*)*$/'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+        ], [
+            'folder.regex' => 'The folder may only contain letters, numbers, spaces, dashes, underscores, and / between folder names.',
         ]);
         $municipalityId = $this->municipalityAccess->resolveForWrite(
             $request->user(),
@@ -254,7 +328,9 @@ class BackupController extends Controller
 
         $disk = 'local';
         $folder = trim($data['folder'] ?? '');
-        if ($folder === '') $folder = LocalTime::now()->format('Y/m');
+        if ($folder === '') {
+            $folder = LocalTime::now()->format('Y/m');
+        }
 
         $storedPaths = [];
         $records = [];
@@ -283,7 +359,8 @@ class BackupController extends Controller
                     'stored_name' => $storedName,
                     'path' => $path,
                     'size' => (int) $file->getSize(),
-                    'mime' => $file->getClientMimeType(),
+                    // Detected from the file's own bytes; the browser-supplied type is not trusted.
+                    'mime' => $file->getMimeType() ?: 'application/octet-stream',
                     'sha256' => $this->computeSha256($disk, $path),
                     'notes' => $data['notes'] ?? null,
                     'uploaded_by' => Auth::id(),
@@ -312,11 +389,15 @@ class BackupController extends Controller
     {
         $this->authorize('view', $backup);
         $disk = $backup->disk;
-        if (!Storage::disk($disk)->exists($backup->path)) {
+        if (! Storage::disk($disk)->exists($backup->path)) {
             return redirect()->route('backups.index')->with('error', 'File not found in storage.');
         }
 
-        return Storage::disk($disk)->download($backup->path, $backup->original_name);
+        return Storage::disk($disk)->download(
+            $backup->path,
+            $backup->original_name,
+            ['X-Content-Type-Options' => 'nosniff']
+        );
     }
 
     public function destroy(BackupFile $backup)
@@ -355,7 +436,7 @@ class BackupController extends Controller
         }
 
         $disk = $backup->disk;
-        if (!Storage::disk($disk)->exists($backup->path)) {
+        if (! Storage::disk($disk)->exists($backup->path)) {
             return redirect()->route('backups.index')->with('error', 'File not found in storage.');
         }
 
@@ -369,20 +450,33 @@ class BackupController extends Controller
     {
         $this->authorize('view', $backup);
         $disk = $backup->disk;
-        if (!Storage::disk($disk)->exists($backup->path)) {
+        if (! Storage::disk($disk)->exists($backup->path)) {
             abort(404);
         }
 
         $name = $backup->original_name ?: basename($backup->path);
-        $mime = $backup->mime ?: (Storage::disk($disk)->mimeType($backup->path) ?: 'application/octet-stream');
+        $extension = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+        $inlineType = self::INLINE_CONTENT_TYPES[$extension] ?? null;
 
         $headers = [
-            'Content-Type' => $mime,
-            'Content-Disposition' => 'inline; filename="'.$this->safeFilename($name).'"',
+            'Content-Type' => $inlineType ?? 'application/octet-stream',
             'X-Content-Type-Options' => 'nosniff',
+            // Stricter than the application-wide policy, because a stored file is
+            // not part of the interface. Downloads are fully sandboxed since nothing
+            // should render at all; the previewable types keep only what a document,
+            // image, or media file needs, and never script.
+            'Content-Security-Policy' => $inlineType === null
+                ? "default-src 'none'; sandbox"
+                : "default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'; script-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'",
         ];
 
-        return Storage::disk($disk)->response($backup->path, $name, $headers);
+        // Anything this module cannot render safely is handed over as a download instead.
+        return Storage::disk($disk)->response(
+            $backup->path,
+            $this->safeFilename($name),
+            $headers,
+            $inlineType === null ? 'attachment' : 'inline'
+        );
     }
 
     /**
@@ -399,16 +493,16 @@ class BackupController extends Controller
         $this->authorize('update', $backup);
         $disk = $backup->disk;
 
-        if (!Storage::disk($disk)->exists($backup->path)) {
+        if (! Storage::disk($disk)->exists($backup->path)) {
             return response()->json(['ok' => false, 'message' => 'File not found'], 404);
         }
 
         $kind = (string) $request->input('kind', '');
-        $ext  = strtolower(pathinfo((string)$backup->original_name, PATHINFO_EXTENSION));
+        $ext = strtolower(pathinfo((string) $backup->original_name, PATHINFO_EXTENSION));
 
         // ---- TEXT SAVE ----
         if ($kind === 'text') {
-            if (!$this->isEditableText($ext)) {
+            if (! $this->isEditableText($ext)) {
                 return response()->json(['ok' => false, 'message' => 'This file type is not editable'], 422);
             }
 
@@ -448,7 +542,7 @@ class BackupController extends Controller
 
         // ---- XLSX SAVE ----
         if ($kind === 'xlsx') {
-            if (!$this->isEditableExcel($ext)) {
+            if (! $this->isEditableExcel($ext)) {
                 return response()->json(['ok' => false, 'message' => 'This file type is not editable'], 422);
             }
 
@@ -510,12 +604,13 @@ class BackupController extends Controller
 
     private function buildLike(string $s, string $mode): string
     {
-        $s = addcslashes($s, "%_"); // escape wildcards
+        $s = addcslashes($s, '%_'); // escape wildcards
+
         return match ($mode) {
-            'starts' => $s . '%',
-            'ends'   => '%' . $s,
-            'exact'  => $s,
-            default  => '%' . $s . '%', // contains
+            'starts' => $s.'%',
+            'ends' => '%'.$s,
+            'exact' => $s,
+            default => '%'.$s.'%', // contains
         };
     }
 
@@ -524,36 +619,69 @@ class BackupController extends Controller
         $preset = strtolower(trim($preset));
         $today = now()->toDateString();
 
-        if ($preset === 'today') return [$today, $today];
-        if ($preset === '7d')    return [now()->subDays(6)->toDateString(), $today];
-        if ($preset === '30d')   return [now()->subDays(29)->toDateString(), $today];
+        if ($preset === 'today') {
+            return [$today, $today];
+        }
+        if ($preset === '7d') {
+            return [now()->subDays(6)->toDateString(), $today];
+        }
+        if ($preset === '30d') {
+            return [now()->subDays(29)->toDateString(), $today];
+        }
 
         $from = trim($from);
         $to = trim($to);
+
         return [$from !== '' ? $from : null, $to !== '' ? $to : null];
     }
 
     private function resolveSizeRange(string $preset, $minMb, $maxMb): array
     {
         $preset = strtolower(trim($preset));
-        if ($preset === 'small')  return [0, 5];      // <= 5 MB
-        if ($preset === 'medium') return [5, 50];     // 5–50 MB
-        if ($preset === 'large')  return [50, null];  // >= 50 MB
+        if ($preset === 'small') {
+            return [0, 5];
+        }      // <= 5 MB
+        if ($preset === 'medium') {
+            return [5, 50];
+        }     // 5–50 MB
+        if ($preset === 'large') {
+            return [50, null];
+        }  // >= 50 MB
 
-        $min = ($minMb !== null && $minMb !== '') ? (float)$minMb : null;
-        $max = ($maxMb !== null && $maxMb !== '') ? (float)$maxMb : null;
+        $min = ($minMb !== null && $minMb !== '') ? (float) $minMb : null;
+        $max = ($maxMb !== null && $maxMb !== '') ? (float) $maxMb : null;
+
         return [$min, $max];
+    }
+
+    /**
+     * Refuse markup and executable uploads by their extension.
+     */
+    private function blockedExtensionRule(): callable
+    {
+        return function (string $attribute, $value, callable $fail): void {
+            if (! $value instanceof UploadedFile) {
+                return;
+            }
+
+            $extension = strtolower($value->getClientOriginalExtension());
+            if (in_array($extension, self::BLOCKED_UPLOAD_EXTENSIONS, true)) {
+                $fail('A .'.$extension.' file cannot be stored in the Backup Folder.');
+            }
+        };
     }
 
     private function isEditableText(string $ext): bool
     {
         $ext = strtolower($ext);
+
         return in_array($ext, $this->editableTextExts, true);
     }
 
     private function isEditableExcel(string $ext): bool
     {
         $ext = strtolower($ext);
+
         return in_array($ext, $this->editableExcelExts, true);
     }
 
@@ -564,16 +692,23 @@ class BackupController extends Controller
     {
         try {
             $stream = Storage::disk($disk)->readStream($path);
-            if (!$stream) return null;
+            if (! $stream) {
+                return null;
+            }
 
             $hash = hash_init('sha256');
-            while (!feof($stream)) {
+            while (! feof($stream)) {
                 $buf = fread($stream, 1024 * 1024); // 1MB chunks
-                if ($buf === false) break;
+                if ($buf === false) {
+                    break;
+                }
                 hash_update($hash, $buf);
             }
 
-            if (is_resource($stream)) fclose($stream);
+            if (is_resource($stream)) {
+                fclose($stream);
+            }
+
             return hash_final($hash);
         } catch (\Throwable $e) {
             return null;
@@ -583,7 +718,8 @@ class BackupController extends Controller
     private function safeFilename(string $name): string
     {
         // simple safe header filename
-        $name = str_replace(["\r","\n",'"'], ['','',''], $name);
+        $name = str_replace(["\r", "\n", '"'], ['', '', ''], $name);
+
         return $name;
     }
 }

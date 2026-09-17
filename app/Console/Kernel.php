@@ -10,12 +10,17 @@ class Kernel extends ConsoleKernel
     /**
      * Define the application's command schedule.
      *
-     * @param  \Illuminate\Console\Scheduling\Schedule  $schedule
      * @return void
      */
     protected function schedule(Schedule $schedule)
     {
-        // $schedule->command('inspire')->hourly();
+        // This repository has no complete migration history, so the nightly dump is
+        // the only way back from a lost database. It runs outside office hours and
+        // will not start a second time if the previous one is still writing.
+        $schedule->command('db:backup')
+            ->dailyAt((string) config('backup.schedule_at', '01:30'))
+            ->withoutOverlapping()
+            ->runInBackground();
     }
 
     /**

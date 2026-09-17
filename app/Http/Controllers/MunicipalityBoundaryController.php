@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ImportMunicipalityBoundaryRequest;
+use App\Http\Requests\StoreMunicipalityBoundaryRequest;
 use App\Models\Farmer;
 use App\Models\FarmPlot;
 use App\Models\Municipality;
@@ -13,11 +15,12 @@ use App\Support\MunicipalityAccess;
 use App\Support\MunicipalityBoundaryImporter;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
@@ -251,12 +254,13 @@ class MunicipalityBoundaryController extends Controller
             .$boundary->id.':'
             .$requestedVersion;
         $map = Cache::get($cacheKey);
+        $failureMessage = 'Google could not generate the municipality satellite image. Please try again.';
 
         if (! is_array($map)) {
             try {
                 $map = Cache::lock($cacheKey.':refresh-lock', 30)->block(
                     5,
-                    function () use ($cacheKey, $apiKey, $frame): ?array {
+                    function () use ($cacheKey, $apiKey, $frame, &$failureMessage): ?array {
                         $cached = Cache::get($cacheKey);
                         if (is_array($cached)) {
                             return $cached;
@@ -266,7 +270,7 @@ class MunicipalityBoundaryController extends Controller
                             'Accept' => 'image/png,image/*;q=0.9',
                             'Referer' => rtrim((string) config('app.url'), '/').'/',
                             'User-Agent' => 'AgriMS-Tarlac/1.0',
-                        ])->timeout(20)->get(
+                        ])->connectTimeout(5)->timeout(20)->get(
                             'https://maps.googleapis.com/maps/api/staticmap',
                             [
                                 'center' => number_format($frame['center_lat'], 7, '.', '').','.number_format($frame['center_lng'], 7, '.', ''),
@@ -281,7 +285,16 @@ class MunicipalityBoundaryController extends Controller
 
                         $contentType = strtolower((string) $response->header('Content-Type'));
                         if (! $response->successful() || ! str_starts_with($contentType, 'image/') || $response->body() === '') {
-                            report(new \RuntimeException('Google municipality snapshot request failed with HTTP '.$response->status().'.'));
+                            $failureMessage = match ($response->status()) {
+                                401, 403 => 'Google denied the satellite image request. Ask the system administrator to check the Maps Static API key restrictions, API activation, and billing.',
+                                429 => 'Google Maps usage limit was reached. Please try again later or ask the system administrator to check the Maps Static API quota.',
+                                400 => 'Google rejected the satellite image request. Ask the system administrator to check the Maps Static API configuration.',
+                                default => 'Google returned an unavailable or invalid satellite image. Please try again later.',
+                            };
+                            // Never log Google's body or request URL: either can contain credentials.
+                            Log::warning('Municipality satellite snapshot provider failure.', [
+                                'upstream_status' => $response->status(),
+                            ]);
 
                             return null;
                         }
@@ -296,15 +309,23 @@ class MunicipalityBoundaryController extends Controller
                     }
                 );
             } catch (LockTimeoutException $exception) {
+                $failureMessage = 'The municipality satellite image is still being prepared. Please try again shortly.';
+                $map = Cache::get($cacheKey);
+            } catch (ConnectionException $exception) {
+                $failureMessage = 'The server could not connect to Google Maps. Please try again or ask the system administrator to check the hosting connection.';
+                // Connection exception messages include the full URL and API key.
+                Log::warning('Municipality satellite snapshot connection failed.');
                 $map = Cache::get($cacheKey);
             } catch (\Throwable $exception) {
-                report($exception);
+                Log::error('Municipality satellite snapshot failed.', [
+                    'exception_type' => get_class($exception),
+                ]);
                 $map = Cache::get($cacheKey);
             }
         }
 
         if (! is_array($map) || ! isset($map['body'])) {
-            return response('Google could not generate the municipality satellite image.', 502)
+            return response($failureMessage, 502)
                 ->header('Cache-Control', 'no-store');
         }
 
@@ -348,37 +369,17 @@ class MunicipalityBoundaryController extends Controller
         return response()->json(['recorded' => $auditLog !== null]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreMunicipalityBoundaryRequest $request): JsonResponse
     {
-        $this->authorize('create', MunicipalityBoundary::class);
-        $validated = $this->validateBoundaryRequest($request, true);
+        $validated = $request->validated();
         $geometry = $this->decodeGeometry($validated['geojson']);
 
         return $this->persistNew($request, $validated, $geometry, 'drawn');
     }
 
-    public function import(Request $request): JsonResponse
+    public function import(ImportMunicipalityBoundaryRequest $request): JsonResponse
     {
-        $this->authorize('import', MunicipalityBoundary::class);
-        $validated = $request->validate([
-            'municipality_id' => ['required', 'integer', Rule::exists('municipalities', 'id')->where('is_active', true)],
-            'name' => ['required', 'string', 'max:150'],
-            'color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'status' => ['required', Rule::in([MunicipalityBoundary::STATUS_DRAFT, MunicipalityBoundary::STATUS_ACTIVE])],
-            'replace_confirmed' => ['nullable', 'boolean'],
-            'file' => [
-                'bail',
-                'required',
-                'file',
-                'max:10240',
-                function (string $attribute, $value, $fail): void {
-                    $extension = strtolower((string) $value->getClientOriginalExtension());
-                    if (! in_array($extension, ['kml', 'kmz', 'json', 'geojson', 'xml'], true)) {
-                        $fail('Upload a KML, KMZ, GeoJSON, JSON, or XML boundary file.');
-                    }
-                },
-            ],
-        ]);
+        $validated = $request->validated();
 
         try {
             $geometry = $this->importer->import($request->file('file'));
@@ -391,10 +392,9 @@ class MunicipalityBoundaryController extends Controller
         ]);
     }
 
-    public function update(Request $request, MunicipalityBoundary $boundary): JsonResponse
+    public function update(StoreMunicipalityBoundaryRequest $request, MunicipalityBoundary $boundary): JsonResponse
     {
-        $this->authorize('update', $boundary);
-        $validated = $this->validateBoundaryRequest($request, false);
+        $validated = $request->validated();
         $newGeometry = array_key_exists('geojson', $validated)
             ? $this->decodeGeometry($validated['geojson'])
             : $boundary->geojson;
@@ -528,25 +528,6 @@ class MunicipalityBoundaryController extends Controller
     }
 
     /** @return array<string, mixed> */
-    private function validateBoundaryRequest(Request $request, bool $creating): array
-    {
-        $rules = [
-            'name' => [$creating ? 'required' : 'sometimes', 'string', 'max:150'],
-            'color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'geojson' => [$creating ? 'required' : 'sometimes'],
-            'replace_confirmed' => ['nullable', 'boolean'],
-        ];
-
-        if ($creating) {
-            $rules['municipality_id'] = ['required', 'integer', Rule::exists('municipalities', 'id')->where('is_active', true)];
-            $rules['status'] = ['required', Rule::in([MunicipalityBoundary::STATUS_DRAFT, MunicipalityBoundary::STATUS_ACTIVE])];
-        } else {
-            $rules['_record_version'] = ['required', 'string'];
-        }
-
-        return $request->validate($rules);
-    }
-
     /** @param  mixed  $raw @return array<string, mixed> */
     private function decodeGeometry($raw): array
     {

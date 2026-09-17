@@ -1433,6 +1433,9 @@
   window.__farmerMapCardUrlTemplate = "{{ url('/farmers/__ID__/map-card') }}";
   window.__farmerGeocodeUrl = "{{ route('geocode') }}";
   window.__canManageOperationalData = @json($canManageOperations ?? auth()->user()->canManageOperationalData());
+  {{-- Letterhead images for the printable parcel sheet, previously inlined in the script. --}}
+  window.__printLeftLogo = @json(asset('images/mao-logo.jpg'));
+  window.__printRightLogo = @json(asset('images/ramos-logo.jpg'));
 </script>
 @include('farmers.partials.maps-styles')
 <script src="{{ asset('js/municipality-snapshot-export.js') }}?v=1"></script>

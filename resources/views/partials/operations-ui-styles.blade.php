@@ -189,5 +189,22 @@
   .module-form-section[open]:has(> summary) > summary::after { content:'−'; }
   .module-error-link { color:inherit; text-decoration:underline; text-underline-offset:3px; }
   @media(max-width:600px) { .module-form-body,.module-form-section-head,.module-form-actions { padding:16px; } .module-form-grid { grid-template-columns:1fr; } .module-form-field,.module-form-field-third,.module-form-field-full { grid-column:1/-1; } .module-form-actions .module-button { min-height:44px; } }
+  .module-scope-note { display:flex; align-items:center; flex-wrap:wrap; gap:4px 8px; color:var(--ui-text); font-size:13px; overflow-wrap:anywhere; }
+  .module-header .module-scope-note { margin-top:10px; color:var(--ui-text); font-size:13px; }
+  .module-scope-note strong { font-weight:500; }
+  .module-filter-summary { display:flex; align-items:center; flex-wrap:wrap; gap:8px; min-width:0; }
+  .module-filter-chip { display:inline-flex; align-items:center; gap:8px; min-height:44px; max-width:100%; padding:8px 12px; border:1px solid var(--ui-control-border); border-radius:var(--ui-radius-control); color:var(--ui-primary); background:var(--ui-primary-soft); font-size:13px; line-height:1.5; text-decoration:none; overflow-wrap:anywhere; }
+  .module-filter-chip:hover { color:var(--ui-primary-hover); background:var(--ui-accent-soft); }
+  .module-filter-chip > span { min-width:0; }
+  .module-kpis-compact .module-kpi { box-shadow:none; }
+  .module-kpis-compact .module-kpi > small { white-space:normal; overflow-wrap:anywhere; }
+  .module-kpis-compact .module-kpi strong { font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+  @media(max-width:600px) {
+    .module-kpis.module-kpis-compact { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+    .module-kpis-compact .module-kpi { padding:12px; }
+    .module-kpis-compact .module-kpi-icon { display:none; }
+    .module-kpis-compact .module-kpi-label { letter-spacing:normal; }
+    .module-kpis-compact .module-kpi strong { font-size:26px; margin-top:8px; }
+  }
   @media(prefers-reduced-motion:reduce) { .module-page * { transition:none!important; } }
 </style>

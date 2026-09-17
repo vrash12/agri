@@ -10,11 +10,12 @@ use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Tests\Support\ProvinceScopedFixtures;
 use Tests\TestCase;
 
 class PublicFarmerLandMapTest extends TestCase
 {
-    use DatabaseTransactions;
+    use DatabaseTransactions, ProvinceScopedFixtures;
 
     private Farmer $farmer;
 
@@ -28,6 +29,7 @@ class PublicFarmerLandMapTest extends TestCase
         $municipality = Municipality::create([
             'name' => 'QR Map Municipality '.$suffix,
             'province' => 'Tarlac',
+            'province_id' => $this->supervisingProvinceId(),
             'code' => 'QR'.substr($suffix, -8),
             'is_active' => true,
         ]);

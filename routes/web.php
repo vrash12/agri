@@ -42,7 +42,10 @@ Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])
         ->name('login');
 
+    // Per-address guessing is stopped in AuthController; this caps one host's overall
+    // sign-in traffic while staying generous enough for a whole office behind one IP.
     Route::post('/login', [AuthController::class, 'login'])
+        ->middleware('throttle:30,1')
         ->name('login.attempt');
 });
 

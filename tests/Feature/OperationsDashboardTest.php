@@ -11,11 +11,12 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Tests\Support\ProvinceScopedFixtures;
 use Tests\TestCase;
 
 class OperationsDashboardTest extends TestCase
 {
-    use DatabaseTransactions;
+    use DatabaseTransactions, ProvinceScopedFixtures;
 
     public function test_dashboard_and_mapping_workspace_use_the_municipal_scope(): void
     {
@@ -30,6 +31,7 @@ class OperationsDashboardTest extends TestCase
             'role' => User::ROLE_MUNICIPAL_STAFF,
             'municipality_id' => $ownMunicipality->id,
             'is_active' => true,
+            'province_id' => $this->supervisingProvinceId(),
         ]);
 
         $mappedFarmer = $this->makeFarmer(
@@ -136,6 +138,7 @@ class OperationsDashboardTest extends TestCase
             'role' => User::ROLE_SUPER_ADMIN,
             'municipality_id' => null,
             'is_active' => true,
+            'province_id' => $this->supervisingProvinceId(),
         ]);
 
         User::create([
@@ -145,6 +148,7 @@ class OperationsDashboardTest extends TestCase
             'role' => User::ROLE_MUNICIPAL_HEAD,
             'municipality_id' => $firstMunicipality->id,
             'is_active' => true,
+            'province_id' => $this->supervisingProvinceId(),
         ]);
 
         $mappedFarmer = $this->makeFarmer(
@@ -219,6 +223,7 @@ class OperationsDashboardTest extends TestCase
             'role' => User::ROLE_MUNICIPAL_STAFF,
             'municipality_id' => $municipality->id,
             'is_active' => true,
+            'province_id' => $this->supervisingProvinceId(),
         ]);
 
         Http::fake([
@@ -243,6 +248,7 @@ class OperationsDashboardTest extends TestCase
         return Municipality::create([
             'name' => $name,
             'province' => 'Tarlac',
+            'province_id' => $this->supervisingProvinceId(),
             'code' => substr($code, 0, 20),
             'is_active' => true,
         ]);

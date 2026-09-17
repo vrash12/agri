@@ -388,6 +388,22 @@ Design changes must preserve the system's authorization and business rules descr
 
 ## 13. Reusable component contract
 
+### `<x-module.field>`
+
+The form-field wrapper is a Blade component: `resources/views/components/module/field.blade.php`. Use it for every new field, and migrate existing ones as you touch their form.
+
+```blade
+<x-module.field name="chairperson" label="Chairperson" :required="true" :full="true" hint="Shown under the control.">
+  <input class="module-input" id="chairperson" name="chairperson" aria-describedby="chairperson_hint chairperson_error">
+</x-module.field>
+```
+
+The component renders the wrapper, the label, the required marker, the hint and the validation message. The control stays in the slot, so selects with option groups, textareas and inputs with data attributes keep their own markup untouched.
+
+Element ids follow a fixed convention, `<name>_hint` and `<name>_error`, or the same from an explicit `:id`. The control in the slot references them through `aria-describedby`; naming an id that is not currently on the page is ignored by browsers, so a control may reference its error id whether or not the field is invalid.
+
+This block was previously handwritten 95 times across 10 forms, which is how the message element became a `<div>` in some fields and a `<span>` in others, and how several fields lost the association between an input and its message. `tests/Feature/ModuleFieldComponentTest` fixes the contract; keep it passing when changing the component. `farmers_cooperatives/_form.blade.php` is the migrated reference. The remaining forms are `agricultural_machineries` (24 fields), `rice_seed_distributions` (19), `anti_rabies_vaccinations` (18), `farmers` (14), `backups`, and the two import forms; migrate one form per change and check its rendered output rather than converting them in bulk.
+
 Reuse or extend these existing component groups during implementation:
 
 | Concern | Existing class/partial family |

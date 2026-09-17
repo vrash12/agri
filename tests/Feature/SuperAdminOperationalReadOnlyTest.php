@@ -14,11 +14,12 @@ use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Tests\Support\ProvinceScopedFixtures;
 use Tests\TestCase;
 
 class SuperAdminOperationalReadOnlyTest extends TestCase
 {
-    use DatabaseTransactions;
+    use DatabaseTransactions, ProvinceScopedFixtures;
 
     private Municipality $municipality;
 
@@ -46,6 +47,7 @@ class SuperAdminOperationalReadOnlyTest extends TestCase
         $this->municipality = Municipality::create([
             'name' => 'Read Only Municipality '.$suffix,
             'province' => 'Tarlac',
+            'province_id' => $this->supervisingProvinceId(),
             'code' => 'RO'.substr($suffix, -8),
             'is_active' => true,
         ]);
@@ -56,6 +58,7 @@ class SuperAdminOperationalReadOnlyTest extends TestCase
             'password' => Hash::make('password'),
             'role' => User::ROLE_SUPER_ADMIN,
             'is_active' => true,
+            'province_id' => $this->supervisingProvinceId(),
         ]);
 
         $this->farmer = Farmer::create([
@@ -114,9 +117,10 @@ class SuperAdminOperationalReadOnlyTest extends TestCase
         $this->actingAs($this->superAdmin)
             ->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('Find a module')
-            ->assertSee('User Management')
-            ->assertDontSee('data-label="Backup Folder"', false)
+            // The module search was removed when the navigation became a grouped
+            // sidebar; entries are now titled links.
+            ->assertSee('<span class="nav-text">User Management</span>', false)
+            ->assertDontSee('<span class="nav-text">Backup Folder</span>', false)
             ->assertDontSee('href="'.route('backups.index').'"', false);
 
         $this->actingAs($this->superAdmin)
@@ -287,8 +291,8 @@ class SuperAdminOperationalReadOnlyTest extends TestCase
             ->post(route('admins.store'), [
                 'name' => 'Managed Provincial Staff',
                 'email' => $email,
-                'password' => 'password123',
-                'password_confirmation' => 'password123',
+                'password' => 'municipal ledger tuesday rainfall',
+                'password_confirmation' => 'municipal ledger tuesday rainfall',
                 'role' => User::ROLE_PROVINCIAL_STAFF,
                 'is_active' => '1',
             ])
@@ -310,12 +314,13 @@ class SuperAdminOperationalReadOnlyTest extends TestCase
             'password' => Hash::make('password'),
             'role' => User::ROLE_PROVINCIAL_STAFF,
             'is_active' => true,
+            'province_id' => $this->supervisingProvinceId(),
         ]);
 
         $this->actingAs($provincialStaff)
             ->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('data-label="Backup Folder"', false)
+            ->assertSee('<span class="nav-text">Backup Folder</span>', false)
             ->assertSee('href="'.route('backups.index').'"', false);
 
         $this->actingAs($provincialStaff)

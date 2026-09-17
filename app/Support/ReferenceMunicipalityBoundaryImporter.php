@@ -20,10 +20,15 @@ final class ReferenceMunicipalityBoundaryImporter
     /**
      * Apply a trusted, pinned municipality dataset as one atomic import.
      *
-     * @param  array<string,array{code:string,aliases:array<int,string>,psgc_code:string,legacy_psgc_code:string,shape_id:string,reference_area_ha:float}>  $identities
+     * An identity may set `workspace_name` when the workspace must not carry the source
+     * `shapeName`, such as Bulakan, whose source name collides with the Bulacan province workspace.
+     *
+     * @param  array<string,array{code:string,aliases:array<int,string>,psgc_code:string,legacy_psgc_code:string,shape_id:string,reference_area_ha:float,workspace_name?:string}>  $identities
+     * @param  string|null  $supersededBoundary  Exact name of a coarser active reference in this province that these
+     *                                           boundaries replace; it is archived inside the same transaction.
      * @return array<int,int> Municipality IDs whose active-boundary caches were invalidated.
      */
-    public function import(string $province, string $sourceFile, string $checksum, string $revision, array $identities): array
+    public function import(string $province, string $sourceFile, string $checksum, string $revision, array $identities, ?string $supersededBoundary = null): array
     {
         foreach (['municipalities', 'municipality_boundaries', 'users'] as $table) {
             if (! Schema::hasTable($table)) {
@@ -35,17 +40,18 @@ final class ReferenceMunicipalityBoundaryImporter
 
         $municipalityIds = Cache::lock('municipality-boundaries:activation', 120)->block(
             15,
-            fn (): array => DB::transaction(function () use ($province, $references, $identities, $checksum, $revision): array {
+            fn (): array => DB::transaction(function () use ($province, $references, $identities, $checksum, $revision, $supersededBoundary): array {
                 $actor = ReferenceBoundaryAccess::actor($province);
 
-                $ids = [];
+                // A coarser reference covers the same land, so it must be archived before the overlap checks run.
+                $ids = $supersededBoundary === null ? [] : $this->archiveSuperseded($supersededBoundary, $province, $actor);
                 foreach ($identities as $name => $identity) {
                     [$municipality, $workspaceCreated] = $this->resolveMunicipality($province, $name, $identity);
                     $this->activateReference($municipality, $identity, $references[$name], $actor, $workspaceCreated, $checksum, $revision);
                     $ids[] = (int) $municipality->id;
                 }
 
-                return $ids;
+                return array_values(array_unique($ids));
             }, 3)
         );
 
@@ -63,6 +69,7 @@ final class ReferenceMunicipalityBoundaryImporter
     private function resolveMunicipality(string $province, string $name, array $identity): array
     {
         $provinceId = ReferenceBoundaryAccess::provinceId($province);
+        $name = $identity['workspace_name'] ?? $name;
         $names = [mb_strtolower($name), 'municipality of '.mb_strtolower($name)];
         $codes = array_merge($identity['aliases'], [$identity['psgc_code'], $identity['legacy_psgc_code']]);
         $matches = Municipality::query()->where(function (Builder $query) use ($names, $codes): void {
@@ -187,6 +194,48 @@ final class ReferenceMunicipalityBoundaryImporter
     }
 
     /**
+     * Archive an active coarser reference in this province that the imported set replaces.
+     *
+     * Only the named reference is touched; every other conflict still stops the whole import.
+     *
+     * @return array<int,int> Municipality IDs whose active-boundary caches must be invalidated.
+     */
+    private function archiveSuperseded(string $name, string $province, User $actor): array
+    {
+        $provinceId = ReferenceBoundaryAccess::provinceId($province);
+        $boundaries = MunicipalityBoundary::query()->active()->where('name', $name)
+            ->whereIn('municipality_id', Municipality::query()->where('province_id', $provinceId)->select('id'))
+            ->lockForUpdate()->get();
+
+        $ids = [];
+        foreach ($boundaries as $boundary) {
+            $boundary->forceFill([
+                'status' => MunicipalityBoundary::STATUS_ARCHIVED,
+                'archived_at' => now(),
+                'updated_by' => $actor->id,
+            ])->save();
+
+            AuditTrail::record('archived', 'Municipality geofences',
+                $actor->name.' archived the superseded '.$name.' before importing its municipality references.', [
+                    'actor' => $actor,
+                    'auditable' => $boundary,
+                    'municipality_id' => $boundary->municipality_id,
+                    'old_values' => ['status' => MunicipalityBoundary::STATUS_ACTIVE],
+                    'new_values' => ['status' => $boundary->status, 'archived_at' => $boundary->archived_at?->toIso8601String()],
+                    'metadata' => [
+                        'data_classification' => 'planning_reference',
+                        'reason' => 'superseded_by_municipality_references',
+                        'superseded_boundary' => $name,
+                    ],
+                ]);
+
+            $ids[] = (int) $boundary->municipality_id;
+        }
+
+        return $ids;
+    }
+
+    /**
      * @param  array<string,array<string,mixed>>  $identities
      * @return array<string,array{name:string,geometry:array<string,mixed>,metadata:array<string,mixed>}>
      */
@@ -227,7 +276,7 @@ final class ReferenceMunicipalityBoundaryImporter
             if (abs($metadata['area_ha'] - $identity['reference_area_ha']) / $identity['reference_area_ha'] > 0.03) {
                 throw new RuntimeException("The {$name} boundary area differs from the municipality reference by more than 3%.");
             }
-            $references[$name] = ['name' => $name, 'geometry' => $geometry, 'metadata' => $metadata];
+            $references[$name] = ['name' => $identity['workspace_name'] ?? $name, 'geometry' => $geometry, 'metadata' => $metadata];
         }
 
         return $references;

@@ -7,11 +7,12 @@ use App\Models\User;
 use App\Support\ConcurrentWrite;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Hash;
+use Tests\Support\ProvinceScopedFixtures;
 use Tests\TestCase;
 
 class MunicipalHeadUserManagementTest extends TestCase
 {
-    use DatabaseTransactions;
+    use DatabaseTransactions, ProvinceScopedFixtures;
 
     private Municipality $managedMunicipality;
 
@@ -84,8 +85,8 @@ class MunicipalHeadUserManagementTest extends TestCase
             ->post(route('admins.store'), [
                 'name' => 'Created Municipal Staff',
                 'email' => $email,
-                'password' => 'password123',
-                'password_confirmation' => 'password123',
+                'password' => 'municipal ledger tuesday rainfall',
+                'password_confirmation' => 'municipal ledger tuesday rainfall',
                 'role' => User::ROLE_MUNICIPAL_STAFF,
                 'municipality_id' => $this->otherMunicipality->id,
                 'is_active' => '1',
@@ -100,22 +101,39 @@ class MunicipalHeadUserManagementTest extends TestCase
             'is_active' => 1,
         ]);
 
+        // A crafted role is overridden rather than rejected, so the escalation
+        // attempt succeeds as a request but cannot produce a provincial account.
+        $escalationEmail = 'escalation-'.uniqid().'@example.test';
+
         $this->actingAs($this->municipalHead)
             ->post(route('admins.store'), [
                 'name' => 'Attempted Provincial User',
-                'email' => 'escalation-'.uniqid().'@example.test',
-                'password' => 'password123',
-                'password_confirmation' => 'password123',
+                'email' => $escalationEmail,
+                'password' => 'municipal ledger tuesday rainfall',
+                'password_confirmation' => 'municipal ledger tuesday rainfall',
                 'role' => User::ROLE_PROVINCIAL_STAFF,
                 'municipality_id' => $this->managedMunicipality->id,
                 'is_active' => '1',
             ])
-            ->assertSessionHasErrors('role');
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseMissing('users', [
+            'email' => $escalationEmail,
+            'role' => User::ROLE_PROVINCIAL_STAFF,
+        ]);
+        $this->assertDatabaseHas('users', [
+            'email' => $escalationEmail,
+            'role' => User::ROLE_MUNICIPAL_STAFF,
+            'municipality_id' => $this->managedMunicipality->id,
+        ]);
     }
 
     public function test_municipal_head_can_update_and_delete_own_staff(): void
     {
         $updatedEmail = 'updated-own-staff-'.uniqid().'@example.test';
+        // The token hashes the stored attributes, so take it from the persisted
+        // record the way an edit page loads it.
+        $this->ownStaff->refresh();
 
         $this->actingAs($this->municipalHead)
             ->put(route('admins.update', $this->ownStaff), [
@@ -190,6 +208,7 @@ class MunicipalHeadUserManagementTest extends TestCase
         return Municipality::create([
             'name' => $name,
             'province' => 'Tarlac',
+            'province_id' => $this->supervisingProvinceId(),
             'code' => substr($code, 0, 20),
             'is_active' => true,
         ]);
@@ -207,6 +226,7 @@ class MunicipalHeadUserManagementTest extends TestCase
             'password' => Hash::make('password'),
             'role' => $role,
             'municipality_id' => $municipalityId,
+            'province_id' => $this->supervisingProvinceId(),
             'is_active' => true,
         ]);
     }

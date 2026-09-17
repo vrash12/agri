@@ -8,11 +8,12 @@ use App\Models\Municipality;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Hash;
+use Tests\Support\ProvinceScopedFixtures;
 use Tests\TestCase;
 
 class SuperAdminAuditTrailTest extends TestCase
 {
-    use DatabaseTransactions;
+    use DatabaseTransactions, ProvinceScopedFixtures;
 
     private Municipality $municipality;
 
@@ -26,6 +27,7 @@ class SuperAdminAuditTrailTest extends TestCase
         $this->municipality = Municipality::create([
             'name' => 'Audit Municipality '.$suffix,
             'province' => 'Tarlac',
+            'province_id' => $this->supervisingProvinceId(),
             'code' => 'AU'.substr($suffix, -8),
             'is_active' => true,
         ]);
@@ -39,10 +41,14 @@ class SuperAdminAuditTrailTest extends TestCase
 
     public function test_only_super_admin_can_open_or_export_the_audit_trail(): void
     {
+        // A province-scoped Super Admin only sees events owned by their province;
+        // null-province events are deliberately owner-only.
         $log = AuditLog::query()->create([
             'event' => 'created',
             'module' => 'Farmers',
             'description' => 'Test audit event.',
+            'municipality_id' => $this->municipality->id,
+            'province_id' => $this->supervisingProvinceId(),
         ]);
 
         $this->actingAs($this->superAdmin)
@@ -55,7 +61,9 @@ class SuperAdminAuditTrailTest extends TestCase
         $this->actingAs($this->superAdmin)
             ->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('data-label="Audit Trail"', false)
+            // The navigation was rewritten to a grouped sidebar; the entry is now a
+            // titled link rather than the old data-label attribute.
+            ->assertSee('<span class="nav-text">Audit Trail</span>', false)
             ->assertSee('Review audit trail');
 
         foreach ([User::ROLE_PROVINCIAL_STAFF, User::ROLE_MUNICIPAL_HEAD, User::ROLE_MUNICIPAL_STAFF] as $role) {
@@ -201,11 +209,17 @@ class SuperAdminAuditTrailTest extends TestCase
             'actor_name' => $this->superAdmin->name,
             'actor_email' => $this->superAdmin->email,
             'user_id' => $this->superAdmin->id,
+            'municipality_id' => $this->municipality->id,
+            'province_id' => $this->supervisingProvinceId(),
         ]);
+        // In the same province, so it is the filter that must exclude it rather
+        // than the province scope.
         AuditLog::query()->create([
             'event' => 'deleted',
             'module' => 'Vaccinations',
             'description' => 'Excluded audit marker.',
+            'municipality_id' => $this->municipality->id,
+            'province_id' => $this->supervisingProvinceId(),
         ]);
 
         $filters = ['event' => 'updated', 'module' => 'Farmers'];
@@ -238,6 +252,7 @@ class SuperAdminAuditTrailTest extends TestCase
             'password' => Hash::make('password'),
             'role' => $role,
             'municipality_id' => $municipalityId,
+            'province_id' => $this->supervisingProvinceId(),
             'is_active' => true,
         ]);
     }

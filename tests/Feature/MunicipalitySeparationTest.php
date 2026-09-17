@@ -16,11 +16,12 @@ use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Tests\Support\ProvinceScopedFixtures;
 use Tests\TestCase;
 
 class MunicipalitySeparationTest extends TestCase
 {
-    use DatabaseTransactions;
+    use DatabaseTransactions, ProvinceScopedFixtures;
 
     private Municipality $firstMunicipality;
 
@@ -39,12 +40,14 @@ class MunicipalitySeparationTest extends TestCase
         $this->firstMunicipality = Municipality::create([
             'name' => 'First Municipality '.$suffix,
             'province' => 'Tarlac',
+            'province_id' => $this->supervisingProvinceId(),
             'code' => 'F'.substr(md5($suffix), 0, 8),
             'is_active' => true,
         ]);
         $this->secondMunicipality = Municipality::create([
             'name' => 'Second Municipality '.$suffix,
             'province' => 'Tarlac',
+            'province_id' => $this->supervisingProvinceId(),
             'code' => 'S'.substr(md5($suffix), 0, 8),
             'is_active' => true,
         ]);
@@ -462,6 +465,11 @@ class MunicipalitySeparationTest extends TestCase
             'first_name' => 'Foreign',
         ]);
 
+        // The version token hashes the stored attributes, so it has to be taken from
+        // the persisted record the way an edit page loads it, not from the in-memory
+        // model returned by create().
+        $ownFarmer->refresh();
+
         $this->actingAs($this->municipalUser)
             ->put(route('farmers.update', $ownFarmer), [
                 '_record_version' => ConcurrentWrite::version($ownFarmer),
@@ -668,6 +676,7 @@ class MunicipalitySeparationTest extends TestCase
             'password' => Hash::make('password'),
             'role' => $role,
             'municipality_id' => $municipalityId,
+            'province_id' => $this->supervisingProvinceId(),
             'is_active' => true,
         ]);
     }

@@ -5,15 +5,19 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Tests\Support\OperationsViewFixtures;
+use Tests\Support\PresentationProvinceSchema;
 use Tests\TestCase;
 
 class OperationsPresentationTest extends TestCase
 {
+    use PresentationProvinceSchema;
+
     protected function setUp(): void
     {
         parent::setUp();
         config(['database.default' => 'sqlite', 'database.connections.sqlite.database' => ':memory:', 'session.driver' => 'array']);
         DB::purge('sqlite');
+        $this->createPresentationScope();
         $this->withViewErrors([]);
         $this->actingAs(OperationsViewFixtures::user());
     }

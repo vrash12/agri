@@ -7,6 +7,7 @@ use App\Models\Farmer;
 use App\Models\FarmersCooperative;
 use App\Support\AuditTrail;
 use App\Support\ConcurrentWrite;
+use App\Support\CsvExport;
 use App\Support\MunicipalityAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -258,7 +259,7 @@ class AgriculturalMachineryController extends Controller
                     ->where('id', '<=', $maximumId)
                     ->chunkById(500, function ($records) use ($stream): void {
                         foreach ($records as $record) {
-                            fputcsv($stream, array_map([$this, 'csvValue'], [
+                            fputcsv($stream, array_map([CsvExport::class, 'value'], [
                                 $record->asset_code,
                                 $record->name,
                                 $record->category_label,
@@ -449,14 +450,7 @@ class AgriculturalMachineryController extends Controller
         };
     }
 
-    /** @param mixed $value */
-    private function csvValue($value): string
-    {
-        $value = (string) ($value ?? '');
-
-        return preg_match('/^[=+\-@]/', $value) ? "'".$value : $value;
-    }
-
+    /** @param  mixed  $value */
     private function formData(
         Request $request,
         ?AgriculturalMachinery $machinery

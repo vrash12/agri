@@ -20,6 +20,8 @@ class AuditLog extends Model
         'session_timeout' => 'Idle timeout',
         'login_failed' => 'Failed sign-in',
         'login_blocked' => 'Blocked sign-in',
+        'login_throttled' => 'Sign-in locked out',
+        'login_failures_suppressed' => 'Repeated sign-in failures',
         'exported' => 'Exported',
     ];
 
@@ -90,7 +92,7 @@ class AuditLog extends Model
         return match ($this->event) {
             'created', 'login' => 'green',
             'updated', 'membership_updated', 'exported' => 'blue',
-            'deleted', 'login_failed', 'login_blocked' => 'red',
+            'deleted', 'login_failed', 'login_blocked', 'login_throttled', 'login_failures_suppressed' => 'red',
             'logout', 'session_timeout' => 'amber',
             default => 'neutral',
         };

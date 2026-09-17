@@ -13,11 +13,12 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
+use Tests\Support\ProvinceScopedFixtures;
 use Tests\TestCase;
 
 class ProvincialVeterinaryAccessTest extends TestCase
 {
-    use DatabaseTransactions;
+    use DatabaseTransactions, ProvinceScopedFixtures;
 
     private User $veterinaryUser;
 
@@ -34,12 +35,14 @@ class ProvincialVeterinaryAccessTest extends TestCase
         $this->firstMunicipality = Municipality::create([
             'name' => 'Vet First '.$suffix,
             'province' => 'Tarlac',
+            'province_id' => $this->supervisingProvinceId(),
             'code' => 'VF'.substr($suffix, -8),
             'is_active' => true,
         ]);
         $this->secondMunicipality = Municipality::create([
             'name' => 'Vet Second '.$suffix,
             'province' => 'Tarlac',
+            'province_id' => $this->supervisingProvinceId(),
             'code' => 'VS'.substr($suffix, -8),
             'is_active' => true,
         ]);
@@ -50,6 +53,7 @@ class ProvincialVeterinaryAccessTest extends TestCase
             'role' => User::ROLE_PROVINCIAL_VET,
             'municipality_id' => null,
             'is_active' => true,
+            'province_id' => $this->supervisingProvinceId(),
         ]);
     }
 
@@ -156,6 +160,7 @@ class ProvincialVeterinaryAccessTest extends TestCase
             'password' => Hash::make('password123'),
             'role' => User::ROLE_SUPER_ADMIN,
             'is_active' => true,
+            'province_id' => $this->supervisingProvinceId(),
         ]);
         $email = 'created-vet-'.uniqid().'@example.test';
 
@@ -163,8 +168,8 @@ class ProvincialVeterinaryAccessTest extends TestCase
             ->post(route('admins.store'), [
                 'name' => 'Created Provincial Vet',
                 'email' => $email,
-                'password' => 'password123',
-                'password_confirmation' => 'password123',
+                'password' => 'municipal ledger tuesday rainfall',
+                'password_confirmation' => 'municipal ledger tuesday rainfall',
                 'role' => User::ROLE_PROVINCIAL_VET,
                 'is_active' => '1',
             ])

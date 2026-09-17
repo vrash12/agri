@@ -6,11 +6,12 @@ use App\Http\Middleware\EnforceIdleSession;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Hash;
+use Tests\Support\ProvinceScopedFixtures;
 use Tests\TestCase;
 
 class SessionIdleTimeoutTest extends TestCase
 {
-    use DatabaseTransactions;
+    use DatabaseTransactions, ProvinceScopedFixtures;
 
     public function test_successful_login_initializes_the_idle_activity_timestamp(): void
     {
@@ -95,6 +96,7 @@ class SessionIdleTimeoutTest extends TestCase
             'password' => Hash::make('password'),
             'role' => User::ROLE_PROVINCIAL_STAFF,
             'municipality_id' => null,
+            'province_id' => $this->supervisingProvinceId(),
             'is_active' => true,
         ]);
     }

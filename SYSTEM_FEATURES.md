@@ -35,11 +35,13 @@ The application is designed for multiple offices using the system at the same ti
 - Secure email and password login.
 - Optional “Remember me” login.
 - Passwords are stored as one-way hashes and cannot be retrieved as plaintext.
+- New and changed passwords must be at least 12 characters, and passwords that appear in known public data breaches are refused. A few ordinary words together satisfy this and are easier to remember than a short password with symbols. The check never sends the password itself, and account creation still works when the office has no internet connection.
 - Session ID regeneration after a successful login.
 - Active-account and supported-role validation.
 - Municipality assignment and municipality status validation for municipal accounts.
 - Last-login timestamp tracking.
 - Successful, failed, and blocked login auditing.
+- Sign-in attempts are limited to five per email address from one device before a five-minute lockout, which is recorded once in the audit trail. Signing in successfully clears the count, and a lockout on one account never blocks a colleague signing in from the same office.
 - Secure logout with session invalidation and CSRF-token regeneration.
 - Automatic logout after 15 minutes of inactivity.
 - One-minute session-expiration warning.
@@ -196,10 +198,12 @@ Implementation status and remaining staff/staging checks are documented in [DESI
 - Shared municipality edges are allowed when they do not create an actual overlap.
 - Changing a boundary's name or color preserves its saved shape. Vertex edits retain untouched shared-border coordinates at their original precision, preventing rounding from creating false overlap errors; genuine overlaps remain blocked.
 - Optimistic locking and municipality-level mutation locks for concurrent edits.
-- Explicit, idempotent reference imports cover all 18 Tarlac workspaces (17 municipalities and Tarlac City), the Bulacan province evaluation workspace, Baguio City, and all thirteen Benguet municipalities.
+- Explicit, idempotent reference imports cover all 18 Tarlac workspaces (17 municipalities and Tarlac City), all 24 Bulacan workspaces (21 municipalities and the component cities of Malolos, Meycauayan, and San Jose del Monte), Baguio City, and all thirteen Benguet municipalities.
 - Reference files must be imported into each deployment's database before their boundaries appear on maps; deploying the code alone does not activate geofences. The Bulacan importer recognizes the legacy workspace code without renaming or replacing its existing records.
 - A separate boundary-only Tarlac import adds Bamban, Capas, Gerona, La Paz, Mayantoc, Moncada, Pura, San Clemente, San Jose, San Manuel, Santa Ignacia, and Victoria. It preserves the six existing references and archived boundary history, creates no sample operational records, and stops the entire import if any boundary or workspace conflicts. The pinned municipality identities and areas are checked against PSA/GeoRiskPH references. These approximate planning boundaries require LGU/NAMRIA verification before official use; normal municipality isolation and parcel geofence validation apply once active.
-- The Bulacan import is stored as a clearly labeled ADM2 planning/reference boundary and does not create farmers or operational records.
+- The province-level Bulacan import is stored as a clearly labeled ADM2 planning/reference boundary and does not create farmers or operational records.
+- A separate Bulacan municipality import adds all 21 municipalities and the 3 component cities as ADM3 planning references. It creates missing workspaces or reuses existing active ones and creates no users or sample operational records. Two workspaces deliberately differ from the source wording: the municipality is named Bulakan, because the source spelling is identical to the Bulacan province workspace, and the three cities follow the existing "Tarlac City" wording.
+- Because a province boundary contains every municipality inside it, the two cannot both stay active. The municipality import archives the active Bulacan province reference as superseded, records that in the audit trail with its reason, and leaves the province workspace and its archived history otherwise untouched; re-running the province import restores the province-level view. Any other conflicting boundary stops the entire import and the archival is rolled back with it.
 - The Baguio import uses a pinned city-level boundary from geoBoundaries, checked against PSA identity and area references. It creates or reuses the Baguio workspace without creating sample records, preserves an existing different active boundary, and applies the normal parcel validation once active. The boundary is an approximate planning reference requiring LGU/NAMRIA verification before official use.
 - La Trinidad, Atok, and Tublay have a separate import using verified municipality features from the same pinned dataset. It creates or reuses their Benguet workspaces and activates all three references together, preserving existing different active boundaries and creating no sample records. Any conflict stops the entire import. These planning references retain normal municipality isolation and require LGU/NAMRIA verification before official use.
 - A second Benguet boundary-only import adds Bakun, Bokod, Buguias, Itogon, Kabayan, Kapangan, Kibungan, Mankayan, Sablan, and Tuba. It creates missing municipality workspaces or reuses existing active ones, preserves existing boundaries and archived history, and creates no users or sample operational records. All ten references are applied together; an identity or boundary conflict stops the entire import. They use the existing geofence visibility and opacity controls, municipality isolation, and parcel validation. These are approximate planning references requiring LGU/NAMRIA verification before official use.
@@ -230,6 +234,7 @@ Implementation status and remaining staff/staging checks are documented in [DESI
 - Omits titles, timestamps, statistics, legends, exception lists, footers, and other report text so the downloaded image contains only the geofence and in-boundary parcel map.
 - Preserves the Google logo and attribution area.
 - Uses a same-origin, authenticated, and throttled Google Static Maps request.
+- Explains satellite download failures for Google access/configuration, quota, connectivity, and busy exports; failed images are not cached, and diagnostic logs exclude provider bodies and secret-bearing URLs.
 - Uses a versioned map frame to prevent stale satellite imagery from becoming misaligned after boundary changes.
 - Records a successful completed snapshot download in the audit trail without storing the full geometry.
 
@@ -386,6 +391,8 @@ The Backup Folder is a protected document repository. It is not an automatic dat
 
 - Upload one or multiple files.
 - Maximum file size of 50 MB per file.
+- Web-page, image-markup, and program files such as .html, .svg, .js, .php, and .exe are refused, because they can run inside the browser instead of being read as documents.
+- Folder names accept letters, numbers, spaces, dashes, underscores, and / only.
 - Private local storage.
 - Municipality ownership for every file.
 - Uploader, folder, notes, MIME type, file size, and SHA-256 hash tracking.
@@ -395,6 +402,7 @@ The Backup Folder is a protected document repository. It is not an automatic dat
 - Sorting and filtered storage totals.
 - Authorized preview, inline viewing, download, editing, and deletion.
 - PDF, image, text, spreadsheet, and supported document preview.
+- Any other stored file, including one saved before the upload rules above, downloads instead of opening in the page, so a saved file can never run as part of the system.
 - Text-like file editing.
 - In-browser `.xlsx` editing.
 - File size and SHA-256 recalculation after an edit.
@@ -429,7 +437,8 @@ The Backup Folder is a protected document repository. It is not an automatic dat
 - System Owner audit dashboard across all provinces, and Super Administrator audit dashboard limited to the assigned province.
 - Province ownership is saved with each audit event and does not follow later account reassignment. Global, unknown-scope, and cross-province reassignment events are visible only to the System Owner.
 - Activity totals for today and the previous seven days.
-- Security, failed-login, blocked-login, timeout, and deletion alerts.
+- Security, failed-login, blocked-login, lockout, repeated-failure, timeout, and deletion alerts.
+- When one device produces a long run of unsuccessful sign-ins, the trail keeps the first 20 entries and then records a single entry saying the rest of the 15-minute window was suppressed, so a flood of generated entries cannot hide genuine activity. Successful sign-ins are always recorded.
 - Search and filtering by event, module, municipality, actor, and local date range.
 - Before-and-after values for supported changes.
 - Request method, URL, IP address, browser information, actor, role, and municipality context.

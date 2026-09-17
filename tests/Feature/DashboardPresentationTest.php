@@ -5,10 +5,13 @@ namespace Tests\Feature;
 use App\Models\Municipality;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Tests\Support\PresentationProvinceSchema;
 use Tests\TestCase;
 
 class DashboardPresentationTest extends TestCase
 {
+    use PresentationProvinceSchema;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -16,6 +19,7 @@ class DashboardPresentationTest extends TestCase
         // Presentation checks use unsaved models and cannot touch operational data.
         config(['database.default' => 'sqlite', 'database.connections.sqlite.database' => ':memory:']);
         DB::purge('sqlite');
+        $this->createPresentationScope();
     }
 
     /** @dataProvider dashboardRoles */
@@ -108,7 +112,11 @@ class DashboardPresentationTest extends TestCase
 
     private function signInForView(string $role): void
     {
-        $user = new User(['name' => 'Preview Staff', 'role' => $role, 'municipality_id' => 1, 'is_active' => true]);
+        $user = new User([
+            'name' => 'Preview Staff', 'role' => $role, 'municipality_id' => 1,
+            // Oversight roles resolve their scope through the province.
+            'province_id' => $this->presentationProvinceId, 'is_active' => true,
+        ]);
         $user->id = 1;
         $user->setRelation('municipality', new Municipality(['name' => 'Sample Municipality']));
         $this->actingAs($user);

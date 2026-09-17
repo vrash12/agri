@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreFarmerRequest;
 use App\Models\Farmer;
 use App\Models\Municipality;
 use App\Models\MunicipalityBoundary;
@@ -19,7 +20,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
@@ -467,10 +467,11 @@ class FarmerController extends Controller
     /**
      * Store a new farmer in the correct municipality.
      */
-    public function store(Request $request)
+    public function store(StoreFarmerRequest $request)
     {
-        $this->authorize('create', Farmer::class);
-        $data = $this->validatedFarmerData($request);
+        // Authorization and validation are handled by the form request, which runs
+        // the policy before the rules.
+        $data = $request->farmerData($this->municipalityAccess);
 
         $farmer = $this->concurrentWrite->transaction(
             function () use ($data, $request): Farmer {
@@ -505,13 +506,13 @@ class FarmerController extends Controller
     /**
      * Update an accessible farmer.
      */
-    public function update(Request $request, Farmer $farmer)
+    public function update(StoreFarmerRequest $request, Farmer $farmer)
     {
-        $this->authorize('update', $farmer);
-        $user = $this->authenticatedUser($request);
-        $this->ensureFarmerIsAccessible($farmer, $user);
+        // Defence in depth: the policy already checked ownership, this repeats it
+        // against the resolved record before anything is written.
+        $this->ensureFarmerIsAccessible($farmer, $this->authenticatedUser($request));
 
-        $data = $this->validatedFarmerData($request, $farmer);
+        $data = $request->farmerData($this->municipalityAccess);
 
         $this->concurrentWrite->execute(
             $farmer,
@@ -573,110 +574,6 @@ class FarmerController extends Controller
     /**
      * Validate and normalize farmer input.
      */
-    private function validatedFarmerData(
-        Request $request,
-        ?Farmer $farmer = null
-    ): array {
-        $user = $this->authenticatedUser($request);
-        $farmerId = $farmer?->id;
-
-        $rules = [
-            'rsbsa_no' => [
-                'nullable',
-                'string',
-                'max:255',
-                Rule::unique('farmers', 'rsbsa_no')->ignore($farmerId),
-            ],
-            'ffrs' => [
-                'nullable',
-                'string',
-                'max:255',
-                Rule::unique('farmers', 'ffrs')->ignore($farmerId),
-            ],
-
-            'last_name' => ['required', 'string', 'max:255'],
-            'first_name' => ['required', 'string', 'max:255'],
-            'middle_name' => ['nullable', 'string', 'max:255'],
-            'ext_name' => ['nullable', 'string', 'max:50'],
-            'owner_name' => ['nullable', 'string', 'max:255'],
-
-            'date_of_birth' => ['nullable', 'date'],
-            'contact_number' => ['nullable', 'string', 'max:50'],
-            'profile_photo' => [
-                'nullable',
-                'image',
-                'mimes:jpg,jpeg,png,webp',
-                'max:3072',
-                'dimensions:min_width=200,min_height=200,max_width=5000,max_height=5000',
-            ],
-            'remove_profile_photo' => ['nullable', 'boolean'],
-            'gender' => [
-                'nullable',
-                Rule::in(['Male', 'Female', 'Other', 'Unspecified']),
-            ],
-
-            'farm_location' => ['nullable', 'string', 'max:255'],
-            'farm_province' => ['nullable', 'string', 'max:255'],
-            'farm_municipality' => ['nullable', 'string', 'max:255'],
-            'ecosystem' => ['nullable', 'string', 'max:255'],
-            'ecosystem_source' => ['nullable', 'string', 'max:255'],
-
-            'farm_area_ha' => ['nullable', 'numeric', 'min:0'],
-
-            'is_arb' => ['nullable', 'boolean'],
-            'is_4ps' => ['nullable', 'boolean'],
-            'is_ip' => ['nullable', 'boolean'],
-            'is_pwd' => ['nullable', 'boolean'],
-            'is_sc' => ['nullable', 'boolean'],
-            'is_ofw' => ['nullable', 'boolean'],
-        ];
-
-        if ($user->isProvincialUser()) {
-            $rules['municipality_id'] = [
-                'required',
-                'integer',
-            ];
-        }
-
-        $data = $request->validate($rules);
-
-        unset($data['profile_photo'], $data['remove_profile_photo']);
-
-        $municipality = $this->resolveMunicipalityForWrite(
-            $request,
-            $user
-        );
-
-        $data['municipality_id'] = $municipality->id;
-        $data['farm_municipality'] = $municipality->name;
-        $data['farm_province'] = $municipality->province ?: $municipality->supervisingProvince?->name;
-
-        foreach (
-            ['is_arb', 'is_4ps', 'is_ip', 'is_pwd', 'is_sc', 'is_ofw']
-            as $field
-        ) {
-            $data[$field] = $request->boolean($field);
-        }
-
-        foreach ([
-            'rsbsa_no',
-            'ffrs',
-            'middle_name',
-            'ext_name',
-            'owner_name',
-            'contact_number',
-            'farm_location',
-            'farm_province',
-            'farm_municipality',
-            'ecosystem',
-            'ecosystem_source',
-        ] as $field) {
-            $data[$field] = $this->nullIfEmpty($data[$field] ?? null);
-        }
-
-        return $data;
-    }
-
     /**
      * Store, replace, or remove a farmer photo on the protected local disk.
      */

@@ -50,7 +50,12 @@ return [
     |
     */
 
-    'encrypt' => false,
+    /*
+     * Session payloads sit on disk with the file driver, so they are encrypted at
+     * rest with the application key. Changing this value invalidates every stored
+     * session, which signs everyone out once on the deployment that enables it.
+     */
+    'encrypt' => env('SESSION_ENCRYPT', true),
 
     /*
     |--------------------------------------------------------------------------

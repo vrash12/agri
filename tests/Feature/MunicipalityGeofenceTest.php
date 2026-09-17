@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -440,7 +441,53 @@ class MunicipalityGeofenceTest extends TestCase
 
         $this->actingAs($this->municipal)
             ->get(route('municipality-boundaries.snapshot-base', $boundary))
-            ->assertStatus(502);
+            ->assertStatus(502)
+            ->assertSee('Google denied the satellite image request.')
+            ->assertHeader('Cache-Control', 'no-store, private');
+    }
+
+    public function test_snapshot_connection_failure_does_not_expose_the_request_url_or_key(): void
+    {
+        config(['services.google_maps.static_key' => 'static-test-key']);
+        Log::spy();
+        Http::fake(function () {
+            throw new \Illuminate\Http\Client\ConnectionException('Connection failed for https://maps.googleapis.com/maps/api/staticmap?key=static-test-key');
+        });
+        $boundary = $this->createBoundary($this->first, 120.50, 15.40);
+
+        $this->actingAs($this->municipal)
+            ->get(route('municipality-boundaries.snapshot-base', $boundary))
+            ->assertStatus(502)
+            ->assertSee('The server could not connect to Google Maps.')
+            ->assertDontSee('static-test-key');
+
+        Log::shouldHaveReceived('warning')->once()
+            ->with('Municipality satellite snapshot connection failed.');
+        Log::shouldNotHaveReceived('error');
+    }
+
+    public function test_snapshot_provider_failure_is_not_cached_and_can_recover(): void
+    {
+        config(['services.google_maps.static_key' => 'static-test-key']);
+        Log::spy();
+        Http::fake([
+            'maps.googleapis.com/maps/api/staticmap*' => Http::sequence()
+                ->push('Sensitive provider response static-test-key', 429)
+                ->push('PNG-CONTENT', 200, ['Content-Type' => 'image/png']),
+        ]);
+        $boundary = $this->createBoundary($this->first, 120.50, 15.40);
+        $url = route('municipality-boundaries.snapshot-base', $boundary);
+
+        $this->actingAs($this->municipal)->get($url)
+            ->assertStatus(502)
+            ->assertSee('Google Maps usage limit was reached.')
+            ->assertDontSee('static-test-key');
+        $this->get($url)->assertOk()->assertContent('PNG-CONTENT');
+        $this->get($url)->assertOk()->assertContent('PNG-CONTENT');
+
+        Http::assertSentCount(2);
+        Log::shouldHaveReceived('warning')->once()
+            ->with('Municipality satellite snapshot provider failure.', ['upstream_status' => 429]);
     }
 
     private function createSchema(): void
