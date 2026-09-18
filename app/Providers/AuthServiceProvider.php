@@ -8,6 +8,7 @@ use App\Models\BackupFile;
 use App\Models\Farmer;
 use App\Models\FarmersCooperative;
 use App\Models\FarmPlot;
+use App\Models\HarvestRecord;
 use App\Models\MunicipalityBoundary;
 use App\Models\RiceDistributionBatch;
 use App\Models\RiceSeedDistribution;
@@ -18,6 +19,7 @@ use App\Policies\BackupFilePolicy;
 use App\Policies\FarmerPolicy;
 use App\Policies\FarmersCooperativePolicy;
 use App\Policies\FarmPlotPolicy;
+use App\Policies\HarvestRecordPolicy;
 use App\Policies\MunicipalityBoundaryPolicy;
 use App\Policies\RiceDistributionBatchPolicy;
 use App\Policies\RiceSeedDistributionPolicy;
@@ -35,6 +37,7 @@ class AuthServiceProvider extends ServiceProvider
         AgriculturalMachinery::class => AgriculturalMachineryPolicy::class,
         Farmer::class => FarmerPolicy::class,
         FarmPlot::class => FarmPlotPolicy::class,
+        HarvestRecord::class => HarvestRecordPolicy::class,
         MunicipalityBoundary::class => MunicipalityBoundaryPolicy::class,
         RiceSeedDistribution::class => RiceSeedDistributionPolicy::class,
         RiceDistributionBatch::class => RiceDistributionBatchPolicy::class,

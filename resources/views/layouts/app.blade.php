@@ -1065,6 +1065,7 @@
           'audit' => '<svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"></path><path d="M9 11l2 2 4-4"></path><path d="M9 17h6"></path></svg>',
           'boundary' => '<svg viewBox="0 0 24 24"><path d="M4 6l5-3 6 3 5-2v14l-5 3-6-3-5 2V6Z"></path><path d="M9 3v15"></path><path d="M15 6v15"></path></svg>',
           'cooperative' => '<svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"></circle><circle cx="17" cy="9" r="2.5"></circle><path d="M2.5 20a5.5 5.5 0 0 1 11 0"></path><path d="M13 19a4.5 4.5 0 0 1 8.5 0"></path></svg>',
+          'harvest' => '<svg viewBox="0 0 24 24"><path d="M3 21c4-1 7-4 8-8"></path><path d="M11 13c0-4 3-7 7-8 1 5-1 9-5 10-1 .2-2 .2-2-.5Z"></path><path d="M7 21h14"></path></svg>',
           'machinery' => '<svg viewBox="0 0 24 24"><path d="M3 15h18v4H3z"></path><path d="M6 15V9h8l3 6"></path><path d="M9 9V6h4"></path><circle cx="7" cy="19" r="2"></circle><circle cx="18" cy="19" r="2"></circle></svg>',
           'chev-left' => '<svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"></path></svg>',
           'logout' => '<svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path><path d="M14 4h5a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5"></path></svg>',
@@ -1092,6 +1093,14 @@
               'icon' => 'seed',
               'route' => 'rice-seed-distributions.index',
               'patterns' => ['rice-seed-distributions.*'],
+              'badge' => $operationBadge,
+            ],
+            [
+              'label' => 'Harvest Records',
+              'description' => 'Production by commodity',
+              'icon' => 'harvest',
+              'route' => 'harvest-records.index',
+              'patterns' => ['harvest-records.*'],
               'badge' => $operationBadge,
             ],
             [

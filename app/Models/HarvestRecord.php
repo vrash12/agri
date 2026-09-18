@@ -118,6 +118,19 @@ class HarvestRecord extends Model
         return $this->belongsTo(RiceSeedDistribution::class);
     }
 
+    /**
+     * Whether this harvest came from an assistance release rather than being entered
+     * on its own.
+     *
+     * A projected record is rewritten from the release every time the release is
+     * saved, so it is read-only wherever harvests are managed directly. Editing it
+     * there would be undone by the next save of the sheet it came from.
+     */
+    public function isProjected(): bool
+    {
+        return $this->rice_seed_distribution_id !== null;
+    }
+
     public function commodityLabel(): string
     {
         return self::COMMODITY_LABELS[$this->commodity] ?? ($this->commodity ?: 'Not recorded');

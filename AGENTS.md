@@ -414,6 +414,48 @@ Season headings are always built from the stored season and year through `RiceDi
 
 Deleting a sheet is refused while it still groups releases, re-checked inside the row lock. Sheet exports are audited with `exported`, and create/update/delete flow through `AuditModelObserver` under the `Assistance distributions` module.
 
+### 5.5.2 Harvest records
+
+Primary model/table: `HarvestRecord` / `harvest_records`
+
+What was actually harvested, as a record in its own right rather than a field on an
+assistance release: a farmer who planted their own seed still has a harvest, and a
+harvest of corn or tilapia is not a property of a rice seed hand-out. Nine
+commodities and six units, both model constants. This is what the dashboard's
+production-by-commodity report reads.
+
+Two ways a harvest gets here:
+
+- **Projected from an assistance release.** The Rice Seed Distribution Sheet already
+  has a production section staff fill in on paper. `App\Support\HarvestFromRelease`
+  writes the matching harvest whenever a release is saved, updated or imported, and
+  removes it when the production fields are cleared. A unique index on
+  `harvest_records.rice_seed_distribution_id` keeps that a projection rather than an
+  accumulating copy. `php artisan harvests:backfill-from-releases` reaches releases
+  recorded before the wiring existed (`--dry-run` supported, safe to repeat).
+- **Entered directly**, for every commodity no seed sheet covers.
+
+A projected record is **read-only in this module**. The release owns its figures and
+rewrites them on every save, so editing the harvest here would be silently discarded
+by the next save of the sheet. `HarvestRecordPolicy` overrides `update` and `delete`
+to refuse a record whose `rice_seed_distribution_id` is set; the list links to the
+release instead. This is enforcement, not a hidden button.
+
+Other rules:
+
+- The farmer decides the owning municipality when one is named; a submitted
+  `municipality_id` is only consulted when there is no farmer, and then through
+  `resolveForWrite`. A farmer outside the account's scope is refused by the form
+  request, and a parcel belonging to a different farmer is refused with it.
+- A harvest may have no farmer. A municipality reporting a season's corn has a real
+  figure and no single farmer to attach it to.
+- Quantities are **never summed across units**. The list totals per unit and the
+  chart draws one series per commodity-and-unit pair.
+- A harvest date must fall within one year of the reported harvest year, because the
+  year is what the production report groups by.
+- The CSV export is audited with its filters and row count and is bounded by a fixed
+  maximum id, like the machinery export.
+
 ### 5.6 Animal-health services
 
 Primary model/table: `AntiRabiesVaccination` / `anti_rabies_vaccinations`

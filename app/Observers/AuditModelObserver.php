@@ -8,6 +8,7 @@ use App\Models\BackupFile;
 use App\Models\Farmer;
 use App\Models\FarmersCooperative;
 use App\Models\FarmPlot;
+use App\Models\HarvestRecord;
 use App\Models\Municipality;
 use App\Models\Province;
 use App\Models\RiceDistributionBatch;
@@ -115,6 +116,7 @@ class AuditModelObserver
             $model instanceof AgriculturalMachinery => 'Machinery inventory',
             $model instanceof Farmer => 'Farmers',
             $model instanceof FarmPlot => 'Farm plots',
+            $model instanceof HarvestRecord => 'Harvest records',
             $model instanceof RiceSeedDistribution => 'Assistance distributions',
             $model instanceof RiceDistributionBatch => 'Assistance distributions',
             $model instanceof AntiRabiesVaccination => 'Animal health services',
@@ -158,6 +160,11 @@ class AuditModelObserver
 
             return trim($model->serviceTypeLabel().' · '.$animal.' · '.$model->owner_name, ' ·')
                 ?: 'Animal-health service #'.$model->getKey();
+        }
+
+        if ($model instanceof HarvestRecord) {
+            return trim($model->commodityLabel().' · '.$model->periodLabel(), ' ·')
+                ?: 'Harvest #'.$model->getKey();
         }
 
         if ($model instanceof RiceDistributionBatch) {

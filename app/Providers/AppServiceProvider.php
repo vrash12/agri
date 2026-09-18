@@ -8,6 +8,7 @@ use App\Models\BackupFile;
 use App\Models\Farmer;
 use App\Models\FarmersCooperative;
 use App\Models\FarmPlot;
+use App\Models\HarvestRecord;
 use App\Models\Municipality;
 use App\Models\RiceDistributionBatch;
 use App\Models\RiceSeedDistribution;
@@ -52,6 +53,7 @@ class AppServiceProvider extends ServiceProvider
             AgriculturalMachinery::class,
             Farmer::class,
             FarmPlot::class,
+            HarvestRecord::class,
             RiceSeedDistribution::class,
             RiceDistributionBatch::class,
             AntiRabiesVaccination::class,

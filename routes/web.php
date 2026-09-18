@@ -8,6 +8,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FarmerController;
+use App\Http\Controllers\HarvestRecordController;
 use App\Http\Controllers\FarmersCooperativeController;
 use App\Http\Controllers\FarmPlotController;
 use App\Http\Controllers\MunicipalityBoundaryController;
@@ -415,6 +416,27 @@ Route::middleware([
     )->except(['show'])->parameters([
         'machinery-inventory' => 'machinery',
     ]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | HARVEST RECORDS
+    |--------------------------------------------------------------------------
+    |
+    | What was actually harvested. Rice arrives on its own from the assistance
+    | sheet's production section; every other commodity is entered here.
+    |
+    | No show route: the list already carries every field a harvest has, so a
+    | detail page would be the same row again on its own page.
+    */
+    Route::get(
+        '/harvest-records/export',
+        [HarvestRecordController::class, 'export']
+    )->name('harvest-records.export');
+
+    Route::resource(
+        'harvest-records',
+        HarvestRecordController::class
+    )->except(['show']);
 
     /*
     |--------------------------------------------------------------------------

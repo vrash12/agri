@@ -39,7 +39,7 @@ Status vocabulary: `Not started` · `In progress` · `Blocked` · `Verified comp
 Baseline at the time of writing: **375 automated tests passing (3,998 assertions)**,
 plus 11 JavaScript regression tests. Branch `feature/rice-seed-distribution-sheet`.
 
-As of 2026-09-19 on `main`: **418 automated tests passing (4,255 assertions)**, plus
+As of 2026-09-19 on `main`: **430 automated tests passing (4,306 assertions)**, plus
 32 JavaScript regression tests.
 
 ---
@@ -456,11 +456,13 @@ spanning 2024–2026 with three commodities in two units, which were then remove
 
 **What is still open.**
 
-- Decision 1 is only partly answered. Rice production now has a path that costs
-  staff nothing extra, but **no non-rice commodity has an entry screen** — nothing
-  writes corn, vegetables, fisheries or livestock production today, so those series
-  will stay absent until the office says whether it will record them and on what
-  cycle. The chart states what it has rather than implying more.
+- Decision 1 is now the office's to answer by using the system rather than by
+  meeting. Rice production reaches the chart from the sheet staff already fill in,
+  and as of 2026-09-19 every other commodity has an entry screen
+  (`/harvest-records`). What remains open is a policy question, not a missing
+  capability: **will** the office record non-rice production, at what level and on
+  what cycle. The chart states what it has rather than implying more, and counts
+  what is missing.
 - **The NRP import workbook has no harvest-year column.** The spreadsheet import now
   projects like a save does, and re-running it refreshes a release whose year was
   already entered. But a fresh import carries bag counts with no period to report
@@ -1062,3 +1064,4 @@ absent chart.
 | 2026-09-19 | 2 | Repeat assistance claims warned on at entry (`App\Support\DuplicateClaimCheck`), and the third-party CDN assets pinned by version with subresource-integrity hashes (`App\Support\Cdn`, `config/cdn.php`). |
 | 2026-09-19 | 3 | Negros Island Region municipality geofences added for Negros Occidental, Negros Oriental and Siquijor, from the pinned geoBoundaries revision, verified against PSA areas. |
 | 2026-09-19 | 1 | **Graph 2 built.** `harvest_records` gives production a record of its own across nine commodities and six units. The Rice Seed Distribution Sheet's production section projects into it on save (`App\Support\HarvestFromRelease`), so rice production the office already writes down is never entered twice; `harvests:backfill-from-releases` reaches releases nobody will re-open. Bags are stored rather than derived kilograms, because the bag weight beside them is an average rather than a weighed total. One chart series per commodity-and-unit pair, so two units are never summed into an invented total. The spreadsheet import projects too, though the NRP workbook has no harvest-year column, so a fresh import leaves the bag count on the release until a year is entered rather than inventing a period. Decision 1 remains open for non-rice commodities, which have no entry screen yet. |
+| 2026-09-19 | 1 | Harvest entry screen added (`/harvest-records`), which is what was missing for the production chart to cover anything but rice: the table, model and chart existed with no writer. Scoped, audited and exportable like every other module. A harvest projected from an assistance release is **read-only here** and edited at its release — `HarvestRecordPolicy` refuses `update` and `delete` on it, because the release rewrites those figures on every save and an edit made here would be silently discarded. Measured: the create form renders at 299,292 bytes against Ramos's 1,546 farmers, against 723,889 for the equivalent rice form; the farmer select is the bulk of both and wants the `farmers.lookup` treatment. |
