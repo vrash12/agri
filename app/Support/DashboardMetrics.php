@@ -6,6 +6,7 @@ use App\Models\AgriculturalMachinery;
 use App\Models\AntiRabiesVaccination;
 use App\Models\Farmer;
 use App\Models\FarmPlot;
+use App\Models\HarvestRecord;
 use App\Models\Municipality;
 use App\Models\RiceSeedDistribution;
 use App\Models\User;
@@ -308,6 +309,65 @@ class DashboardMetrics
             AgriculturalMachinery::AVAILABILITY_STATUSES,
             'Machinery by current availability',
             'Units with no availability recorded'
+        );
+    }
+
+    /**
+     * Recorded harvest over time, one series per commodity.
+     *
+     * This is the graph the office asked for and the one the system could not answer,
+     * because the only harvest figures it held were three fields on a rice seed
+     * release. A release says what was handed out; it cannot say what a farmer who
+     * planted their own seed produced, and it cannot speak for corn or fish at all.
+     *
+     * Two rules this shares with every other figure on the dashboard. Units are never
+     * summed across each other, so a commodity recorded in sacks and in kilograms
+     * appears as two series rather than one wrong number. And a period is stated, not
+     * inferred: a harvest with no year recorded is counted under `not_recorded`
+     * instead of being placed in a year somebody guessed for it.
+     *
+     * @return array<string, mixed>
+     */
+    public function productionByCommodity(User $user): array
+    {
+        $rows = $this->scoped(HarvestRecord::query(), $user)
+            ->whereNotNull('harvest_year')
+            ->whereNotNull('commodity')
+            ->where('commodity', '!=', '')
+            ->whereNotNull('quantity')
+            ->groupBy('harvest_year', 'commodity', 'quantity_unit')
+            ->orderBy('harvest_year')
+            ->selectRaw('harvest_year, commodity, quantity_unit, COALESCE(SUM(quantity), 0) as total')
+            ->get();
+
+        $years = $rows->pluck('harvest_year')->unique()->sort()->values();
+        $labels = $years->map(fn ($year) => (string) $year)->all();
+
+        // One series per commodity-and-unit pair. Two units for one commodity are two
+        // different measurements, and putting them on one line would invent a total.
+        $series = [];
+        foreach ($rows->groupBy(fn ($row) => $row->commodity.'|'.($row->quantity_unit ?: '')) as $key => $group) {
+            [$commodity, $unit] = explode('|', (string) $key);
+            $byYear = $group->keyBy(fn ($row) => (int) $row->harvest_year);
+
+            $series[] = $this->series(
+                HarvestRecord::COMMODITY_LABELS[$commodity] ?? $commodity,
+                HarvestRecord::QUANTITY_UNIT_LABELS[$unit] ?? ($unit ?: 'unit not recorded'),
+                $years->map(fn ($year) => (float) ($byYear[(int) $year]->total ?? 0))->all(),
+                2
+            );
+        }
+
+        return $this->metric(
+            'Recorded production by commodity',
+            $labels,
+            $series,
+            $this->missing(
+                $this->scoped(HarvestRecord::query(), $user)
+                    ->where(fn (Builder $q) => $q->whereNull('harvest_year')->orWhereNull('quantity'))
+                    ->count(),
+                'Harvest records with no year or no quantity recorded'
+            )
         );
     }
 

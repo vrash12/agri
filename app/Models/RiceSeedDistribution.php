@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class RiceSeedDistribution extends Model
 {
@@ -193,6 +194,18 @@ class RiceSeedDistribution extends Model
     public function municipality(): BelongsTo
     {
         return $this->belongsTo(Municipality::class);
+    }
+
+    /**
+     * The harvest this release's production section projects to.
+     *
+     * One at most, and absent until the sheet reports both a harvest year and a bag
+     * count. The release stays the place those figures are entered and edited; the
+     * harvest record is what production is read from.
+     */
+    public function harvestRecord(): HasOne
+    {
+        return $this->hasOne(HarvestRecord::class);
     }
 
     /**

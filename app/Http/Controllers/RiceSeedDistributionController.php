@@ -10,6 +10,7 @@ use App\Support\AuditTrail;
 use App\Support\ConcurrentWrite;
 use App\Support\CsvExport;
 use App\Support\DuplicateClaimCheck;
+use App\Support\HarvestFromRelease;
 use App\Support\MunicipalityAccess;
 use App\Support\SeedReleaseQuantity;
 use Illuminate\Database\Eloquent\Builder;
@@ -641,6 +642,11 @@ class RiceSeedDistributionController extends Controller
             fn () => RiceSeedDistribution::create($payload)
         );
 
+        // The sheet's production section is where rice harvest is entered. Projecting
+        // it here means the figure reaches the production chart without anyone typing
+        // it twice.
+        app(HarvestFromRelease::class)->sync($release);
+
         if ($warning !== null) {
             AuditTrail::record(
                 'repeat_claim_confirmed',
@@ -729,6 +735,11 @@ class RiceSeedDistributionController extends Controller
             fn (RiceSeedDistribution $current) => $current->update($payload)
         );
 
+        // Re-projected rather than left alone: an edited harvest updates the same
+        // record, and a production section that has been cleared removes it instead
+        // of leaving a figure behind that the sheet no longer claims.
+        app(HarvestFromRelease::class)->sync($riceSeedDistribution->fresh());
+
         return redirect()
             ->route('rice-seed-distributions.index')
             ->with('success', 'Agriculture or fisheries assistance release updated successfully.');
@@ -737,10 +748,15 @@ class RiceSeedDistributionController extends Controller
     public function destroy(RiceSeedDistribution $riceSeedDistribution)
     {
         $this->authorize('delete', $riceSeedDistribution);
+        $releaseId = $riceSeedDistribution->getKey();
+
         $this->concurrentWrite->locked(
             $riceSeedDistribution,
             fn (RiceSeedDistribution $current) => $current->delete()
         );
+
+        // A harvest projected from a release does not outlive it.
+        \App\Models\HarvestRecord::query()->where('rice_seed_distribution_id', $releaseId)->delete();
 
         return redirect()->route('rice-seed-distributions.index')
             ->with('success', 'Assistance release deleted successfully.');

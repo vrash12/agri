@@ -259,9 +259,11 @@
       </div></div>
     </details>
 
-    <details class="module-more rice-monitoring" id="riceProductionMonitoring" @if(collect(['avg_weight_per_bag_kg', 'total_production_bags', 'avg_area_harvested_ha', 'seed_variety_planted'])->contains(fn ($key) => filled($value($key)) || $errors->has($key))) open @endif>
+    <details class="module-more rice-monitoring" id="riceProductionMonitoring" @if(collect(['avg_weight_per_bag_kg', 'total_production_bags', 'avg_area_harvested_ha', 'seed_variety_planted', 'harvest_season', 'harvest_year'])->contains(fn ($key) => filled($value($key)) || $errors->has($key))) open @endif>
       <summary>Production monitoring <span style="color:var(--module-muted);font-size:12px;font-weight:700">Optional follow-up information</span></summary>
-      <div class="module-more-content"><div class="module-form-grid">
+      <div class="module-more-content">
+        <p class="module-hint">A harvest year and a production bag count are what the production report reads. Recording them here is enough; the harvest does not need entering anywhere else.</p>
+        <div class="module-form-grid">
         <div class="module-form-field module-form-field-third"><label for="avg_weight_per_bag_kg">Average bag weight (kg)</label><input class="module-input" id="avg_weight_per_bag_kg" type="number" min="0" name="avg_weight_per_bag_kg" value="{{ $value('avg_weight_per_bag_kg') }}" aria-describedby="avg_weight_per_bag_kg_error">@error('avg_weight_per_bag_kg')<span class="rice-field-error" id="avg_weight_per_bag_kg_error">{{ $message }}</span>@enderror</div>
         <div class="module-form-field module-form-field-third"><label for="total_production_bags">Production bags</label><input class="module-input" id="total_production_bags" type="number" min="0" name="total_production_bags" value="{{ $value('total_production_bags') }}" aria-describedby="total_production_bags_error">@error('total_production_bags')<span class="rice-field-error" id="total_production_bags_error">{{ $message }}</span>@enderror</div>
         <div class="module-form-field module-form-field-third"><label for="avg_area_harvested_ha">Harvested area (ha)</label><input class="module-input" id="avg_area_harvested_ha" type="number" min="0" step="0.01" name="avg_area_harvested_ha" value="{{ $value('avg_area_harvested_ha') }}" aria-describedby="avg_area_harvested_ha_error">@error('avg_area_harvested_ha')<span class="rice-field-error" id="avg_area_harvested_ha_error">{{ $message }}</span>@enderror</div>

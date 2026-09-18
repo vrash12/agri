@@ -26,6 +26,7 @@
       'fisheries_assistance' => $providedMetrics['fisheries_assistance'] ?? $blankMetric('Fisheries assistance'),
       'machinery_by_condition' => $providedMetrics['machinery_by_condition'] ?? $blankMetric('Machinery by operating condition'),
       'machinery_by_availability' => $providedMetrics['machinery_by_availability'] ?? $blankMetric('Machinery by current availability'),
+      'production_by_commodity' => $providedMetrics['production_by_commodity'] ?? $blankMetric('Recorded production by commodity'),
       'municipality_comparison' => $providedMetrics['municipality_comparison'] ?? null,
   ];
   // Assigned here rather than in an inline PHP directive further down the file. Blade
@@ -399,6 +400,12 @@
             'metricId' => 'chartMachineryCondition',
             'metricLabel' => 'Condition',
             'metricNote' => 'What state each unit is in.',
+          ])
+          @include('partials.dashboard-metric', [
+            'metric' => $dashboardMetrics['production_by_commodity'],
+            'metricId' => 'chartProductionByCommodity',
+            'metricLabel' => 'Harvest year',
+            'metricNote' => 'What farmers harvested, recorded against the harvest itself rather than against an assistance release. Each commodity and unit is its own series, because nothing here converts sacks into kilograms.',
           ])
           @include('partials.dashboard-metric', [
             'metric' => $dashboardMetrics['machinery_by_availability'],
@@ -792,6 +799,52 @@
       });
     };
 
+    const drawLines = (id, metric) => {
+      const canvas = freshCanvas(id);
+      if (!canvas || !metric || !metric.labels.length) return;
+
+      new Chart(canvas, {
+        type: 'line',
+        data: {
+          labels: metric.labels,
+          datasets: metric.series.map((series, index) => ({
+            label: series.name + ' (' + series.unit + ')',
+            data: series.values,
+            borderColor: SERIES_COLORS[index % SERIES_COLORS.length],
+            backgroundColor: 'transparent',
+            pointBackgroundColor: SERIES_COLORS[index % SERIES_COLORS.length],
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            borderWidth: 2,
+            tension: .25,
+          })),
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: reduceMotion ? false : { duration: 400 },
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            // Commodities measured in different units share this axis only in the
+            // sense that they are all quantities; the legend names each unit so no
+            // two lines are read as directly comparable.
+            legend: {
+              display: true,
+              position: 'bottom',
+              labels: { boxWidth: 9, usePointStyle: true, color: INK_MUTED, font: { size: 12 } },
+            },
+            tooltip: tooltipFor(metric),
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: INK_MUTED, font: { size: 12 } } },
+            y: { beginAtZero: true, grid: { color: GRID_INK }, ticks: { color: INK_MUTED, font: { size: 12 } } },
+          },
+        },
+      });
+    };
+
     const drawDoughnut = (id, metric, colors) => {
       const canvas = freshCanvas(id);
       if (!canvas || !metric || !metric.labels.length) return;
@@ -868,6 +921,7 @@
         drawBars('chartAssistanceByMunicipality', METRICS.assistance_by_municipality);
         drawBars('chartFisheriesAssistance', METRICS.fisheries_assistance);
         drawBars('chartAnimalHealth', METRICS.animal_health_by_service);
+        drawLines('chartProductionByCommodity', METRICS.production_by_commodity);
         drawDoughnut('chartMappingCoverage', METRICS.mapping_coverage, COVERAGE_COLORS);
         drawDoughnut('chartMachineryCondition', METRICS.machinery_by_condition, CONDITION_COLORS);
         drawDoughnut('chartMachineryAvailability', METRICS.machinery_by_availability, AVAILABILITY_COLORS);

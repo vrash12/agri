@@ -262,6 +262,9 @@ class ProvinceReportingScopeTest extends TestCase
             'farmers_cooperatives' => ['name'],
             'agricultural_machineries' => ['name', 'availability_status', 'condition_status', 'next_maintenance_date'],
             'backup_files' => ['name'],
+            // The dashboard reports production by commodity for every account,
+            // so this fixture needs the table even when no harvest is recorded.
+            'harvest_records' => ['commodity', 'season', 'quantity_unit'],
         ] as $name => $columns) {
             Schema::create($name, function (Blueprint $table) use ($name, $columns): void {
                 $table->id();
@@ -277,6 +280,10 @@ class ProvinceReportingScopeTest extends TestCase
                 }
                 if ($name === 'anti_rabies_vaccinations') {
                     $table->integer('animal_count')->default(1);
+                }
+                if ($name === 'harvest_records') {
+                    $table->integer('harvest_year')->nullable();
+                    $table->double('quantity')->nullable();
                 }
                 if ($name === 'agricultural_machineries') {
                     $table->unsignedBigInteger('farmer_id')->nullable();

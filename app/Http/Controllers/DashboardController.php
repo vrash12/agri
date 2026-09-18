@@ -442,6 +442,7 @@ class DashboardController extends Controller
             'fisheries_assistance' => $this->metrics->fisheriesAssistance($user),
             'machinery_by_condition' => $this->metrics->machineryByCondition($user),
             'machinery_by_availability' => $this->metrics->machineryByAvailability($user),
+            'production_by_commodity' => $this->metrics->productionByCommodity($user),
             'municipality_comparison' => $this->metrics->municipalityComparison($user),
         ];
 

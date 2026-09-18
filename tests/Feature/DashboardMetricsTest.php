@@ -197,6 +197,80 @@ class DashboardMetricsTest extends TestCase
         $this->assertNull($this->metrics->farmersByMunicipality($owner->fresh())['not_recorded']);
     }
 
+    public function test_production_is_reported_by_commodity_over_time(): void
+    {
+        // The graph the office asked for, and the one the register could not answer
+        // while its only harvest figures lived on a rice seed release.
+        $this->harvest(['commodity' => 'rice', 'harvest_year' => 2025, 'quantity' => 100, 'quantity_unit' => 'sack']);
+        $this->harvest(['commodity' => 'rice', 'harvest_year' => 2026, 'quantity' => 140, 'quantity_unit' => 'sack']);
+        $this->harvest(['commodity' => 'corn', 'harvest_year' => 2026, 'quantity' => 60, 'quantity_unit' => 'sack']);
+
+        $metric = $this->metrics->productionByCommodity($this->municipalUser());
+
+        $this->assertSame(['2025', '2026'], $metric['labels']);
+        $this->assertSame([100.0, 140.0], $this->seriesValues($metric, 'Rice / Palay'));
+        // Corn has no 2025 harvest, which is a true zero rather than a gap.
+        $this->assertSame([0.0, 60.0], $this->seriesValues($metric, 'Corn'));
+    }
+
+    public function test_a_commodity_recorded_in_two_units_is_never_summed_into_one(): void
+    {
+        // Sacks and kilograms are different measurements and nothing converts between
+        // them, so one rice line carrying 100 sacks plus 500 kg would be invented.
+        $this->harvest(['commodity' => 'rice', 'harvest_year' => 2026, 'quantity' => 100, 'quantity_unit' => 'sack']);
+        $this->harvest(['commodity' => 'rice', 'harvest_year' => 2026, 'quantity' => 500, 'quantity_unit' => 'kg']);
+
+        $metric = $this->metrics->productionByCommodity($this->municipalUser());
+        $units = collect($metric['series'])->pluck('unit')->sort()->values()->all();
+
+        $this->assertCount(2, $metric['series'], 'Two units were collapsed into one series.');
+        $this->assertSame(['Kilograms (kg)', 'Sacks'], $units);
+        foreach ($metric['series'] as $series) {
+            $this->assertNotContains(600.0, $series['values'], 'Sacks and kilograms were added together.');
+        }
+    }
+
+    public function test_a_harvest_with_no_year_is_reported_as_not_recorded_rather_than_placed_in_one(): void
+    {
+        $this->harvest(['commodity' => 'rice', 'harvest_year' => 2026, 'quantity' => 100, 'quantity_unit' => 'sack']);
+        $this->harvest(['commodity' => 'rice', 'harvest_year' => null, 'quantity' => 40, 'quantity_unit' => 'sack']);
+        $this->harvest(['commodity' => 'corn', 'harvest_year' => 2026, 'quantity' => null, 'quantity_unit' => 'sack']);
+
+        $metric = $this->metrics->productionByCommodity($this->municipalUser());
+
+        $this->assertSame(['2026'], $metric['labels']);
+        $this->assertSame([100.0], $this->seriesValues($metric, 'Rice / Palay'));
+        $this->assertSame(
+            ['label' => 'Harvest records with no year or no quantity recorded', 'count' => 2],
+            $metric['not_recorded']
+        );
+    }
+
+    public function test_production_stays_inside_the_account_scope(): void
+    {
+        $this->harvest(['commodity' => 'rice', 'harvest_year' => 2026, 'quantity' => 100, 'quantity_unit' => 'sack']);
+        $this->harvest([
+            'municipality_id' => $this->foreignMunicipality,
+            'commodity' => 'rice', 'harvest_year' => 2026, 'quantity' => 999, 'quantity_unit' => 'sack',
+        ]);
+
+        $metric = $this->metrics->productionByCommodity($this->municipalUser());
+
+        $this->assertSame([100.0], $this->seriesValues($metric, 'Rice / Palay'), 'Another municipality harvest was counted.');
+    }
+
+    public function test_production_is_never_described_as_assistance(): void
+    {
+        // The reverse of the rule the assistance charts follow: what came off a field
+        // is not a hand-out, just as a hand-out is not production.
+        $this->harvest(['commodity' => 'rice', 'harvest_year' => 2026, 'quantity' => 100, 'quantity_unit' => 'sack']);
+
+        $metric = $this->metrics->productionByCommodity($this->municipalUser());
+        $wording = $metric['title'].' '.implode(' ', array_column($metric['series'], 'name'));
+
+        $this->assertDoesNotMatchRegularExpression('/released|assistance|beneficiar|distribut/i', $wording);
+    }
+
     public function test_not_recorded_is_null_when_nothing_is_missing(): void
     {
         $this->release($this->ownMunicipality, ['input_category' => 'rice_seed']);
@@ -478,6 +552,22 @@ class DashboardMetricsTest extends TestCase
         ]);
     }
 
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    private function harvest(array $attributes = []): void
+    {
+        DB::table('harvest_records')->insert($attributes + [
+            'municipality_id' => $this->ownMunicipality,
+            'farmer_id' => null,
+            'commodity' => 'rice',
+            'season' => null,
+            'harvest_year' => 2026,
+            'quantity' => 100,
+            'quantity_unit' => 'sack',
+        ]);
+    }
+
     private function seedScope(): void
     {
         DB::table('provinces')->insert([
@@ -566,6 +656,17 @@ class DashboardMetricsTest extends TestCase
             $table->unsignedBigInteger('municipality_id')->nullable();
             $table->string('service_type')->nullable();
             $table->unsignedInteger('animal_count')->default(1);
+            $table->timestamps();
+        });
+        Schema::create('harvest_records', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('municipality_id')->nullable();
+            $table->unsignedBigInteger('farmer_id')->nullable();
+            $table->string('commodity')->nullable();
+            $table->string('season')->nullable();
+            $table->unsignedSmallInteger('harvest_year')->nullable();
+            $table->decimal('quantity', 14, 3)->nullable();
+            $table->string('quantity_unit')->nullable();
             $table->timestamps();
         });
         Schema::create('agricultural_machineries', function (Blueprint $table) {
