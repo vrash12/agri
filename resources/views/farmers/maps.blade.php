@@ -5,7 +5,9 @@
   $googleMapsMapId  = $googleMapsMapId ?? config('services.google_maps.map_id') ?? '';
   $farmersMapData   = $farmersMapData ?? [];
   $mapWorkspaceMunicipality = $mapWorkspaceMunicipality ?? null;
-  $mapWorkspaceName = $mapWorkspaceName ?? ($mapWorkspaceMunicipality?->name ?? 'All Tarlac municipalities');
+  // Neutral fallback: this partial has no way of knowing which province it is
+  // being rendered for, so it must not name one.
+  $mapWorkspaceName = $mapWorkspaceName ?? ($mapWorkspaceMunicipality?->name ?? 'All supervised municipalities');
   $mapWorkspaceShortName = $mapWorkspaceShortName ?? ($mapWorkspaceMunicipality?->name ?? 'Province overview');
   $mapFarmerCount = (int) ($mapFarmerCount ?? count($farmersMapData));
   $mapMappedFarmerCount = (int) ($mapMappedFarmerCount ?? 0);

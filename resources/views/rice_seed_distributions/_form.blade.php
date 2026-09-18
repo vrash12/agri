@@ -62,6 +62,21 @@
   <div class="module-alert module-alert-error"><strong>Please review the distribution information.</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
 @endif
 
+@if(session('repeat_claim_warning'))
+  {{-- A warning, not a refusal. A second release is sometimes correct — a replanting
+       after a typhoon, or a delivery split because the truck was short — so the
+       officer is shown the earlier one and decides. Saving again confirms it, and
+       that confirmation is recorded in the audit trail. --}}
+  <div class="module-alert module-alert-warning" role="alert">
+    <strong>This looks like a repeat release.</strong>
+    <p>{{ session('repeat_claim_warning') }}</p>
+    <label class="repeat-claim-confirm">
+      <input type="checkbox" name="confirm_repeat_claim" value="1" required>
+      <span>I have checked, and this is a separate entitlement.</span>
+    </label>
+  </div>
+@endif
+
 <div class="module-form-shell assistance-form">
   <div class="module-form-main">
     <section class="module-form-section" id="riceRecipientSection">

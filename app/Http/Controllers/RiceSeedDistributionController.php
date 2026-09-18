@@ -9,6 +9,7 @@ use App\Models\RiceSeedDistribution;
 use App\Support\AuditTrail;
 use App\Support\ConcurrentWrite;
 use App\Support\CsvExport;
+use App\Support\DuplicateClaimCheck;
 use App\Support\MunicipalityAccess;
 use App\Support\SeedReleaseQuantity;
 use Illuminate\Database\Eloquent\Builder;
@@ -605,15 +606,56 @@ class RiceSeedDistributionController extends Controller
             $farmer
         );
 
+        /*
+         * One entitlement should be issued once, and nothing here used to notice when
+         * it was issued twice. This warns rather than refuses: a second release is
+         * sometimes right — a replanting after a typhoon, a delivery split because the
+         * truck was short — and refusing those would teach staff to work around the
+         * register, which is worse than not checking at all.
+         *
+         * The officer is shown what the earlier release was and can save again to
+         * confirm. That confirmation is audited, so "who issued a second claim and
+         * when" is answerable afterwards.
+         */
+        $warning = app(DuplicateClaimCheck::class)->warningFor(
+            (int) $validated['farmer_id'],
+            $validated['input_category'] ?? null,
+            $validated['date_received'] ?? null,
+            $validated['harvest_season'] ?? null,
+            isset($validated['harvest_year']) ? (int) $validated['harvest_year'] : null
+        );
+
+        if ($warning !== null && ! $request->boolean('confirm_repeat_claim')) {
+            return back()
+                ->withInput()
+                ->with('repeat_claim_warning', $warning);
+        }
+
         $payload = $this->buildDistributionPayload(
             $validated,
             $farmer,
             $municipalityId
         );
 
-        $this->concurrentWrite->transaction(
+        $release = $this->concurrentWrite->transaction(
             fn () => RiceSeedDistribution::create($payload)
         );
+
+        if ($warning !== null) {
+            AuditTrail::record(
+                'repeat_claim_confirmed',
+                'Assistance distributions',
+                $request->user()->name.' recorded a repeat release after being warned about an earlier one.',
+                [
+                    'auditable_id' => (string) $release->getKey(),
+                    'metadata' => [
+                        'farmer_id' => (int) $validated['farmer_id'],
+                        'input_category' => $validated['input_category'] ?? null,
+                        'warning' => $warning,
+                    ],
+                ]
+            );
+        }
 
         return redirect()
             ->route('rice-seed-distributions.index')

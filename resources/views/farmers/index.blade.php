@@ -44,7 +44,18 @@
       'farmers.index',
       array_merge($workspaceParameters, $parameters)
   ).'#farmerDirectory';
-  $workspaceName = $selectedMunicipality?->name ?? 'All Tarlac municipalities';
+  /*
+   * With no municipality chosen the map covers everything the account oversees,
+   * which is not always Tarlac: a System Owner sees every supervised province.
+   * Naming one province here told such an account its scope was narrower than it
+   * is, which matters when a province's boundaries are missing for some other
+   * reason and the label appears to explain it.
+   */
+  $workspaceAccount = auth()->user();
+  $workspaceName = $selectedMunicipality?->name
+      ?? ($workspaceAccount->isSystemOwner()
+          ? 'All supervised provinces'
+          : 'All '.($workspaceAccount->province?->name ?? 'supervised').' municipalities');
   $workspaceShortName = $selectedMunicipality?->name ?? 'Province overview';
   $canManageOperations = auth()->user()->canManageOperationalData();
 @endphp

@@ -5,7 +5,12 @@
   $workspaceFarmerCount = (int) ($workspaceFarmerCount ?? 0);
   $workspaceMappedFarmerCount = (int) ($workspaceMappedFarmerCount ?? 0);
   $workspacePlotCount = (int) ($workspacePlotCount ?? 0);
-  $workspaceName = $workspaceMunicipality?->name ?? 'All Tarlac municipalities';
+  // Named from the account's own scope rather than a fixed province: a System
+  // Owner overseeing several provinces was being told the workspace was Tarlac.
+  $workspaceName = $workspaceMunicipality?->name
+      ?? ($workspaceUser->isSystemOwner()
+          ? 'All supervised provinces'
+          : 'All '.($workspaceUser->province?->name ?? 'supervised').' municipalities');
   $workspaceProvinceView = $workspaceCanChoose && !$workspaceMunicipality;
 @endphp
 
