@@ -39,7 +39,7 @@ Status vocabulary: `Not started` · `In progress` · `Blocked` · `Verified comp
 Baseline at the time of writing: **375 automated tests passing (3,998 assertions)**,
 plus 11 JavaScript regression tests. Branch `feature/rice-seed-distribution-sheet`.
 
-As of 2026-09-19 on `main`: **417 automated tests passing (4,247 assertions)**, plus
+As of 2026-09-19 on `main`: **418 automated tests passing (4,255 assertions)**, plus
 32 JavaScript regression tests.
 
 ---
@@ -450,15 +450,25 @@ not when only the harvest season and year were — so a release whose harvest pe
 had been recorded looked as though nothing had been. Now covered by a test that was
 checked against the unfixed view to confirm it fails there.
 
-**Verification.** Full suite green: **417 tests, 4,247 assertions**, plus 32
+**Verification.** Full suite green: **418 tests, 4,255 assertions**, plus 32
 JavaScript regression tests. The chart was seen rendering against demonstration rows
 spanning 2024–2026 with three commodities in two units, which were then removed.
 
-**What is still open.** Decision 1 is only partly answered. Rice production now has
-a path that costs staff nothing extra, but **no non-rice commodity has an entry
-screen** — nothing writes corn, vegetables, fisheries or livestock production today,
-so those series will stay absent until the office says whether it will record them
-and on what cycle. The chart states what it has rather than implying more.
+**What is still open.**
+
+- Decision 1 is only partly answered. Rice production now has a path that costs
+  staff nothing extra, but **no non-rice commodity has an entry screen** — nothing
+  writes corn, vegetables, fisheries or livestock production today, so those series
+  will stay absent until the office says whether it will record them and on what
+  cycle. The chart states what it has rather than implying more.
+- **The NRP import workbook has no harvest-year column.** The spreadsheet import now
+  projects like a save does, and re-running it refreshes a release whose year was
+  already entered. But a fresh import carries bag counts with no period to report
+  them in, and the import will not derive one — `date_of_sowing_label` is a label and
+  the import attaches no sheet, so any year it produced would be invented. Imported
+  production therefore stays on the release, visible there, until someone enters a
+  harvest year. Adding that column to the workbook would close the gap; that is an
+  office decision about the form, not a code change.
 **Migration / configuration implications:** none expected — aggregates over
 existing columns. If query cost grows, consider caching or separate report
 endpoints (per `DESIGN_IMPLEMENTATION.md`), not eager chart loading.
@@ -1051,4 +1061,4 @@ absent chart.
 | 2026-09-18 | 2 | Kilogram totals corrected on the sheet list and the printed sheet (defect 6); gender vocabulary unified on `Farmer::GENDERS` (defect 5); missing-location and missing-FFRS rules unified in `App\Support\FarmerDataQuality` (defect 3); farmer identifiers trimmed before validation (defect 1, fixable half). Defects 2 and 4 examined and found overstated. Decisions 6 and 7 raised. |
 | 2026-09-19 | 2 | Repeat assistance claims warned on at entry (`App\Support\DuplicateClaimCheck`), and the third-party CDN assets pinned by version with subresource-integrity hashes (`App\Support\Cdn`, `config/cdn.php`). |
 | 2026-09-19 | 3 | Negros Island Region municipality geofences added for Negros Occidental, Negros Oriental and Siquijor, from the pinned geoBoundaries revision, verified against PSA areas. |
-| 2026-09-19 | 1 | **Graph 2 built.** `harvest_records` gives production a record of its own across nine commodities and six units. The Rice Seed Distribution Sheet's production section projects into it on save (`App\Support\HarvestFromRelease`), so rice production the office already writes down is never entered twice; `harvests:backfill-from-releases` reaches releases nobody will re-open. Bags are stored rather than derived kilograms, because the bag weight beside them is an average rather than a weighed total. One chart series per commodity-and-unit pair, so two units are never summed into an invented total. Decision 1 remains open for non-rice commodities, which have no entry screen yet. |
+| 2026-09-19 | 1 | **Graph 2 built.** `harvest_records` gives production a record of its own across nine commodities and six units. The Rice Seed Distribution Sheet's production section projects into it on save (`App\Support\HarvestFromRelease`), so rice production the office already writes down is never entered twice; `harvests:backfill-from-releases` reaches releases nobody will re-open. Bags are stored rather than derived kilograms, because the bag weight beside them is an average rather than a weighed total. One chart series per commodity-and-unit pair, so two units are never summed into an invented total. The spreadsheet import projects too, though the NRP workbook has no harvest-year column, so a fresh import leaves the bag count on the release until a year is entered rather than inventing a period. Decision 1 remains open for non-rice commodities, which have no entry screen yet. |

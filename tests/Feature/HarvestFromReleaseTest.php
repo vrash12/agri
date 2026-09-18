@@ -10,7 +10,10 @@ use App\Models\User;
 use App\Support\DashboardMetrics;
 use App\Support\HarvestFromRelease;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Tests\Support\ProvinceScopedFixtures;
 use Tests\TestCase;
 
@@ -287,6 +290,69 @@ class HarvestFromReleaseTest extends TestCase
         );
 
         return (bool) preg_match('/\sopen[\s>]/', $tag[0]);
+    }
+
+    public function test_the_spreadsheet_import_projects_the_production_columns_it_carries(): void
+    {
+        // The workbook has the production columns in it, so an import is a bulk way of
+        // recording harvest. Wiring only the form would leave those figures sitting in
+        // the register, entered and unreported.
+        $path = $this->workbook([
+            'FFRS RSBSA Number' => '11-11-11-111-000001',
+            'Farmer Last Name' => 'Recipient',
+            'Farmer First Name' => 'Harvest',
+            'Seed Variety Claimed' => 'NSIC Rc 216',
+            'Seed Variety Planted' => 'NSIC Rc 216',
+            'Total Production (no. of bags) - for all variety(ies)' => 64,
+            'Average Weight per Bag (kg) - for all variety(ies)' => 50,
+            'Average Area Harvested (ha)' => 1.25,
+        ]);
+
+        $this->actingAs($this->staff)
+            ->post(route('rice-seed-distributions.import'), [
+                'file' => new UploadedFile($path, 'nrp.xlsx', null, null, true),
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('rice-seed-distributions.index'));
+
+        $release = RiceSeedDistribution::query()
+            ->where('municipality_id', $this->municipality->id)
+            ->latest('id')
+            ->firstOrFail();
+
+        $this->assertSame(64, $release->total_production_bags);
+
+        // The workbook has no harvest-year column, so the import has nothing to report
+        // the figure in and must not invent one. The bags stay on the release until a
+        // year is entered, at which point saving projects them.
+        $this->assertNull($release->harvest_year);
+        $this->assertSame(0, HarvestRecord::query()->where('rice_seed_distribution_id', $release->id)->count());
+
+        $release->update(['harvest_year' => 2025]);
+        app(HarvestFromRelease::class)->sync($release->fresh());
+
+        $record = HarvestRecord::query()->where('rice_seed_distribution_id', $release->id)->firstOrFail();
+        $this->assertSame('64.000', (string) $record->quantity);
+        $this->assertSame('1.2500', (string) $record->area_harvested_ha);
+    }
+
+    /**
+     * A one-row NRP workbook, removed again when the test finishes.
+     *
+     * @param  array<string, mixed>  $row
+     */
+    private function workbook(array $row): string
+    {
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('NRP DISTRIBUTION');
+        $sheet->fromArray([array_keys($row), array_values($row)], null, 'A1');
+
+        $path = tempnam(sys_get_temp_dir(), 'nrp').'.xlsx';
+        (new Xlsx($spreadsheet))->save($path);
+        $this->beforeApplicationDestroyed(fn () => @unlink($path));
+
+        return $path;
     }
 
     /**

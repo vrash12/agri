@@ -416,7 +416,7 @@ class RiceSeedDistributionController extends Controller
         return $this->importForm($request);
     }
 
-    public function import(Request $request)
+    public function import(Request $request, HarvestFromRelease $harvestProjection)
     {
         $this->authorize('import', RiceSeedDistribution::class);
 
@@ -453,7 +453,8 @@ class RiceSeedDistributionController extends Controller
             &$skipped,
             $rows,
             $headerMap,
-            $municipalityId
+            $municipalityId,
+            $harvestProjection
         ) {
             foreach ($rows as $row) {
                 $ffrs = $this->cellStr($row, $headerMap, ['FFRS RSBSA Number']);
@@ -547,11 +548,17 @@ class RiceSeedDistributionController extends Controller
 
                 if ($existing) {
                     $existing->fill($data)->save();
+                    $release = $existing;
                     $updated++;
                 } else {
-                    RiceSeedDistribution::create($data);
+                    $release = RiceSeedDistribution::create($data);
                     $created++;
                 }
+
+                // The workbook carries the production columns, so an import is a bulk
+                // way of recording harvest and has to project like a save does.
+                // Without this the figures would sit in the register unreported.
+                $harvestProjection->sync($release);
             }
         });
 
