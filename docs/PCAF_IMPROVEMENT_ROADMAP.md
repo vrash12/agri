@@ -30,7 +30,7 @@ Status vocabulary: `Not started` · `In progress` · `Blocked` · `Verified comp
 | Milestone | Title | Status |
 | --- | --- | --- |
 | 0 | Evidence-based assessment | **Verified complete** |
-| 1 | Dashboard and municipality comparisons | **Verified complete** (graph 2 deferred) |
+| 1 | Dashboard and municipality comparisons | **Verified complete** (graph 2 added 2026-09-19) |
 | 2 | Data quality, farmer profiles, assistance history | **Complete pending decision 6** |
 | 3 | GIS analysis | **Verified complete** |
 | 4 | Reporting and mobile workflows | **Complete pending decision 2** |
@@ -38,6 +38,9 @@ Status vocabulary: `Not started` · `In progress` · `Blocked` · `Verified comp
 
 Baseline at the time of writing: **375 automated tests passing (3,998 assertions)**,
 plus 11 JavaScript regression tests. Branch `feature/rice-seed-distribution-sheet`.
+
+As of 2026-09-19 on `main`: **417 automated tests passing (4,247 assertions)**, plus
+32 JavaScript regression tests.
 
 ---
 
@@ -75,7 +78,7 @@ an operational decision.
 | # | Requested graph | Class | Evidence and constraint |
 | --- | --- | --- | --- |
 | 1 | Farmers by municipality | **B** | Data fully supports it: 1,665 farmers with `municipality_id`. Chart infrastructure exists. |
-| 2 | Agricultural production trend by commodity | **C / blocked** | **No production data exists.** The only harvest fields are rice-specific and attached to a seed release (`total_production_bags`, `avg_weight_per_bag_kg`, `avg_area_harvested_ha`); **1 of 41 releases** has any of them populated. There is no commodity-level production record for corn, vegetables, fisheries, or livestock. See "Blocking dependency" below. |
+| 2 | Agricultural production trend by commodity | **B (built 2026-09-19)** | Originally **C / blocked**: the only harvest fields were rice-specific and attached to a seed release (`total_production_bags`, `avg_weight_per_bag_kg`, `avg_area_harvested_ha`), with **1 of 41 releases** carrying any of them, and no commodity-level record at all for corn, vegetables, fisheries or livestock. `harvest_records` now provides that record across nine commodities. The chart is built and tested; it will stay near-empty until production is actually recorded, which remains decision 1. |
 | 3 | Assistance releases and beneficiaries by program/municipality | **B** | 41 releases across 9 input categories. Must count **unique beneficiaries separately from release transactions**, and must not sum mixed units (kg, piece, sack, pack, set are all in use). |
 | 4 | Farm/parcel mapping coverage | **B (redefined)** | 1,665 farmers, **4** with any parcel, 4 parcels total. Mapped vs unmapped **farmers** is computable. **Unmapped parcel count is not knowable** — there is no total parcel inventory, so a "mapped vs unmapped parcels" chart would be fabricated. |
 | 5 | Animal health services | **B** | `anti_rabies_vaccinations` models generalised services (`service_type`, `animal_count`). Currently 0 rows locally. |
@@ -163,7 +166,17 @@ These are genuine questions, not implementation blockers to guess around:
 
 1. **Production recording.** Will the office record actual harvest? For which
    commodities, at what level (farmer, parcel, municipality), in what units, and on
-   what reporting cycle? Without this, graph 2 cannot exist.
+   what reporting cycle?
+
+   *Partly answered by building, 2026-09-19.* Rather than wait on the whole
+   question, `harvest_records` was built to hold a harvest at farmer or parcel
+   level across nine commodities in six units, and the Rice Seed Distribution
+   Sheet's existing production section now projects into it, so rice production
+   the office already writes down needs no second entry. What is still genuinely
+   open: whether non-rice commodities will be recorded at all (nothing writes
+   them today — there is no entry screen for a standalone harvest), and on what
+   cycle. The chart is honest while unanswered: it shows what has been recorded
+   and counts what has not.
 2. **"Automated reporting."** On-demand generation, or scheduled generation and
    delivery? If delivery: to whom, by what transport? No mail service or queue
    worker is confirmed.
@@ -390,6 +403,62 @@ machinery and animal-health cards showed "Not recorded".
   horizontal bars and the page grows rather than truncating, but it has not been
   reviewed on a phone.
 
+### Addendum, 2026-09-19 — graph 2, production trend by commodity
+
+Graph 2 was deferred because production had nowhere to live, not because a chart
+was hard to draw. This addendum records what was built to give it one, and what
+remains genuinely unanswered.
+
+**Schema.** `harvest_records` (migration `2026_09_19_000100`) holds a harvest as a
+record in its own right: municipality, farmer, parcel, commodity, variety, season,
+year, date, area harvested, quantity and unit. It is not a field on a release,
+because a farmer who planted their own seed still has a harvest and a harvest of
+corn or tilapia is not a property of a rice seed hand-out. Nine commodities and six
+units, both as model constants. Additive and reversible per AGENTS.md section 9.
+
+**Entry, without asking for it twice.** The Rice Seed Distribution Sheet already has
+a production monitoring section, and staff already fill it in on paper. Asking them
+to re-enter the same harvest on a second screen so it could appear on a chart would
+be the surest way to have it never entered at all. `App\Support\HarvestFromRelease`
+projects that section into a harvest record whenever a release is saved, and
+migration `2026_09_19_000200` gives the link a unique index so the projection stays
+a projection: re-saving updates the same row, clearing the production fields removes
+it, and deleting the release takes its harvest with it. Releases recorded before any
+of this existed are reached by `php artisan harvests:backfill-from-releases`
+(`--dry-run` supported, safe to run twice).
+
+**Measurement rules, and why.**
+
+- *Bags are stored, not kilograms.* `avg_weight_per_bag_kg` sits beside the bag
+  count and multiplying the two would give a tidier unit, but that weight is an
+  average the office wrote down rather than a weighed total. The counted number is
+  what was observed; the bag weight is kept in the record's note, so a kilogram
+  estimate can still be worked out and is seen to be an estimate when it is.
+- *One series per commodity-and-unit pair.* Sacks and kilograms of one crop are two
+  measurements. A single line through both would invent a total. This is the same
+  rule graph 3 already follows for mixed assistance units.
+- *Both a year and a quantity, or nothing.* A release naming a planted variety is a
+  plan, not a harvest; projecting it would put a zero on the chart for a field
+  nobody has cut yet.
+- *What is missing is counted, not hidden.* Harvest records lacking a year or a
+  quantity are reported through the shared `not_recorded` note rather than dropped
+  silently from the aggregate.
+
+**Defect found and fixed while building.** The production section of the release
+form expanded when the bag, area, weight or planted-variety field was filled, but
+not when only the harvest season and year were — so a release whose harvest period
+had been recorded looked as though nothing had been. Now covered by a test that was
+checked against the unfixed view to confirm it fails there.
+
+**Verification.** Full suite green: **417 tests, 4,247 assertions**, plus 32
+JavaScript regression tests. The chart was seen rendering against demonstration rows
+spanning 2024–2026 with three commodities in two units, which were then removed.
+
+**What is still open.** Decision 1 is only partly answered. Rice production now has
+a path that costs staff nothing extra, but **no non-rice commodity has an entry
+screen** — nothing writes corn, vegetables, fisheries or livestock production today,
+so those series will stay absent until the office says whether it will record them
+and on what cycle. The chart states what it has rather than implying more.
 **Migration / configuration implications:** none expected — aggregates over
 existing columns. If query cost grows, consider caching or separate report
 endpoints (per `DESIGN_IMPLEMENTATION.md`), not eager chart loading.
@@ -980,3 +1049,6 @@ absent chart.
 | 2026-09-18 | 1 | Follow-up: `not_recorded` on the two municipality-grouped metrics was an unsatisfiable predicate (`municipality_id IN (...) AND IS NULL`), so orphan rows were invisible. Now reported only to an account whose view is unrestricted, gated on the resolved scope rather than the role so a deactivated owner stays fail-closed. |
 | 2026-09-18 | 3 | Parcel map payloads bounded: `farm-plots.all` capped with an explicit truncation signal; the farmers workspace payload replaced by a scoped `farmers.lookup` search endpoint and `public/js/farmer-finder.js`. Personal data removed from the map payload. The `/farmers` page fell from 2,287,590 to 329,460 bytes. |
 | 2026-09-18 | 2 | Kilogram totals corrected on the sheet list and the printed sheet (defect 6); gender vocabulary unified on `Farmer::GENDERS` (defect 5); missing-location and missing-FFRS rules unified in `App\Support\FarmerDataQuality` (defect 3); farmer identifiers trimmed before validation (defect 1, fixable half). Defects 2 and 4 examined and found overstated. Decisions 6 and 7 raised. |
+| 2026-09-19 | 2 | Repeat assistance claims warned on at entry (`App\Support\DuplicateClaimCheck`), and the third-party CDN assets pinned by version with subresource-integrity hashes (`App\Support\Cdn`, `config/cdn.php`). |
+| 2026-09-19 | 3 | Negros Island Region municipality geofences added for Negros Occidental, Negros Oriental and Siquijor, from the pinned geoBoundaries revision, verified against PSA areas. |
+| 2026-09-19 | 1 | **Graph 2 built.** `harvest_records` gives production a record of its own across nine commodities and six units. The Rice Seed Distribution Sheet's production section projects into it on save (`App\Support\HarvestFromRelease`), so rice production the office already writes down is never entered twice; `harvests:backfill-from-releases` reaches releases nobody will re-open. Bags are stored rather than derived kilograms, because the bag weight beside them is an average rather than a weighed total. One chart series per commodity-and-unit pair, so two units are never summed into an invented total. Decision 1 remains open for non-rice commodities, which have no entry screen yet. |
