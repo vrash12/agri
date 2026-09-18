@@ -879,22 +879,11 @@
           placeholder="Name, FFRS, or farm location"
           autocomplete="off"
         >
-        <datalist id="mapFarmerOptions">
-          @foreach($farmersMapData as $farmerOption)
-            @php
-              $farmerOptionName = trim(collect([
-                  $farmerOption['first_name'] ?? null,
-                  $farmerOption['middle_name'] ?? null,
-                  $farmerOption['last_name'] ?? null,
-                  $farmerOption['ext_name'] ?? null,
-              ])->filter()->join(' '));
-            @endphp
-            <option value="{{ $farmerOptionName }} — {{ $farmerOption['ffrs'] ?: 'No FFRS' }}"></option>
-          @endforeach
-        </datalist>
+        {{-- Filled from farmers.lookup as the user types; never pre-loaded. --}}
+        <datalist id="mapFarmerOptions"></datalist>
         <button type="button" class="btn btn-soft btn-sm" id="mapFarmerLocateBtn" disabled>Locate</button>
       </div>
-      <small id="mapPickerHelp">{{ number_format(count($farmersMapData)) }} farmers available across the complete municipality workspace.</small>
+      <small id="mapPickerHelp">Type at least two characters to search {{ number_format($mapFarmerCount) }} farmers across the complete municipality workspace.</small>
     </div>
 
     <details class="parcel-tool-group parcel-map-tools">
@@ -1412,7 +1401,6 @@
 </div>
 
 <script>
-  window.__farmersMapData = window.__farmersMapData || @json($farmersMapData);
   window.__municipalityGeofenceData = @json($mapMunicipalityBoundaries->values());
   window.__municipalitySnapshotDataUrl = @json(
     $mapWorkspaceMunicipality
@@ -2025,124 +2013,12 @@
 </style>
 @endpush
 
+{{-- The farmer finder runs from public/js/farmer-finder.js. Server values reach it
+     through these globals so that file holds no template syntax. --}}
 <script>
-  (() => {
-    const input = document.getElementById('mapFarmerSearch');
-    const locateButton = document.getElementById('mapFarmerLocateBtn');
-    const pickerHelp = document.getElementById('mapPickerHelp');
-    const selectedName = document.getElementById('selName');
-    const data = Array.isArray(window.__farmersMapData) ? window.__farmersMapData : [];
-    const mapWorkspaceLabel = @json($mapWorkspaceShortName);
-
-    if (!input || !locateButton) return;
-
-    const clean = value => String(value || '').trim().replace(/\s+/g, ' ');
-    const entries = data.map(farmer => {
-      const name = clean([
-        farmer.first_name,
-        farmer.middle_name,
-        farmer.last_name,
-        farmer.ext_name
-      ].filter(Boolean).join(' '));
-      const ffrs = clean(farmer.ffrs) || 'No FFRS';
-      const location = clean(farmer.farm_location || farmer.location);
-
-      return {
-        id: String(farmer.id),
-        name,
-        label: `${name} — ${ffrs}`,
-        search: clean(`${name} ${ffrs} ${location}`).toLowerCase()
-      };
-    });
-
-    function matchesFor(value) {
-      const query = clean(value).toLowerCase();
-      if (!query) return [];
-
-      const exact = entries.filter(entry => entry.label.toLowerCase() === query);
-      if (exact.length) return exact;
-
-      return entries.filter(entry => entry.search.includes(query));
-    }
-
-    function syncLocateState() {
-      const matches = matchesFor(input.value);
-      locateButton.disabled = matches.length !== 1;
-
-      if (!clean(input.value)) {
-        pickerHelp.textContent = `${entries.length.toLocaleString()} farmers available across ${mapWorkspaceLabel}.`;
-      } else if (matches.length === 1) {
-        pickerHelp.textContent = `Ready to locate ${matches[0].name}.`;
-      } else if (matches.length > 1) {
-        pickerHelp.textContent = `${matches.length} matches. Enter more of the name or FFRS.`;
-      } else {
-        pickerHelp.textContent = 'No farmer matches inside the current municipality workspace.';
-      }
-    }
-
-    function locateFarmer() {
-      const matches = matchesFor(input.value);
-      if (matches.length !== 1) {
-        syncLocateState();
-        return;
-      }
-
-      if (typeof window.__openFarmer3d !== 'function') {
-        if (typeof window.__mapToast === 'function') {
-          window.__mapToast('The map is still loading. Try again in a moment.', 'warn');
-        }
-        return;
-      }
-
-      input.value = matches[0].label;
-      window.__openFarmer3d(matches[0].id);
-      syncLocateState();
-    }
-
-    function syncSelectionActions() {
-      const value = clean(selectedName ? selectedName.textContent : '');
-      const hasSelection = value !== '' && value !== '—' && value !== 'No farmer selected';
-
-      document.getElementById('farmersMapModule')?.classList.toggle('has-farmer-selection', hasSelection);
-
-      document.querySelectorAll('#farmersMapModule .parcel-requires-selection').forEach(button => {
-        button.disabled = !hasSelection;
-        button.setAttribute('aria-disabled', hasSelection ? 'false' : 'true');
-      });
-
-      document.querySelectorAll('#farmersMapModule .parcel-requires-selection-link').forEach(link => {
-        link.setAttribute('aria-disabled', hasSelection ? 'false' : 'true');
-        link.setAttribute('tabindex', hasSelection ? '0' : '-1');
-      });
-    }
-
-    input.addEventListener('input', syncLocateState);
-    input.addEventListener('change', syncLocateState);
-    input.addEventListener('keydown', event => {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        locateFarmer();
-      }
-    });
-    locateButton.addEventListener('click', locateFarmer);
-
-    if (selectedName) {
-      new MutationObserver(syncSelectionActions).observe(selectedName, {
-        childList: true,
-        characterData: true,
-        subtree: true
-      });
-    }
-
-    document.addEventListener('keydown', event => {
-      if (event.key !== '/' || event.ctrlKey || event.metaKey || event.altKey) return;
-      const target = event.target;
-      if (target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return;
-      event.preventDefault();
-      input.focus();
-    });
-
-    syncLocateState();
-    syncSelectionActions();
-  })();
+  window.__farmerLookupUrl = @json(route('farmers.lookup'));
+  window.__mapFarmerCount = @json((int) $mapFarmerCount);
+  window.__mapWorkspaceLabel = @json($mapWorkspaceShortName);
 </script>
+@php($farmerFinderScriptVersion = @filemtime(public_path('js/farmer-finder.js')) ?: 1)
+<script src="{{ asset('js/farmer-finder.js') }}?v={{ $farmerFinderScriptVersion }}" defer></script>

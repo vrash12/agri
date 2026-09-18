@@ -4,10 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreRiceSeedDistributionRequest;
 use App\Models\Farmer;
+use App\Models\RiceDistributionBatch;
 use App\Models\RiceSeedDistribution;
+use App\Support\AuditTrail;
 use App\Support\ConcurrentWrite;
 use App\Support\CsvExport;
 use App\Support\MunicipalityAccess;
+use App\Support\SeedReleaseQuantity;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -566,6 +569,9 @@ class RiceSeedDistributionController extends Controller
 
         return view('rice_seed_distributions.create', [
             'farmers' => $farmers,
+            'batches' => $this->getBatchesForForm($request),
+            'seasonOptions' => RiceDistributionBatch::SEASONS,
+            'consentStatusOptions' => RiceSeedDistribution::CONSENT_STATUS_LABELS,
             'seedVarietyClaimedOptions' => $this->seedVarietyClaimedOptions,
             'cropEstablishmentOptions' => $this->cropEstablishmentOptions,
             'seedClassOptions' => $this->seedClassOptions,
@@ -624,9 +630,21 @@ class RiceSeedDistributionController extends Controller
         return view('rice_seed_distributions.edit', [
             'record' => $riceSeedDistribution,
             'farmers' => $this->getFarmersForForm($request),
+            'batches' => $this->getBatchesForForm($request),
+            'seasonOptions' => RiceDistributionBatch::SEASONS,
+            'consentStatusOptions' => RiceSeedDistribution::CONSENT_STATUS_LABELS,
             'seedVarietyClaimedOptions' => $this->seedVarietyClaimedOptions,
-            'cropEstablishmentOptions' => $this->cropEstablishmentOptions,
-            'seedClassOptions' => $this->seedClassOptions,
+            // Imported releases carry establishment methods and seed classes this
+            // form never offered. Keeping the stored value in the list is what
+            // makes those records editable instead of unsavable.
+            'cropEstablishmentOptions' => $this->optionsWithStoredValue(
+                $this->cropEstablishmentOptions,
+                $riceSeedDistribution->crop_establishment
+            ),
+            'seedClassOptions' => $this->optionsWithStoredValue(
+                $this->seedClassOptions,
+                $riceSeedDistribution->seed_class
+            ),
             'inputCategoryOptions' => $this->inputCategoryOptions,
             'inputSuggestions' => $this->inputSuggestions,
             'quantityUnitOptions' => $this->quantityUnitOptions,
@@ -644,6 +662,11 @@ class RiceSeedDistributionController extends Controller
 
     public function update(StoreRiceSeedDistributionRequest $request, RiceSeedDistribution $riceSeedDistribution)
     {
+        // The form request already authorized this record. Repeating the check
+        // here keeps the route-bound record protected even if the request class is
+        // ever swapped for plain controller validation.
+        $this->authorize('update', $riceSeedDistribution);
+
         $validated = $request->validated();
         $farmer = Farmer::findOrFail($validated['farmer_id']);
         $municipalityId = $this->resolveDistributionMunicipality(
@@ -687,8 +710,66 @@ class RiceSeedDistributionController extends Controller
 
         $query = $this->buildFilteredQuery($request);
         $maximumId = (int) ((clone $query)->max('id') ?? 0);
+        $rowCount = $maximumId === 0
+            ? 0
+            : (clone $query)->where('id', '<=', $maximumId)->count();
 
         $filename = 'agriculture_fisheries_assistance_'.now()->format('Y-m-d_H-i-s').'.csv';
+
+        /*
+         * Recorded before the download starts.
+         *
+         * This file leaves the system carrying every recipient's date of birth,
+         * gender and six eligibility flags — 4Ps, IP, PWD, senior citizen, OFW and
+         * agrarian reform beneficiary. Those say things about a household that the
+         * household did not choose to publish, and once the file is on someone's
+         * laptop the system has no further say in where it goes. The audit trail is
+         * the only record that it left at all, so it is written even if the stream
+         * is abandoned part-way: an export that began is what matters here, not one
+         * that finished.
+         *
+         * The filters are recorded with it, because "who exported the register" and
+         * "who exported the twelve 4Ps recipients in one barangay" are different
+         * events and the row count alone cannot tell them apart.
+         */
+        AuditTrail::record(
+            'exported',
+            'Assistance distributions',
+            $request->user()->name.' exported the agriculture and fisheries assistance register.',
+            [
+                'metadata' => [
+                    'row_count' => $rowCount,
+                    'includes_personal_data' => true,
+                    'filters' => array_filter($request->only([
+                        'q',
+                        'municipality_id',
+                        'assistance_sector',
+                        'input_category',
+                        'seed_variety_claimed',
+                        'received_from',
+                        'received_to',
+                        'gender',
+                        'kgs_min',
+                        'kgs_max',
+                        'last_name',
+                        'first_name',
+                        'middle_name',
+                        'ffrs',
+                        'farm_location',
+                        'farm_area_min',
+                        'farm_area_max',
+                        'dob_from',
+                        'dob_to',
+                        'is_arb',
+                        'is_4ps',
+                        'is_ip',
+                        'is_pwd',
+                        'is_sc',
+                        'is_ofw',
+                    ]), fn ($value) => $value !== null && $value !== ''),
+                ],
+            ]
+        );
 
         $headings = [
             'No.',
@@ -698,6 +779,12 @@ class RiceSeedDistributionController extends Controller
             'FFRS No.',
             'Date of Birth',
             'Location of Farm',
+            // Recorded on the release itself rather than joined from the farmer:
+            // a register should say where the hand-over belonged at the time, and a
+            // provincial export otherwise cannot tell two barangays of the same name
+            // in different municipalities apart.
+            'Municipality',
+            'Province',
             'Gender',
             'ARB',
             '4Ps',
@@ -740,6 +827,8 @@ class RiceSeedDistributionController extends Controller
                                 $r->ffrs,
                                 optional($r->date_of_birth)->format('Y-m-d'),
                                 $r->farm_location,
+                                $r->farm_municipality,
+                                $r->farm_province,
                                 $r->gender,
                                 $r->is_arb ? 'Y' : 'N',
                                 $r->is_4ps ? 'Y' : 'N',
@@ -798,7 +887,7 @@ class RiceSeedDistributionController extends Controller
         }
 
         $gender = $request->query('gender');
-        if (in_array($gender, ['Male', 'Female', 'Other'], true)) {
+        if (in_array($gender, Farmer::GENDERS, true)) {
             $query->where('gender', $gender);
         }
 
@@ -911,6 +1000,34 @@ class RiceSeedDistributionController extends Controller
             ]);
     }
 
+    /**
+     * Distribution sheets the signed-in account may attach a release to.
+     *
+     * Municipality scope is applied to the base query before anything is
+     * selected, so a provincial account sees only sheets inside its province and a
+     * municipal account only its own.
+     */
+    private function getBatchesForForm(Request $request)
+    {
+        $query = RiceDistributionBatch::query();
+        $this->municipalityAccess->scope($query, $request->user());
+
+        return $query
+            ->orderByDesc('planting_year')
+            ->orderBy('reference')
+            ->limit(200)
+            ->get([
+                'id',
+                'municipality_id',
+                'reference',
+                'planting_season',
+                'planting_year',
+                'harvest_season',
+                'harvest_year',
+                'default_seed_bag_kg',
+            ]);
+    }
+
     private function buildDistributionPayload(
         array $validated,
         Farmer $farmer,
@@ -921,10 +1038,12 @@ class RiceSeedDistributionController extends Controller
             [
                 'municipality_id' => $municipalityId,
                 'farmer_id' => $farmer->id,
+                'batch_id' => $this->resolveBatchId($validated, $municipalityId),
                 'input_category' => $validated['input_category'],
                 'seed_variety_claimed' => $validated['seed_variety_claimed'],
                 'claimed_area_ha' => $validated['claimed_area_ha'] ?? null,
                 'claimed_seeds_kg' => $validated['claimed_seeds_kg'] ?? null,
+                'registered_rice_area_ha' => $validated['registered_rice_area_ha'] ?? null,
                 'lot_series' => $this->nullIfEmpty($validated['lot_series'] ?? null),
                 'input_notes' => $this->nullIfEmpty($validated['input_notes'] ?? null),
                 'crop_establishment' => $validated['crop_establishment'] ?? null,
@@ -934,9 +1053,18 @@ class RiceSeedDistributionController extends Controller
                 'avg_area_harvested_ha' => $validated['avg_area_harvested_ha'] ?? null,
                 'seed_variety_planted' => $this->nullIfEmpty($validated['seed_variety_planted'] ?? null),
                 'seed_class' => $validated['seed_class'] ?? null,
+                'harvest_season' => $validated['harvest_season'] ?? null,
+                'harvest_year' => $validated['harvest_year'] ?? null,
+                'seed_bags' => $validated['seed_bags'] ?? null,
+                'seed_bag_kg' => $validated['seed_bag_kg'] ?? null,
+                // Already derived from bags x bag weight by the form request when
+                // both were supplied, so there is only ever one stored total.
                 'kgs_received' => $validated['kgs_received'],
                 'quantity_unit' => $validated['quantity_unit'],
                 'date_received' => $validated['date_received'],
+                'consent_status' => $validated['consent_status'],
+                'kp_kits_received' => $validated['kp_kits_received'] ?? null,
+                'representative_name' => $this->nullIfEmpty($validated['representative_name'] ?? null),
             ]
         );
     }
@@ -958,6 +1086,62 @@ class RiceSeedDistributionController extends Controller
         }
 
         return $municipalityId;
+    }
+
+    /**
+     * A release may only join a distribution sheet owned by the same municipality.
+     *
+     * An unavailable sheet and a sheet belonging to another municipality return
+     * the same message, so the form cannot be used to discover whether another
+     * municipality's sheet exists.
+     *
+     * @param  array<string, mixed>  $validated
+     */
+    private function resolveBatchId(array $validated, int $municipalityId): ?int
+    {
+        $batchId = $validated['batch_id'] ?? null;
+
+        if ($batchId === null || $batchId === '') {
+            return null;
+        }
+
+        $available = RiceDistributionBatch::query()
+            ->whereKey((int) $batchId)
+            ->where('municipality_id', $municipalityId)
+            ->exists();
+
+        if (! $available) {
+            throw ValidationException::withMessages([
+                'batch_id' => 'The selected distribution sheet is unavailable for this municipality.',
+            ]);
+        }
+
+        // The sheet totals a column printed as "Total seed (kg)" and nothing in this
+        // system converts between units, so a release counted in pieces or sacks
+        // cannot be added to it. Seed handed out in bags belongs on the sheet through
+        // the bag count and bag weight, which state the kilograms outright.
+        if (! SeedReleaseQuantity::isKilogramUnit($validated['quantity_unit'] ?? null)) {
+            throw ValidationException::withMessages([
+                'batch_id' => 'A distribution sheet totals seed in kilograms. Record this release in kilograms, or use the bag count and bag weight, before adding it to a sheet.',
+            ]);
+        }
+
+        return (int) $batchId;
+    }
+
+    /**
+     * @param  array<int, string>  $options
+     * @return array<int, string>
+     */
+    private function optionsWithStoredValue(array $options, ?string $stored): array
+    {
+        $stored = $stored === null ? '' : trim($stored);
+
+        if ($stored === '' || in_array($stored, $options, true)) {
+            return $options;
+        }
+
+        return [...$options, $stored];
     }
 
     private function buildFarmerSnapshot(Farmer $farmer): array

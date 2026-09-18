@@ -5,7 +5,9 @@ const vm = require('node:vm');
 const { test } = require('node:test');
 
 const root = path.resolve(__dirname, '../..');
-const source = fs.readFileSync(path.join(root, 'resources/views/municipality_boundaries/index.blade.php'), 'utf8');
+// The workspace script now lives in its own file rather than inside the Blade
+// page, so it can be linted and read here without stripping template syntax.
+const source = fs.readFileSync(path.join(root, 'public/js/municipality-boundaries.js'), 'utf8');
 const functions = ['geometryPolygons', 'googlePaths', 'editBoundary', 'cancelEditor', 'updateDrawState', 'pointsToGeoJson', 'saveEditor'];
 const editorCode = functions.map(name => {
   const match = source.match(new RegExp('^  (?:async )?function ' + name + '\\b[\\s\\S]*?(?=^  (?:async )?function )', 'm'));

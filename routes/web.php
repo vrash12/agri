@@ -11,6 +11,7 @@ use App\Http\Controllers\FarmerController;
 use App\Http\Controllers\FarmersCooperativeController;
 use App\Http\Controllers\FarmPlotController;
 use App\Http\Controllers\MunicipalityBoundaryController;
+use App\Http\Controllers\RiceDistributionBatchController;
 use App\Http\Controllers\RiceSeedDistributionController;
 use App\Http\Controllers\WeatherAdvisoryController;
 use Illuminate\Http\Request;
@@ -25,13 +26,13 @@ use Illuminate\Support\Facades\Route;
 */
 Route::get('/', function () {
     if (! auth()->check()) {
-        return redirect()->route('login');
+        return view('welcome');
     }
 
     return auth()->user()->isProvincialVeterinaryOffice()
         ? redirect()->route('anti-rabies-vaccinations.index')
         : redirect()->route('dashboard');
-});
+})->name('welcome');
 
 /*
 |--------------------------------------------------------------------------
@@ -255,6 +256,10 @@ Route::middleware([
     Route::get('/farmers', [FarmerController::class, 'index'])
         ->name('farmers.index');
 
+    // Declared before /farmers/{farmer} so the wildcard does not swallow it.
+    Route::get('/farmers/lookup', [FarmerController::class, 'lookup'])
+        ->name('farmers.lookup');
+
     Route::get('/farmers/create', [FarmerController::class, 'create'])
         ->name('farmers.create');
 
@@ -360,6 +365,33 @@ Route::middleware([
         RiceSeedDistributionController::class
     )->except(['show'])->parameters([
         'rice-seed-distributions' => 'riceSeedDistribution',
+    ]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | RICE SEED DISTRIBUTION SHEETS
+    |--------------------------------------------------------------------------
+    |
+    | Sheets group existing assistance releases for printing and signature. They
+    | keep their own URL prefix so the release resource's {riceSeedDistribution}
+    | parameter can never swallow a sheet path.
+    |
+    */
+    Route::get(
+        '/rice-distribution-batches/{riceDistributionBatch}/sheet',
+        [RiceDistributionBatchController::class, 'sheet']
+    )->name('rice-distribution-batches.sheet');
+
+    Route::get(
+        '/rice-distribution-batches/{riceDistributionBatch}/sheet/export',
+        [RiceDistributionBatchController::class, 'export']
+    )->name('rice-distribution-batches.export');
+
+    Route::resource(
+        'rice-distribution-batches',
+        RiceDistributionBatchController::class
+    )->except(['show'])->parameters([
+        'rice-distribution-batches' => 'riceDistributionBatch',
     ]);
 
     /*

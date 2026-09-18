@@ -5,32 +5,16 @@
 @section('content')
 @include('partials.operations-ui-styles')
 @php
-  $farmersMapData = collect($mapFarmers ?? $farmers->items())->map(function ($farmer) {
-    return [
-      'id' => $farmer->id,
-      'municipality_id' => $farmer->municipality_id,
-      'registry_id' => $farmer->registry_id,
-      'profile_photo_url' => $farmer->profile_photo_path ? route('farmers.photo', $farmer) : null,
-      'last_name' => $farmer->last_name,
-      'first_name' => $farmer->first_name,
-      'middle_name' => $farmer->middle_name,
-      'ext_name' => $farmer->ext_name,
-      'owner_name' => $farmer->owner_name,
-      'ffrs' => $farmer->ffrs,
-      'rsbsa_no' => $farmer->rsbsa_no,
-      'date_of_birth' => $farmer->date_of_birth,
-      'gender' => $farmer->gender,
-      'contact_number' => $farmer->contact_number,
-      'location' => $farmer->farm_location,
-      'farm_location' => $farmer->farm_location,
-      'farm_municipality' => $farmer->farm_municipality,
-      'farm_province' => $farmer->farm_province,
-      'farm_area_ha' => $farmer->farm_area_ha,
-      'records_count' => (int) ($farmer->records_count ?? 0),
-      'total_kgs' => (float) ($farmer->total_kgs ?? 0),
-      'last_received' => $farmer->last_received,
-    ];
-  })->values();
+  /*
+   * The parcel map no longer receives the farmer list.
+   *
+   * It used to be handed every farmer in the account's scope so the finder could
+   * search them in the browser -- around 600 KB of JSON for a province, serialised
+   * into this page on every load whether or not anyone opened the map, and carrying
+   * personal data the map never showed. The finder now searches through the
+   * `farmers.lookup` endpoint, which applies the municipality scope before the
+   * search term and returns at most fifty matches.
+   */
 
   $activeFilterCount = collect([
     request('q'), request('gender'),
@@ -180,7 +164,7 @@
               <label for="farmer_gender">Gender</label>
               <select class="module-input" id="farmer_gender" name="gender">
                 <option value="">All genders</option>
-                @foreach (['Male', 'Female', 'Other', 'Unspecified'] as $gender)
+                @foreach (\App\Models\Farmer::GENDERS as $gender)
                   <option value="{{ $gender }}" @selected(request('gender') === $gender)>{{ $gender }}</option>
                 @endforeach
               </select>
@@ -312,7 +296,6 @@
   <details id="farmerMapWorkspace" class="module-more farmer-map-section">
     <summary>Parcel map <span>View boundaries, select a farmer, and open mapping tools</span></summary>
     @include('farmers.maps', [
-      'farmersMapData' => $farmersMapData,
       'mapWorkspaceMunicipality' => $selectedMunicipality,
       'mapWorkspaceName' => $workspaceName,
       'mapWorkspaceShortName' => $workspaceShortName,
@@ -379,7 +362,10 @@
 <script>
   window.__genderStats = @json($genderStats ?? []);
   window.__locationStats = @json($locationStats ?? []);
-  window.__farmersMapData = window.__farmersMapData || @json($farmersMapData);
+  {{-- The parcel map owns this data and emits it in farmers/maps.blade.php, which this
+       page includes above. Emitting it here as well serialised the whole workspace a
+       second time — 886 KB on a provincial account — and the second copy never even
+       took effect, because the partial had already assigned it. --}}
 </script>
 @endsection
 
@@ -416,8 +402,13 @@
       chartsLoaded = true;
       try {
         if (!window.Chart) await new Promise((resolve, reject) => {
+          // Pinned and hashed in config/cdn.php.
+          const chartAsset = @json(\App\Support\Cdn::asset('chart_js'));
           const script = document.createElement('script');
-          script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js';
+          script.src = chartAsset.url;
+          script.integrity = chartAsset.integrity;
+          script.crossOrigin = 'anonymous';
+          script.referrerPolicy = 'no-referrer';
           script.onload = resolve;
           script.onerror = reject;
           document.head.appendChild(script);

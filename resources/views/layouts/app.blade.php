@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>@yield('title', 'Agriculture Information System')</title>
+  <title>@yield('title', 'Agriculture Information System') | AgriGOV</title>
 
   <!-- Roboto -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,10 +14,10 @@
   @include('partials.design-tokens')
 
   <!-- DataTables -->
-  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
+  {!! \App\Support\Cdn::style('datatables_css') !!}
 
   <!-- Tom Select -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.css">
+  {!! \App\Support\Cdn::style('tom_select_css') !!}
 
   <style>
     :root{
@@ -1025,6 +1025,7 @@
     @media(prefers-reduced-motion: reduce) { .app-shell *, .app-shell *::before, .app-shell *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
   </style>
   @stack('styles')
+  @include('partials.branding-head')
 </head>
 
 <body>
@@ -1220,11 +1221,9 @@
         <div class="sidebar-topbar">
           @auth
             <button class="nav-mobile-close" type="button" onclick="closeSidebar()" aria-label="Close menu">Close</button>
-            <div class="brand">
-
-              <img src="{{ asset('images/da.jpg') }}" alt="Department of Agriculture logo">
+            <div class="brand agrigov-sidebar">
+              <x-brand />
               <div class="brand-text">
-                <div class="brand-title">Agriculture Information System</div>
                 <div class="brand-sub">{{ $officeLabel }}</div>
               </div>
             </div>
@@ -1246,10 +1245,7 @@
   title="Expand navigation"
   aria-label="Expand navigation"
 >
-  <img
-    src="{{ asset('images/da.jpg') }}"
-    alt="Department of Agriculture logo"
-  >
+  <x-brand compact />
 </button>
           @endauth
         </div>
@@ -1316,7 +1312,7 @@
               ☰ Menu
             </button>
             <div class="mobilebar-title">
-              @yield('title', 'Agriculture Information System')
+              <x-brand />
             </div>
           </div>
         </div>
@@ -1337,11 +1333,11 @@
   </div>
 
   <!-- jQuery + DataTables -->
-  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-  <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+  {!! \App\Support\Cdn::script('jquery_js') !!}
+  {!! \App\Support\Cdn::script('datatables_js') !!}
 
   <!-- Tom Select -->
-  <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+  {!! \App\Support\Cdn::script('tom_select_js') !!}
 
   <script>
     document.addEventListener('DOMContentLoaded', function () {

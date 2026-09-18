@@ -4,9 +4,9 @@
 @section('title', 'Preview Backup File')
 
 @push('styles')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@14.3.0/dist/handsontable.full.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/eclipse.min.css">
+{!! \App\Support\Cdn::style('handsontable_css') !!}
+{!! \App\Support\Cdn::style('codemirror_css') !!}
+{!! \App\Support\Cdn::style('codemirror_theme_eclipse_css') !!}
 
 <style>
   .pv-shell{
@@ -397,16 +397,16 @@
 @endpush
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/handsontable@14.3.0/dist/handsontable.full.min.js"></script>
+{!! \App\Support\Cdn::script('xlsx_js') !!}
+{!! \App\Support\Cdn::script('handsontable_js') !!}
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/sql/sql.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/markdown/markdown.min.js"></script>
+{!! \App\Support\Cdn::script('codemirror_js') !!}
+{!! \App\Support\Cdn::script('codemirror_mode_sql') !!}
+{!! \App\Support\Cdn::script('codemirror_mode_javascript') !!}
+{!! \App\Support\Cdn::script('codemirror_mode_xml') !!}
+{!! \App\Support\Cdn::script('codemirror_mode_markdown') !!}
 
-<script src="https://cdn.jsdelivr.net/npm/docx-preview@0.1.15/dist/docx-preview.min.js"></script>
+{!! \App\Support\Cdn::script('docx_preview_js') !!}
 
 <script>
 (function(){

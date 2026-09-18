@@ -752,8 +752,17 @@ async function readKmzOrKmlText(file) {
 
   if (typeof JSZip === 'undefined') {
     await new Promise(function (resolve, reject) {
+      // Pinned and hashed in config/cdn.php and handed over on window, because
+      // this file carries no template syntax. Without a hash the browser would
+      // run whatever the CDN returned.
+      var zipAsset = window.__cdnJszip || {};
       var script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+      script.src = zipAsset.url;
+      if (zipAsset.integrity) {
+        script.integrity = zipAsset.integrity;
+        script.crossOrigin = 'anonymous';
+        script.referrerPolicy = 'no-referrer';
+      }
       script.onload = resolve;
       script.onerror = function () { reject(new Error('KMZ tools could not load. Check your connection and try again, or select a KML file.')); };
       document.head.appendChild(script);
@@ -1289,6 +1298,10 @@ var PopoverElement = maps3d.PopoverElement;
     var plotsCacheByFarmerId = new Map();
     var plotFetchPromisesByFarmerId = new Map();
     var savedPlotOverlays = [];
+    var renderedPlotDataByFarmerId = new Map();
+    var plotDisplayRevision = 0;
+    var plotDisplayTimer = null;
+    var savedPlotsHiddenForEditing = false;
     var municipalityGeofenceOverlays = [];
 
     function geoJsonPolygons(geometry) {
@@ -1477,6 +1490,7 @@ var PopoverElement = maps3d.PopoverElement;
 
     function clearPlotsForFarmer(farmerId) {
       farmerId = String(farmerId);
+      renderedPlotDataByFarmerId.delete(farmerId);
       var keep = [];
 
       for (var i4 = 0; i4 < savedPlotOverlays.length; i4++) {
@@ -1486,6 +1500,7 @@ var PopoverElement = maps3d.PopoverElement;
           continue;
         }
 
+        it.disposed = true;
         try { if (it.poly && it.poly.isConnected) map3d.removeChild(it.poly); } catch (e4) {}
         try { if (it.line && it.line.isConnected) map3d.removeChild(it.line); } catch (e5) {}
       }
@@ -1506,19 +1521,8 @@ var PopoverElement = maps3d.PopoverElement;
   } catch (e) {}
 }
 
-function setSavedPlotOverlayVisible(plotId, visible) {
-  plotId = String(plotId);
-
-  for (var i = 0; i < savedPlotOverlays.length; i++) {
-    var it = savedPlotOverlays[i];
-    if (!it || String(it.plotId) !== plotId) continue;
-
-    setOverlayVisible(it.poly, visible);
-    setOverlayVisible(it.line, visible);
-  }
-}
-
 function setAllSavedPlotsVisible(visible) {
+  savedPlotsHiddenForEditing = !visible;
   for (var i = 0; i < savedPlotOverlays.length; i++) {
     var it = savedPlotOverlays[i];
     if (!it) continue;
@@ -1529,6 +1533,7 @@ function setAllSavedPlotsVisible(visible) {
 }
 
 function restoreSavedPlotsVisibility() {
+  savedPlotsHiddenForEditing = false;
   if (typeof window.__applyPlotVisibility === "function") {
     window.__applyPlotVisibility();
   }
@@ -1564,6 +1569,7 @@ function reloadSelectedFarmerPlots(autoZoom) {
     var parcelHoverCardEl = document.getElementById('parcelHoverCard');
     var parcelFocusResetBtnEl = document.getElementById('parcelFocusResetBtn');
     var parcelHoverHideTimer = null;
+    var parcelHoverPositionFrame = null;
     var lastParcelPointer = null;
 
     function rememberParcelPointer(event) {
@@ -1582,6 +1588,10 @@ function reloadSelectedFarmerPlots(autoZoom) {
       if (!parcelHoverCardEl) return;
 
       rememberParcelPointer(event);
+      if (parcelHoverPositionFrame !== null) return;
+      parcelHoverPositionFrame = window.requestAnimationFrame(function () {
+      parcelHoverPositionFrame = null;
+      if (!parcelHoverCardEl.classList.contains('is-visible')) return;
       var stage = stageEl || document.querySelector('#farmersMapModule .farmers-map-stage');
       if (!stage) return;
 
@@ -1604,6 +1614,7 @@ function reloadSelectedFarmerPlots(autoZoom) {
 
       parcelHoverCardEl.style.left = Math.max(12, left) + 'px';
       parcelHoverCardEl.style.top = Math.max(12, top) + 'px';
+      });
     }
 
     function showParcelHoverCard(farmerId, plot, event) {
@@ -1667,9 +1678,13 @@ function reloadSelectedFarmerPlots(autoZoom) {
 
     function bindClickablePlotOverlay(outline, poly, farmerId, plot, styleOpts) {
       styleOpts = styleOpts || {};
+      var hovered = false;
+      var lastActivation = -Infinity;
 
       function applyHoverState(event) {
         if (plotMode) return;
+        if (hovered) { positionParcelHoverCard(event); return; }
+        hovered = true;
 
         if (poly) {
           poly.fillColor = styleOpts.fillHover || styleOpts.fillSoft;
@@ -1690,6 +1705,8 @@ function reloadSelectedFarmerPlots(autoZoom) {
 
     function resetHoverState() {
   if (plotMode) return;
+  if (!hovered) return;
+  hovered = false;
 
   if (poly) {
     poly.fillColor = styleOpts.fillSoft;
@@ -1717,6 +1734,10 @@ function reloadSelectedFarmerPlots(autoZoom) {
       function handlePlotOverlayClick(ev) {
         if (ev && ev.stopPropagation) ev.stopPropagation();
         if (plotMode) return;
+        // Native and Google events can report the same activation.
+        var activatedAt = performance.now();
+        if (activatedAt - lastActivation < 250) return;
+        lastActivation = activatedAt;
         hideParcelHoverCard();
         setPlotHoverCursor(false);
         window.__openFarmer3d(String(farmerId), { focusParcels: true });
@@ -1742,15 +1763,20 @@ function reloadSelectedFarmerPlots(autoZoom) {
       }
     }
 
-function renderPlotsForFarmer(farmerId, plots) {
+function renderPlotsForFarmer(farmerId, plots, options) {
   farmerId = String(farmerId);
-  clearPlotsForFarmer(farmerId);
+  options = options || {};
+  // Selection reuses cached plot records; do not destroy/recreate their GPU
+  // objects each time staff open the same farmer's card.
+  if (renderedPlotDataByFarmerId.get(farmerId) === plots) return;
+  if (options.append && renderedPlotDataByFarmerId.has(farmerId)) return;
+  if (!options.append) clearPlotsForFarmer(farmerId);
 
-  if (!plots || !plots.length || !Polygon3DInteractiveElement) return;
-
-  var show = true;
-  var t = document.getElementById('togglePlots');
-  if (t) show = t.checked;
+  if (!plots || !plots.length) {
+    renderedPlotDataByFarmerId.set(farmerId, plots);
+    return;
+  }
+  if (!Polygon3DInteractiveElement) return;
 
   for (var i6 = 0; i6 < plots.length; i6++) {
     var pl = plots[i6];
@@ -1764,25 +1790,17 @@ function renderPlotsForFarmer(farmerId, plots) {
 
     // stronger fill so polygon is easier to see on satellite view
     var fillSoft = hexToRgba(fillHex, 0.38);
-
-    // invisible click target only
-    var outline = null;
-    if (Polyline3DInteractiveElement) {
-      outline = new Polyline3DInteractiveElement({
-        path: ring,
-        strokeColor: '#ffffff01',
-        outerColor: '#ffffff00',
-        strokeWidth: 14,
-        outerWidth: 0,
-        altitudeMode: AltitudeMode.CLAMP_TO_GROUND,
-        drawsOccludedSegments: true
-      });
-      if (show) map3d.append(outline);
-    }
+    var overview = window.ParcelDisplayGeometry
+      ? window.ParcelDisplayGeometry.overviewRing(ring, 1)
+      : ring;
+    var bounds = { minLat: Infinity, maxLat: -Infinity, minLng: Infinity, maxLng: -Infinity };
+    extendBounds(bounds, ring);
+    var overlay = { farmerId: farmerId, plotId: pl.id, ring: ring, overviewRing: overview, bounds: bounds, line: null };
+    var detailed = needsFullPlotDetail(overlay);
 
     // actual visible polygon
     var poly = new Polygon3DInteractiveElement({
-      path: ring,
+      path: detailed ? ring : overview,
       strokeColor: visibleBorder,
       strokeWidth: 0.8,
       fillColor: fillSoft,
@@ -1790,9 +1808,12 @@ function renderPlotsForFarmer(farmerId, plots) {
       drawsOccludedSegments: true,
       zIndex: 10
     });
-    if (show) map3d.append(poly);
+    overlay.poly = poly;
+    overlay.detailed = detailed;
+    if (shouldShowSavedPlot(overlay)) map3d.append(poly);
 
-    bindClickablePlotOverlay(outline, poly, farmerId, pl, {
+    // The polygon already provides the full click target, including its fill.
+    bindClickablePlotOverlay(null, poly, farmerId, pl, {
       strokeStrong: visibleBorder,
       strokeHover: hexAlpha(fillHex, 'B0'),
       fillSoft: fillSoft,
@@ -1805,15 +1826,72 @@ function renderPlotsForFarmer(farmerId, plots) {
       lineHoverOuterWidth: 0
     });
 
-    savedPlotOverlays.push({
-      farmerId: farmerId,
-      plotId: pl.id,
-      poly: poly,
-      line: outline,
-      ring: ring
-    });
+    savedPlotOverlays.push(overlay);
+  }
+  renderedPlotDataByFarmerId.set(farmerId, plots);
+}
+
+function nextPlotFrame() {
+  return new Promise(function (resolve) { window.requestAnimationFrame(resolve); });
+}
+
+function shouldShowSavedPlot(overlay) {
+  var toggle = document.getElementById('togglePlots');
+  return (!toggle || toggle.checked) && !savedPlotsHiddenForEditing
+    && (!focusedParcelFarmerId || String(overlay.farmerId) === String(focusedParcelFarmerId))
+    && (!editingPlotId || String(overlay.plotId) !== String(editingPlotId));
+}
+
+function needsFullPlotDetail(overlay) {
+  if (String(overlay.farmerId) === String(selectedFarmerId)) return true;
+  var range = Number(map3d.range);
+  if (!Number.isFinite(range) || range <= 0) return true;
+  if (range > 2500) return false;
+  // Keep nearby parcels exact when zoomed in. Distant parcels remain visible
+  // with lighter paths; this is not a visibility/camera-frustum calculation.
+  if (!map3d.center || Number(map3d.tilt) > 60) return true;
+  var center = toLatLng(map3d.center);
+  if (!Number.isFinite(center.lat) || !Number.isFinite(center.lng)) return true;
+  var radius = Math.max(1000, range * 4);
+  var latitudeSpan = radius / 110540;
+  var longitudeSpan = radius / (111320 * Math.max(0.01, Math.cos(center.lat * Math.PI / 180)));
+  var bounds = overlay.bounds;
+  return bounds.maxLat >= center.lat - latitudeSpan && bounds.minLat <= center.lat + latitudeSpan
+    && bounds.maxLng >= center.lng - longitudeSpan && bounds.minLng <= center.lng + longitudeSpan;
+}
+
+async function refreshSavedPlotDisplay() {
+  var revision = ++plotDisplayRevision;
+  var overlays = savedPlotOverlays.slice();
+  var index = 0;
+  while (index < overlays.length) {
+    if (revision !== plotDisplayRevision) return;
+    var frameStart = performance.now();
+    do {
+      var overlay = overlays[index++];
+      if (overlay.disposed) continue;
+      var detailed = needsFullPlotDetail(overlay);
+      if (overlay.detailed !== detailed) {
+        overlay.poly.path = detailed ? overlay.ring : overlay.overviewRing;
+        overlay.detailed = detailed;
+      }
+      setOverlayVisible(overlay.poly, shouldShowSavedPlot(overlay));
+    } while (index < overlays.length && performance.now() - frameStart < 6);
+    if (index < overlays.length) await nextPlotFrame();
   }
 }
+
+function schedulePlotDisplayRefresh() {
+  if (plotDisplayTimer) clearTimeout(plotDisplayTimer);
+  plotDisplayTimer = setTimeout(function () {
+    plotDisplayTimer = null;
+    refreshSavedPlotDisplay();
+  }, 120);
+}
+
+['gmp-rangechange', 'gmp-centerchange', 'gmp-tiltchange', 'gmp-animationend'].forEach(function (eventName) {
+  map3d.addEventListener(eventName, schedulePlotDisplayRefresh);
+});
 
 
     async function loadAllMunicipalPlots() {
@@ -1835,7 +1913,18 @@ function renderPlotsForFarmer(farmerId, plots) {
   var json = await res.json();
   var plots = Array.isArray(json && json.plots) ? json.plots : [];
 
+  // The endpoint caps how many parcels it will return. Say so plainly when it
+  // stopped early: a map that silently drops parcels looks complete, and someone
+  // reading it has no way to tell that part of their area is missing.
+  if (json && json.truncated) {
+    var shown = Number(json.returned || plots.length).toLocaleString();
+    var total = Number(json.total || 0).toLocaleString();
+    toast('Showing ' + shown + ' of ' + total + ' parcels. Choose a municipality to see the rest.', 'warn');
+  }
+
+  savedPlotOverlays.forEach(function (overlay) { overlay.disposed = true; setOverlayVisible(overlay.poly, false); });
   savedPlotOverlays = [];
+  renderedPlotDataByFarmerId.clear();
   plotsCacheByFarmerId.clear();
 
   var grouped = new Map();
@@ -1850,8 +1939,21 @@ function renderPlotsForFarmer(farmerId, plots) {
 
   grouped.forEach(function (items, fid) {
     plotsCacheByFarmerId.set(String(fid), items);
-    renderPlotsForFarmer(String(fid), items);
   });
+  var groups = Array.from(grouped.entries());
+  var groupIndex = 0;
+  var drawn = 0;
+  while (groupIndex < groups.length) {
+    var frameStart = performance.now();
+    do {
+      var group = groups[groupIndex++];
+      renderPlotsForFarmer(String(group[0]), group[1], { append: true });
+      drawn += group[1].length;
+    } while (groupIndex < groups.length && performance.now() - frameStart < 6);
+    setProgress(20 + Math.round(75 * drawn / Math.max(1, plots.length)));
+    setStatus('Drawing parcels…', drawn + ' of ' + plots.length);
+    if (groupIndex < groups.length) await nextPlotFrame();
+  }
 
   if (typeof window.__applyPlotVisibility === 'function') {
     window.__applyPlotVisibility();
@@ -3472,28 +3574,7 @@ window.__handleDownloadAllPlots = handleDownloadAllPlots;
     };
 
 window.__applyPlotVisibility = function () {
-  var t = document.getElementById('togglePlots');
-  var on = !t || t.checked;
-
-  for (var i13 = 0; i13 < savedPlotOverlays.length; i13++) {
-    var it = savedPlotOverlays[i13];
-    if (!it || !it.poly) continue;
-    var isPlotBeingEdited = editingPlotId
-      && String(it.plotId) === String(editingPlotId);
-    var isInFocusedFarmer = !focusedParcelFarmerId
-      || String(it.farmerId) === String(focusedParcelFarmerId);
-    var shouldShow = on && isInFocusedFarmer && !isPlotBeingEdited;
-
-    try {
-      if (shouldShow) {
-        if (!it.poly.isConnected) map3d.append(it.poly);
-        if (it.line && !it.line.isConnected) map3d.append(it.line);
-      } else {
-        if (it.poly.isConnected) map3d.removeChild(it.poly);
-        if (it.line && it.line.isConnected) map3d.removeChild(it.line);
-      }
-    } catch (e6) {}
-  }
+  return refreshSavedPlotDisplay();
 };
 
   window.__reset3dMap = function () {
@@ -3501,6 +3582,7 @@ window.__applyPlotVisibility = function () {
   selectedFarmerId = null;
   focusedParcelFarmerId = null;
   plotMode = false;
+  savedPlotsHiddenForEditing = false;
 
   setPlotModeUi(false);
   showPlotButtons(false);
@@ -3566,6 +3648,7 @@ window.__applyPlotVisibility = function () {
   selectedFarmerId = null;
   focusedParcelFarmerId = null;
   plotMode = false;
+  savedPlotsHiddenForEditing = false;
 
   setPlotModeUi(false);
   showPlotButtons(false);

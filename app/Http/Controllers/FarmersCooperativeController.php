@@ -6,11 +6,13 @@ use App\Models\Farmer;
 use App\Models\FarmersCooperative;
 use App\Support\AuditTrail;
 use App\Support\ConcurrentWrite;
+use App\Support\CsvExport;
 use App\Support\MunicipalityAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
@@ -44,14 +46,14 @@ class FarmersCooperativeController extends Controller
         );
 
         $query->when($q !== '', function ($query) use ($q) {
-                $query->where(function ($w) use ($q) {
-                    $w->where('name', 'like', "%{$q}%")
-                      ->orWhere('chairperson', 'like', "%{$q}%")
-                      ->orWhere('contact_number', 'like', "%{$q}%")
-                      ->orWhere('address', 'like', "%{$q}%")
-                      ->orWhere('description', 'like', "%{$q}%");
-                });
-            })
+            $query->where(function ($w) use ($q) {
+                $w->where('name', 'like', "%{$q}%")
+                  ->orWhere('chairperson', 'like', "%{$q}%")
+                  ->orWhere('contact_number', 'like', "%{$q}%")
+                  ->orWhere('address', 'like', "%{$q}%")
+                  ->orWhere('description', 'like', "%{$q}%");
+            });
+        })
             ->when($status === 'with_members', function ($query) {
                 $query->whereHas('farmers');
             })
@@ -128,11 +130,11 @@ class FarmersCooperativeController extends Controller
         $this->authorize('create', FarmersCooperative::class);
         $data = $request->validate([
             'municipality_id' => ['nullable', 'integer'],
-            'name'           => ['required', 'string', 'max:255'],
-            'chairperson'    => ['nullable', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
+            'chairperson' => ['nullable', 'string', 'max:255'],
             'contact_number' => ['nullable', 'string', 'max:50'],
-            'address'        => ['nullable', 'string', 'max:255'],
-            'description'    => ['nullable', 'string'],
+            'address' => ['nullable', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
         ]);
         $data['municipality_id'] = $this->municipalityAccess
             ->resolveForWrite(
@@ -152,8 +154,7 @@ class FarmersCooperativeController extends Controller
     public function edit(
         Request $request,
         FarmersCooperative $farmersCooperative
-    )
-    {
+    ) {
         $this->authorize('update', $farmersCooperative);
 
         return view('farmers_cooperatives.edit', [
@@ -173,11 +174,11 @@ class FarmersCooperativeController extends Controller
         $this->authorize('update', $farmersCooperative);
         $data = $request->validate([
             'municipality_id' => ['nullable', 'integer'],
-            'name'           => ['required', 'string', 'max:255'],
-            'chairperson'    => ['nullable', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
+            'chairperson' => ['nullable', 'string', 'max:255'],
             'contact_number' => ['nullable', 'string', 'max:50'],
-            'address'        => ['nullable', 'string', 'max:255'],
-            'description'    => ['nullable', 'string'],
+            'address' => ['nullable', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
         ]);
         $municipalityId = $this->municipalityAccess->resolveForWrite(
             $request->user(),
@@ -265,7 +266,7 @@ class FarmersCooperativeController extends Controller
     {
         $this->authorize('update', $farmersCooperative);
         $data = $request->validate([
-            'farmer_ids'   => ['nullable', 'array'],
+            'farmer_ids' => ['nullable', 'array'],
             'farmer_ids.*' => [
                 'integer',
                 Rule::exists('farmers', 'id')->where(
@@ -325,16 +326,36 @@ class FarmersCooperativeController extends Controller
     public function exportExcel(FarmersCooperative $farmersCooperative)
     {
         $this->authorize('export', $farmersCooperative);
-        $farmersCooperative->load([
-            'farmers' => function ($query) use ($farmersCooperative) {
-                $query->where(
-                    'farmers.municipality_id',
-                    $farmersCooperative->municipality_id
-                )
-                      ->orderBy('last_name')
-                      ->orderBy('first_name');
-            }
-        ]);
+
+        // Queried rather than eager-loaded. `load()` pulled every member into memory
+        // at once; a cooperative is unbounded in principle and this export runs on
+        // the same request that builds the workbook.
+        $members = $farmersCooperative->farmers()
+            ->where('farmers.municipality_id', $farmersCooperative->municipality_id)
+            ->orderBy('farmers.last_name')
+            ->orderBy('farmers.first_name');
+
+        $memberCount = (clone $members)->count();
+
+        /*
+         * Recorded before the file is built.
+         *
+         * The sheet carries each member's date of birth and gender. The machinery and
+         * audit-trail exports already record who took a copy; this one did not, even
+         * though its contents are more personal than either.
+         */
+        AuditTrail::record(
+            'exported',
+            'Cooperatives',
+            auth()->user()->name.' exported the assigned farmers of '.$farmersCooperative->name.'.',
+            [
+                'auditable_id' => (string) $farmersCooperative->getKey(),
+                'metadata' => [
+                    'row_count' => $memberCount,
+                    'includes_personal_data' => true,
+                ],
+            ]
+        );
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -344,13 +365,13 @@ class FarmersCooperativeController extends Controller
 
         // Top title with cooperative name
         $sheet->mergeCells("A1:{$lastColumn}1");
-        $sheet->setCellValue('A1', 'COOPERATIVE: ' . ($farmersCooperative->name ?? '—'));
+        $sheet->setCellValue('A1', 'COOPERATIVE: '.($farmersCooperative->name ?? '—'));
 
         $sheet->mergeCells("A2:{$lastColumn}2");
         $sheet->setCellValue('A2', 'Assigned Farmers Export');
 
         $sheet->mergeCells("A3:{$lastColumn}3");
-        $sheet->setCellValue('A3', 'Generated on: ' . now()->format('F d, Y h:i A'));
+        $sheet->setCellValue('A3', 'Generated on: '.now()->format('F d, Y h:i A'));
 
         $this->styleTitle($sheet, "A1:{$lastColumn}1", '2E7D32', 16);
         $this->styleTitle($sheet, "A2:{$lastColumn}2", '66BB6A', 13);
@@ -379,37 +400,36 @@ class FarmersCooperativeController extends Controller
         $row = 6;
         $count = 1;
 
-        if ($farmersCooperative->farmers->isEmpty()) {
+        if ($memberCount === 0) {
             $sheet->mergeCells("A{$row}:{$lastColumn}{$row}");
-            $sheet->setCellValue("A{$row}", 'No assigned farmers found for this cooperative.');
+            $this->put($sheet, "A{$row}", 'No assigned farmers found for this cooperative.');
             $sheet->getStyle("A{$row}:{$lastColumn}{$row}")
                 ->getAlignment()
                 ->setHorizontal(Alignment::HORIZONTAL_CENTER);
         } else {
-            foreach ($farmersCooperative->farmers as $farmer) {
-                $sheet->setCellValue("A{$row}", $count++);
-                $sheet->setCellValue("B{$row}", $farmer->ffrs ?? '');
-                $sheet->setCellValue("C{$row}", $farmer->last_name ?? '');
-                $sheet->setCellValue("D{$row}", $farmer->first_name ?? '');
-                $sheet->setCellValue("E{$row}", $farmer->middle_name ?? '');
-                $sheet->setCellValue("F{$row}", $farmer->ext_name ?? '');
-                $sheet->setCellValue("G{$row}", $farmer->gender ?? '');
-                $sheet->setCellValue(
-                    "H{$row}",
-                    $farmer->date_of_birth
+            // Chunked so the workbook is built from a bounded slice at a time.
+            $members->chunk(500, function ($chunk) use ($sheet, &$row, &$count) {
+                foreach ($chunk as $farmer) {
+                    $this->put($sheet, "A{$row}", $count++);
+                    $this->put($sheet, "B{$row}", $farmer->ffrs);
+                    $this->put($sheet, "C{$row}", $farmer->last_name);
+                    $this->put($sheet, "D{$row}", $farmer->first_name);
+                    $this->put($sheet, "E{$row}", $farmer->middle_name);
+                    $this->put($sheet, "F{$row}", $farmer->ext_name);
+                    $this->put($sheet, "G{$row}", $farmer->gender);
+                    $this->put($sheet, "H{$row}", $farmer->date_of_birth
                         ? \Illuminate\Support\Carbon::parse($farmer->date_of_birth)->format('Y-m-d')
-                        : ''
-                );
-                $sheet->setCellValue("I{$row}", $farmer->farm_location ?? '');
-                $sheet->setCellValue("J{$row}", $farmer->farm_municipality ?? '');
-                $sheet->setCellValue("K{$row}", $farmer->farm_province ?? '');
-                $sheet->setCellValue(
-                    "L{$row}",
-                    $farmer->farm_area_ha !== null ? (float) $farmer->farm_area_ha : ''
-                );
+                        : '');
+                    $this->put($sheet, "I{$row}", $farmer->farm_location);
+                    $this->put($sheet, "J{$row}", $farmer->farm_municipality);
+                    $this->put($sheet, "K{$row}", $farmer->farm_province);
+                    $this->put($sheet, "L{$row}", $farmer->farm_area_ha !== null
+                        ? (float) $farmer->farm_area_ha
+                        : '');
 
-                $row++;
-            }
+                    $row++;
+                }
+            });
         }
 
         // Improve layout
@@ -420,10 +440,10 @@ class FarmersCooperativeController extends Controller
         $sheet->getRowDimension(2)->setRowHeight(24);
         $sheet->getRowDimension(3)->setRowHeight(22);
 
-        $filename = 'cooperative_' .
-            Str::slug($farmersCooperative->name ?: 'export') .
-            '_assigned_farmers_' .
-            now()->format('Ymd_His') .
+        $filename = 'cooperative_'.
+            Str::slug($farmersCooperative->name ?: 'export').
+            '_assigned_farmers_'.
+            now()->format('Ymd_His').
             '.xlsx';
 
         $tempFile = tempnam(sys_get_temp_dir(), 'coop_export_');
@@ -438,6 +458,20 @@ class FarmersCooperativeController extends Controller
                 'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             ]
         )->deleteFileAfterSend(true);
+    }
+
+    /**
+     * The single guarded write used by every cell in this workbook.
+     *
+     * Written explicitly as a string so a value beginning with `=`, `+`, `-` or `@`
+     * is stored as text rather than becoming a live formula when the file is opened.
+     * A farmer's name is not a formula, and a spreadsheet that executes one because
+     * of what somebody typed into a registry field is a way into whichever machine
+     * opened it. `CsvExport::value()` is the same guard the CSV exports use.
+     */
+    private function put(Worksheet $sheet, string $coordinate, mixed $value): void
+    {
+        $sheet->setCellValueExplicit($coordinate, CsvExport::value($value), DataType::TYPE_STRING);
     }
 
     private function styleTitle(Worksheet $sheet, string $range, string $fillColor, int $fontSize = 14): void

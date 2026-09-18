@@ -12,7 +12,7 @@
     content="{{ csrf_token() }}"
   >
 
-  <title>Provincial Agriculture Information System - Login</title>
+  <title>Office sign in | AgriGOV</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -530,6 +530,9 @@
     .error-box strong, .login-footer strong { font-weight: 700; }
     .login-footer { background: var(--ui-surface-subtle); border-color: var(--ui-border); }
   </style>
+  <link rel="stylesheet" href="{{ asset('css/login-layout.css') }}?v={{ filemtime(public_path('css/login-layout.css')) }}">
+  <script src="{{ asset('js/login-slideshow.js') }}?v={{ filemtime(public_path('js/login-slideshow.js')) }}" defer></script>
+  @include('partials.branding-head')
 </head>
 
 <body>
@@ -540,13 +543,9 @@
         aria-labelledby="login-title"
       >
         <header class="login-header">
-          <div class="logo-wrap">
-            <img
-              src="{{ asset('images/da.jpg') }}"
-              alt="Department of Agriculture Logo"
-              class="logo-img"
-            >
-          </div>
+          <a class="agrigov-login" href="{{ route('welcome') }}" aria-label="AgriGOV home">
+            <x-brand compact />
+          </a>
 
           <div class="office-badge">
             <span class="office-badge-dot"></span>
@@ -711,9 +710,74 @@
 
         <footer class="login-footer">
           © {{ date('Y') }}
-          <strong>Provincial Agriculture Office</strong><br>
-          Province of Tarlac
+          <strong>AgriGOV</strong><br>
+          Agriculture Information System<br>
+          <a href="{{ asset('photo-credits.html') }}">Image sources</a>
         </footer>
+      </section>
+
+      <section class="login-scenes" aria-label="Scenes of Philippine agriculture" aria-roledescription="carousel" data-login-slideshow>
+        <p class="login-scenes-eyebrow">Our farming communities</p>
+        <div class="login-scenes-frame">
+          <div class="login-scenes-slides" id="login-scenes-slides">
+            <figure class="login-scene" data-slide role="group" aria-roledescription="slide" aria-label="1 of 8">
+              <div class="login-scene-media">
+                <img src="{{ asset('images/login/rice-planting.jpg') }}" width="1280" height="853" alt="Farmers planting rice in the green terraces of Happao, Ifugao" fetchpriority="high" decoding="async">
+                <p class="login-scene-fallback" data-image-fallback hidden>Rice planting in the Happao terraces</p>
+              </div>
+              <figcaption class="login-scene-caption"><h2>Every season begins with our farmers.</h2><p>Rice planting · Happao, Ifugao</p></figcaption>
+            </figure>
+            <figure class="login-scene" data-slide role="group" aria-roledescription="slide" aria-label="2 of 8" hidden>
+              <div class="login-scene-media">
+                <img src="{{ asset('images/welcome/rice-fields.jpg') }}" width="1280" height="960" alt="Golden rice fields under a blue sky in Murcia, Negros Occidental" loading="lazy" decoding="async">
+                <p class="login-scene-fallback" data-image-fallback hidden>Rice fields in Murcia, Negros Occidental</p>
+              </div>
+              <figcaption class="login-scene-caption"><h2>Looking after the land that feeds us.</h2><p>Rice fields · Murcia, Negros Occidental</p></figcaption>
+            </figure>
+            <figure class="login-scene" data-slide role="group" aria-roledescription="slide" aria-label="3 of 8" hidden>
+              <div class="login-scene-media">
+                <img src="{{ asset('images/login/farm-machinery.jpg') }}" width="1280" height="960" alt="A blue farm tractor with a tillage attachment in Camiling, Tarlac" loading="lazy" decoding="async">
+                <p class="login-scene-fallback" data-image-fallback hidden>Farm machinery in Camiling, Tarlac</p>
+              </div>
+              <figcaption class="login-scene-caption"><h2>Tools for the work ahead.</h2><p>Farm machinery · Camiling, Tarlac</p></figcaption>
+            </figure>
+            <figure class="login-scene" data-slide role="group" aria-roledescription="slide" aria-label="4 of 8" hidden>
+              <div class="login-scene-media">
+                <img src="{{ asset('images/login/carabao.jpg') }}" width="728" height="546" alt="A carabao standing in water in Dumaguete" loading="lazy" decoding="async">
+                <p class="login-scene-fallback" data-image-fallback hidden>A carabao standing in water in Dumaguete</p>
+              </div>
+              <figcaption class="login-scene-caption"><h2>Caring for livestock and livelihoods.</h2><p>Livestock · Dumaguete, Negros Oriental</p></figcaption>
+            </figure>
+            <figure class="login-scene" data-slide role="group" aria-roledescription="slide" aria-label="5 of 8" hidden>
+              <div class="login-scene-media">
+                <img src="{{ asset('images/login/fishing-boat.jpg') }}" width="1280" height="756" alt="A blue fishing boat on the shore in the Philippines" loading="lazy" decoding="async">
+                <p class="login-scene-fallback" data-image-fallback hidden>A blue fishing boat on the shore in the Philippines</p>
+              </div>
+              <figcaption class="login-scene-caption"><h2>Supporting our fishing communities.</h2><p>Fisheries · Philippines</p></figcaption>
+            </figure>
+            <figure class="login-scene" data-slide role="group" aria-roledescription="slide" aria-label="6 of 8" hidden>
+              <div class="login-scene-media">
+                <img src="{{ asset('images/login/rice-harvest.jpg') }}" width="1280" height="960" alt="Bundles of harvested rice panicles in Baliuag" loading="lazy" decoding="async">
+                <p class="login-scene-fallback" data-image-fallback hidden>Bundles of harvested rice panicles in Baliuag</p>
+              </div>
+              <figcaption class="login-scene-caption"><h2>From the field to the harvest.</h2><p>Rice harvest · Baliuag, Bulacan</p></figcaption>
+            </figure>
+            <figure class="login-scene" data-slide role="group" aria-roledescription="slide" aria-label="7 of 8" hidden>
+              <div class="login-scene-media">
+                <img src="{{ asset('images/login/vegetable-harvest.jpg') }}" width="1280" height="960" alt="Farm workers harvesting vegetables in Pulilan" loading="lazy" decoding="async">
+                <p class="login-scene-fallback" data-image-fallback hidden>Farm workers harvesting vegetables in Pulilan</p>
+              </div>
+              <figcaption class="login-scene-caption"><h2>Growing food for our communities.</h2><p>Vegetable harvest · Pulilan, Bulacan</p></figcaption>
+            </figure>
+            <figure class="login-scene" data-slide role="group" aria-roledescription="slide" aria-label="8 of 8" hidden>
+              <div class="login-scene-media">
+                <img src="{{ asset('images/login/rice-drying.jpg') }}" width="1280" height="960" alt="Rice grains drying in Basey, Samar" loading="lazy" decoding="async">
+                <p class="login-scene-fallback" data-image-fallback hidden>Rice grains drying in Basey, Samar</p>
+              </div>
+              <figcaption class="login-scene-caption"><h2>Care for every stage of the season.</h2><p>Rice drying · Basey, Samar</p></figcaption>
+            </figure>
+          </div>
+        </div>
       </section>
     </div>
   </main>

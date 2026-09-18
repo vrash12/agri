@@ -9,6 +9,7 @@ use App\Models\Farmer;
 use App\Models\FarmersCooperative;
 use App\Models\FarmPlot;
 use App\Models\MunicipalityBoundary;
+use App\Models\RiceDistributionBatch;
 use App\Models\RiceSeedDistribution;
 use App\Models\User;
 use App\Policies\AgriculturalMachineryPolicy;
@@ -18,6 +19,7 @@ use App\Policies\FarmerPolicy;
 use App\Policies\FarmersCooperativePolicy;
 use App\Policies\FarmPlotPolicy;
 use App\Policies\MunicipalityBoundaryPolicy;
+use App\Policies\RiceDistributionBatchPolicy;
 use App\Policies\RiceSeedDistributionPolicy;
 use App\Policies\UserPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
@@ -35,6 +37,7 @@ class AuthServiceProvider extends ServiceProvider
         FarmPlot::class => FarmPlotPolicy::class,
         MunicipalityBoundary::class => MunicipalityBoundaryPolicy::class,
         RiceSeedDistribution::class => RiceSeedDistributionPolicy::class,
+        RiceDistributionBatch::class => RiceDistributionBatchPolicy::class,
         AntiRabiesVaccination::class => AntiRabiesVaccinationPolicy::class,
         FarmersCooperative::class => FarmersCooperativePolicy::class,
         BackupFile::class => BackupFilePolicy::class,

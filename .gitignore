@@ -21,3 +21,7 @@ yarn-error.log
 /credentials.txt
 /credentials*.txt
 *.credentials
+
+# Generated user manuals and branding exports. Regenerated from source, so the
+# repository tracks what produces them rather than the output itself.
+/output

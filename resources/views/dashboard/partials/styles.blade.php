@@ -259,4 +259,28 @@
   @media (max-width:1250px) { .ops-kpi-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
   @media (max-width:620px) { .ops-actions { grid-template-columns:1fr; } .ops-actions .ops-button {font-size:14px;} .ops-report-kpis {grid-template-columns:1fr;} .ops-reports-content {padding:0 12px 12px;} .ops-reports > summary {padding:16px;} }
   @media (max-width:380px) { .ops-kpi-grid {grid-template-columns:1fr;} .ops-chart-data dl {grid-template-columns:1fr;} }
+
+  /* Program indicators ----------------------------------------------------- */
+  .ops-report-status { margin: 0; color: var(--ops-muted); font-size: 12px; line-height: 1.5; }
+  .ops-metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 16px; padding: 20px; }
+  .ops-metric { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 16px; border: 1px solid #edf1ee; border-radius: 10px; background: #fff; }
+  .ops-metric-head h3 { margin: 0; font-size: 14px; line-height: 1.35; letter-spacing: -.01em; color: var(--ops-ink); }
+  .ops-metric-head p { margin: 6px 0 0; color: var(--ops-muted); font-size: 12px; line-height: 1.5; }
+  .ops-metric-canvas { position: relative; min-width: 0; height: 270px; }
+  .ops-metric-canvas canvas { max-width: 100%; }
+  /* The comparison sizes itself in JS from the number of municipalities; this is the
+     floor it starts from so the box never collapses before Chart.js arrives. */
+  .ops-metric-canvas-tall { height: 360px; margin: 0 20px; }
+  .ops-metric-empty { margin: 0; padding: 18px; border: 1px dashed #cbd8ce; border-radius: 8px; background: #fbfdfb; color: var(--ops-muted); font-size: 12px; line-height: 1.5; text-align: center; }
+  .ops-metric-figures > summary { cursor: pointer; padding: 6px 0; color: var(--ops-muted); font-size: 12px; font-weight: 500; }
+  .ops-metric-figures > summary:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; border-radius: 4px; }
+  .ops-metric-figures[open] > summary { margin-bottom: 6px; }
+  .ops-metric-picker { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--ops-muted); }
+  .ops-metric-picker select { padding: 7px 10px; border: 1px solid var(--ui-control-border); border-radius: var(--ui-radius-control); background: #fff; color: var(--ops-ink); font: inherit; font-size: 13px; }
+  .ops-metric-picker select:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 1px; }
+  @media (max-width:620px) {
+    .ops-metric-grid { grid-template-columns: 1fr; padding: 12px; gap: 12px; }
+    .ops-metric-canvas { height: 240px; }
+    .ops-metric-canvas-tall { margin: 0 12px; }
+  }
 </style>

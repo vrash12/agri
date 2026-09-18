@@ -25,6 +25,24 @@ Then inspect the adjacent modules and match them. Consistency with neighbouring 
 
 Component families to extend: `module-page`, `module-header`, `module-actions`, `module-button`, `module-panel`/`module-panel-head`, `module-form-shell`/`-section`/`-grid`/`-field`, `module-input`, `module-hint`, `module-required`, `module-alert`/`module-alert-error`, `module-table`/`module-table-scroll`/`module-row-actions`, `module-badge`. Create a Blade component only when reuse justifies it — when you do, preserve labels, slot content, validation state, classes, IDs, and form attributes.
 
+## `<x-module.field>` — use it for every new form field
+
+`resources/views/components/module/field.blade.php`. Props: `name`, `label`, `required` (false), `hint` (null), `full` (false), `id` (null).
+
+```blade
+<x-module.field name="seed_bags" label="Seed bags" :required="true" :full="true" hint="Bags issued to this farmer.">
+  <input class="module-input" id="seed_bags" name="seed_bags" type="number" min="0" aria-describedby="seed_bags_hint seed_bags_error">
+</x-module.field>
+```
+
+The component renders the wrapper, label, required marker, hint and validation message. **The control stays in the slot**, so selects with option groups, textareas and inputs with data attributes keep their own markup. Ids follow a fixed convention — `<name>_hint` and `<name>_error`, or the same from an explicit `:id` — and the control references them through `aria-describedby`. Naming an id that is not currently on the page is ignored by browsers, so a control may reference its error id whether or not the field is invalid.
+
+`tests/Feature/ModuleFieldComponentTest` fixes this contract; keep it passing. `farmers_cooperatives/_form.blade.php` is the migrated reference. The other forms still carry the handwritten block — migrate one form per change and check its rendered output rather than converting in bulk. See `DESIGN_SYSTEM.md` section 13.
+
+## Map JavaScript lives outside Blade
+
+The plotting workspace script is `public/js/farmers-maps.js`, loaded by `resources/views/farmers/partials/maps-scripts.blade.php`. It contains **no Blade syntax at all** — no `{{ }}`, no `@json`, no directives — and it must stay that way, so linters can read it and the template compiler cannot swallow part of it. Everything the server decides reaches it through the `window.__*` config block in `farmers/maps.blade.php`; a new server value is added there, not in the script. It is deliberately a classic script, not an ES module, because it shares `var` declarations across what used to be two `<script>` blocks and exports its API as `window.__*` for other scripts on the page. Do not route it through Vite: `@vite` is unused in this application and there is no build step in the deployment.
+
 ## Interface rules
 
 - State the active municipality scope on every operational screen, and place filters next to the records or map they affect.

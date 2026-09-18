@@ -172,6 +172,56 @@ class ProvinceReportingScopeTest extends TestCase
         $write->invoke($controller, Request::create('/farmers', 'POST', ['municipality_id' => $this->foreign->id]), $staff);
     }
 
+    public function test_farmer_profiles_render_for_provincial_roles_with_scoped_workspace_choices(): void
+    {
+        $farmer = Model::withoutEvents(fn () => Farmer::create([
+            'first_name' => 'Profile', 'last_name' => 'Farmer', 'municipality_id' => $this->own->id,
+        ]));
+        DB::table('rice_seed_distributions')->insert([
+            'farmer_id' => $farmer->id, 'municipality_id' => $this->own->id,
+            'seed_variety_claimed' => 'Profile seed', 'input_category' => 'rice_seed',
+            'quantity_unit' => 'kg', 'kgs_received' => 20, 'date_received' => '2026-09-01',
+        ]);
+        $staff = Model::withoutEvents(fn () => $this->user(User::ROLE_PROVINCIAL_STAFF, $this->benguet->id, 'Profile staff'));
+
+        foreach ([$this->admin, $this->owner, $staff] as $user) {
+            $expected = $user->isSystemOwner() ? [$this->foreign->id, $this->own->id] : [$this->own->id];
+            $response = $this->actingAs($user)->get(route('farmers.records', $farmer))
+                ->assertOk()->assertSee('Profile Farmer')->assertSee('Profile seed')
+                ->assertViewHas('municipalities', fn ($items) => $items->pluck('id')->all() === $expected);
+
+            if ($user->canManageOperationalData()) {
+                $response->assertSee('Edit profile')->assertSee('Add distribution');
+            } else {
+                $response->assertSee('Read only')->assertDontSee('Edit profile')->assertDontSee('Add distribution');
+            }
+        }
+    }
+
+    public function test_super_admin_cannot_open_a_farmer_profile_in_another_province(): void
+    {
+        $farmer = Model::withoutEvents(fn () => Farmer::create([
+            'first_name' => 'Foreign', 'last_name' => 'Profile', 'municipality_id' => $this->foreign->id,
+        ]));
+        $this->actingAs($this->admin)->get(route('farmers.records', $farmer))->assertForbidden();
+    }
+
+    public function test_municipal_staff_can_open_an_empty_profile_only_in_their_municipality(): void
+    {
+        [$staff, $ownFarmer, $foreignFarmer] = Model::withoutEvents(function (): array {
+            $staff = $this->user(User::ROLE_MUNICIPAL_STAFF, null, 'Profile municipal staff');
+            $staff->update(['municipality_id' => $this->own->id]);
+
+            return [$staff,
+                Farmer::create(['first_name' => 'Own', 'last_name' => 'Profile', 'municipality_id' => $this->own->id]),
+                Farmer::create(['first_name' => 'Foreign', 'last_name' => 'Profile', 'municipality_id' => $this->foreign->id]),
+            ];
+        });
+        $this->actingAs($staff)->get(route('farmers.records', $ownFarmer))->assertOk()
+            ->assertSee('No distribution records found')->assertSee('Locked to your assigned municipality');
+        $this->get(route('farmers.records', $foreignFarmer))->assertForbidden();
+    }
+
     private function user(string $role, ?int $provinceId, string $name): User
     {
         return User::create(['name' => $name, 'email' => str_replace(' ', '-', strtolower($name)).'@example.test', 'password' => 'test-disabled', 'role' => $role, 'province_id' => $provinceId, 'is_active' => true]);
@@ -220,10 +270,16 @@ class ProvinceReportingScopeTest extends TestCase
                     $table->string($column)->nullable();
                 }
                 if ($name === 'rice_seed_distributions') {
+                    // The dashboard counts unique beneficiaries apart from release
+                    // transactions, which it can only do through this column.
+                    $table->unsignedBigInteger('farmer_id')->nullable();
                     $table->double('kgs_received')->default(0);
                 }
                 if ($name === 'anti_rabies_vaccinations') {
                     $table->integer('animal_count')->default(1);
+                }
+                if ($name === 'agricultural_machineries') {
+                    $table->unsignedBigInteger('farmer_id')->nullable();
                 }
                 $table->timestamps();
             });

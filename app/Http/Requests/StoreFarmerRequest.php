@@ -72,7 +72,7 @@ class StoreFarmerRequest extends FormRequest
                 'dimensions:min_width=200,min_height=200,max_width=5000,max_height=5000',
             ],
             'remove_profile_photo' => ['nullable', 'boolean'],
-            'gender' => ['nullable', Rule::in(['Male', 'Female', 'Other', 'Unspecified'])],
+            'gender' => ['nullable', Rule::in(Farmer::GENDERS)],
 
             'farm_location' => ['nullable', 'string', 'max:255'],
             'farm_province' => ['nullable', 'string', 'max:255'],
@@ -94,6 +94,33 @@ class StoreFarmerRequest extends FormRequest
         }
 
         return $rules;
+    }
+
+    /**
+     * Trim the identifiers before anything is checked against them.
+     *
+     * `rsbsa_no` and `ffrs` carry unique rules, and those rules compare whatever was
+     * submitted. Trimming afterwards meant " FFRS-123 " was checked with its spaces,
+     * passed because no stored value matched, and was only then trimmed to a value
+     * that did already exist — so the database's unique index rejected the insert and
+     * the officer saw a database error instead of a message on the field.
+     *
+     * Only the identifiers are normalised here. Every other text field keeps its
+     * existing handling in `farmerData()`, where trimming affects storage but not
+     * whether a check passes.
+     */
+    protected function prepareForValidation(): void
+    {
+        foreach (['rsbsa_no', 'ffrs'] as $identifier) {
+            if (! $this->has($identifier)) {
+                continue;
+            }
+
+            $value = $this->input($identifier);
+            $value = $value === null ? null : trim((string) $value);
+
+            $this->merge([$identifier => $value === '' ? null : $value]);
+        }
     }
 
     /**

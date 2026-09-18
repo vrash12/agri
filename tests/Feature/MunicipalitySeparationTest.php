@@ -426,20 +426,31 @@ class MunicipalitySeparationTest extends TestCase
                 return $farmers->count() === 1
                     && (int) $farmers->first()->id === (int) $matchingFarmer->id;
             })
-            ->assertViewHas(
-                'mapFarmers',
-                function ($mapFarmers) use (
-                    $matchingFarmer,
-                    $otherFarmerInMunicipality,
-                    $foreignFarmer
-                ) {
-                    $ids = $mapFarmers->pluck('id')->map(fn ($id) => (int) $id);
+            // The map covers the whole municipality workspace even though the registry
+            // search narrowed the table to one farmer. The page no longer carries the
+            // farmer list — the finder searches through farmers.lookup — so this is
+            // now asserted on the count the map reports and on that endpoint.
+            ->assertViewHas('mapFarmerCount', 2);
 
-                    return $ids->contains((int) $matchingFarmer->id)
-                        && $ids->contains((int) $otherFarmerInMunicipality->id)
-                        && ! $ids->contains((int) $foreignFarmer->id);
-                }
-            );
+        $found = $this->actingAs($this->provincialUser)
+            ->getJson(route('farmers.lookup', [
+                'municipality_id' => $this->firstMunicipality->id,
+                'q' => 'Workspace',
+            ]))
+            ->assertOk()
+            ->json('farmers');
+
+        $foundIds = collect($found)->pluck('id')->map(fn ($id) => (int) $id);
+
+        $this->assertTrue($foundIds->contains((int) $matchingFarmer->id));
+        $this->assertTrue(
+            $foundIds->contains((int) $otherFarmerInMunicipality->id),
+            'The finder must cover the whole municipality, not just the registry search.'
+        );
+        $this->assertFalse(
+            $foundIds->contains((int) $foreignFarmer->id),
+            'The finder returned a farmer from another municipality.'
+        );
 
         $this->actingAs($this->provincialUser)
             ->getJson(route('farm-plots.all', [

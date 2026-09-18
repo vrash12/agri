@@ -114,7 +114,7 @@
 
 @push('scripts')
 @if ($totalRecords > 0)
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{!! \App\Support\Cdn::script('chart_js') !!}
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     const timeline = @json($kgsOverTime ?? []);

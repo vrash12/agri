@@ -2,9 +2,21 @@
 
 ## 1. System overview
 
+The system uses the **AgriGOV** name and leaf-and-field logo across its public pages, office login, application navigation, and browser tabs. Official office seals remain on farmer registry cards; the cards identify AgriGOV as the application.
+
 The Agriculture Information System is a Laravel and MySQL platform for multiple supervised provinces for managing agricultural records across the Provincial Agriculture Office and participating municipal agriculture offices. It combines farmer registration, GIS land mapping, agricultural and fisheries assistance, animal-health services, cooperative management, machinery monitoring, protected files, dashboards, reporting, user administration, and audit records in one municipality-aware system.
 
 The application is designed for multiple offices using the system at the same time. Every operational record is assigned to a municipality, and users only receive the records and actions allowed by their role.
+
+### Public farmer welcome page
+
+- Visitors to the homepage can read guides to farmer registration, crop inputs, fisheries assistance, animal health, farm mapping, cooperatives, and machinery inquiries.
+- Official DA, RSBSA Finder, PhilRice, ATI, BFAR, and PAGASA links provide program, learning, and weather information.
+- An office-visit checklist helps visitors prepare their information; the local office confirms requirements, schedules, and eligibility.
+- Mobile navigation and keyboard-accessible service disclosures work alongside a separate office sign-in entry.
+- Credited Philippine agriculture photographs illustrate the services, including rice farming, fisheries, livestock, and machinery.
+- The page displays no private records or operational totals and does not offer public applications, account registration, or equipment bookings.
+- Signed-in users keep their existing dashboard or Animal Health destination.
 
 ## 2. Supported user roles
 
@@ -33,6 +45,7 @@ The application is designed for multiple offices using the system at the same ti
 ## 3. Authentication and session security
 
 - Secure email and password login.
+- Desktop sign-in places the form beside an eight-photo Philippine agriculture slideshow that loops automatically without visible controls. On smaller screens the form comes first. Reduced-motion preferences disable automatic playback; photo credits are linked as Image sources in the sign-in footer.
 - Optional “Remember me” login.
 - Passwords are stored as one-way hashes and cannot be retrieved as plaintext.
 - New and changed passwords must be at least 12 characters, and passwords that appear in known public data breaches are refused. A few ordinary words together satisfy this and are easier to remember than a short password with symbols. The check never sends the password itself, and account creation still works when the office has no internet connection.
@@ -159,6 +172,7 @@ Implementation status and remaining staff/staging checks are documented in [DESI
 - Clicking a parcel isolates the selected farmer’s parcels.
 - In-map reset restores all parcels for the selected municipality.
 - Parcel boundaries are displayed without unnecessary centroid pins.
+- Large 3D parcel collections draw in batches using one interactive shape per parcel. The overview uses lighter display outlines, while selection and close inspection restore full detail. Stored boundaries, measured areas, editing, and exports retain their original coordinates.
 - Municipality-scoped parcel loading prevents parcels from different municipalities from being mixed.
 - Authorized selected-farmer KML and KMZ import.
 - Server-side KML and XML bulk parcel import for one municipality.
@@ -192,6 +206,7 @@ Implementation status and remaining staff/staging checks are documented in [DESI
 - Invalid coordinate rejection.
 - Ring-closing and geometry normalization.
 - Self-intersection and invalid-hole detection.
+- Precision-aware validation of short survey edges, preserving valid detailed parcel shapes while rejecting actual crossings and rings smaller than one square metre.
 - Safe simplification of oversized geometry.
 - Configurable maximum geometry size.
 - Detection of overlapping active municipality boundaries.
@@ -302,6 +317,25 @@ The historical database name remains `rice_seed_distributions`, but the module s
 - Item, category, location, gender, age, eligibility, crop-establishment, yield-variety, seed-class, and municipality-area charts.
 - Chunked filtered CSV export with spreadsheet-formula protection.
 - NRP Excel import with municipality-scoped FFRS and RSBSA matching.
+- Certified, Registered, and Not Specified seed classes, with imported legacy values kept editable.
+
+### Rice Seed Distribution Sheet
+
+- Group existing assistance releases into a printable distribution sheet for one programme reference and planting season.
+- Create, edit, search, and delete municipality-owned sheets; a sheet holding releases must be emptied before it can be deleted.
+- Record the planting season and year, an optional harvest season and year, an optional default seed-bag weight, and sheet notes.
+- Attach a release to a sheet in the same municipality only; releases recorded before sheets existed stay fully editable without one.
+- Record the declared rice area separately from the total farm area, and the seed-bag weight separately from the harvest bag weight.
+- Record the number of seed bags; the released kilograms are computed from bags multiplied by bag weight and kept in the single existing total.
+- Record the harvest season and year explicitly; they are never guessed from the planting season or the current date.
+- Record data-privacy consent as yes, no, or not recorded, with not recorded as the default for anything never asked.
+- Record Kalinga Package kits received and the name of a representative who collected on the farmer's behalf.
+- View the sheet on screen and download the same sheet as a wide grouped Excel workbook.
+- Grouped season headings built from the stored season and year, headers repeated on every printed page, a totals row, and a blank signature column for the recipient.
+- Spreadsheet-formula protection on every exported cell.
+- Sheet downloads and sheet changes appear in the audit trail.
+- Municipal staff work only in their own municipality, provincial staff choose a municipality in their province, and System Owner and Super Administrator access stays read-only.
+- Very large sheets are directed to the streaming CSV export instead of a single oversized workbook.
 
 ## 11. Animal Health services
 
@@ -570,3 +604,11 @@ The Backup Folder is a protected document repository. It is not an automatic dat
 ---
 
 **Document status:** Updated for the current Agriculture Information System build as of September 2026. Update this catalog whenever a role, module, workflow, integration, or security rule changes.
+
+### Assistance form usability
+
+The assistance entry/edit form provides a searchable beneficiary selector with names, FFRS and RSBSA identifiers, a scoped beneficiary count, municipality-first guidance, and no-match messages. Dropdowns open above surrounding form sections. Larger controls, clearer profile/summary text, and stacked mobile fields improve entry.
+
+### Local Baguio and Benguet account setup
+
+The local setup now matches the four Hostinger Baguio/Benguet accounts and their roles. Baguio City is separately supervised; the Benguet Super Admin cannot access its records. The Benguet office Head Agriculturist is limited to the legacy Benguet office workspace, and the La Trinidad staff account is limited to La Trinidad.

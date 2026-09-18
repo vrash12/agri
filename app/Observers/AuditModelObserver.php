@@ -10,6 +10,7 @@ use App\Models\FarmersCooperative;
 use App\Models\FarmPlot;
 use App\Models\Municipality;
 use App\Models\Province;
+use App\Models\RiceDistributionBatch;
 use App\Models\RiceSeedDistribution;
 use App\Models\User;
 use App\Support\AuditTrail;
@@ -115,6 +116,7 @@ class AuditModelObserver
             $model instanceof Farmer => 'Farmers',
             $model instanceof FarmPlot => 'Farm plots',
             $model instanceof RiceSeedDistribution => 'Assistance distributions',
+            $model instanceof RiceDistributionBatch => 'Assistance distributions',
             $model instanceof AntiRabiesVaccination => 'Animal health services',
             $model instanceof FarmersCooperative => 'Cooperatives',
             $model instanceof BackupFile => 'Backup files',
@@ -156,6 +158,10 @@ class AuditModelObserver
 
             return trim($model->serviceTypeLabel().' · '.$animal.' · '.$model->owner_name, ' ·')
                 ?: 'Animal-health service #'.$model->getKey();
+        }
+
+        if ($model instanceof RiceDistributionBatch) {
+            return $model->displayLabel();
         }
 
         if ($model instanceof BackupFile) {

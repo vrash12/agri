@@ -44,6 +44,57 @@ class GeoGeometryTest extends TestCase
         ]);
     }
 
+    public function test_it_accepts_a_narrow_parcel_with_dense_survey_vertices(): void
+    {
+        // Two diagonal survey edges about one metre apart remain disjoint even
+        // when their short segments have overlapping longitude/latitude bounds.
+        $corners = [[120.60, 15.60], [120.601, 15.601], [120.60099, 15.60101], [120.59999, 15.60001]];
+        $points = [];
+        foreach ($corners as $index => $start) {
+            $end = $corners[($index + 1) % count($corners)];
+            $steps = $index % 2 === 0 ? 100 : 1;
+            for ($step = 0; $step < $steps; $step++) {
+                $points[] = [
+                    'lng' => $start[0] + ($end[0] - $start[0]) * $step / $steps,
+                    'lat' => $start[1] + ($end[1] - $start[1]) * $step / $steps,
+                ];
+            }
+        }
+
+        $parcel = $this->geometry->fromLatLngRing($points);
+
+        $this->assertSame(count($points), $this->geometry->vertexCount($parcel));
+        $this->assertGreaterThan(0.01, $this->geometry->areaHectares($parcel));
+        $this->assertLessThan(0.04, $this->geometry->areaHectares($parcel));
+    }
+
+    public function test_it_still_rejects_crossing_edges_at_survey_scale(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('self-intersecting');
+
+        $this->geometry->fromLatLngRing([
+            ['lng' => 120.60, 'lat' => 15.60],
+            ['lng' => 120.60002, 'lat' => 15.60002],
+            ['lng' => 120.60, 'lat' => 15.60002],
+            ['lng' => 120.60002, 'lat' => 15.60],
+        ]);
+    }
+
+    public function test_short_disjoint_edges_are_not_mistaken_for_a_crossing(): void
+    {
+        $parcel = $this->geometry->fromLatLngRing([
+            ['lng' => 120.60, 'lat' => 15.60],
+            ['lng' => 120.6001, 'lat' => 15.60],
+            ['lng' => 120.60011, 'lat' => 15.600011],
+            ['lng' => 120.60001, 'lat' => 15.600009],
+        ]);
+
+        $this->assertSame(4, $this->geometry->vertexCount($parcel));
+        $this->assertGreaterThan(0.0008, $this->geometry->areaHectares($parcel));
+        $this->assertLessThan(0.0015, $this->geometry->areaHectares($parcel));
+    }
+
     public function test_it_classifies_inside_partial_and_outside_parcels(): void
     {
         $boundary = $this->geometry->prepare($this->square(120.50, 15.40, 0.02));

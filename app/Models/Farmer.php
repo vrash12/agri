@@ -10,6 +10,17 @@ use Illuminate\Support\Str;
 
 class Farmer extends Model
 {
+    /**
+     * The gender values a farmer record may carry.
+     *
+     * Declared here because four places need the same list — the write validation,
+     * the two directory filters, and the two filter dropdowns — and they had drifted:
+     * the assistance directory accepted only the first three, so a farmer recorded as
+     * "Unspecified" could be saved and then never found again from that page, and a
+     * hand-typed `?gender=Unspecified` silently returned every row instead of none.
+     */
+    public const GENDERS = ['Male', 'Female', 'Other', 'Unspecified'];
+
     protected $table = 'farmers';
 
     protected $hidden = [

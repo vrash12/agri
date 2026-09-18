@@ -523,7 +523,7 @@ final class GeoGeometry
         $o3 = $this->orientation($c, $d, $a);
         $o4 = $this->orientation($c, $d, $b);
 
-        if ($o1 !== $o2 && $o3 !== $o4) {
+        if ($o1 !== 0 && $o2 !== 0 && $o3 !== 0 && $o4 !== 0 && $o1 !== $o2 && $o3 !== $o4) {
             return true;
         }
 
@@ -535,9 +535,16 @@ final class GeoGeometry
 
     private function orientation(array $a, array $b, array $c): int
     {
-        $value = ($b[1] - $a[1]) * ($c[0] - $b[0]) - ($b[0] - $a[0]) * ($c[1] - $b[1]);
+        $dx = $b[0] - $a[0];
+        $dy = $b[1] - $a[1];
+        $value = $dy * ($c[0] - $a[0]) - $dx * ($c[1] - $a[1]);
 
-        return abs($value) <= self::EPSILON ? 0 : ($value > 0 ? 1 : 2);
+        // The determinant has squared coordinate units. Scale the positional
+        // tolerance by edge length so short survey segments are not falsely
+        // treated as collinear merely because their cross products are small.
+        $tolerance = self::EPSILON * hypot($dx, $dy);
+
+        return abs($value) <= $tolerance ? 0 : ($value > 0 ? 1 : 2);
     }
 
     private function onSegment(array $a, array $point, array $b): bool

@@ -6,6 +6,10 @@ The main interfaces now use simpler defaults and shared management-system stylin
 
 ## Green/yellow theme update
 
+### AgriGOV branding — September 18, 2026
+
+The leaf-and-field A now forms the first letter of the AgriGOV wordmark. The shared `x-brand` component supplies full and compact variants across standalone public/login pages and authenticated navigation, with responsive sizing, accessible image text, and browser icons. Farmer-card HTML and PNG attribution use AgriGOV while retaining office seals. See `docs/AGRIGOV_BRANDING.md`. This branding update was deployed to Hostinger on September 18, 2026 at 07:33 UTC, including the component, views, CSS, and PNG assets together. Live welcome and login branding were verified.
+
 The current color companion is [GREEN_YELLOW_THEME.md](GREEN_YELLOW_THEME.md). Shared tokens now include warm yellow, pale yellow, dark text on yellow, a dark green overview, and an inverse focus color. Ordinary primary actions remain green; the dashboard overview uses a yellow primary action. Active navigation and the farmer workspace tab use pale yellow, form section numbers use yellow, and the shell, login, and public map use a thin green/yellow strip. Work surfaces remain white. Semantic warning/error colors and saved parcel colors are preserved.
 
 The background refinement uses the almost-white `--ui-bg` value `#F8FAF8` and a shared `--ui-page-background`: green at 3.5% opacity in the upper-left corner and yellow at 4.5% in the upper-right corner, fading near the top. The application shell, dashboard, login, and public map consume this treatment; forms, tables, and dialogs keep solid white work surfaces so the tint stays secondary to the task. Six rendered screen states passed browser checks at five widths from 320 to 1440 pixels, including the background colors, existing action/focus colors, and absence of page overflow or script errors. The desktop dashboard and mobile login were visually reviewed; Blade compilation and the whitespace check passed.
@@ -129,3 +133,32 @@ User Management now distinguishes global System Owner access from a Super Admin'
 Verification passed 86 isolated tests with 1,175 assertions for access isolation, account mutations, audit/report scope, migration up/down, and existing boundary workflows. Changed PHP files passed Pint and syntax checks; Blade views compiled. Synthetic Owner and Tarlac account create/list/edit pages passed 15 browser checks across 390, 768, and 1440 CSS pixels, with no horizontal page overflow. Role changes updated visibility and native required controls, and foreign province/privileged account choices were absent. Desktop and mobile screenshots were visually reviewed. CDN requests were blocked during these checks, so enhanced third-party selectors were not exercised.
 
 The local additive migration and explicit account setup were applied after a database backup. The existing administrator is now System Owner; Benguet and Tarlac Super Admins are prepared inactive. Existing operational records, geofences, and passwords were verified unchanged. See `PROVINCE_SUPERVISION.md` for account activation, deployment, local evidence, and coordinated rollback. No production deployment or live sign-in using the inactive accounts was performed.
+
+## Public farmer welcome page — 2026-09-18
+
+Guests at `/` now receive a farmer-services guide with a Filipino introduction, six native service disclosures, official agriculture resources, a visit checklist, and office sign-in links. Scoped welcome CSS consumes the shared green/yellow tokens. Six credited Philippine photographs are served locally; the five lazy service thumbnails total about 161 KiB. Authenticated role redirects and private operational access remain unchanged.
+
+Verification: 8 focused tests with 42 assertions passed, alongside Pint, PHP/JavaScript syntax, Blade compilation, route checks, and diff whitespace checks. Browser checks covered navigation, keyboard disclosures, login links, credits, and widths from 320 to 1440 pixels without horizontal overflow. The official BFAR link returned an external certificate error; other agency links loaded. No migration, new configuration, or production deployment. See `docs/WELCOME_PAGE.md` for detailed evidence and `docs/WELCOME_PHOTO_SOURCES.md` for image provenance.
+
+## 3D parcel rendering — 2026-09-18
+
+The Farmers Parcel Map now uses one interactive polygon per plot, batched rendering, cached overlay reuse, and conservative display-only overview paths. Selection and nearby close inspection restore full coordinates. Editing, measurements, exports, municipality isolation, and stored geometry are unchanged. The Ramos overview workload fell from 2,088 elements / 232,056 path vertices to 1,044 elements / 26,299 vertices. This is a drawing-workload measurement, not a frame-rate benchmark.
+
+Verification: 23 JavaScript geometry, renderer and finder tests passed; script syntax, Blade compilation and scoped diff checks passed. The browser reached the local sign-in screen, so signed-in Google Maps interaction and actual frame rate remain to be checked. No migration, new dependency or production deployment. See `docs/PARCEL_MAP_PERFORMANCE.md` for details and release instructions.
+
+## Sign-in photography layout — 2026-09-18
+
+The existing credential card now sits on the left of a three-photo Philippine agriculture slideshow. Captions remain below the pictures, with source/author/license credits in a native disclosure. The form stacks first at 900 pixels and below. Scoped CSS consumes shared tokens; slideshow JavaScript supplies seven-second rotation, Pause/Play, keyboard pause, hidden-tab/hover suspension, reduced-motion handling, and image failure fallbacks. The first photo remains available without JavaScript. Credential fields, validation recovery, submit handling, and authentication routes are retained.
+
+Verification: 9 JavaScript lifecycle tests and 8 existing isolated PHP presentation/security-header tests passed. Blade compilation, PHP/JavaScript syntax, login route verification, and scoped whitespace checks passed. Local browser checks covered all three images, automatic advance, pause, manual wrapping, password visibility, credits, and layout at 320, 390, 768, 1024, and 1440 pixels with no horizontal overflow; desktop/mobile screenshots were reviewed and no console warnings/errors were captured. Reduced-motion, hidden-tab, and broken-image behavior were covered by JavaScript tests; actual screen-reader testing and a live authenticated sign-in were not performed. No migration, new configuration, or deployment. See `docs/LOGIN_SLIDESHOW.md` for assets and release requirements.
+
+## Assistance beneficiary dropdown — 2026-09-18
+
+Fixed clipping from form-section overflow and introduced form-specific beneficiary search including both FFRS and RSBSA numbers. Provincial selection waits for a municipality; empty lists have guidance and changing municipality clears unavailable selections and their previews. Improved dropdown row spacing, focus, summary typography, mobile stacking, and submit-button recovery on back navigation. Existing native fallback, record versions, and server ownership rules remain intact.
+
+Verification: 18 OperationsPresentationTest cases passed using isolated SQLite; Blade compilation, PHP and extracted JavaScript syntax, and scoped diff checks passed. Browser access redirected to login, so authenticated visual/keyboard verification remains outstanding. No database changes, migrations, configuration changes, or deployment. The existing server-loaded beneficiary payload remains a separate scalability limitation.
+
+
+### Continuous login gallery — September 18, 2026
+
+The login now loops eight local photographs without Pause/Play, arrows, a counter, or a credits disclosure beside the images. Five added scenes cover livestock, fishing, rice harvest, vegetable harvest, and rice drying. Required author/source/license credits are on `public/photo-credits.html`, linked from the login footer. Reduced motion keeps images still; hidden tabs suspend rotation. Upcoming images load one at a time ahead of display. This supersedes the earlier three-photo control layout.

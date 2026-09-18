@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex,nofollow,noarchive">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <title>{{ $farmer->registry_id }} · Interactive land map</title>
+  <title>{{ $farmer->registry_id }} · Interactive land map | AgriGOV</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
@@ -49,6 +49,7 @@
     .parcel-button:hover{transform:none}
     @media(max-width:480px){.map-toolbar{width:calc(100% - 24px);flex-wrap:wrap;justify-content:center}.map-action{padding-inline:8px}.hero-stat{min-width:0;flex:1 1 120px}.registry-id{overflow-wrap:anywhere}}
   </style>
+  @include('partials.branding-head')
 </head>
 <body>
   @php
@@ -61,9 +62,9 @@
   <div class="topline"></div>
   <main class="shell">
     <header class="masthead">
-      <div class="brand">
-        <img src="{{ asset('images/da.jpg') }}" alt="Department of Agriculture logo">
-        <div><strong>Agriculture Information System</strong><span>Public parcel verification · {{ $province }}</span></div>
+      <div class="brand agrigov-public">
+        <x-brand />
+        <span>Public parcel verification · {{ $province }}</span>
       </div>
       <div class="verified"><i>✓</i><span>Registry link verified</span></div>
     </header>

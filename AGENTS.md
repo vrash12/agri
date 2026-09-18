@@ -10,6 +10,10 @@ Use [GREEN_YELLOW_THEME.md](GREEN_YELLOW_THEME.md) for the current color treatme
 
 The current interface implementation and outstanding verification are recorded in [DESIGN_IMPLEMENTATION.md](DESIGN_IMPLEMENTATION.md). Reuse `partials.design-tokens`, `partials.operations-ui-styles`, and the layout's `partials.form-feedback`. Optional native disclosures must retain their controls inside the form and reveal validation errors. Operational report pages register `renderOperationalCharts` on their report disclosure before including `partials.operational-report-loader`; figures must remain available if the library fails.
 
+## Application branding
+
+AgriGOV is the application identity. Use `<x-brand />` for the integrated wordmark and `<x-brand compact />` for the square emblem. Standalone pages include `partials.branding-head`; the shared layout handles authenticated modules. Keep agency seals and registry identifiers distinct from application branding. Assets and deployment requirements are recorded in `docs/AGRIGOV_BRANDING.md`.
+
 ## Senior developer mandate
 
 Act as the senior full-stack developer and software architect responsible for helping the project owner build, improve, secure, test, document, and deploy this system. Treat the application as a real government operations platform with multiple simultaneous users and municipality-owned data, not as a prototype or generated demo.
@@ -212,6 +216,8 @@ All accounts must be active. Provincial roles require an existing active provinc
 
 ### Authentication workflow
 
+The standalone `/login` page keeps the credential form on the left and an eight-photo Philippine agriculture slideshow on the right, stacking the form first on smaller screens. `public/css/login-layout.css` and `public/js/login-slideshow.js` provide the layout and progressive enhancement. Photos loop every seven seconds without visible controls; playback suspends for hidden tabs and reduced-motion preference. The first photo remains visible without JavaScript. Keep the footer Image sources link to `public/photo-credits.html` for required attribution; provenance is recorded in `docs/LOGIN_SLIDESHOW.md`. Authentication, CSRF, error recovery, and password-manager fields must remain independent of the slideshow.
+
 1. A guest submits email, password, and optional “remember me” to `AuthController@login`.
 2. Laravel attempts session authentication and regenerates the session ID after success.
 3. The controller rejects unknown roles, inactive users, municipal users without a municipality, and users assigned to a missing/inactive municipality.
@@ -256,6 +262,12 @@ Reusable authorization is implemented by:
 When adding a new municipality-owned module, reuse these components instead of copying role comparisons into controllers.
 
 ## 5. Functional module catalog
+
+### Public welcome page
+
+Route: `GET /` (`welcome`). Guests receive a public farmer-services guide in `resources/views/welcome.blade.php`; signed-in users retain the dashboard or Animal Health redirect. `/login` remains the staff sign-in entry. The page provides native service disclosures, an office-visit checklist, and links to official DA, RSBSA Finder, PhilRice, ATI, BFAR, and PAGASA resources. It does not query operational records or publish counts, accept farmer registrations/applications, or create bookings. Keep availability and eligibility inquiries with the responsible office.
+
+The page consumes `partials.design-tokens` and its scoped `public/css/welcome.css` / `public/js/welcome.js`. Navigation and service guidance remain usable without JavaScript. Six locally served Philippine agriculture photographs use CC BY-SA or CC0 licenses, with source, author, and license attribution in the footer disclosure; preserve their credits. Service thumbnails are lazy-loaded. See `docs/WELCOME_PAGE.md` and `docs/WELCOME_PHOTO_SOURCES.md` for the design rationale, asset provenance, and verification. No migration or new configuration is required.
 
 ### 5.1 Dashboard
 
@@ -311,7 +323,9 @@ Primary model/table: `FarmPlot` / `farm_plots`
 
 Authenticated functions:
 
-The directory's Parcel Map disclosure preserves `#farmersMapModule` bookmarks and row actions. It defers Google Maps startup and the all-plots request until opened; KMZ tools load when a KMZ file is selected. The complete municipality farmer finder and boundary metadata are still assembled in the initial page, and the all-plots endpoint remains unpaginated. This presentation change does not resolve those server payload limits.
+The directory's Parcel Map disclosure preserves `#farmersMapModule` bookmarks and row actions. It defers Google Maps startup and the all-plots request until opened; KMZ tools load when a KMZ file is selected. The farmer finder searches the scoped server endpoint. The all-plots endpoint remains unpaginated but caps responses through `map.max_plots_per_request` and reports truncation; the 3D display optimization does not reduce that network payload.
+
+The 3D parcel renderer uses one interactive polygon per parcel, reuses cached overlays, and yields between drawing batches. `public/js/parcel-display-geometry.js` supplies display-only one-metre overview paths with a two-percent area-change guard and topology checks. Original rings remain in the plot cache for edits, collision checks, fitting, measurements, and exports; selected farmers and nearby parcels at close range use full detail. Never persist simplified display paths. Camera-driven refreshes are debounced and cancellable so stale batches cannot restore hidden or deleted plots. See `docs/PARCEL_MAP_PERFORMANCE.md` for verification and limits.
 
 - retrieve all visible parcels or one accessible farmer's parcels as JSON;
 - draw and save polygon boundaries for the selected farmer;
@@ -367,6 +381,38 @@ Functions:
 - stream filtered CSV exports in chunks.
 
 Only rows whose `quantity_unit` is empty or `kg` are included in kilogram totals. Do not add fingerlings, pieces, sacks, bottles, or liters directly to kilogram aggregates. Fisheries KPIs count `fish_fingerlings` only when the unit is `piece`.
+
+`StoreRiceSeedDistributionRequest::SEED_CLASSES` offers Certified, Registered and Not Specified. Imported releases also hold establishment methods and seed classes the form has never offered, such as `Direct seeded`; the request keeps the value already stored on the record being edited acceptable, and the controller adds it to the select, so a legacy record stays editable instead of failing validation on a field nobody touched. Do not remove a stored value from the accepted list without checking the real data first.
+
+#### 5.5.1 Rice Seed Distribution Sheet
+
+Season values are stored as the short codes in `RiceDistributionBatch::SEASONS` (`dry`, `wet`) and displayed through their labels; `SEASON_ABBREVIATIONS` turns them into the printed band, so a heading reads "2025 DS" from stored data and is never hardcoded. A planting season is required; a harvest season is deliberately separate and stays empty until a harvest is reported, and is never inferred from the planting season.
+
+Three columns must not be confused with older ones that look similar. `registered_rice_area_ha` is the area registered for rice and is **not** `farm_area_ha`, which is the farmer's total farm area. `seed_bag_kg` is the weight of a seed bag and is **not** `avg_weight_per_bag_kg`, which the Production monitoring section records as the harvest bag weight. Total released kilograms are derived from `seed_bags * seed_bag_kg` into the existing `kgs_received`; there is no second total, and a batch never re-counts a release.
+
+`consent_status` defaults to `unrecorded` so an unknown answer stays unknown rather than becoming a No. `batch_id` is nullable and every existing release remains fully usable without a sheet.
+
+Primary model/table: `RiceDistributionBatch` / `rice_distribution_batches`
+
+Routes: `rice-distribution-batches.*`, including `rice-distribution-batches.sheet` and `rice-distribution-batches.export`.
+
+A sheet groups existing assistance releases for one programme reference and planting season so a municipal office can print, sign and file them. It stores no released quantity of its own; every printed total is aggregated from the grouped release rows, so the sheet and the module's kilogram figures cannot disagree.
+
+Functions:
+
+- create, edit, delete, search, and paginate municipality-owned sheets carrying a reference, planting season/year, optional harvest season/year, an optional default seed-bag weight, and notes;
+- attach a release to a sheet through the nullable `rice_seed_distributions.batch_id`; releases recorded before sheets existed keep a null batch and stay fully editable;
+- record the sheet fields on each release: `registered_rice_area_ha` (declared rice area, separate from the total `farm_area_ha`), `seed_bags`, `seed_bag_kg` (seed bag weight, separate from the harvest `avg_weight_per_bag_kg`), explicit `harvest_season`/`harvest_year`, `consent_status`, `kp_kits_received`, and `representative_name`;
+- derive the released total from `seed_bags * seed_bag_kg` in `App\Support\SeedReleaseQuantity` and store it in the existing `kgs_received` column — never add a second total column;
+- render the sheet on screen and as a wide grouped `.xlsx` workbook with merged season headings, a header block repeated on every printed page, a printed totals row, and a blank signature column.
+
+`consent_status` is exactly `unrecorded`, `yes` or `no` and defaults to `unrecorded`. A consent that was never asked must stay unrecorded; do not read it as a refusal or as agreement, and do not backfill it.
+
+Season headings are always built from the stored season and year through `RiceDistributionBatch::seasonHeading()`. Never hardcode a season such as "2025 DS", and never infer the harvest season from the planting season or from today's date.
+
+`App\Support\RiceSeedDistributionSheet` owns the sheet's meaning — titles, column groups, row values, the filtered release query and the aggregated totals — and is shared by the screen and the export, so the two cannot disagree. `App\Support\RiceSeedDistributionSheetWorkbook` only draws the worksheet, and writes every title, heading, label and value through `App\Support\CsvExport::value()` as an explicit string so a stored value cannot execute as a spreadsheet formula. That stores figures as text, which suits a sheet that is printed and signed. Workbook exports are capped at `RiceSeedDistributionSheetWorkbook::MAX_ROWS` (5000) because PhpSpreadsheet holds the whole workbook in memory; a larger scope is directed to the streaming CSV export.
+
+Deleting a sheet is refused while it still groups releases, re-checked inside the row lock. Sheet exports are audited with `exported`, and create/update/delete flow through `AuditModelObserver` under the `Assistance distributions` module.
 
 ### 5.6 Animal-health services
 
@@ -536,6 +582,7 @@ Functions:
 - display active official boundaries beneath farm parcels in the Farmers 3D map, with a visibility toggle and municipality-aware camera fitting; municipal users receive only their assigned boundary, while province-wide users receive boundaries from the selected workspace scope;
 - draw Polygon boundaries in the browser or import Polygon/MultiPolygon KML, KMZ, GeoJSON, JSON, and XML files;
 - normalize coordinates, close rings, reject invalid ranges, reject self-intersections and invalid holes, safely simplify oversized geometry, and reject files above the configured hard vertex limit;
+- scale segment-orientation tolerance by edge length so dense survey vertices do not produce false self-intersection errors; genuine crossings, invalid holes, and rings below one square metre remain rejected;
 - retain draft and archived history while permitting one active official boundary per municipality through synchronized, transaction-backed replacement;
 - calculate area, centroid, vertex count, and indexed bounding-box columns for fast overlap candidate selection on MySQL/MariaDB and SQLite-compatible tests;
 - detect overlap with another municipality's active boundary before saving or activation;
@@ -553,13 +600,14 @@ The boundary editor preserves full source precision for untouched vertices and d
 
 ## 6. Route inventory
 
-As of 2026-09-03, `php artisan route:list --json` reports 88 routes protected by Laravel authentication, including the Sanctum endpoint:
+As of 2026-09-17, `php artisan route:list --json` reports 96 routes protected by Laravel authentication, including the Sanctum endpoint:
 
 | Area | Authenticated routes |
 | --- | ---: |
 | Farmers | 14 |
 | Farmers' cooperatives | 9 |
 | Seed and farm-input distribution | 9 |
+| Rice seed distribution sheets | 8 |
 | Machinery inventory | 8 |
 | Animal health | 7 |
 | Backup Folder | 7 |
@@ -588,6 +636,8 @@ Municipality
 │   ├── agricultural_machineries
 │   └── farmers_cooperatives (many-to-many through cooperative_farmer)
 ├── rice_seed_distributions
+│   └── rice_distribution_batches (optional sheet grouping through batch_id)
+├── rice_distribution_batches
 ├── anti_rabies_vaccinations
 ├── farmers_cooperatives
 │   └── agricultural_machineries
@@ -623,8 +673,12 @@ Distribution records intentionally keep a farmer snapshot in addition to `farmer
 - `resources/views/layouts/app.blade.php`: shared shell, responsive navigation, and role-aware module links
 - `resources/views/partials/operations-ui-styles.blade.php`: shared operational-module design system
 - `resources/views/vendor/pagination`: application-wide pagination templates
+- `public/js/municipality-boundaries.js`: the geofence workspace script, loaded by `resources/views/municipality_boundaries/index.blade.php`. Extracted from that page for the same reasons as the plotting workspace: it is linted and diffable, and the template compiler cannot swallow part of it. It holds no Blade syntax; server values arrive on `window.__municipalityBoundarySettings`, written by the page, and a new value is added there rather than in the script. `tests/JavaScript/municipality-boundary-editor.test.cjs` reads this file, so moving it again means updating that test.
 - `public/js/farmers-maps.js`: the authenticated plotting workspace script, loaded by `resources/views/farmers/partials/maps-scripts.blade.php`. It is a plain file rather than a Blade template so editors and linters can read it and the template compiler cannot swallow part of it, and it stays a classic script because it shares `var` declarations across what used to be two `<script>` blocks and exports its API to the rest of the page as `window.__*`. Everything the server decides reaches it through the `window.__*` config block in `resources/views/farmers/maps.blade.php`; never reintroduce a Blade directive or `{{ }}` into the script itself. Adding a new server value means adding it to that block.
 - `resources/views/farmers/partials/maps-*`: authenticated plotting workspace CSS and the loader for the script above
+- `app/Support/RiceSeedDistributionSheet.php`: Rice Seed Distribution Sheet titles, column groups, row values, filtered release query, and aggregated totals shared by the screen and the export
+- `app/Support/RiceSeedDistributionSheetWorkbook.php`: the printable `.xlsx` writer for that sheet; every cell goes through `CsvExport::value()`
+- `app/Support/SeedReleaseQuantity.php`: the single bags x bag-weight to kilograms rule, stored in the existing `kgs_received` column
 - `app/Support/CsvExport.php`: the single spreadsheet-formula guard for CSV exports. It replaced three byte-identical private copies; a new export must use it rather than growing a fourth.
 - `resources/views/components/module/field.blade.php`: the `<x-module.field>` form-field component. See DESIGN_SYSTEM.md section 13 for its contract and the list of forms still to migrate.
 - `app/Http/Requests`: form requests for the farmer, farm parcel, assistance release, and municipality geofence write endpoints. Each runs its policy in `authorize()`, which Laravel checks before the rules, so an unauthorized account is refused rather than handed a description of the form.
@@ -651,10 +705,22 @@ Legacy and deployed environments may still be missing these incremental migratio
 - `2026_08_20_000100_add_input_details_to_rice_seed_distributions.php`, which adds `input_category`, `quantity_unit`, and `input_notes`;
 - `2026_08_20_000200_create_agricultural_machineries_table.php`.
 - `2026_09_03_000100_create_municipality_boundaries_table.php`, which adds official geofence geometry, lifecycle, measurements, bounding-box indexes, and editor attribution.
+- `2026_09_17_000100_create_rice_distribution_batches_table.php`, which adds the Rice Seed Distribution Sheet batches table.
+- `2026_09_17_000200_add_seed_sheet_fields_to_rice_seed_distributions.php`, which adds the nullable sheet columns (`batch_id`, `registered_rice_area_ha`, `seed_bags`, `seed_bag_kg`, `harvest_season`, `harvest_year`, `consent_status`, `kp_kits_received`, `representative_name`) and the `batch_id` foreign key.
 
 The migration `2026_08_24_000100_extend_vaccinations_for_animal_health_services.php` widens the legacy Dog/Cat enum and adds the generalized animal-health service fields. It must be applied before deploying code that queries `service_type` or `animal_count`.
 
 The code already queries those fields/tables. Apply the migrations to the intended environment after taking a database backup. A missing `quantity_unit` produces `SQLSTATE[42S22]`, and a missing machinery table prevents the dashboard and machinery module from loading.
+
+The two Rice Seed Distribution Sheet migrations are additive only. They create one new table and add nullable columns (plus the `consent_status` default `unrecorded`) to the imported `rice_seed_distributions` table; nothing is renamed, repurposed, backfilled or deleted, and existing releases stay usable with a null `batch_id`. Because the repository has no complete migration history, apply them by path after taking a backup, never with a bare `php artisan migrate`:
+
+```bash
+php artisan db:backup
+php artisan migrate --path=database/migrations/2026_09_17_000100_create_rice_distribution_batches_table.php
+php artisan migrate --path=database/migrations/2026_09_17_000200_add_seed_sheet_fields_to_rice_seed_distributions.php
+```
+
+Both roll back cleanly: the column migration drops its foreign key before its columns, and the table migration drops the batches table afterwards. Rolling back leaves every existing release row untouched.
 
 The migration `2026_08_17_000000_backfill_rice_distribution_municipalities.php` fills missing distribution ownership from the linked farmer and intentionally does not erase that business ownership on rollback.
 
@@ -844,6 +910,7 @@ Important feature suites include:
 - `PublicFarmerLandMapTest`
 - `SuperAdminAuditTrailTest`
 - `ProvincialVeterinaryAccessTest`
+- `RiceSeedDistributionSheetTest`
 - `ConcurrentWriteTest` (uses its own in-memory SQLite connection)
 
 The current `phpunit.xml` does not configure a separate test database, and feature tests use `DatabaseTransactions`. Never run the suite while `.env` points to production. Configure a dedicated disposable test database first. Add a regression test whenever changing permissions, municipality scoping, route-model binding, public-map privacy, imports, exports, file access, or audit redaction.
@@ -885,3 +952,11 @@ A feature is not complete until all of the following are true:
 - feature tests cover own municipality, foreign municipality, provincial access, and super-admin behavior;
 - migrations work against a backed-up copy of the real schema;
 - this `AGENTS.md` is updated if system behavior changed.
+
+### Assistance beneficiary selector
+
+The shared agriculture/fisheries create/edit form initializes its own beneficiary Tom Select, searches both FFRS and RSBSA identifiers, and limits displayed matches to 100 while searching the full loaded choice list. Form panels allow dropdown overflow. Provincial users choose a municipality before selecting beneficiaries; municipal accounts retain their server-scoped choices. Native select fallback and server authorization remain required.
+
+### Local Baguio/Benguet account alignment
+
+The local workspace was explicitly aligned with Hostinger on 2026-09-18: Baguio City has separate province supervision and is excluded from Benguet Super Admin access. The legacy Benguet office workspace (`BEN`) supports its existing municipal-head role and must not be treated as province-wide operational staff access. See `PROVINCE_SUPERVISION.md` for the local synchronization and verification. Do not automatically merge Baguio back into Benguet.

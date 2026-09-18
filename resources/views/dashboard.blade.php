@@ -10,6 +10,29 @@
   $recentPlots = $recentPlots ?? collect();
   $municipalityStats = collect($municipalityStats ?? []);
   $provinceOverview = $provinceOverview ?? [];
+
+  // Presentation tests render this view directly, so every indicator falls back to an
+  // empty metric rather than an undefined index. An empty metric renders as
+  // "Not recorded", which is also what an office with no data entered should see.
+  $providedMetrics = $dashboardMetrics ?? [];
+  $blankMetric = fn (string $title) => ['title' => $title, 'labels' => [], 'series' => [], 'not_recorded' => null];
+  $dashboardMetrics = [
+      'farmers_by_municipality' => $providedMetrics['farmers_by_municipality'] ?? $blankMetric('Registered farmers by municipality'),
+      'assistance_by_category' => $providedMetrics['assistance_by_category'] ?? $blankMetric('Assistance by category'),
+      'assistance_by_municipality' => $providedMetrics['assistance_by_municipality'] ?? $blankMetric('Assistance by municipality'),
+      'quantity_by_unit' => $providedMetrics['quantity_by_unit'] ?? $blankMetric('Quantity released by unit'),
+      'mapping_coverage' => $providedMetrics['mapping_coverage'] ?? $blankMetric('Farm mapping coverage'),
+      'animal_health_by_service' => $providedMetrics['animal_health_by_service'] ?? $blankMetric('Animal-health services by type'),
+      'fisheries_assistance' => $providedMetrics['fisheries_assistance'] ?? $blankMetric('Fisheries assistance'),
+      'machinery_by_condition' => $providedMetrics['machinery_by_condition'] ?? $blankMetric('Machinery by operating condition'),
+      'machinery_by_availability' => $providedMetrics['machinery_by_availability'] ?? $blankMetric('Machinery by current availability'),
+      'municipality_comparison' => $providedMetrics['municipality_comparison'] ?? null,
+  ];
+  // Assigned here rather than in an inline PHP directive further down the file. Blade
+  // pairs raw PHP blocks by scanning forward for the next closing directive, so an
+  // inline one sitting between two blocks lower in this file gets paired with the
+  // wrong closing tag and silently swallows all the markup in between.
+  $comparison = $dashboardMetrics['municipality_comparison'];
   $localNow = \App\Support\LocalTime::now();
   $currentYear = $currentYear ?? $localNow->year;
 
@@ -190,6 +213,7 @@
   <details class="ops-reports" id="dashboardReports">
     <summary><span><strong>Reports and office details</strong><small>Monthly figures, program totals, recent services, and parcel work</small></span></summary>
     <div class="ops-reports-content">
+  <p class="ops-report-status" data-report-status role="status">Charts load when you open this section. Every figure is also listed as a table.</p>
   <section class="ops-month-strip" aria-label="Current month summary">
     <div class="ops-month-label"><span>This month</span><strong>{{ $localNow->format('F Y') }}</strong></div>
     <div class="ops-month-stat"><span>Input releases</span><strong>{{ number_format((int) ($stats['monthly_distribution_records'] ?? 0)) }}</strong></div>
@@ -243,7 +267,7 @@
           <div><span class="ops-panel-kicker">Program monitoring</span><h2>Weight-based distribution trend</h2><p>Agriculture and fisheries inputs released in kilograms during {{ $currentYear }}.</p></div>
           <span class="ops-period">Jan–Dec {{ $currentYear }}</span>
         </div>
-        <div class="ops-chart-wrap">
+        <div class="ops-chart-wrap module-chart-body">
           <canvas id="chartRiceMonthly" role="img" aria-label="Monthly kilograms of inputs released in {{ $currentYear }}"></canvas>
           @if(collect($charts['rice_monthly'] ?? [])->sum() <= 0)
             <div class="ops-chart-empty">No kilogram-based releases have been recorded for {{ $currentYear }}.</div>
@@ -270,7 +294,9 @@
         @endif
       </section></div>
       <aside class="ops-side-column">      <section class="ops-panel">
-        <div class="ops-panel-header ops-panel-header-compact"><div><span class="ops-panel-kicker">Seed program</span><h2>Leading varieties</h2></div></div>
+        {{-- Named for what the query actually selects: rice seed released in
+             kilograms. The assistance module calls the same figures the same thing. --}}
+        <div class="ops-panel-header ops-panel-header-compact"><div><span class="ops-panel-kicker">Seed program</span><h2>Leading rice seed varieties</h2></div></div>
         <div class="ops-ranking">
           @forelse($seedLabels as $index => $label)
             @php
@@ -318,6 +344,97 @@
           @if($canManageUsers)<a class="ops-button ops-button-secondary" href="{{ route('admins.index') }}">Manage staff</a>@endif
         </div>
       </section></aside></div>
+
+      <section class="ops-panel" aria-labelledby="dashboardIndicatorsHeading">
+        <div class="ops-panel-header">
+          <div>
+            <span class="ops-panel-kicker">Program indicators</span>
+            <h2 id="dashboardIndicatorsHeading">Where the assistance went</h2>
+            <p>Each indicator is measured on its own terms. What was released is counted as a release, never as production or yield.</p>
+          </div>
+        </div>
+        <div class="ops-metric-grid">
+          @include('partials.dashboard-metric', [
+            'metric' => $dashboardMetrics['farmers_by_municipality'],
+            'metricId' => 'chartFarmersByMunicipality',
+            'metricLabel' => 'Municipality',
+            'metricNote' => 'Farmers on the register, counted where they are registered.',
+          ])
+          @include('partials.dashboard-metric', [
+            'metric' => $dashboardMetrics['assistance_by_category'],
+            'metricId' => 'chartAssistanceByCategory',
+            'metricNote' => 'Releases are hand-overs. A farmer who collected three times is three releases but one beneficiary.',
+          ])
+          @include('partials.dashboard-metric', [
+            'metric' => $dashboardMetrics['assistance_by_municipality'],
+            'metricId' => 'chartAssistanceByMunicipality',
+            'metricLabel' => 'Municipality',
+            'metricNote' => 'The same two measures, by office.',
+          ])
+          @include('partials.dashboard-metric', [
+            'metric' => $dashboardMetrics['quantity_by_unit'],
+            'metricChart' => false,
+            'metricLabel' => 'Unit',
+            'metricNote' => 'Shown as figures only. Nothing here converts kilograms into pieces or sacks, so these rows cannot be added together or drawn on one axis.',
+          ])
+          @include('partials.dashboard-metric', [
+            'metric' => $dashboardMetrics['mapping_coverage'],
+            'metricId' => 'chartMappingCoverage',
+            'metricLabel' => 'Coverage',
+            'metricNote' => 'Counted in farmers, not parcels. The office has no inventory of the parcels that exist in the field, so unmapped parcels cannot be counted.',
+          ])
+          @include('partials.dashboard-metric', [
+            'metric' => $dashboardMetrics['fisheries_assistance'],
+            'metricId' => 'chartFisheriesAssistance',
+            'metricNote' => 'Fisheries releases. Quantities of fingerlings are counted in pieces and appear under quantity by unit.',
+          ])
+          @include('partials.dashboard-metric', [
+            'metric' => $dashboardMetrics['animal_health_by_service'],
+            'metricId' => 'chartAnimalHealth',
+            'metricLabel' => 'Service type',
+            'metricNote' => 'One service record can cover many animals, so services and animals are counted separately.',
+          ])
+          @include('partials.dashboard-metric', [
+            'metric' => $dashboardMetrics['machinery_by_condition'],
+            'metricId' => 'chartMachineryCondition',
+            'metricLabel' => 'Condition',
+            'metricNote' => 'What state each unit is in.',
+          ])
+          @include('partials.dashboard-metric', [
+            'metric' => $dashboardMetrics['machinery_by_availability'],
+            'metricId' => 'chartMachineryAvailability',
+            'metricLabel' => 'Availability',
+            'metricNote' => 'Whether each unit can be used right now. A unit in excellent condition can still be unavailable because it is already in use.',
+          ])
+        </div>
+      </section>
+
+      @if($dashboardMetrics['municipality_comparison'])
+        <section class="ops-panel" aria-labelledby="dashboardComparisonHeading">
+          <div class="ops-panel-header">
+            <div>
+              <span class="ops-panel-kicker">Comparison</span>
+              <h2 id="dashboardComparisonHeading">Municipalities, one indicator at a time</h2>
+              <p>Indicators are shown one at a time and are never combined into a score, an index or a ranking.</p>
+            </div>
+            <label class="ops-metric-picker">
+              <span>Indicator</span>
+              <select id="municipalityIndicatorPicker">
+                @foreach($comparison['series'] as $comparisonIndex => $comparisonSeries)
+                  <option value="{{ $comparisonIndex }}">{{ $comparisonSeries['name'] }}</option>
+                @endforeach
+              </select>
+            </label>
+          </div>
+          <div class="ops-metric-canvas ops-metric-canvas-tall module-chart-body" hidden>
+            <canvas id="chartMunicipalityComparison" role="img" aria-label="{{ $comparison['title'] }}"></canvas>
+          </div>
+          @include('partials.metric-figures', [
+            'metric' => $comparison,
+            'metricLabel' => 'Municipality',
+          ])
+        </section>
+      @endif
     </div>
   </details>
 
@@ -565,53 +682,209 @@
   })();
 
   (() => {
-    const drawChart = () => {
-    if (typeof Chart === 'undefined') {
-      const wrap = document.querySelector('.ops-chart-wrap');
-      if (wrap && !wrap.querySelector('.ops-chart-empty')) {
-        const notice = document.createElement('div');
-        notice.className = 'ops-chart-empty';
-        notice.textContent = 'The chart could not load. Monthly figures are available below.';
-        wrap.appendChild(notice);
-      }
-      return;
-    }
-    const canvas = document.getElementById('chartRiceMonthly');
-    if (!canvas) return;
-    const existing = Chart.getChart(canvas);
-    if (existing) existing.destroy();
+    /*
+      Dashboard charts.
 
-    const chart = new Chart(canvas, {
-      type: 'line',
-      data: {
-        labels: @json($charts['months'] ?? []),
-        datasets: [{ label: 'Kilograms released', data: @json($charts['rice_monthly'] ?? []), borderColor: '#17643a', backgroundColor: 'rgba(23,100,58,.08)', pointBackgroundColor: '#17643a', pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 3, pointHoverRadius: 5, borderWidth: 2, tension: .28, fill: true }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false, animation: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? false : { duration: 450 }, interaction: { mode: 'index', intersect: false },
-        plugins: { legend: { display: false }, tooltip: { backgroundColor: '#17211b', padding: 10, titleFont: { weight: '700' }, bodyFont: { weight: '400' }, cornerRadius: 6, callbacks: { label: context => `${Number(context.raw || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} kg` } } },
-        scales: { x: { grid: { display: false }, ticks: { color: '#66736b', font: { size: 12, weight: '400' } } }, y: { beginAtZero: true, grid: { color: 'rgba(23,33,27,.07)' }, ticks: { color: '#66736b', font: { size: 12, weight: '400' } } } }
-      }
+      Chart.js is fetched by partials.operational-report-loader the first time the
+      Reports section is opened, which is why every drawing routine here hangs off
+      renderOperationalCharts instead of running at parse time. If the CDN never
+      answers, the loader hides the canvases and the figures tables underneath carry
+      the entire report on their own.
+    */
+    const METRICS = @json($dashboardMetrics);
+
+    /*
+      Series colours are assigned in a fixed order and never cycled: the first series
+      is green, the second blue. The pair, the condition ramp and the status set were
+      checked for colour-vision separation against the white panel surface rather
+      than picked by eye. Condition is an ordered severity scale, so it runs green to
+      red through a neutral middle; availability is a set of states, not a severity.
+    */
+    const SERIES_COLORS = ['#2e7d52', '#2f6fb5'];
+    const CONDITION_COLORS = ['#186b40', '#6fb586', '#c9ccc6', '#d18a5a', '#9e3f39'];
+    const AVAILABILITY_COLORS = ['#2e7d52', '#2f6fb5', '#b07016', '#4a5852'];
+    const COVERAGE_COLORS = ['#2e7d52', '#9aa8a0'];
+
+    const INK_MUTED = '#607269';
+    const GRID_INK = 'rgba(32,54,44,.08)';
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const formatValue = (value, decimals) => Number(value || 0).toLocaleString(undefined, {
+      minimumFractionDigits: decimals || 0,
+      maximumFractionDigits: decimals || 0,
     });
-      return chart;
+
+    const freshCanvas = id => {
+      const canvas = document.getElementById(id);
+      if (!canvas) return null;
+      const existing = Chart.getChart(canvas);
+      if (existing) existing.destroy();
+      return canvas;
     };
-    let chart = null;
-    let loading = false;
-    let attempted = false;
+
+    const tooltipFor = metric => ({
+      backgroundColor: '#17211b',
+      padding: 10,
+      cornerRadius: 6,
+      displayColors: metric.series.length > 1,
+      titleFont: { weight: '700' },
+      bodyFont: { weight: '400' },
+      callbacks: {
+        label: context => {
+          const series = metric.series[context.datasetIndex] || metric.series[0];
+          return `${series.name}: ${formatValue(context.raw, series.decimals)} ${series.unit}`;
+        },
+      },
+    });
+
+    const drawBars = (id, metric, colors) => {
+      const canvas = freshCanvas(id);
+      if (!canvas || !metric || !metric.labels.length) return;
+
+      // Named categories read far better stacked down the page than squeezed across
+      // it; a province with fifty municipalities is unreadable as vertical bars.
+      const horizontal = metric.labels.length > 8;
+      if (horizontal) {
+        canvas.parentElement.style.height = Math.max(240, metric.labels.length * 26) + 'px';
+      }
+
+      new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: metric.labels,
+          datasets: metric.series.map((series, index) => ({
+            label: series.name,
+            data: series.values,
+            backgroundColor: colors ? colors[index] : SERIES_COLORS[index % SERIES_COLORS.length],
+            borderRadius: 4,
+            borderWidth: 0,
+            maxBarThickness: 34,
+          })),
+        },
+        options: {
+          indexAxis: horizontal ? 'y' : 'x',
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: reduceMotion ? false : { duration: 400 },
+          plugins: {
+            // A single series is already named by the heading above the chart; two or
+            // more need the key, so identity never rests on colour alone.
+            legend: {
+              display: metric.series.length > 1,
+              position: 'bottom',
+              labels: { boxWidth: 9, usePointStyle: true, color: INK_MUTED, font: { size: 12 } },
+            },
+            tooltip: tooltipFor(metric),
+          },
+          scales: {
+            x: {
+              beginAtZero: horizontal,
+              grid: { display: horizontal, color: GRID_INK },
+              ticks: { color: INK_MUTED, font: { size: 12 }, precision: 0 },
+            },
+            y: {
+              beginAtZero: !horizontal,
+              grid: { display: !horizontal, color: GRID_INK },
+              ticks: { color: INK_MUTED, font: { size: 12 }, precision: 0, autoSkip: !horizontal },
+            },
+          },
+        },
+      });
+    };
+
+    const drawDoughnut = (id, metric, colors) => {
+      const canvas = freshCanvas(id);
+      if (!canvas || !metric || !metric.labels.length) return;
+      new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+          labels: metric.labels,
+          datasets: [{
+            data: metric.series[0].values,
+            backgroundColor: colors,
+            // A 2px surface ring keeps touching slices from bleeding into each other.
+            borderColor: '#fff',
+            borderWidth: 2,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '62%',
+          animation: reduceMotion ? false : { duration: 400 },
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { boxWidth: 9, usePointStyle: true, color: INK_MUTED, font: { size: 12 } },
+            },
+            tooltip: tooltipFor(metric),
+          },
+        },
+      });
+    };
+
+    const drawMonthly = () => {
+      const canvas = freshCanvas('chartRiceMonthly');
+      if (!canvas) return;
+      new Chart(canvas, {
+        type: 'line',
+        data: {
+          labels: @json($charts['months'] ?? []),
+          datasets: [{ label: 'Kilograms released', data: @json($charts['rice_monthly'] ?? []), borderColor: '#2e7d52', backgroundColor: 'rgba(46,125,82,.08)', pointBackgroundColor: '#2e7d52', pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 3, pointHoverRadius: 5, borderWidth: 2, tension: .28, fill: true }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: reduceMotion ? false : { duration: 450 }, interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { display: false }, tooltip: { backgroundColor: '#17211b', padding: 10, titleFont: { weight: '700' }, bodyFont: { weight: '400' }, cornerRadius: 6, callbacks: { label: context => `${Number(context.raw || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} kg` } } },
+          scales: { x: { grid: { display: false }, ticks: { color: INK_MUTED, font: { size: 12, weight: '400' } } }, y: { beginAtZero: true, grid: { color: GRID_INK }, ticks: { color: INK_MUTED, font: { size: 12, weight: '400' } } } }
+        }
+      });
+    };
+
+    /*
+      The comparison shows one indicator at a time. Indicators are not weighed against
+      one another or combined into a score, because the office has never defined how
+      they would be weighed — any single number would be invented here, not measured.
+    */
+    const comparisonPicker = document.getElementById('municipalityIndicatorPicker');
+    const drawComparison = () => {
+      const metric = METRICS.municipality_comparison;
+      if (!metric) return;
+      const index = Number(comparisonPicker ? comparisonPicker.value : 0) || 0;
+      const chosen = metric.series[index] || metric.series[0];
+      drawBars('chartMunicipalityComparison', {
+        title: metric.title,
+        labels: metric.labels,
+        series: [chosen],
+        not_recorded: metric.not_recorded,
+      }, [SERIES_COLORS[0]]);
+    };
+
     const reports = document.getElementById('dashboardReports');
-    const initializeReports = () => {
-      if (!reports?.open) return;
-      if (chart) { requestAnimationFrame(() => chart.resize()); return; }
-      if (loading || attempted) return;
-      attempted = true;
-      if (typeof Chart !== 'undefined') { chart = drawChart(); return; }
-      loading = true;
-      const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';
-      script.onload = script.onerror = () => { loading = false; chart = drawChart(); };
-      document.head.appendChild(script);
-    };
-    reports?.addEventListener('toggle', initializeReports);
+    if (reports) {
+      reports.renderOperationalCharts = () => {
+        drawMonthly();
+        drawBars('chartFarmersByMunicipality', METRICS.farmers_by_municipality, [SERIES_COLORS[0]]);
+        drawBars('chartAssistanceByCategory', METRICS.assistance_by_category);
+        drawBars('chartAssistanceByMunicipality', METRICS.assistance_by_municipality);
+        drawBars('chartFisheriesAssistance', METRICS.fisheries_assistance);
+        drawBars('chartAnimalHealth', METRICS.animal_health_by_service);
+        drawDoughnut('chartMappingCoverage', METRICS.mapping_coverage, COVERAGE_COLORS);
+        drawDoughnut('chartMachineryCondition', METRICS.machinery_by_condition, CONDITION_COLORS);
+        drawDoughnut('chartMachineryAvailability', METRICS.machinery_by_availability, AVAILABILITY_COLORS);
+        drawComparison();
+      };
+    }
+
+    if (comparisonPicker) {
+      comparisonPicker.addEventListener('change', () => {
+        if (typeof Chart !== 'undefined') drawComparison();
+      });
+    }
+
+    /*
+      Deep links from the summary cards open the matching section. This is navigation,
+      not chart behaviour, and has to keep working whether or not Chart.js ever loads.
+    */
     const openSection = id => {
       const section = document.getElementById(id);
       if (!(section instanceof HTMLDetailsElement)) return;
@@ -624,7 +897,7 @@
     const openHashSection = () => openSection(window.location.hash.slice(1));
     window.addEventListener('hashchange', openHashSection);
     openHashSection();
-    initializeReports();
   })();
 </script>
+@include('partials.operational-report-loader', ['reportId' => 'dashboardReports'])
 @endpush

@@ -9,6 +9,7 @@ use App\Models\MunicipalityBoundary;
 use App\Models\RiceSeedDistribution;
 use App\Models\User;
 use App\Support\ConcurrentWrite;
+use App\Support\FarmerDataQuality;
 use App\Support\MunicipalityAccess;
 use Endroid\QrCode\ErrorCorrectionLevel\ErrorCorrectionLevelMedium;
 use Endroid\QrCode\QrCode;
@@ -159,6 +160,7 @@ class FarmerController extends Controller
             'varietyChartData'
         ) + [
             'inputCategoryOptions' => RiceSeedDistribution::INPUT_CATEGORY_LABELS,
+            'municipalities' => $this->municipalityOptionsFor($user),
         ]);
     }
 
@@ -251,23 +253,34 @@ class FarmerController extends Controller
             ->paginate($perPage)
             ->withQueryString();
 
-        // The map always receives the complete municipality workspace. Search,
-        // gender, and data-quality filters refine only the registry table.
-        $mapFarmers = $this->baseQuery(
+        // The map's headline figures describe the complete municipality workspace:
+        // search, gender and data-quality filters refine only the registry table, so
+        // these are counted over the unfiltered scope.
+        //
+        // Counted in the database rather than by loading the farmers. The map used to
+        // receive every farmer in scope so the browser could search them, and these
+        // four numbers were then derived from that collection — which meant a province
+        // of 1,665 farmers was hydrated into memory and serialised into the page on
+        // every request, whether or not anyone opened the map. The finder now searches
+        // through `farmers.lookup`, so nothing here needs the rows themselves.
+        $mapTotals = $this->baseQuery(
             $request,
-            true,
+            false,
             $workspaceMunicipalityId,
             false
         )
-            ->orderBy('farmers.last_name')
-            ->orderBy('farmers.first_name')
-            ->get();
-        $mapFarmerCount = $mapFarmers->count();
-        $mapMappedFarmerCount = $mapFarmers
-            ->where('plot_count', '>', 0)
-            ->count();
-        $mapPlotCount = (int) $mapFarmers->sum('plot_count');
-        $mapAreaHa = (float) $mapFarmers->sum('mapped_area_ha');
+            ->selectRaw(
+                'COUNT(farmers.id) as farmer_count,
+                 SUM(CASE WHEN p.farmer_id IS NOT NULL THEN 1 ELSE 0 END) as mapped_farmer_count,
+                 SUM(COALESCE(p.plot_count, 0)) as plot_count,
+                 SUM(COALESCE(p.mapped_area_ha, 0)) as mapped_area_ha'
+            )
+            ->first();
+
+        $mapFarmerCount = (int) ($mapTotals->farmer_count ?? 0);
+        $mapMappedFarmerCount = (int) ($mapTotals->mapped_farmer_count ?? 0);
+        $mapPlotCount = (int) ($mapTotals->plot_count ?? 0);
+        $mapAreaHa = (float) ($mapTotals->mapped_area_ha ?? 0);
         $canChooseMunicipality = $user->isProvincialUser();
         $mapMunicipalityBoundaries = collect();
 
@@ -321,7 +334,6 @@ class FarmerController extends Controller
             'locationStats',
             'municipalities',
             'selectedMunicipality',
-            'mapFarmers',
             'mapFarmerCount',
             'mapMappedFarmerCount',
             'mapPlotCount',
@@ -965,6 +977,135 @@ class FarmerController extends Controller
     /**
      * Build the municipality-aware farmer listing query.
      */
+    /**
+     * Find farmers for the parcel map's finder.
+     *
+     * The map used to be handed every farmer in the account's scope so it could search
+     * them in the browser — around 600 KB of JSON for a province, sent on every page
+     * load whether or not anyone opened the map. Searching here instead keeps that
+     * payload off the page entirely, and a typed search is a better tool than a
+     * dropdown holding sixteen hundred names.
+     *
+     * The municipality scope is applied to the query *before* the search term, so a
+     * search can only ever match inside what the account may already read. Reversing
+     * those two would turn this into a way to confirm whether a farmer exists in
+     * another municipality.
+     */
+    public function lookup(Request $request)
+    {
+        $this->authorize('viewAny', Farmer::class);
+
+        $term = trim((string) $request->query('q', ''));
+        $limit = max(1, min((int) $request->query('limit', 20), 50));
+
+        // One or two characters match most of a registry; make the caller be specific
+        // rather than returning an arbitrary slice of everyone.
+        if (mb_strlen($term) < 2) {
+            return response()->json([
+                'farmers' => [],
+                'total' => 0,
+                'returned' => 0,
+                'truncated' => false,
+                'term' => $term,
+                'needs_more_input' => true,
+            ]);
+        }
+
+        $user = $this->authenticatedUser($request);
+        $workspaceMunicipality = $this->resolveWorkspaceMunicipality(
+            $request,
+            $user,
+            $this->municipalityOptionsFor($user)
+        );
+
+        $query = $this->baseQuery(
+            $request,
+            false,
+            $workspaceMunicipality?->id,
+            false
+        );
+
+        // Escaped so a name containing % or _ searches for those characters rather
+        // than acting as a wildcard.
+        $like = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $term).'%';
+
+        $query->where(function (Builder $search) use ($like) {
+            $search->where('farmers.last_name', 'like', $like)
+                ->orWhere('farmers.first_name', 'like', $like)
+                ->orWhere('farmers.middle_name', 'like', $like)
+                ->orWhere('farmers.ffrs', 'like', $like)
+                ->orWhere('farmers.farm_location', 'like', $like);
+        });
+
+        $total = (clone $query)->count();
+
+        $farmers = $query
+            ->selectRaw(
+                'farmers.id,
+                 farmers.municipality_id,
+                 farmers.profile_photo_path,
+                 farmers.last_name,
+                 farmers.first_name,
+                 farmers.middle_name,
+                 farmers.ext_name,
+                 farmers.owner_name,
+                 farmers.ffrs,
+                 farmers.farm_location,
+                 farmers.farm_municipality,
+                 farmers.farm_province,
+                 farmers.farm_area_ha,
+                 COALESCE(a.records_count, 0) as records_count,
+                 COALESCE(a.total_kgs, 0) as total_kgs,
+                 COALESCE(p.plot_count, 0) as plot_count,
+                 COALESCE(p.mapped_area_ha, 0) as mapped_area_ha'
+            )
+            ->orderBy('farmers.last_name')
+            ->orderBy('farmers.first_name')
+            ->limit($limit)
+            ->get()
+            ->map(fn (Farmer $farmer) => $this->mapFarmerPayload($farmer))
+            ->values();
+
+        return response()->json([
+            'farmers' => $farmers,
+            'total' => $total,
+            'returned' => $farmers->count(),
+            'truncated' => $total > $farmers->count(),
+            'term' => $term,
+            'needs_more_input' => false,
+        ]);
+    }
+
+    /**
+     * The farmer fields the parcel map renders, and only those.
+     *
+     * Shared by the finder and the page payload so the two can never disagree about
+     * what a farmer record looks like on the map.
+     *
+     * @return array<string, mixed>
+     */
+    public function mapFarmerPayload(Farmer $farmer): array
+    {
+        return [
+            'id' => $farmer->id,
+            'municipality_id' => $farmer->municipality_id,
+            'profile_photo_url' => $farmer->profile_photo_path ? route('farmers.photo', $farmer) : null,
+            'last_name' => $farmer->last_name,
+            'first_name' => $farmer->first_name,
+            'middle_name' => $farmer->middle_name,
+            'ext_name' => $farmer->ext_name,
+            'owner_name' => $farmer->owner_name,
+            'ffrs' => $farmer->ffrs,
+            'location' => $farmer->farm_location,
+            'farm_location' => $farmer->farm_location,
+            'farm_municipality' => $farmer->farm_municipality,
+            'farm_province' => $farmer->farm_province,
+            'farm_area_ha' => $farmer->farm_area_ha,
+            'records_count' => (int) ($farmer->records_count ?? 0),
+            'total_kgs' => (float) ($farmer->total_kgs ?? 0),
+        ];
+    }
+
     private function baseQuery(
         Request $request,
         bool $withSelect,
@@ -1068,7 +1209,7 @@ class FarmerController extends Controller
         }
 
         $gender = (string) $request->query('gender', '');
-        if (in_array($gender, ['Male', 'Female', 'Other', 'Unspecified'], true)) {
+        if (in_array($gender, Farmer::GENDERS, true)) {
             if ($gender === 'Unspecified') {
                 $query->where(function ($sub) {
                     $sub->whereNull('farmers.gender')
@@ -1088,17 +1229,12 @@ class FarmerController extends Controller
         }
 
         $quality = (string) $request->query('quality', '');
+        // The same two rules the dashboard counts with, so the list a user lands on
+        // always holds exactly the records the figure they clicked was counting.
         if ($quality === 'missing_ffrs') {
-            $query->where(function ($sub) {
-                $sub->whereNull('farmers.ffrs')
-                    ->orWhere('farmers.ffrs', '');
-            });
+            FarmerDataQuality::missingFfrs($query, 'farmers.ffrs');
         } elseif ($quality === 'missing_location') {
-            $query->where(function ($sub) {
-                $sub->whereNull('farmers.farm_location')
-                    ->orWhere('farmers.farm_location', '')
-                    ->orWhereRaw('UPPER(farmers.farm_location) = ?', ['UNKNOWN']);
-            });
+            FarmerDataQuality::missingLocation($query, 'farmers.farm_location');
         }
     }
 

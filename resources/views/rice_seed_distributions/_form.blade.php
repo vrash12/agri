@@ -29,6 +29,24 @@
 
 @push('styles')
 <style>
+  .assistance-form .module-form-section{overflow:visible}
+  .assistance-form .module-form-section-head{border-radius:11px 11px 0 0}
+  .assistance-form .ts-wrapper{width:100%;padding:0;border:0;background:transparent}
+  .assistance-form .ts-control{min-height:48px;padding:12px 14px;border:1px solid var(--ui-control-border);border-radius:8px;font-size:16px;line-height:1.5;box-shadow:none}
+  .assistance-form .ts-control input{font-size:16px;min-width:120px}
+  .assistance-form .ts-control .item{overflow-wrap:anywhere;max-width:100%}
+  .assistance-form .ts-wrapper.focus .ts-control{outline:3px solid var(--ui-focus);outline-offset:2px}
+  .assistance-form .ts-dropdown{z-index:100;font-size:14px;border:1px solid var(--ui-control-border);border-radius:8px;box-shadow:0 8px 20px rgba(32,54,44,.12);overflow:hidden}
+  .assistance-form .ts-dropdown-content{max-height:280px;overscroll-behavior:contain}
+  .assistance-form .ts-dropdown .option,.assistance-form .ts-dropdown .no-results{padding:12px 14px;line-height:1.5;overflow-wrap:anywhere}
+  .assistance-form .ts-dropdown .active{background:var(--ui-primary-soft);color:var(--ui-text)}
+  .assistance-form .module-form-section:focus-within{position:relative;z-index:2}
+  .assistance-form .module-aside-card{padding:20px}
+  .assistance-form .module-aside-card h3{font-size:16px}
+  .assistance-form .module-preview-item strong{font-size:14px;font-weight:500}
+  .assistance-form .module-hint{line-height:1.6;margin-top:8px}
+  @media(max-width:560px){.assistance-form .module-form-body,.assistance-form .module-form-section-head{padding:18px}.assistance-form .module-form-aside{grid-template-columns:1fr}.assistance-form .module-form-field-third{grid-column:1/-1}.assistance-form .module-preview-grid{grid-template-columns:1fr}.assistance-form .module-preview-item-wide{grid-column:auto}}
+
   .rice-progress{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin-bottom:13px;overflow:hidden;border:1px solid var(--module-border);border-radius:11px;background:#fff}.rice-progress button{position:relative;display:flex;align-items:center;gap:10px;min-width:0;padding:12px 14px;border:0;border-right:1px solid var(--module-border);color:#647168;background:#fff;text-align:left;cursor:pointer}.rice-progress button:last-child{border-right:0}.rice-progress button:hover{background:#f8fbf9}.rice-progress button.is-complete{color:#17643a;background:#f4faf6}.rice-progress-index{width:24px;height:24px;display:grid;place-items:center;flex:0 0 auto;border-radius:7px;color:#516159;background:#edf2ef;font-size:12px;font-weight:700}.rice-progress button.is-complete .rice-progress-index{color:#fff;background:#268253}.rice-progress-copy{min-width:0}.rice-progress-copy strong,.rice-progress-copy small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rice-progress-copy strong{font-size:12px}.rice-progress-copy small{margin-top:2px;color:var(--module-muted);font-size:12px}.rice-progress-check{margin-left:auto;color:#268253;font-size:13px;font-weight:700;opacity:0}.rice-progress button.is-complete .rice-progress-check{opacity:1}
   .rice-farmer-preview{display:none;margin-top:13px}.rice-farmer-preview.is-visible{display:block}.rice-preview-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}.rice-preview-heading strong{font-size:12px}.rice-preview-heading span{color:var(--module-green);font-size:12px;font-weight:700}.rice-form-summary-value{display:block;margin-top:4px;color:var(--module-ink);font-size:16px;font-weight:700;line-height:1.25;overflow-wrap:anywhere}.rice-monitoring>summary{border-bottom:0}.rice-monitoring[open]>summary{border-bottom:1px solid var(--module-border)}.rice-monitoring .module-more-content{padding:15px}.rice-input-callout{display:flex;gap:10px;align-items:flex-start;margin-bottom:15px;padding:12px 13px;border:1px solid #cce7d5;border-radius:10px;background:#f2faf5;color:#28523a}.rice-input-callout svg{width:18px;height:18px;flex:0 0 auto;fill:none;stroke:currentColor;stroke-width:1.8}.rice-input-callout strong{display:block;margin-bottom:2px;color:#18442b;font-size:12px}.rice-input-callout span{display:block;font-size:12px;line-height:1.45}
   .rice-category-fieldset{grid-column:1/-1;min-width:0;margin:0;padding:0;border:0}.rice-category-fieldset legend{margin-bottom:8px;color:#45534a;font-size:12px;font-weight:700}.rice-category-groups{display:grid;gap:12px}.rice-category-group{padding:10px;border:1px solid #e2e9e4;border-radius:11px;background:#fbfcfb}.rice-category-group[data-sector="fisheries"]{border-color:#cfe3eb;background:#f7fbfd}.rice-category-group-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}.rice-category-group-head strong{color:var(--module-ink);font-size:12px}.rice-category-group-head span{color:var(--module-muted);font-size:12px}.rice-category-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.rice-category-fieldset.is-invalid .rice-category-groups{padding:5px;border:1px solid #cb625d;border-radius:10px;background:#fffafa}.rice-category-option{position:relative;min-width:0}.rice-category-option input{position:absolute;opacity:0;pointer-events:none}.rice-category-card{display:grid;grid-template-columns:34px minmax(0,1fr) 18px;align-items:center;gap:9px;min-height:64px;padding:9px 10px;border:1px solid #dce5df;border-radius:9px;background:#fff;cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease,background .15s ease,transform .15s ease}.rice-category-card:hover{border-color:#9ab8a5;background:#fafdfb;transform:translateY(-1px)}.rice-category-option input:focus-visible+.rice-category-card{outline:3px solid rgba(38,130,83,.16);outline-offset:1px}.rice-category-option input:checked+.rice-category-card{border-color:#5b9c73;background:#f1f9f4;box-shadow:0 0 0 2px rgba(38,130,83,.08)}.rice-category-group[data-sector="fisheries"] .rice-category-option input:checked+.rice-category-card{border-color:#4b8ca4;background:#eef8fb;box-shadow:0 0 0 2px rgba(75,140,164,.09)}.rice-category-code{width:34px;height:34px;display:grid;place-items:center;border-radius:8px;color:#17643a;background:#e7f4eb;font-size:12px;font-weight:700}.rice-category-group[data-sector="fisheries"] .rice-category-code{color:#236b85;background:#e7f4f8}.rice-category-copy{min-width:0}.rice-category-copy strong,.rice-category-copy small{display:block}.rice-category-copy strong{color:var(--module-ink);font-size:12px}.rice-category-copy small{margin-top:3px;color:var(--module-muted);font-size:12px;line-height:1.3}.rice-category-mark{width:16px;height:16px;display:grid;place-items:center;border:1px solid #bccbc1;border-radius:50%;color:#fff;font-size:12px}.rice-category-option input:checked+.rice-category-card .rice-category-mark{border-color:#268253;background:#268253}.rice-category-group[data-sector="fisheries"] .rice-category-option input:checked+.rice-category-card .rice-category-mark{border-color:#347e99;background:#347e99}.rice-category-option input:checked+.rice-category-card .rice-category-mark:after{content:'✓'}
@@ -44,7 +62,7 @@
   <div class="module-alert module-alert-error"><strong>Please review the distribution information.</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
 @endif
 
-<div class="module-form-shell">
+<div class="module-form-shell assistance-form">
   <div class="module-form-main">
     <section class="module-form-section" id="riceRecipientSection">
       <div class="module-form-section-head"><span class="module-step">1</span><div><h2>Select the recipient</h2><p>The registered farmer or fisherfolk profile supplies identity, location, and eligibility information automatically.</p></div></div>
@@ -63,13 +81,13 @@
               @error('municipality_id')<span class="rice-field-error" id="municipalityError">{{ $message }}</span>@enderror
             </div>
           @endif
-          <div class="module-form-field module-form-field-full"><label for="farmer_id">Registered beneficiary <span class="module-required">*</span></label><select class="module-input js-select @error('farmer_id') is-invalid @enderror" id="farmer_id" name="farmer_id" required aria-describedby="farmerHelp @error('farmer_id') farmerError @enderror"><option value="">Search and select beneficiary</option>
+          <div class="module-form-field module-form-field-full"><label for="farmer_id">Registered beneficiary <span class="module-required">*</span></label><select class="module-input @error('farmer_id') is-invalid @enderror" id="farmer_id" name="farmer_id" required aria-describedby="farmerHelp @error('farmer_id') farmerError @enderror"><option value="">Search and select beneficiary</option>
             @foreach($farmers as $farmer)
               @php
                 $fullName = trim($farmer->last_name.', '.$farmer->first_name.' '.($farmer->middle_name ?? '').' '.($farmer->ext_name ?? ''));
                 $tags = collect(['ARB' => $farmer->is_arb, '4Ps' => $farmer->is_4ps, 'IP' => $farmer->is_ip, 'PWD' => $farmer->is_pwd, 'SC' => $farmer->is_sc, 'OFW' => $farmer->is_ofw])->filter()->keys()->implode(', ');
               @endphp
-              <option value="{{ $farmer->id }}" data-municipality-id="{{ $farmer->municipality_id }}" data-name="{{ $fullName }}" data-ffrs="{{ $farmer->ffrs ?: ($farmer->rsbsa_no ?: 'Not assigned') }}" data-location="{{ $farmer->farm_location ?: 'Not recorded' }}" data-municipality="{{ $farmer->farm_municipality ?: 'Not recorded' }}" data-province="{{ $farmer->farm_province ?: 'Not recorded' }}" data-area="{{ $farmer->farm_area_ha !== null ? number_format((float) $farmer->farm_area_ha, 2).' ha' : 'Not recorded' }}" data-contact="{{ $farmer->contact_number ?: 'Not recorded' }}" data-tags="{{ $tags ?: 'None' }}" @selected((string) $selectedFarmerId === (string) $farmer->id)>{{ $fullName }}{{ $farmer->ffrs ? ' — '.$farmer->ffrs : '' }}</option>
+              <option value="{{ $farmer->id }}" data-municipality-id="{{ $farmer->municipality_id }}" data-name="{{ $fullName }}" data-ffrs="{{ $farmer->ffrs ?: ($farmer->rsbsa_no ?: 'Not assigned') }}" data-location="{{ $farmer->farm_location ?: 'Not recorded' }}" data-municipality="{{ $farmer->farm_municipality ?: 'Not recorded' }}" data-province="{{ $farmer->farm_province ?: 'Not recorded' }}" data-area="{{ $farmer->farm_area_ha !== null ? number_format((float) $farmer->farm_area_ha, 2).' ha' : 'Not recorded' }}" data-contact="{{ $farmer->contact_number ?: 'Not recorded' }}" data-tags="{{ $tags ?: 'None' }}" @selected((string) $selectedFarmerId === (string) $farmer->id)>{{ $fullName }}{{ collect([$farmer->ffrs, $farmer->rsbsa_no])->filter()->unique()->map(fn ($identifier) => ' — '.$identifier)->implode('') }}</option>
             @endforeach
           </select><div class="module-hint" id="farmerHelp">Search by beneficiary name or FFRS/RSBSA number, then verify the profile preview below.</div>@error('farmer_id')<span class="rice-field-error" id="farmerError">{{ $message }}</span>@enderror</div>
         </div>
@@ -161,12 +179,93 @@
       </div></div>
     </details>
 
+    {{-- Rice seed distribution sheet fields. A release works perfectly well without
+         a sheet, so everything here is optional and the disclosure only opens when
+         something has been recorded or rejected. --}}
+    <details class="module-more" id="riceSheetFields"
+      @if(collect(['batch_id', 'registered_rice_area_ha', 'seed_bags', 'seed_bag_kg', 'kp_kits_received', 'representative_name'])->contains(fn ($f) => filled(old($f, $record->{$f} ?? null))) || $errors->hasAny(['batch_id', 'registered_rice_area_ha', 'seed_bags', 'seed_bag_kg', 'consent_status', 'kp_kits_received', 'representative_name'])) open @endif>
+      <summary>Rice seed distribution sheet <span style="color:var(--module-muted);font-size:12px;font-weight:700">Optional</span></summary>
+      <div class="module-more-content"><div class="module-form-grid">
+
+        <x-module.field name="batch_id" label="Distribution sheet" :full="true"
+          hint="Groups this release onto a printed sheet. Leaving it blank keeps the release in the register only.">
+          <select class="module-input" id="batch_id" name="batch_id" aria-describedby="batch_id_hint batch_id_error">
+            <option value="">Not on a sheet</option>
+            @foreach(($batches ?? []) as $sheet)
+              <option value="{{ $sheet->id }}" @selected((string) old('batch_id', $record->batch_id ?? '') === (string) $sheet->id)>{{ $sheet->displayLabel() }}</option>
+            @endforeach
+          </select>
+        </x-module.field>
+
+        <x-module.field name="registered_rice_area_ha" label="Registered rice area (ha)"
+          hint="The area registered for rice. This is not the farmer's total farm area.">
+          <input class="module-input" id="registered_rice_area_ha" type="number" min="0" step="0.01" name="registered_rice_area_ha"
+            value="{{ old('registered_rice_area_ha', $record->registered_rice_area_ha ?? '') }}"
+            aria-describedby="registered_rice_area_ha_hint registered_rice_area_ha_error">
+        </x-module.field>
+
+        <x-module.field name="seed_bags" label="Seed bags issued">
+          <input class="module-input" id="seed_bags" type="number" min="0" step="1" name="seed_bags"
+            value="{{ old('seed_bags', $record->seed_bags ?? '') }}" aria-describedby="seed_bags_error">
+        </x-module.field>
+
+        <x-module.field name="seed_bag_kg" label="Weight per seed bag (kg)"
+          hint="The seed bag. Harvest bag weight is recorded separately under Production monitoring.">
+          <input class="module-input" id="seed_bag_kg" type="number" min="0" step="0.01" name="seed_bag_kg"
+            value="{{ old('seed_bag_kg', $record->seed_bag_kg ?? '') }}"
+            aria-describedby="seed_bag_kg_hint seed_bag_kg_error">
+        </x-module.field>
+
+        {{-- Always answered, because it defaults to "Not recorded" and offers no empty
+             option, so it needs no required marker and never hides a required field
+             inside a closed disclosure. --}}
+        <x-module.field name="consent_status" label="Data privacy consent"
+          hint="Leave as Not recorded when the form does not say. An unknown answer is kept as unknown.">
+          <select class="module-input" id="consent_status" name="consent_status"
+            aria-describedby="consent_status_hint consent_status_error">
+            @foreach(($consentStatusOptions ?? []) as $consentKey => $consentLabel)
+              <option value="{{ $consentKey }}" @selected((string) old('consent_status', $record->consent_status ?? 'unrecorded') === (string) $consentKey)>{{ $consentLabel }}</option>
+            @endforeach
+          </select>
+        </x-module.field>
+
+        <x-module.field name="kp_kits_received" label="KP kits received">
+          <input class="module-input" id="kp_kits_received" type="number" min="0" step="1" name="kp_kits_received"
+            value="{{ old('kp_kits_received', $record->kp_kits_received ?? '') }}" aria-describedby="kp_kits_received_error">
+        </x-module.field>
+
+        <x-module.field name="representative_name" label="Authorized representative" :full="true"
+          hint="Only when someone other than the farmer received the seed.">
+          <input class="module-input" id="representative_name" type="text" maxlength="150" name="representative_name"
+            value="{{ old('representative_name', $record->representative_name ?? '') }}"
+            aria-describedby="representative_name_hint representative_name_error">
+        </x-module.field>
+
+      </div></div>
+    </details>
+
     <details class="module-more rice-monitoring" id="riceProductionMonitoring" @if(collect(['avg_weight_per_bag_kg', 'total_production_bags', 'avg_area_harvested_ha', 'seed_variety_planted'])->contains(fn ($key) => filled($value($key)) || $errors->has($key))) open @endif>
       <summary>Production monitoring <span style="color:var(--module-muted);font-size:12px;font-weight:700">Optional follow-up information</span></summary>
       <div class="module-more-content"><div class="module-form-grid">
         <div class="module-form-field module-form-field-third"><label for="avg_weight_per_bag_kg">Average bag weight (kg)</label><input class="module-input" id="avg_weight_per_bag_kg" type="number" min="0" name="avg_weight_per_bag_kg" value="{{ $value('avg_weight_per_bag_kg') }}" aria-describedby="avg_weight_per_bag_kg_error">@error('avg_weight_per_bag_kg')<span class="rice-field-error" id="avg_weight_per_bag_kg_error">{{ $message }}</span>@enderror</div>
         <div class="module-form-field module-form-field-third"><label for="total_production_bags">Production bags</label><input class="module-input" id="total_production_bags" type="number" min="0" name="total_production_bags" value="{{ $value('total_production_bags') }}" aria-describedby="total_production_bags_error">@error('total_production_bags')<span class="rice-field-error" id="total_production_bags_error">{{ $message }}</span>@enderror</div>
         <div class="module-form-field module-form-field-third"><label for="avg_area_harvested_ha">Harvested area (ha)</label><input class="module-input" id="avg_area_harvested_ha" type="number" min="0" step="0.01" name="avg_area_harvested_ha" value="{{ $value('avg_area_harvested_ha') }}" aria-describedby="avg_area_harvested_ha_error">@error('avg_area_harvested_ha')<span class="rice-field-error" id="avg_area_harvested_ha_error">{{ $message }}</span>@enderror</div>
+        <x-module.field name="harvest_season" label="Harvest season"
+          hint="Recorded explicitly. Leave blank until this farmer's harvest is reported; it is never assumed from the planting season.">
+          <select class="module-input" id="harvest_season" name="harvest_season"
+            aria-describedby="harvest_season_hint harvest_season_error">
+            <option value="">Not yet reported</option>
+            @foreach(($seasonOptions ?? []) as $seasonKey => $seasonLabel)
+              <option value="{{ $seasonKey }}" @selected((string) old('harvest_season', $record->harvest_season ?? '') === (string) $seasonKey)>{{ $seasonLabel }}</option>
+            @endforeach
+          </select>
+        </x-module.field>
+
+        <x-module.field name="harvest_year" label="Harvest year">
+          <input class="module-input" id="harvest_year" type="number" name="harvest_year" min="1990" max="{{ now()->year + 1 }}" step="1"
+            value="{{ old('harvest_year', $record->harvest_year ?? '') }}" aria-describedby="harvest_year_error">
+        </x-module.field>
+
         <div class="module-form-field module-form-field-full"><label for="seed_variety_planted">Seed variety planted</label><input class="module-input" id="seed_variety_planted" name="seed_variety_planted" value="{{ $value('seed_variety_planted') }}" maxlength="200" placeholder="e.g. NSIC Rc 222" aria-describedby="seed_variety_planted_error">@error('seed_variety_planted')<span class="rice-field-error" id="seed_variety_planted_error">{{ $message }}</span>@enderror</div>
       </div></div>
     </details>
@@ -228,11 +327,23 @@ document.addEventListener('DOMContentLoaded', () => {
     preview?.classList.toggle('is-visible', hasFarmer);
     setText('farmer_preview_name',source?.dataset.name,'No farmer selected'); setText('farmer_preview_ffrs',source?.dataset.ffrs); setText('farmer_preview_area',source?.dataset.area); setText('farmer_preview_contact',source?.dataset.contact); setText('farmer_preview_location',source ? `${source.dataset.location || 'Not recorded'} · ${source.dataset.municipality || ''}, ${source.dataset.province || ''}` : ''); setText('farmer_preview_tags',source?.dataset.tags,'None'); setText('riceSummaryFarmer',source?.dataset.name,'Not selected');
   };
-  const refreshFarmer = () => { const selected=selectedOption(); applyFarmer(selected?.value ? selected : fallback); };
+  const refreshFarmer = () => { const selected=selectedOption(); applyFarmer(selected?.value ? selected : (farmer?.value ? fallback : null)); };
+  if (farmer && typeof TomSelect !== 'undefined') {
+    new TomSelect(farmer, {
+      create: false, maxOptions: 100, allowEmptyOption: false,
+      placeholder: 'Type a name, FFRS or RSBSA number',
+      sortField: { field: 'text', direction: 'asc' },
+      render: { no_results: () => '<div class="no-results">No matching beneficiary. Check the name or registry number.</div>' }
+    });
+    farmer.tomselect.control_input.setAttribute('aria-describedby', farmer.getAttribute('aria-describedby'));
+  }
   const filterFarmers = () => {
-    if (!municipality || !farmer) return;
-    const municipalityId = municipality.value;
-    const available = farmerChoices.filter(choice => !municipalityId || choice.municipalityId === municipalityId);
+    if (!farmer) return;
+    const municipalityId = municipality?.value || '';
+    const available = farmerChoices.filter(choice => !municipality || (municipalityId && choice.municipalityId === municipalityId));
+    const help = document.getElementById('farmerHelp');
+    const unavailable = Boolean(municipality && !municipalityId);
+    if (help) help.textContent = unavailable ? 'Select a municipality first to see its registered beneficiaries.' : available.length ? `${available.length.toLocaleString()} registered beneficiaries. Search by name, FFRS or RSBSA, then check the profile below.` : 'No registered beneficiaries in this municipality. Register the beneficiary before recording a release.';
     const currentValue = String(farmer.value || '');
     const currentIsAvailable = available.some(choice => String(choice.value) === currentValue);
 
@@ -241,13 +352,16 @@ document.addEventListener('DOMContentLoaded', () => {
       farmer.tomselect.clearOptions();
       farmer.tomselect.addOptions(available.map(choice => ({ value: choice.value, text: choice.text })));
       farmer.tomselect.refreshOptions(false);
+      if (unavailable) farmer.tomselect.disable();
+      else farmer.tomselect.enable();
       if (currentIsAvailable) farmer.tomselect.setValue(currentValue, true);
     } else {
       Array.from(farmer.options).forEach(option => {
         if (!option.value) return;
-        option.hidden = Boolean(municipalityId) && option.dataset.municipalityId !== municipalityId;
+        option.hidden = Boolean(municipality) && (!municipalityId || option.dataset.municipalityId !== municipalityId);
         option.disabled = option.hidden;
       });
+      farmer.disabled = unavailable;
       if (!currentIsAvailable) farmer.value = '';
     }
   };
@@ -347,6 +461,10 @@ document.addEventListener('DOMContentLoaded', () => {
     form.setAttribute('aria-busy', 'true');
   });
   form?.querySelectorAll('.is-invalid').forEach(field => field.addEventListener('input', () => field.classList.remove('is-invalid'), { once: true }));
+  window.addEventListener('pageshow', () => {
+    if (submitButton) { submitButton.disabled = false; submitButton.classList.remove('is-saving'); }
+    form?.removeAttribute('aria-busy');
+  });
   filterFarmers();
   refreshFarmer();
   refreshCategoryFields();

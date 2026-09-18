@@ -9,6 +9,7 @@ use App\Models\Farmer;
 use App\Models\FarmersCooperative;
 use App\Models\FarmPlot;
 use App\Models\Municipality;
+use App\Models\RiceDistributionBatch;
 use App\Models\RiceSeedDistribution;
 use App\Models\User;
 use App\Observers\AuditModelObserver;
@@ -52,6 +53,7 @@ class AppServiceProvider extends ServiceProvider
             Farmer::class,
             FarmPlot::class,
             RiceSeedDistribution::class,
+            RiceDistributionBatch::class,
             AntiRabiesVaccination::class,
             FarmersCooperative::class,
             BackupFile::class,

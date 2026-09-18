@@ -74,6 +74,8 @@
       <p class="module-scope-note">Viewing: <strong>{{ $scopeName }}</strong>@unless($canChooseMunicipality ?? false) · Assigned municipality @endunless</p>
     </div>
     <div class="module-actions">
+      {{-- Guarded so the assistance register keeps working if the sheet routes are not registered. --}}
+      @if(Route::has('rice-distribution-batches.index'))<a class="module-button" href="{{ route('rice-distribution-batches.index', collect($workspaceQuery)->only('municipality_id')->all()) }}"><svg viewBox="0 0 24 24"><path d="M7 3h10v18H7zM10 8h4M10 12h4M10 16h4"></path></svg>Rice seed sheets</a>@endif
       @if($canManageOperations)<a class="module-button" href="{{ route('rice-seed-distributions.import.form') }}"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"></path></svg>Import NRP workbook</a>@endif
       <a class="module-button" href="{{ route('rice-seed-distributions.export', request()->query()) }}"><svg viewBox="0 0 24 24"><path d="M12 15V3M7 10l5 5 5-5M5 21h14"></path></svg>Export CSV</a>
       @if($canManageOperations)<a class="module-button module-button-primary" href="{{ route('rice-seed-distributions.create', ['municipality_id' => $selectedMunicipalityId ?? null, 'assistance_sector' => $selectedSector ?: null]) }}"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>Record release</a>@else<span class="module-badge module-badge-green">Read-only oversight</span>@endif
@@ -132,7 +134,7 @@
         <div class="module-field"><label for="riceVariety">Item, species, or variety</label><input class="module-input" id="riceVariety" name="seed_variety_claimed" value="{{ request('seed_variety_claimed') }}" placeholder="Any agriculture or fisheries item"></div>
         <div class="module-field"><label for="riceFrom">Received from</label><input class="module-input" id="riceFrom" type="date" name="received_from" value="{{ request('received_from') }}"></div>
         <div class="module-field"><label for="riceTo">Received to</label><input class="module-input" id="riceTo" type="date" name="received_to" value="{{ request('received_to') }}"></div>
-        <div class="module-field"><label for="riceGender">Gender</label><select class="module-input" id="riceGender" name="gender"><option value="">All genders</option>@foreach(['Male','Female','Other'] as $gender)<option value="{{ $gender }}" @selected(request('gender') === $gender)>{{ $gender }}</option>@endforeach</select></div>
+        <div class="module-field"><label for="riceGender">Gender</label><select class="module-input" id="riceGender" name="gender"><option value="">All genders</option>@foreach(\App\Models\Farmer::GENDERS as $gender)<option value="{{ $gender }}" @selected(request('gender') === $gender)>{{ $gender }}</option>@endforeach</select></div>
         <div class="module-field"><label for="riceKgMin">Minimum quantity</label><input class="module-input" id="riceKgMin" type="number" min="0" step="0.01" name="kgs_min" value="{{ request('kgs_min') }}" placeholder="0.00"></div>
         <div class="module-field"><label for="riceKgMax">Maximum quantity</label><input class="module-input" id="riceKgMax" type="number" min="0" step="0.01" name="kgs_max" value="{{ request('kgs_max') }}" placeholder="Any"></div>
         <div class="module-field"><label for="ricePerPage">Rows per page</label><select class="module-input" id="ricePerPage" name="per_page">@foreach([10,20,50,100] as $n)<option value="{{ $n }}" @selected((int) $perPage === $n)>{{ $n }} rows</option>@endforeach</select></div>

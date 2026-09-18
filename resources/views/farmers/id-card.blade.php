@@ -121,7 +121,7 @@
         <div class="farmer-id-card farmer-id-card-back" id="farmerIdCardBack">
           <header>
             <img src="{{ asset('images/mao-logo.jpg') }}" alt="Agriculture office logo">
-            <div><small>Provincial Agriculture Information System</small><strong>{{ $farmer->registry_id }}</strong></div>
+            <div><small>AgriGOV · Agriculture Information System</small><strong>{{ $farmer->registry_id }}</strong></div>
           </header>
           <div class="farmer-card-back-body">
             <div class="farmer-card-back-column">
@@ -344,7 +344,7 @@
       ctx.fillStyle='#f7fbf8'; ctx.fillRect(0,0,1011,638);
       ctx.fillStyle='#0b6c37'; ctx.fillRect(0,0,1011,132);
       if (officeLogo) ctx.drawImage(officeLogo,42,24,86,86);
-      ctx.fillStyle='#fff'; ctx.font='20px Arial'; ctx.fillText('Provincial Agriculture Information System',155,54);
+      ctx.fillStyle='#fff'; ctx.font='20px Arial'; ctx.fillText('AgriGOV · Agriculture Information System',155,54);
       ctx.font='900 37px monospace'; ctx.fillText(cardData.farmerId,155,98);
       field(ctx,'CONTACT NUMBER',cardData.contact,52,180,420,28);
       field(ctx,'FARM LOCATION',cardData.barangay,52,255,420,28);

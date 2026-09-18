@@ -11,14 +11,18 @@ use App\Models\FarmPlot;
 use App\Models\Municipality;
 use App\Models\RiceSeedDistribution;
 use App\Models\User;
+use App\Support\DashboardMetrics;
+use App\Support\FarmerDataQuality;
 use App\Support\MunicipalityAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
-    public function __construct(private MunicipalityAccess $municipalityAccess)
-    {
+    public function __construct(
+        private MunicipalityAccess $municipalityAccess,
+        private DashboardMetrics $metrics
+    ) {
         $this->middleware('auth');
     }
 
@@ -162,20 +166,12 @@ class DashboardController extends Controller
             ? round(($mappedFarmers / $totalFarmers) * 100, 1)
             : 0.0;
 
-        $farmersMissingFfrs = (clone $farmerQuery)
-            ->where(function (Builder $query) {
-                $query->whereNull('ffrs')
-                    ->orWhere('ffrs', '');
-            })
-            ->count();
+        // Both rules come from App\Support\FarmerDataQuality so this headline, the
+        // per-municipality rollup further down, and the farmer directory that lists
+        // the records behind them cannot drift apart.
+        $farmersMissingFfrs = FarmerDataQuality::missingFfrs(clone $farmerQuery)->count();
 
-        $farmersMissingLocation = (clone $farmerQuery)
-            ->where(function (Builder $query) {
-                $query->whereNull('farm_location')
-                    ->orWhere('farm_location', '')
-                    ->orWhere('farm_location', 'UNKNOWN');
-            })
-            ->count();
+        $farmersMissingLocation = FarmerDataQuality::missingLocation(clone $farmerQuery)->count();
 
         $totalAdmins = (clone $userQuery)
             ->whereIn('role', [
@@ -421,9 +417,38 @@ class DashboardController extends Controller
                 $this->buildMunicipalityOverview($user);
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Reporting charts
+        |--------------------------------------------------------------------------
+        |
+        | Every figure below is produced by App\Support\DashboardMetrics, which is
+        | where the measurement rules are written down and tested: releases are never
+        | reported as production, unique beneficiaries are counted apart from release
+        | transactions, quantities in different units are never added together, and a
+        | missing value is reported as "not recorded" rather than as a zero.
+        |
+        | 'municipality_comparison' is null for an account that can only see one
+        | municipality, because a single row is not a comparison.
+        */
+
+        $dashboardMetrics = [
+            'farmers_by_municipality' => $this->metrics->farmersByMunicipality($user),
+            'assistance_by_category' => $this->metrics->assistanceByCategory($user),
+            'assistance_by_municipality' => $this->metrics->assistanceByMunicipality($user),
+            'quantity_by_unit' => $this->metrics->quantityByUnit($user),
+            'mapping_coverage' => $this->metrics->mappingCoverage($user),
+            'animal_health_by_service' => $this->metrics->animalHealthByServiceType($user),
+            'fisheries_assistance' => $this->metrics->fisheriesAssistance($user),
+            'machinery_by_condition' => $this->metrics->machineryByCondition($user),
+            'machinery_by_availability' => $this->metrics->machineryByAvailability($user),
+            'municipality_comparison' => $this->metrics->municipalityComparison($user),
+        ];
+
         return view('dashboard', compact(
             'stats',
             'charts',
+            'dashboardMetrics',
             'recentRecipients',
             'recentVaccinations',
             'recentPlots',
@@ -465,12 +490,8 @@ class DashboardController extends Controller
             ->whereIn('municipality_id', $municipalityIds)
             ->select('municipality_id')
             ->selectRaw('COUNT(*) as total_farmers')
-            ->selectRaw(
-                "SUM(CASE WHEN ffrs IS NULL OR ffrs = '' THEN 1 ELSE 0 END) as missing_ffrs"
-            )
-            ->selectRaw(
-                "SUM(CASE WHEN farm_location IS NULL OR farm_location = '' OR UPPER(farm_location) = 'UNKNOWN' THEN 1 ELSE 0 END) as missing_location"
-            )
+            ->selectRaw(FarmerDataQuality::missingFfrsCountExpression().' as missing_ffrs')
+            ->selectRaw(FarmerDataQuality::missingLocationCountExpression().' as missing_location')
             ->groupBy('municipality_id')
             ->get()
             ->keyBy('municipality_id');

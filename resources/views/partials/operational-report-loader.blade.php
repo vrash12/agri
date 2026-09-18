@@ -22,8 +22,14 @@
       }
     };
     if (typeof Chart !== 'undefined') { ready(); return; }
+    // Pinned and hashed in config/cdn.php. Without the integrity attribute the
+    // browser would run whatever the CDN returned for this URL.
+    const chartAsset = @json(\App\Support\Cdn::asset('chart_js'));
     const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js';
+    script.src = chartAsset.url;
+    script.integrity = chartAsset.integrity;
+    script.crossOrigin = 'anonymous';
+    script.referrerPolicy = 'no-referrer';
     script.async = true;
     const timer = window.setTimeout(() => {
       fallback('Charts are taking longer to load. Use the figures below.');

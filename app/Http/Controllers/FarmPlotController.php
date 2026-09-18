@@ -53,8 +53,16 @@ class FarmPlotController extends Controller
             }
         );
 
+        // Parcel geometry is the heaviest payload this system sends, so the response
+        // is capped. The count is taken before the limit is applied so the map can
+        // say what it is not showing — a partial map that looks complete is worse
+        // than a slow one, because nothing on screen reveals the omission.
+        $limit = max(1, (int) config('map.max_plots_per_request', 2000));
+        $total = (clone $query)->count();
+
         $plots = $query
                 ->orderByDesc('id')
+                ->limit($limit)
                 ->get([
                     'id',
                     'farmer_id',
@@ -69,7 +77,13 @@ class FarmPlotController extends Controller
                 ])
                 ->each(fn (FarmPlot $plot) => $this->attachVersion($plot));
 
-        return response()->json(['plots' => $plots]);
+        return response()->json([
+            'plots' => $plots,
+            'total' => $total,
+            'returned' => $plots->count(),
+            'truncated' => $total > $plots->count(),
+            'limit' => $limit,
+        ]);
     }
 
     /**
