@@ -93,16 +93,15 @@
     </p>
 
     <div class="module-form-grid">
-      <x-module.field name="farmer_id" label="Farmer">
-        <select class="module-input" id="farmer_id" name="farmer_id" aria-describedby="farmer_id_error">
-          <option value="">No individual farmer</option>
-          @foreach($farmers as $farmer)
-            <option value="{{ $farmer->id }}" @selected($selectedFarmer === (int) $farmer->id)>
-              {{ trim(collect([$farmer->last_name, $farmer->first_name, $farmer->middle_name, $farmer->ext_name])->filter()->implode(' ')) }}{{ $farmer->ffrs ? ' · '.$farmer->ffrs : '' }}
-            </option>
-          @endforeach
-        </select>
-      </x-module.field>
+      @include('partials.farmer-picker', [
+        'name' => 'farmer_id',
+        'label' => 'Farmer',
+        'options' => $farmerOptions,
+        'selected' => $selectedFarmer ?: null,
+        'municipalitySelect' => $canChooseMunicipality ? 'municipality_id' : null,
+        'browseUrl' => $browseUrl,
+        'browsingAll' => $browsingAll,
+      ])
 
       <x-module.field name="farm_plot_id" label="Parcel"
         hint="Only the chosen farmer's mapped parcels. Save the farmer first to see theirs.">

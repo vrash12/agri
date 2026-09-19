@@ -456,6 +456,37 @@ Other rules:
 - The CSV export is audited with its filters and row count and is bounded by a fixed
   maximum id, like the machinery export.
 
+### 5.5.3 Shared beneficiary picker
+
+`App\Support\FarmerPicker`, `partials/farmer-picker.blade.php`,
+`public/js/farmer-picker.js`, endpoint `farmers.picker`.
+
+Both the assistance form and the harvest form choose a farmer. Both used to
+serialise every farmer the account could see into a `<select>` — for Ramos's 1,546
+beneficiaries that was 723,889 bytes on the assistance form and 299,292 on the
+harvest form, on every load. They now render only the farmer already chosen and
+search the registry on the server: 130,563 and 98,986 bytes.
+
+- `FarmerPicker::option()` builds the option shape for both the JSON endpoint and
+  the Blade partial, for the same reason `mapFarmerPayload` is shared with the map:
+  an option rendered on page load must describe a farmer identically to the same
+  option fetched a second later. A test asserts the two agree.
+- The **profile block is opt-in** (`?profile=1`). The assistance form shows a
+  beneficiary preview and needs a contact number and eligibility flags; the harvest
+  form shows a name and is not sent them.
+- `farmers.picker` is deliberately **separate from `farmers.lookup`**, which serves
+  the parcel map and returns the fields the map draws and only those. Widening the
+  map's payload to serve a form would put personal data on the map endpoint.
+- Municipality scope is applied before the search term. A submitted
+  `municipality_id` only ever narrows what scope already allows.
+- The JS keeps the `<select>`'s own dataset describing the current selection, which
+  is how the assistance form's preview reads the chosen beneficiary without knowing
+  where the option came from. It also clears a selection the newly chosen
+  municipality does not hold, and refuses to search at all until a provincial
+  account has chosen one.
+- `?browse=1` renders the whole registry the old way. It is the escape hatch for an
+  operator who would rather scroll, and for a browser not running the picker.
+
 ### 5.6 Animal-health services
 
 Primary model/table: `AntiRabiesVaccination` / `anti_rabies_vaccinations`

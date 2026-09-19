@@ -10,6 +10,7 @@ use App\Models\RiceSeedDistribution;
 use App\Models\User;
 use App\Support\ConcurrentWrite;
 use App\Support\FarmerDataQuality;
+use App\Support\FarmerPicker;
 use App\Support\MunicipalityAccess;
 use Endroid\QrCode\ErrorCorrectionLevel\ErrorCorrectionLevelMedium;
 use Endroid\QrCode\QrCode;
@@ -991,6 +992,30 @@ class FarmerController extends Controller
      * those two would turn this into a way to confirm whether a farmer exists in
      * another municipality.
      */
+    /**
+     * The beneficiary picker's search, for the assistance and harvest forms.
+     *
+     * Separate from `lookup`, which serves the parcel map and returns the fields the
+     * map draws and only those. A form picker needs a different set — an RSBSA number
+     * the map never shows, and optionally a contact number and eligibility flags for
+     * the assistance form's preview. Widening the map's payload to cover both would
+     * put personal data on the map endpoint to serve a form.
+     */
+    public function picker(Request $request, FarmerPicker $picker)
+    {
+        $this->authorize('viewAny', Farmer::class);
+
+        $municipalityId = $request->query('municipality_id');
+
+        return response()->json($picker->search(
+            $this->authenticatedUser($request),
+            (string) $request->query('q', ''),
+            filled($municipalityId) ? (int) $municipalityId : null,
+            (int) $request->query('limit', 20),
+            $request->boolean('profile')
+        ));
+    }
+
     public function lookup(Request $request)
     {
         $this->authorize('viewAny', Farmer::class);

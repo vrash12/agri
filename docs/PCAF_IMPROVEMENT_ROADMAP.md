@@ -39,8 +39,8 @@ Status vocabulary: `Not started` · `In progress` · `Blocked` · `Verified comp
 Baseline at the time of writing: **375 automated tests passing (3,998 assertions)**,
 plus 11 JavaScript regression tests. Branch `feature/rice-seed-distribution-sheet`.
 
-As of 2026-09-19 on `main`: **430 automated tests passing (4,306 assertions)**, plus
-32 JavaScript regression tests.
+As of 2026-09-19 on `main`: **440 automated tests passing (4,340 assertions)**, plus
+41 JavaScript regression tests.
 
 ---
 
@@ -1065,3 +1065,4 @@ absent chart.
 | 2026-09-19 | 3 | Negros Island Region municipality geofences added for Negros Occidental, Negros Oriental and Siquijor, from the pinned geoBoundaries revision, verified against PSA areas. |
 | 2026-09-19 | 1 | **Graph 2 built.** `harvest_records` gives production a record of its own across nine commodities and six units. The Rice Seed Distribution Sheet's production section projects into it on save (`App\Support\HarvestFromRelease`), so rice production the office already writes down is never entered twice; `harvests:backfill-from-releases` reaches releases nobody will re-open. Bags are stored rather than derived kilograms, because the bag weight beside them is an average rather than a weighed total. One chart series per commodity-and-unit pair, so two units are never summed into an invented total. The spreadsheet import projects too, though the NRP workbook has no harvest-year column, so a fresh import leaves the bag count on the release until a year is entered rather than inventing a period. Decision 1 remains open for non-rice commodities, which have no entry screen yet. |
 | 2026-09-19 | 1 | Harvest entry screen added (`/harvest-records`), which is what was missing for the production chart to cover anything but rice: the table, model and chart existed with no writer. Scoped, audited and exportable like every other module. A harvest projected from an assistance release is **read-only here** and edited at its release — `HarvestRecordPolicy` refuses `update` and `delete` on it, because the release rewrites those figures on every save and an edit made here would be silently discarded. Measured: the create form renders at 299,292 bytes against Ramos's 1,546 farmers, against 723,889 for the equivalent rice form; the farmer select is the bulk of both and wants the `farmers.lookup` treatment. |
+| 2026-09-19 | 1 | Beneficiary picker shared by the assistance and harvest forms (`App\Support\FarmerPicker`, `farmers.picker`, `public/js/farmer-picker.js`). Both forms rendered every farmer the account could see; the assistance form fell from 723,889 to 130,563 bytes and the harvest form from 299,292 to 98,986, measured against Ramos's 1,546 beneficiaries. The profile block is opt-in so the harvest form is not sent contact numbers it never shows, and the endpoint is separate from the map's `farmers.lookup` so the map payload stays as narrow as Milestone 3 left it. `?browse=1` still renders the whole registry. |

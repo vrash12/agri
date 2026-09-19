@@ -9,6 +9,7 @@ use App\Models\HarvestRecord;
 use App\Support\AuditTrail;
 use App\Support\ConcurrentWrite;
 use App\Support\CsvExport;
+use App\Support\FarmerPicker;
 use App\Support\LocalTime;
 use App\Support\MunicipalityAccess;
 use Illuminate\Database\Eloquent\Builder;
@@ -35,7 +36,8 @@ class HarvestRecordController extends Controller
 
     public function __construct(
         private MunicipalityAccess $municipalityAccess,
-        private ConcurrentWrite $concurrentWrite
+        private ConcurrentWrite $concurrentWrite,
+        private FarmerPicker $farmerPicker
     ) {
         $this->middleware('auth');
     }
@@ -353,26 +355,35 @@ class HarvestRecordController extends Controller
     {
         $user = $request->user();
 
-        $farmers = $this->municipalityAccess
-            ->scope(Farmer::query(), $user)
-            ->orderBy('last_name')
-            ->orderBy('first_name')
-            ->get(['id', 'first_name', 'middle_name', 'last_name', 'ext_name', 'ffrs', 'municipality_id']);
+        $selectedFarmerId = (int) old('farmer_id', $record?->farmer_id ?? $request->query('farmer_id', 0));
+
+        // Only the chosen farmer travels with the page; the rest of the registry is
+        // searched on the server. `browse=1` is the escape hatch that renders the
+        // whole list the old way for an operator who would rather scroll.
+        $browsingAll = $request->boolean('browse');
+
+        $farmerOptions = $this->farmerPicker->initialOptions(
+            $user,
+            $selectedFarmerId ?: null,
+            $browsingAll
+        );
 
         // Only the selected farmer's parcels, because the form offers a parcel only
         // once a farmer is chosen and validation refuses any other farmer's land.
-        $selectedFarmerId = (int) old('farmer_id', $record?->farmer_id ?? $request->query('farmer_id', 0));
         $plots = $selectedFarmerId === 0
             ? collect()
             : FarmPlot::query()
                 ->where('farmer_id', $selectedFarmerId)
-                ->whereIn('farmer_id', $farmers->pluck('id'))
+                ->whereHas('farmer', fn (Builder $farmer) => $this->municipalityAccess->scope($farmer, $user))
                 ->orderBy('id')
                 ->get(['id', 'farmer_id', 'name', 'area_ha']);
 
         return [
             'record' => $record,
-            'farmers' => $farmers,
+            'farmerOptions' => $farmerOptions,
+            'selectedFarmer' => $selectedFarmerId,
+            'browsingAll' => $browsingAll,
+            'browseUrl' => $request->fullUrlWithQuery(['browse' => 1]),
             'plots' => $plots,
             'commodityOptions' => HarvestRecord::COMMODITY_LABELS,
             'seasonOptions' => HarvestRecord::SEASON_LABELS,

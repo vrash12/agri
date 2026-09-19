@@ -96,15 +96,18 @@
               @error('municipality_id')<span class="rice-field-error" id="municipalityError">{{ $message }}</span>@enderror
             </div>
           @endif
-          <div class="module-form-field module-form-field-full"><label for="farmer_id">Registered beneficiary <span class="module-required">*</span></label><select class="module-input @error('farmer_id') is-invalid @enderror" id="farmer_id" name="farmer_id" required aria-describedby="farmerHelp @error('farmer_id') farmerError @enderror"><option value="">Search and select beneficiary</option>
-            @foreach($farmers as $farmer)
-              @php
-                $fullName = trim($farmer->last_name.', '.$farmer->first_name.' '.($farmer->middle_name ?? '').' '.($farmer->ext_name ?? ''));
-                $tags = collect(['ARB' => $farmer->is_arb, '4Ps' => $farmer->is_4ps, 'IP' => $farmer->is_ip, 'PWD' => $farmer->is_pwd, 'SC' => $farmer->is_sc, 'OFW' => $farmer->is_ofw])->filter()->keys()->implode(', ');
-              @endphp
-              <option value="{{ $farmer->id }}" data-municipality-id="{{ $farmer->municipality_id }}" data-name="{{ $fullName }}" data-ffrs="{{ $farmer->ffrs ?: ($farmer->rsbsa_no ?: 'Not assigned') }}" data-location="{{ $farmer->farm_location ?: 'Not recorded' }}" data-municipality="{{ $farmer->farm_municipality ?: 'Not recorded' }}" data-province="{{ $farmer->farm_province ?: 'Not recorded' }}" data-area="{{ $farmer->farm_area_ha !== null ? number_format((float) $farmer->farm_area_ha, 2).' ha' : 'Not recorded' }}" data-contact="{{ $farmer->contact_number ?: 'Not recorded' }}" data-tags="{{ $tags ?: 'None' }}" @selected((string) $selectedFarmerId === (string) $farmer->id)>{{ $fullName }}{{ collect([$farmer->ffrs, $farmer->rsbsa_no])->filter()->unique()->map(fn ($identifier) => ' — '.$identifier)->implode('') }}</option>
-            @endforeach
-          </select><div class="module-hint" id="farmerHelp">Search by beneficiary name or FFRS/RSBSA number, then verify the profile preview below.</div>@error('farmer_id')<span class="rice-field-error" id="farmerError">{{ $message }}</span>@enderror</div>
+          @include('partials.farmer-picker', [
+            'name' => 'farmer_id',
+            'label' => 'Registered beneficiary',
+            'options' => $farmerOptions,
+            'selected' => $selectedFarmerId ?: null,
+            'required' => true,
+            'withProfile' => true,
+            'municipalitySelect' => ($canChooseMunicipality ?? false) ? 'municipality_id' : null,
+            'browseUrl' => $browseUrl,
+            'browsingAll' => $browsingAll,
+            'hint' => 'Verify the profile preview below before saving.',
+          ])
         </div>
 
         <div id="farmerPreviewFallback" data-name="{{ $fallbackName ?: 'No farmer selected' }}" data-ffrs="{{ $record->ffrs ?? 'Not assigned' }}" data-location="{{ $record->farm_location ?? 'Not recorded' }}" data-municipality="{{ $record->farm_municipality ?? 'Not recorded' }}" data-province="{{ $record->farm_province ?? 'Not recorded' }}" data-area="{{ isset($record->farm_area_ha) ? number_format((float) $record->farm_area_ha, 2).' ha' : 'Not recorded' }}" data-contact="{{ $record->contact_number ?? 'Not recorded' }}" data-tags="{{ $fallbackTags ?: 'None' }}" hidden></div>
@@ -329,59 +332,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const inputCategoryLabels = @json($inputCategoryOptions ?? []);
   const quantityUnitLabels = @json($quantityUnitOptions ?? []);
   const preferredUnitsByCategory = @json($preferredUnitsByCategory ?? []);
-  const farmerChoices = farmer ? Array.from(farmer.options).filter(option => option.value).map(option => ({
-    value: option.value,
-    text: option.textContent.trim(),
-    municipalityId: option.dataset.municipalityId || '',
-    dataset: { ...option.dataset }
-  })) : [];
-  const farmerChoiceById = new Map(farmerChoices.map(choice => [String(choice.value), choice]));
   const setText = (id,value,fallbackText='—') => { const element=document.getElementById(id); if(element) element.textContent=value && String(value).trim() ? value : fallbackText; };
-  const selectedOption = () => farmerChoiceById.get(String(farmer?.value || ''));
   const selectedCategory = () => categoryInputs[0]?.value || 'rice_seed';
   const applyFarmer = source => {
     const hasFarmer = Boolean(source && (source.value || source.dataset.name !== 'No farmer selected'));
     preview?.classList.toggle('is-visible', hasFarmer);
     setText('farmer_preview_name',source?.dataset.name,'No farmer selected'); setText('farmer_preview_ffrs',source?.dataset.ffrs); setText('farmer_preview_area',source?.dataset.area); setText('farmer_preview_contact',source?.dataset.contact); setText('farmer_preview_location',source ? `${source.dataset.location || 'Not recorded'} · ${source.dataset.municipality || ''}, ${source.dataset.province || ''}` : ''); setText('farmer_preview_tags',source?.dataset.tags,'None'); setText('riceSummaryFarmer',source?.dataset.name,'Not selected');
   };
-  const refreshFarmer = () => { const selected=selectedOption(); applyFarmer(selected?.value ? selected : (farmer?.value ? fallback : null)); };
-  if (farmer && typeof TomSelect !== 'undefined') {
-    new TomSelect(farmer, {
-      create: false, maxOptions: 100, allowEmptyOption: false,
-      placeholder: 'Type a name, FFRS or RSBSA number',
-      sortField: { field: 'text', direction: 'asc' },
-      render: { no_results: () => '<div class="no-results">No matching beneficiary. Check the name or registry number.</div>' }
-    });
-    farmer.tomselect.control_input.setAttribute('aria-describedby', farmer.getAttribute('aria-describedby'));
-  }
-  const filterFarmers = () => {
-    if (!farmer) return;
-    const municipalityId = municipality?.value || '';
-    const available = farmerChoices.filter(choice => !municipality || (municipalityId && choice.municipalityId === municipalityId));
-    const help = document.getElementById('farmerHelp');
-    const unavailable = Boolean(municipality && !municipalityId);
-    if (help) help.textContent = unavailable ? 'Select a municipality first to see its registered beneficiaries.' : available.length ? `${available.length.toLocaleString()} registered beneficiaries. Search by name, FFRS or RSBSA, then check the profile below.` : 'No registered beneficiaries in this municipality. Register the beneficiary before recording a release.';
-    const currentValue = String(farmer.value || '');
-    const currentIsAvailable = available.some(choice => String(choice.value) === currentValue);
-
-    if (farmer.tomselect) {
-      farmer.tomselect.clear(true);
-      farmer.tomselect.clearOptions();
-      farmer.tomselect.addOptions(available.map(choice => ({ value: choice.value, text: choice.text })));
-      farmer.tomselect.refreshOptions(false);
-      if (unavailable) farmer.tomselect.disable();
-      else farmer.tomselect.enable();
-      if (currentIsAvailable) farmer.tomselect.setValue(currentValue, true);
-    } else {
-      Array.from(farmer.options).forEach(option => {
-        if (!option.value) return;
-        option.hidden = Boolean(municipality) && (!municipalityId || option.dataset.municipalityId !== municipalityId);
-        option.disabled = option.hidden;
-      });
-      farmer.disabled = unavailable;
-      if (!currentIsAvailable) farmer.value = '';
-    }
-  };
+  const refreshFarmer = () => { applyFarmer(farmer?.value ? (farmer.dataset.name ? farmer : fallback) : null); };
   const isSeedCategory = () => selectedCategory().endsWith('_seed');
   const refreshSuggestions = () => {
     if (!suggestions) return;
@@ -461,7 +419,7 @@ document.addEventListener('DOMContentLoaded', () => {
   receivedDate?.addEventListener('change', refreshRelease);
   notes?.addEventListener('input', refreshNotesCounter);
   categoryInputs.forEach(input => input.addEventListener('change', () => { refreshCategoryFields(true); refreshRelease(); }));
-  municipality?.addEventListener('change',() => { filterFarmers(); refreshFarmerAndProgress(); });
+  municipality?.addEventListener('change', refreshFarmerAndProgress);
   setToday?.addEventListener('click', () => {
     if (!receivedDate) return;
     receivedDate.value = receivedDate.max || new Date().toISOString().slice(0, 10);
@@ -482,7 +440,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (submitButton) { submitButton.disabled = false; submitButton.classList.remove('is-saving'); }
     form?.removeAttribute('aria-busy');
   });
-  filterFarmers();
   refreshFarmer();
   refreshCategoryFields();
   refreshNotesCounter();

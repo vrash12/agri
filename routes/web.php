@@ -261,6 +261,11 @@ Route::middleware([
     Route::get('/farmers/lookup', [FarmerController::class, 'lookup'])
         ->name('farmers.lookup');
 
+    // The beneficiary picker used by the assistance and harvest forms. Separate
+    // from the map's lookup above because the two need different farmer fields.
+    Route::get('/farmers/picker', [FarmerController::class, 'picker'])
+        ->name('farmers.picker');
+
     Route::get('/farmers/create', [FarmerController::class, 'create'])
         ->name('farmers.create');
 

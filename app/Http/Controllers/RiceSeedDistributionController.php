@@ -10,6 +10,7 @@ use App\Support\AuditTrail;
 use App\Support\ConcurrentWrite;
 use App\Support\CsvExport;
 use App\Support\DuplicateClaimCheck;
+use App\Support\FarmerPicker;
 use App\Support\HarvestFromRelease;
 use App\Support\MunicipalityAccess;
 use App\Support\SeedReleaseQuantity;
@@ -24,7 +25,8 @@ class RiceSeedDistributionController extends Controller
 {
     public function __construct(
         private MunicipalityAccess $municipalityAccess,
-        private ConcurrentWrite $concurrentWrite
+        private ConcurrentWrite $concurrentWrite,
+        private FarmerPicker $farmerPicker
     ) {
         $this->middleware('auth');
     }
@@ -572,12 +574,17 @@ class RiceSeedDistributionController extends Controller
     {
         $this->authorize('create', RiceSeedDistribution::class);
 
-        $farmers = $this->getFarmersForForm($request);
         $selectedFarmerId = $request->query('farmer_id');
-        $selectedFarmer = $farmers->firstWhere('id', (int) $selectedFarmerId);
+        $selectedFarmer = $selectedFarmerId
+            ? $this->municipalityAccess
+                ->scope(Farmer::query(), $request->user())
+                ->find((int) $selectedFarmerId)
+            : null;
 
         return view('rice_seed_distributions.create', [
-            'farmers' => $farmers,
+            'farmerOptions' => $this->getFarmersForForm($request, $selectedFarmer?->id),
+            'browsingAll' => $request->boolean('browse'),
+            'browseUrl' => $request->fullUrlWithQuery(['browse' => 1]),
             'batches' => $this->getBatchesForForm($request),
             'seasonOptions' => RiceDistributionBatch::SEASONS,
             'consentStatusOptions' => RiceSeedDistribution::CONSENT_STATUS_LABELS,
@@ -684,7 +691,9 @@ class RiceSeedDistributionController extends Controller
 
         return view('rice_seed_distributions.edit', [
             'record' => $riceSeedDistribution,
-            'farmers' => $this->getFarmersForForm($request),
+            'farmerOptions' => $this->getFarmersForForm($request, $riceSeedDistribution->farmer_id),
+            'browsingAll' => $request->boolean('browse'),
+            'browseUrl' => $request->fullUrlWithQuery(['browse' => 1]),
             'batches' => $this->getBatchesForForm($request),
             'seasonOptions' => RiceDistributionBatch::SEASONS,
             'consentStatusOptions' => RiceSeedDistribution::CONSENT_STATUS_LABELS,
@@ -1030,39 +1039,24 @@ class RiceSeedDistributionController extends Controller
         }
     }
 
-    private function getFarmersForForm(Request $request)
+    /**
+     * The beneficiary options the form starts with.
+     *
+     * Only the farmer already chosen. This used to be every farmer the account
+     * could see, with twenty-three columns each — 724 KB of page for Ramos's 1,546
+     * beneficiaries, on every load. The registry is searched on the server now;
+     * `browse=1` still renders the whole list for anyone who wants it.
+     *
+     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     */
+    private function getFarmersForForm(Request $request, ?int $selectedId = null)
     {
-        $query = Farmer::query();
-        $this->municipalityAccess->scope($query, $request->user());
-
-        return $query
-            ->orderBy('last_name')
-            ->orderBy('first_name')
-            ->get([
-                'id',
-                'municipality_id',
-                'rsbsa_no',
-                'ffrs',
-                'last_name',
-                'first_name',
-                'middle_name',
-                'ext_name',
-                'date_of_birth',
-                'contact_number',
-                'gender',
-                'farm_location',
-                'farm_province',
-                'farm_municipality',
-                'ecosystem',
-                'ecosystem_source',
-                'farm_area_ha',
-                'is_arb',
-                'is_4ps',
-                'is_ip',
-                'is_pwd',
-                'is_sc',
-                'is_ofw',
-            ]);
+        return $this->farmerPicker->initialOptions(
+            $request->user(),
+            $selectedId,
+            $request->boolean('browse'),
+            true
+        );
     }
 
     /**
