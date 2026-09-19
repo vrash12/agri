@@ -32,7 +32,7 @@ Page sizes are 10 parcels and 15 releases. Crop queries cover the current parcel
 
 ## Deployment
 
-Implemented locally; do not copy the local database to Hostinger.
+Deployed to Hostinger on September 20, 2026. See `docs/FARMER_PORTAL_DEPLOYMENT_2026_09_20.md` for the release receipt, checks and remaining pilot. Do not copy the local database to Hostinger.
 
 1. Back up production files/database. Verify PHP/dependency compatibility and the baseline migration history. `farmers.id` and `municipalities.id` must support unsigned BIGINT foreign keys.
 2. Apply only the additive migration after reviewing pending migrations:
@@ -58,4 +58,4 @@ Verified locally on September 20, 2026:
 - Local MySQL unsigned BIGINT parent IDs verified and the additive migration applied successfully. No real farmer accounts issued.
 - Browser checks at 320/390-pixel widths and a desktop viewport: profile, parcels, seasonal crops, assistance, staff access controls, activation and login; a real Google satellite map loaded the synthetic owned parcel without console warnings/errors.
 
-Browser previews use disposable in-memory SQLite sample records, never access issued to real farmers. The developer CLI is PHP 8.4.10, outside the currently documented dependency support range; final verification on the supported Hostinger runtime, production deployment and an approved real-farmer acceptance pilot remain pending.
+Browser previews use disposable in-memory SQLite sample records, never access issued to real farmers. The developer CLI is PHP 8.4.10, outside the currently documented dependency support range; Hostinger PHP 8.3.33 deployment passed 55 read-only checks and public HTTP/asset checks. An approved real-farmer acceptance pilot remains pending.

@@ -169,4 +169,4 @@ Added a separate mobile-friendly farmer shell using shared design tokens, operat
 
 Includes accessible labels, password reveal controls, generic validation feedback, submission guards, empty/loading/retry states, native year filtering, pagination, session-history protection and active-session heartbeat. Scope is one verified farmer record. No placeholder farmer data is installed.
 
-Verification uses isolated automated fixtures and browser previews; migration is additive and applied locally. Hostinger deployment, office acceptance and a verified farmer pilot remain pending. Implementation and deployment details: `docs/FARMER_PORTAL.md`.
+Verification uses isolated automated fixtures and browser previews; migration is additive and applied locally. Hostinger deployment completed on September 20, 2026; 55 read-only production checks and public HTTP/asset checks passed. Office acceptance and a verified farmer pilot remain pending. See `docs/FARMER_PORTAL_DEPLOYMENT_2026_09_20.md`. Implementation and deployment details: `docs/FARMER_PORTAL.md`.
