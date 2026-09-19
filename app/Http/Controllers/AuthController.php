@@ -201,6 +201,13 @@ class AuthController extends Controller
 
         RateLimiter::clear($this->throttleKey($request, $email));
 
+        // A browser session belongs to one audience at a time.
+        Auth::guard('farmer')->logout();
+        $request->session()->forget([
+            \App\Support\FarmerPortalAuthentication::VERSION_KEY,
+            \App\Support\FarmerPortalAuthentication::ACTIVITY_KEY,
+        ]);
+
         $user->forceFill([
             'last_login_at' => now(),
         ])->save();

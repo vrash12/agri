@@ -709,6 +709,7 @@
         </form>
 
         <footer class="login-footer">
+          <p>Looking for your own records? <a href="{{ route('farmer-portal.login') }}">Farmer sign in</a></p>
           © {{ date('Y') }}
           <strong>AgriGOV</strong><br>
           Agriculture Information System<br>

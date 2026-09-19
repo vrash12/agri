@@ -201,7 +201,7 @@ The application currently uses Vite only for the standard `resources/css/app.css
 
 ## 3. Roles and effective permissions
 
-The only supported roles are constants in `App\Models\User`:
+The supported office roles are constants in `App\Models\User`. Farmer portal identities use a separate model, table, and session guard described below; never add them to the office-role lists:
 
 | Role | Operational visibility | Operational writes | User management | Backup Folder | Audit Trail |
 | --- | --- | --- | --- | --- | --- |
@@ -229,7 +229,21 @@ The standalone `/login` page keeps the credential form on the left and an eight-
 9. Authenticated sessions have a 15-minute idle limit. Browser activity is shared across tabs and sends a throttled heartbeat only while the user is active.
 10. The interface warns during the final minute, then automatically signs the account out. The server independently rejects stale requests, invalidates the session, and records a `session_timeout` audit event.
 
-There is currently no user-facing registration, forgotten-password, email-verification, or password-reset workflow.
+Office accounts have no public registration, forgotten-password, email-verification, or self-service password-reset workflow. Farmer portal accounts have staff-assisted activation and recovery; they cannot self-register or recover using a birthday.
+
+### Farmer portal
+
+`FarmerPortalAccount` / `farmer_portal_accounts` uses the separate `farmer` session guard; the default `web` guard and office `User` roles remain unchanged. Each account links to one existing farmer and snapshots its municipality. A transfer fails closed until newly authorized staff verify identity and reissue access. Successful sign-in to either audience clears the other audience's session identity.
+
+Staff authorized by the Farmer update policy manage access from **Farmer profile/history → Farmer portal access**. `GET /farmers/{farmer}/portal-account`, POST `/activation`, and POST `/disable` stay within office authentication, scope, veterinary restriction, and synchronized-write middleware. `FarmerPortalAccounts` locks the parent/account with `ConcurrentWrite`, rejects stale versions, derives ownership from the locked farmer, and audits issuance/recovery/disable without credentials. Oversight and veterinary accounts cannot issue access. Staff must perform an actual office identity check, then confirm it before issuing a code.
+
+The canonical login ID is `AGRI-F-` plus the padded farmer ID. Sign-in optionally accepts the exact recorded RSBSA number when it matches one farmer across the registry. Never select the first duplicate or merge identities. This is AgriGOV authentication, not central RSBSA integration. Activation uses the canonical ID and a random 32-character code valid for 24 hours. Store only its SHA-256 hash; render plaintext once in the private staff response, never in a URL, session flash, log, or audit metadata. Codes are consumed under a row lock. Recovery clears the previous password and code and increments `session_version`; disabling also revokes access.
+
+Public forms at `/farmer-portal/login` and `/farmer-portal/activate` retain CSRF and route throttles. Passwords require 15 characters, confirmation, at most 72 bytes, bcrypt hashing, and the existing bounded breached-password verifier. Five authentication failures lock the identifier/IP and account for five minutes; failed-event audit volume is capped. `EnsureFarmerPortalSession` refreshes state, checks active account/ownership/municipality/province, password/activation, session version and idle timeout, authorizes the self-account policy, and never switches the office guard to farmer. Private responses are non-storable and load the history-restoration guard. Portal audit URLs omit query strings. No remember-me, birthday authentication, SMS, or public recovery lookup exists.
+
+`FarmerPortalRecords` supplies read-only My Profile, My Farm and My Assistance. Ownership comes from the authenticated account, not input. Releases must match both farmer and municipality foreign keys, never an identity snapshot. Parcels paginate at 10 and releases at 15. Seasonal crops match the selected year, owned parcel and municipality. Private map HTML has no geometry; `/farmer-portal/parcels/{plot}/geometry` returns one owned parcel capped at 10,000 points and 1 MB stored geometry. Google Maps loads only on request and has loading/retry states. No other farmers, office directory, operational editing, or applications are available.
+
+Deploy the additive `2026_09_20_000100_create_farmer_portal_accounts_table.php` migration against a verified baseline, new portal classes/config/policy/views/routes, and `public/css/farmer-portal.css`, `public/js/farmer-portal.js`, `public/js/farmer-portal-map.js` plus existing `session-history.js`. Mirror assets to both Hostinger public directories before refreshing caches. See `docs/FARMER_PORTAL.md`. Installation does not issue real farmer accounts; production deployment requires owner authorization.
 
 ## 4. Municipality isolation — non-negotiable rules
 

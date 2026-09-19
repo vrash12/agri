@@ -81,7 +81,8 @@ class AuditTrail
                     ? mb_substr((string) $request->userAgent(), 0, 500)
                     : null,
                 'request_method' => $request?->method(),
-                'request_url' => $request?->fullUrl(),
+                'request_url' => $request?->routeIs('farmer-portal.*', 'farmers.portal-account.*')
+                    ? $request->url() : $request?->fullUrl(),
             ];
 
             // Allow the earlier isolated fixtures and rolling deployments to log

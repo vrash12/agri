@@ -32,6 +32,7 @@
             <nav id="welcome-navigation" aria-label="Main navigation">
                 <a href="#services">Services</a>
                 <a href="#initiatives">DA initiatives</a>
+                <a href="{{ route('farmer-portal.login') }}">Farmer sign in</a>
                 <a href="#visit">Before your visit</a>
                 <a class="welcome-button welcome-office-link" href="{{ route('login') }}">Office sign in</a>
             </nav>

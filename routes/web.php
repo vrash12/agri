@@ -79,6 +79,24 @@ Route::get('/land/{token}', [FarmerController::class, 'publicLand'])
     ->middleware('throttle:60,1')
     ->name('farmers.public-land');
 
+// Farmer identities use an independent session guard and never enter office routes.
+Route::prefix('farmer-portal')->name('farmer-portal.')->group(function () {
+    Route::get('/login', [\App\Http\Controllers\FarmerPortalAuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [\App\Http\Controllers\FarmerPortalAuthController::class, 'login'])->middleware('throttle:30,1')->name('login.attempt');
+    Route::get('/activate', [\App\Http\Controllers\FarmerPortalAuthController::class, 'showActivation'])->name('activate');
+    Route::post('/activate', [\App\Http\Controllers\FarmerPortalAuthController::class, 'activate'])->middleware('throttle:20,1')->name('activate.submit');
+    Route::post('/logout', [\App\Http\Controllers\FarmerPortalAuthController::class, 'logout'])->name('logout');
+    Route::middleware(\App\Http\Middleware\EnsureFarmerPortalSession::class)->group(function () {
+        Route::get('/', [\App\Http\Controllers\FarmerPortalController::class, 'home'])->name('home');
+        Route::get('/profile', [\App\Http\Controllers\FarmerPortalController::class, 'profile'])->name('profile');
+        Route::get('/parcels', [\App\Http\Controllers\FarmerPortalController::class, 'parcels'])->name('parcels');
+        Route::get('/parcels/{plot}', [\App\Http\Controllers\FarmerPortalController::class, 'map'])->whereNumber('plot')->name('parcels.map');
+        Route::get('/parcels/{plot}/geometry', [\App\Http\Controllers\FarmerPortalController::class, 'geometry'])->whereNumber('plot')->middleware('throttle:30,1')->name('parcels.geometry');
+        Route::get('/assistance', [\App\Http\Controllers\FarmerPortalController::class, 'assistance'])->name('assistance');
+        Route::post('/heartbeat', fn () => response()->noContent())->middleware('throttle:12,1')->name('heartbeat');
+    });
+});
+
 /*
 |--------------------------------------------------------------------------
 | AUTHENTICATED ROUTES
@@ -91,6 +109,9 @@ Route::middleware([
     'provincial-vet-scope',
     'synchronized',
 ])->group(function () {
+    Route::get('/farmers/{farmer}/portal-account', [\App\Http\Controllers\FarmerPortalAccountController::class, 'show'])->name('farmers.portal-account.show');
+    Route::post('/farmers/{farmer}/portal-account/activation', [\App\Http\Controllers\FarmerPortalAccountController::class, 'issue'])->middleware('throttle:10,1')->name('farmers.portal-account.issue');
+    Route::post('/farmers/{farmer}/portal-account/disable', [\App\Http\Controllers\FarmerPortalAccountController::class, 'disable'])->middleware('throttle:10,1')->name('farmers.portal-account.disable');
     /*
     |--------------------------------------------------------------------------
     | DASHBOARD

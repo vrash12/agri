@@ -36,6 +36,10 @@ return [
     */
 
     'guards' => [
+        'farmer' => [
+            'driver' => 'session',
+            'provider' => 'farmer_portal_accounts',
+        ],
         'web' => [
             'driver' => 'session',
             'provider' => 'users',
@@ -60,6 +64,10 @@ return [
     */
 
     'providers' => [
+        'farmer_portal_accounts' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\FarmerPortalAccount::class,
+        ],
         'users' => [
             'driver' => 'eloquent',
             'model' => App\Models\User::class,

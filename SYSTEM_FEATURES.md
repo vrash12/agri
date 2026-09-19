@@ -598,7 +598,7 @@ The Backup Folder is a protected document repository. It is not an automatic dat
 - Weather guidance is advisory and is not an official PAGASA warning.
 - The farmer registry card is not a replacement for a national government ID.
 - The public parcel map is for verification and does not expose confidential farmer records.
-- There is currently no public self-registration, email verification, forgotten-password, or user-facing password-reset workflow.
+- Office accounts have no public self-registration, email verification, forgotten-password, or user-facing password-reset workflow. Farmer portal recovery is assisted by authorized agriculture staff after identity verification.
 - The project still depends on an approved legacy baseline SQL schema for a completely new installation because the repository does not yet contain migrations for every original core table.
 
 ---
@@ -612,3 +612,13 @@ The assistance entry/edit form provides a searchable beneficiary selector with n
 ### Local Baguio and Benguet account setup
 
 The local setup now matches the four Hostinger Baguio/Benguet accounts and their roles. Baguio City is separately supervised; the Benguet Super Admin cannot access its records. The Benguet office Head Agriculturist is limited to the legacy Benguet office workspace, and the La Trinidad staff account is limited to La Trinidad.
+
+## Farmer portal — September 20, 2026
+
+Farmers can sign in separately from office users to see their own profile, farm parcels, recorded crops by year and wet/dry season, and assistance history. Each account belongs to one verified farmer record. Other farmers and office modules remain inaccessible.
+
+Authorized agriculture staff issue access through **Farmer profile/history → Farmer portal access**, after verifying identity. A single-use code expires in 24 hours; the farmer chooses their own password. A stable AgriGOV login ID always works; a recorded RSBSA number is accepted for sign-in only when unique. Birthdays cannot be used to activate or recover accounts. This does not connect to a central RSBSA login service.
+
+Staff can reissue access for recovery or disable it. Both revoke old access. There is no automatic account creation, SMS delivery, public registration, farmer editing, assistance application, correction-request queue or digital-ID download in this first version. Contact the agriculture office for corrections. The profile shows the existing local registry identifier.
+
+The read-only satellite map loads one owned parcel at a time. The portal has mobile layouts, pagination, missing-record messages, sign-out and inactivity expiration. Installation requires one additive account-table migration. See `docs/FARMER_PORTAL.md` for activation and deployment details. Production deployment and an approved real-farmer pilot are pending.

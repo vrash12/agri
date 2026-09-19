@@ -162,3 +162,11 @@ Verification: 18 OperationsPresentationTest cases passed using isolated SQLite; 
 ### Continuous login gallery — September 18, 2026
 
 The login now loops eight local photographs without Pause/Play, arrows, a counter, or a credits disclosure beside the images. Five added scenes cover livestock, fishing, rice harvest, vegetable harvest, and rice drying. Required author/source/license credits are on `public/photo-credits.html`, linked from the login footer. Reduced motion keeps images still; hidden tabs suspend rotation. Upcoming images load one at a time ahead of display. This supersedes the earlier three-photo control layout.
+
+## Farmer portal — September 20, 2026
+
+Added a separate mobile-friendly farmer shell using shared design tokens, operations styles, module field components, branding and form feedback. Pages cover sign-in, activation, overview, profile, paginated parcels/year-season records, a lazy private parcel map, and assistance history. Office-side access management reuses the authenticated layout and Farmer update policy. Both entry pages link to farmer sign-in.
+
+Includes accessible labels, password reveal controls, generic validation feedback, submission guards, empty/loading/retry states, native year filtering, pagination, session-history protection and active-session heartbeat. Scope is one verified farmer record. No placeholder farmer data is installed.
+
+Verification uses isolated automated fixtures and browser previews; migration is additive and applied locally. Hostinger deployment, office acceptance and a verified farmer pilot remain pending. Implementation and deployment details: `docs/FARMER_PORTAL.md`.

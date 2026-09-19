@@ -34,6 +34,7 @@ class AuthServiceProvider extends ServiceProvider
      * @var array<class-string, class-string>
      */
     protected $policies = [
+        \App\Models\FarmerPortalAccount::class => \App\Policies\FarmerPortalAccountPolicy::class,
         AgriculturalMachinery::class => AgriculturalMachineryPolicy::class,
         Farmer::class => FarmerPolicy::class,
         FarmPlot::class => FarmPlotPolicy::class,

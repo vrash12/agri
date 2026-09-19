@@ -56,6 +56,14 @@ class SecurityHeaders
         $response = $next($request);
         $headers = $response->headers;
 
+        // Private pages must be fetched again after logout instead of coming
+        // from the HTTP cache. The shared layout also handles history snapshots.
+        if ($request->user() || $request->routeIs('login', 'login.attempt', 'logout', 'session.*', 'farmer-portal.*', 'farmers.portal-account.*')) {
+            $headers->set('Cache-Control', 'private, no-store, no-cache, max-age=0, must-revalidate');
+            $headers->set('Pragma', 'no-cache');
+            $headers->set('Expires', '0');
+        }
+
         $headers->set('X-Content-Type-Options', 'nosniff');
 
         // SAMEORIGIN, not DENY: the Backup Folder preview frames this application's
