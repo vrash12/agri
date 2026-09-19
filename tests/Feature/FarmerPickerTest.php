@@ -58,13 +58,13 @@ class FarmerPickerTest extends TestCase
             'is_active' => true,
         ]);
 
-        $this->ffrs = '03-69-06-024-'.substr($suffix, -6);
+        $this->ffrs = '99-99-99-999-'.substr($suffix, -6);
 
         $this->local = Farmer::create([
             'municipality_id' => $this->municipality->id,
-            'first_name' => 'Teodoro',
-            'middle_name' => 'Rabara',
-            'last_name' => 'Zamboangueno',
+            'first_name' => 'Testfirst',
+            'middle_name' => 'Testmiddle',
+            'last_name' => 'Testsurname',
             'ffrs' => $this->ffrs,
             'farm_location' => 'Barangay Uno',
             'farm_municipality' => 'Ramos',
@@ -78,7 +78,7 @@ class FarmerPickerTest extends TestCase
         $this->foreign = Farmer::create([
             'municipality_id' => $this->sibling->id,
             'first_name' => 'Another',
-            'last_name' => 'Zamboangueno',
+            'last_name' => 'Testsurname',
             'ffrs' => $this->ffrs.'-X',
             'farm_location' => 'Barangay Dos',
         ]);
@@ -89,7 +89,7 @@ class FarmerPickerTest extends TestCase
         // The shared surname is the point: both farmers match the term, and only one
         // may be returned.
         $response = $this->actingAs($this->staff)
-            ->getJson(route('farmers.picker', ['q' => 'Zamboangueno']))
+            ->getJson(route('farmers.picker', ['q' => 'Testsurname']))
             ->assertOk();
 
         $values = collect($response->json('farmers'))->pluck('value')->all();
@@ -105,7 +105,7 @@ class FarmerPickerTest extends TestCase
         // neighbour's — the parameter only ever narrows what scope already allows.
         $response = $this->actingAs($this->staff)
             ->getJson(route('farmers.picker', [
-                'q' => 'Zamboangueno',
+                'q' => 'Testsurname',
                 'municipality_id' => $this->sibling->id,
             ]))
             ->assertOk();
@@ -131,7 +131,7 @@ class FarmerPickerTest extends TestCase
     public function test_the_profile_block_is_opt_in(): void
     {
         $without = $this->actingAs($this->staff)
-            ->getJson(route('farmers.picker', ['q' => 'Zamboangueno']))
+            ->getJson(route('farmers.picker', ['q' => 'Testsurname']))
             ->assertOk()
             ->json('farmers.0.dataset');
 
@@ -139,10 +139,10 @@ class FarmerPickerTest extends TestCase
         // handing out personal data for a field that never appears.
         $this->assertArrayNotHasKey('contact', $without);
         $this->assertArrayNotHasKey('tags', $without);
-        $this->assertSame('Zamboangueno, Teodoro Rabara', $without['name']);
+        $this->assertSame('Testsurname, Testfirst Testmiddle', $without['name']);
 
         $with = $this->actingAs($this->staff)
-            ->getJson(route('farmers.picker', ['q' => 'Zamboangueno', 'profile' => 1]))
+            ->getJson(route('farmers.picker', ['q' => 'Testsurname', 'profile' => 1]))
             ->assertOk()
             ->json('farmers.0.dataset');
 
@@ -218,7 +218,7 @@ class FarmerPickerTest extends TestCase
         $rendered = $picker->initialOptions($this->staff, $this->local->id, false, true)->first();
 
         $fetched = $this->actingAs($this->staff)
-            ->getJson(route('farmers.picker', ['q' => 'Zamboangueno', 'profile' => 1]))
+            ->getJson(route('farmers.picker', ['q' => 'Testsurname', 'profile' => 1]))
             ->assertOk()
             ->json('farmers.0');
 
@@ -232,7 +232,7 @@ class FarmerPickerTest extends TestCase
 
         $option = $picker->option($this->local->fresh());
 
-        $this->assertSame('Zamboangueno, Teodoro Rabara — '.$this->ffrs, $option['label']);
+        $this->assertSame('Testsurname, Testfirst Testmiddle — '.$this->ffrs, $option['label']);
 
         $noIdentifier = Farmer::create([
             'municipality_id' => $this->municipality->id,
@@ -249,7 +249,7 @@ class FarmerPickerTest extends TestCase
 
     public function test_a_signed_out_visitor_cannot_search_the_registry(): void
     {
-        $this->getJson(route('farmers.picker', ['q' => 'Zamboangueno']))
+        $this->getJson(route('farmers.picker', ['q' => 'Testsurname']))
             ->assertUnauthorized();
     }
 
