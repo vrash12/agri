@@ -1,5 +1,7 @@
 # Region II planning/reference geofences
 
+Current status: deployed to Hostinger on September 20, 2026 in release 54cc9e4. Earlier local-only statements below describe implementation-stage checks. See FULL_DEPLOYMENT_2026_09_20.md for the deployment receipt and remaining limits.
+
 ## Coverage and supervision
 
 Region II (Cagayan Valley) has 89 municipalities and four cities, for 93 references. Counts follow the [PSA Region II PSGC directory](https://psa.gov.ph/classification/psgc/provinces/0200000000).

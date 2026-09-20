@@ -1,5 +1,7 @@
 # Negros Island Region planning geofences
 
+Current status: deployed to Hostinger on September 20, 2026 in release 54cc9e4. Earlier local-only statements below describe implementation-stage checks. See FULL_DEPLOYMENT_2026_09_20.md for the deployment receipt and remaining limits.
+
 ## Coverage and supervision
 
 The full Negros Island Region includes 63 municipality/city references: 44 municipalities and 19 cities. Identities were checked on September 20, 2026 against the [PSA Region XVIII directory](https://psa.gov.ph/classification/psgc/provinces/1800000000) and [city list](https://psa.gov.ph/classification/psgc/cities/1800000000).

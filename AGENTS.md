@@ -4,6 +4,8 @@ This file applies to the entire repository. It is both a functional map of the s
 
 `SYSTEM_FEATURES.md` is the companion user-facing feature catalog. Keep it synchronized with this guide whenever a feature, permission, integration, or operational limitation changes.
 
+Production release status: the September 20, 2026 Hostinger release installed commit `54cc9e4`, including the welcome collages, dashboard enhancements, assistance coverage, Ramos barangay references, Region II and Negros Island references. The separately verified Mountain Province import added ten municipality references later that day. See `docs/FULL_DEPLOYMENT_2026_09_20.md` for checks, data preservation and remaining limitations; earlier local-only verification notes describe their original implementation stage.
+
 Read [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) before creating or revising user interfaces. It defines the shared management-system theme, typography, forms, tables, actions, responsive behavior, and accessibility targets. Adopt it within the requested scope; its target styles do not imply that every existing screen has already been migrated.
 
 Use [GREEN_YELLOW_THEME.md](GREEN_YELLOW_THEME.md) for the current color treatment: green primary actions, restrained yellow accents, white work surfaces, and separate status colors. Consume the shared tokens; preserve stored parcel colors and readable focus on both light and dark surfaces.
@@ -288,14 +290,14 @@ Route: `GET /` (`welcome`). Guests receive a public farmer-services guide in `re
 
 The page consumes `partials.design-tokens` and its scoped `public/css/welcome.css` / `public/js/welcome.js`. `partials.welcome-slideshow` and `public/js/welcome-slideshow.js` add 20 Philippine agriculture photographs in five distinct four-photo collages, with eight-second playback, collage selection, pause, reduced-motion handling, and hidden-tab suspension. Images hydrate only for the current, upcoming during playback, or manually selected collage. Keyboard interaction pauses playback until explicitly resumed. Navigation, the first collage, and service guidance remain usable without JavaScript. The About AgriGOV section explains six office capabilities without querying operational records. The unmodified existing DA seal identifies the linked DA resources separately from application branding. Preserve the footer photo credits and link to `public/photo-credits.html`; service thumbnails remain lazy-loaded. See `docs/WELCOME_PAGE.md`, `docs/WELCOME_PHOTO_SOURCES.md`, and `docs/WELCOME_COLLAGE_PHOTOS.md` for design, asset provenance, and verification. No migration or new configuration is required. Deploy the slideshow script before rebuilding views; mirror public assets to both Hostinger public directories.
 
-The local homepage redesign uses a neobrutalist photo collage with page-scoped
+The homepage redesign uses a neobrutalist photo collage with page-scoped
 square borders and offset shadows, retaining the shared green/yellow colors,
 Roboto, service disclosures, DA identity, farmer/office entries and photo credits.
 Only photo frames are rotated; controls stay level. The hero rotates five different arrangements of four photographs, with varied
 landscape and portrait frames. Services precede
 the system overview. This welcome-page style is an explicit owner-requested
 exception to the ordinary management-panel geometry; do not apply it globally.
-The redesign remains local until separately deployed; see `docs/WELCOME_PAGE.md`.
+The redesign was deployed September 20, 2026; see `docs/FULL_DEPLOYMENT_2026_09_20.md`.
 
 Welcome-page microinteractions are progressive enhancements: short button presses,
 link and disclosure feedback, active-section navigation, and one-time heading
@@ -926,6 +928,8 @@ The Benguet, remaining-Benguet, remaining-Tarlac, and Bulacan municipality seede
 `BatanesMunicipalityBoundarySeeder`, `CagayanMunicipalityBoundarySeeder`, `IsabelaMunicipalityBoundarySeeder`, `NuevaVizcayaMunicipalityBoundarySeeder`, `QuirinoMunicipalityBoundarySeeder`, and `SantiagoCityBoundarySeeder` explicitly import Region II's 93 planning references (6/29/36/15/6/1). The owner selected a separate Santiago City supervising scope; Isabela administrators cannot access it. Source geography remains Isabela in attribution. The 2020 pinned shapes retain their coordinates and island components; new display names include the PSA-corrected Sanchez Mira and Alfonso Castañeda. Duplicate town names are province-qualified. Each province is atomic and idempotent; an all-region import uses an outer transaction after a verified backup. Existing identities, accounts and operational records are preserved. Keep these seeders out of `DatabaseSeeder` and automatic deployment. Sources, checksums, area checks and explicit commands: `docs/REGION_II_BOUNDARY_SOURCES.md`.
 
 `NegrosOccidentalMunicipalityBoundarySeeder`, `NegrosOrientalMunicipalityBoundarySeeder`, `SiquijorMunicipalityBoundarySeeder`, and `BacolodCityBoundarySeeder` cover the full Negros Island Region with 63 references (31/25/6/1). The owner explicitly selected separate Bacolod City supervision. Current source PSGC metadata uses region prefix `18`; legacy 9-digit and previous 10-digit identifiers remain lookup aliases. Existing names, codes, IDs and geometry are preserved. A Bacolod workspace still assigned to Negros Occidental must undergo an explicit reviewed scope transfer before its seeder runs; the importer must never silently transfer ownership. The local September 20 setup changed only Bacolod's supervising scope and added its owner-only audit, preserving all existing boundary, account and operational rows. These four seeders stay outside `DatabaseSeeder` and automatic deployment. Sources, checksums, limitations and deployment requirements: `docs/NEGROS_ISLAND_BOUNDARY_SOURCES.md`.
+
+`MountainProvinceMunicipalityBoundarySeeder` explicitly imports ten planning references under the Mountain Province supervising scope using `ReferenceMunicipalityBoundaryImporter`. Bontoc uses a province-qualified workspace name/code to avoid Southern Leyte identity collisions. The pinned source checksum, PSGC identities, independent area checks and import instructions are in `docs/MOUNTAIN_PROVINCE_BOUNDARY_SOURCES.md`. The import is atomic and idempotent, preserves existing records, creates no accounts or operational samples, and stays outside `DatabaseSeeder` and automatic deployments. It was explicitly applied and verified on localhost and Hostinger on September 20, 2026; no migration or new configuration was needed.
 
 Run the demo seeder only when demonstration data is intentionally required; run each reference importer explicitly for its intended workspace:
 

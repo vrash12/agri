@@ -1,5 +1,7 @@
 # Ramos barangay planning references
 
+Current status: deployed to Hostinger on September 20, 2026 in release 54cc9e4. Earlier local-only statements below describe implementation-stage checks. See FULL_DEPLOYMENT_2026_09_20.md for the deployment receipt and remaining limits.
+
 ## Local pilot — September 20, 2026
 
 Open **Municipality geofences → Ramos, Tarlac**. The Barangay boundaries panel

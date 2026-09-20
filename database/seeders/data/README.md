@@ -284,7 +284,7 @@ Current PSGC metadata uses Region XVIII prefix `18`; the older 9-digit and 10-di
 
 Run only the explicit `NegrosOccidentalMunicipalityBoundarySeeder`, `NegrosOrientalMunicipalityBoundarySeeder`, `SiquijorMunicipalityBoundarySeeder`, and `BacolodCityBoundarySeeder` after a verified backup. An existing Bacolod workspace under Negros Occidental requires an explicit reviewed ownership transfer first; seeders reject wrong supervision and never move it automatically. Imports create no accounts or operational records and remain excluded from `DatabaseSeeder` and automatic deployment.
 
-See [Negros Island sources and deployment requirements](../../../docs/NEGROS_ISLAND_BOUNDARY_SOURCES.md) for current identities, checksums, attribution, accuracy limitations and explicit commands. The [local setup record](../../../docs/NEGROS_ISLAND_LOCAL_SETUP_2026_09_20.md) records the authorized Bacolod separation and verification. Production has not been changed by this update.
+See [Negros Island sources and deployment requirements](../../../docs/NEGROS_ISLAND_BOUNDARY_SOURCES.md) for current identities, checksums, attribution, accuracy limitations and explicit commands. The [local setup record](../../../docs/NEGROS_ISLAND_LOCAL_SETUP_2026_09_20.md) records the authorized Bacolod separation and verification. The explicitly authorized production import completed September 20, 2026; see [the release record](../../../docs/FULL_DEPLOYMENT_2026_09_20.md).
 
 ## Region I (Ilocos Region)
 
@@ -299,3 +299,7 @@ The five new province snapshots and two independent-city snapshots add 88 refere
 ## Region II / Cagayan Valley references
 
 Six pinned snapshots supply 93 city/municipality boundaries: Batanes 6, Cagayan 29, Isabela 36, Nueva Vizcaya 15, Quirino 6 and Santiago City 1. Santiago has a separately authorized supervision scope. Sources, identity/area checks, checksums, commands and deployment limitations are in [REGION_II_BOUNDARY_SOURCES.md](../../../docs/REGION_II_BOUNDARY_SOURCES.md). These are explicit, idempotent maintenance imports; no automatic seeding, accounts or operational samples. Back up before importing and wrap a complete regional addition in one transaction.
+
+## Mountain Province references
+
+`mountain_province_municipality_reference_boundaries.geojson` contains ten unchanged geoBoundaries ADM3 planning references from revision `9469f09` (boundary year 2020, CC BY 3.0 IGO). Its LF-normalized SHA-256 is `752130e1d81994e34fc2db89f849bcd0d63b0cd8b14540c3c1afc3c5aa1f96f5`. Run only `MountainProvinceMunicipalityBoundarySeeder` after a verified backup; it remains outside `DatabaseSeeder`. Bontoc is province-qualified, all municipalities share Mountain Province supervision, and existing records remain unchanged. No accounts or operational samples are created. Local and production imports completed September 20, 2026. See [sources, identity and area checks, limitations and explicit import instructions](../../../docs/MOUNTAIN_PROVINCE_BOUNDARY_SOURCES.md).

@@ -1,5 +1,7 @@
 # Public farmer welcome page
 
+Current status: deployed to Hostinger on September 20, 2026 in release 54cc9e4. Earlier local-only statements below describe implementation-stage checks. See FULL_DEPLOYMENT_2026_09_20.md for the deployment receipt and remaining limits.
+
 ## Implementation scope
 
 `GET /` now renders the welcome view for guests. Existing authenticated root redirects and `/login` are preserved. Public content is static, needs no database query, and exposes no farmer records, counts, maps, or tokens. No migration, live feed, CMS, new configuration, public application, or registration workflow is introduced.
