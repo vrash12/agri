@@ -7,13 +7,13 @@
   <section class="user-editor-hero">
     <div>
       <span class="user-editor-eyebrow">
-        {{ $manager->isSystemOwner() ? 'System Administration' : ($isMunicipalHeadManager ? 'Municipal Administration' : $manager->province?->name . ' Administration') }}
+        {{ $manager->isSystemOwner() ? 'System Administration' : ($isMunicipalHeadManager ? 'Municipal Administration' : $manager->scopeLabel() . ' Administration') }}
       </span>
       <h1>{{ $isMunicipalHeadManager ? 'Create Municipal Staff' : 'Create User Account' }}</h1>
       <p>
         {{ $isMunicipalHeadManager
             ? 'Add a municipal-staff account for your municipality.'
-            : ($manager->isSystemOwner() ? 'Add a province super administrator or staff account and assign its office scope.' : 'Add staff accounts within your province and assign the correct office scope.') }}
+            : ($manager->isSystemOwner() ? 'Add a regional head, provincial head or staff account and assign its office scope.' : 'Add permitted accounts within your assigned area and select their office scope.') }}
       </p>
     </div>
     <a class="module-button" href="{{ route('admins.index') }}">Back to users</a>

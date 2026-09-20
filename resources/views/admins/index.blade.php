@@ -6,6 +6,7 @@
 @php
   $roleLabels = [
     \App\Models\User::ROLE_SYSTEM_OWNER => 'System Owner',
+    \App\Models\User::ROLE_REGIONAL_HEAD => 'Regional Head',
     \App\Models\User::ROLE_SUPER_ADMIN => 'Super Admin',
     \App\Models\User::ROLE_PROVINCIAL_STAFF => 'Provincial Staff',
     \App\Models\User::ROLE_PROVINCIAL_VET => 'Provincial Veterinary Office',
@@ -15,6 +16,7 @@
 
   $roleClasses = [
     \App\Models\User::ROLE_SYSTEM_OWNER => 'is-green',
+    \App\Models\User::ROLE_REGIONAL_HEAD => 'is-green',
     \App\Models\User::ROLE_SUPER_ADMIN => 'is-purple',
     \App\Models\User::ROLE_PROVINCIAL_STAFF => 'is-blue',
     \App\Models\User::ROLE_PROVINCIAL_VET => 'is-green',
@@ -28,14 +30,16 @@
     <div>
       <div class="user-management-eyebrow">
         <span></span>
-        {{ $manager->isSystemOwner() ? 'System Administration' : ($isMunicipalHeadManager ? (($manager->municipality?->name ?? 'Municipal') . ' Agriculture Office') : $manager->province?->name . ' Provincial Administration') }}
+        {{ $manager->isSystemOwner() ? 'System Administration' : $manager->scopeLabel() . ' Administration' }}
       </div>
       <h1>{{ $isMunicipalHeadManager ? 'Municipal Staff Management' : 'User Management' }}</h1>
       <p>
         @if($isMunicipalHeadManager)
           Manage municipal-staff accounts assigned to your municipality, including account status and login access.
         @elseif($manager->isSystemOwner())
-          Manage province super administrators, staff accounts, and office assignments across supervised provinces.
+          Manage regional heads, province super administrators, staff accounts, and office assignments.
+        @elseif($manager->isRegionalHead())
+          Manage provincial heads and staff accounts within {{ $manager->scopeLabel() }}, including its separate city scopes.
         @else
           Manage provincial agriculture and veterinary accounts, head
           agriculturists, municipal staff, municipality assignments, account
@@ -109,7 +113,7 @@
         >
       </div>
 
-      @if($manager->isSystemOwner())
+      @if($manager->canChooseProvince())
         <div class="user-filter-field">
           <label for="province_id">Province</label>
           <select class="module-input input js-select" id="province_id" name="province_id">
@@ -131,7 +135,7 @@
                 value="{{ $municipality->id }}"
                 @selected((int) $municipalityId === (int) $municipality->id)
               >
-                {{ $municipality->name }}{{ $manager->isSystemOwner() ? ' · ' . $municipality->province : '' }}
+                {{ $municipality->name }}{{ $manager->canChooseProvince() ? ' · ' . $municipality->province : '' }}
               </option>
             @endforeach
           </select>
@@ -238,7 +242,7 @@
                 @if($account->isProvincialUser())
                   <div class="user-office-name">{{ $account->office_label }}</div>
                   <div class="user-office-sub">
-                    {{ $account->isSystemOwner() ? 'All supervised provinces' : ($account->province?->name ?? 'Province not assigned') }}{{ $account->isProvincialVeterinaryOffice() ? ' · Animal Health only' : '' }}
+                    {{ $account->scopeLabel() }}{{ $account->isProvincialVeterinaryOffice() ? ' · Animal Health only' : '' }}
                   </div>
                 @else
                   <div class="user-office-name">{{ $account->municipality?->name ?? 'Not assigned' }}</div>

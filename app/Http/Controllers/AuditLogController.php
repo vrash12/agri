@@ -240,6 +240,11 @@ class AuditLogController extends Controller
         $query = AuditLog::query();
 
         // Never infer historical scope from the actor's current assignment.
+        if ($user->isRegionalHead()) {
+            return $query->whereIn('province_id', $this->municipalityAccess
+                ->scopeProvinces(\App\Models\Province::query(), $user)->select('provinces.id'));
+        }
+
         return $user->isSystemOwner()
             ? $query
             : $query->where('province_id', $user->province_id)->whereNotNull('province_id');

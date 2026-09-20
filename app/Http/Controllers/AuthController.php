@@ -240,6 +240,7 @@ class AuthController extends Controller
 
         return match ($user->role) {
             User::ROLE_SYSTEM_OWNER => redirect()->intended(route('dashboard')),
+            User::ROLE_REGIONAL_HEAD => redirect()->intended(route('dashboard')),
             User::ROLE_SUPER_ADMIN => redirect()->intended(
                 route('dashboard')
             ),

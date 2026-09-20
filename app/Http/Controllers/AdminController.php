@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Municipality;
 use App\Models\Province;
+use App\Models\Region;
 use App\Models\User;
 use App\Support\ConcurrentWrite;
 use App\Support\MunicipalityAccess;
@@ -12,6 +13,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
@@ -33,11 +35,12 @@ class AdminController extends Controller
         $municipalityId = $manager->isMunicipalHead()
             ? (int) $manager->municipality_id
             : ($request->integer('municipality_id') ?: null);
-        $provinceId = $manager->isSystemOwner() ? ($request->integer('province_id') ?: null) : $manager->province_id;
+        $provinceId = $manager->canChooseProvince() ? ($request->integer('province_id') ?: null) : $manager->province_id;
         $perPage = max(5, min((int) $request->query('per_page', 10), 100));
         $manageableUsers = $this->manageableUsersQuery($manager);
         $query = (clone $manageableUsers)
             ->with(['municipality:id,name,province,province_id', 'province:id,name'])
+            ->when(Schema::hasTable('regions'), fn ($builder) => $builder->with('region:id,name'))
             ->when($q !== '', function ($builder) use ($q) {
                 $builder->where(function ($sub) use ($q) {
                     $sub->where('name', 'like', "%{$q}%")->orWhere('email', 'like', "%{$q}%");
@@ -47,10 +50,10 @@ class AdminController extends Controller
             ->when($status === 'active', fn ($builder) => $builder->where('is_active', true))
             ->when($status === 'inactive', fn ($builder) => $builder->where('is_active', false))
             ->when(! $manager->isMunicipalHead() && $municipalityId, fn ($builder) => $builder->where('municipality_id', $municipalityId))
-            ->when($manager->isSystemOwner() && $provinceId, fn ($builder) => $this->scopeUsersToProvince($builder, (int) $provinceId));
+            ->when($manager->canChooseProvince() && $provinceId, fn ($builder) => $this->scopeUsersToProvince($builder, (int) $provinceId));
 
         $users = $query
-            ->orderByRaw("CASE role WHEN 'system_owner' THEN 0 WHEN 'super_admin' THEN 1 WHEN 'provincial_staff' THEN 2 WHEN 'provincial_vet' THEN 3 WHEN 'municipal_head' THEN 4 WHEN 'municipal_staff' THEN 5 ELSE 6 END")
+            ->orderByRaw("CASE role WHEN 'system_owner' THEN 0 WHEN 'regional_head' THEN 1 WHEN 'super_admin' THEN 2 WHEN 'provincial_staff' THEN 3 WHEN 'provincial_vet' THEN 4 WHEN 'municipal_head' THEN 5 WHEN 'municipal_staff' THEN 6 ELSE 7 END")
             ->orderBy('name')->paginate($perPage)->withQueryString();
         $stats = [
             'total' => (clone $manageableUsers)->count(),
@@ -138,20 +141,22 @@ class AdminController extends Controller
         $role = $ownAccount ? $account->role : ($manager->isMunicipalHead() ? User::ROLE_MUNICIPAL_STAFF : $request->input('role'));
         $municipal = in_array($role, User::MUNICIPAL_ROLES, true);
         $provincial = in_array($role, User::PROVINCIAL_ROLES, true);
+        $regional = $role === User::ROLE_REGIONAL_HEAD;
         $input = $request->all();
         if ($ownAccount) {
-            $input = array_merge($input, $account->only(['role', 'province_id', 'municipality_id', 'is_active']));
+            $input = array_merge($input, $account->only(['role', 'region_id', 'province_id', 'municipality_id', 'is_active']));
         } elseif ($manager->isMunicipalHead()) {
             $input['role'] = User::ROLE_MUNICIPAL_STAFF;
             $input['municipality_id'] = $manager->municipality_id;
         }
-        if ($provincial && ! $manager->isSystemOwner() && ! array_key_exists('province_id', $input)) {
+        if ($provincial && ! $manager->canChooseProvince() && ! array_key_exists('province_id', $input)) {
             $input['province_id'] = $manager->province_id;
         }
         $data = validator($input, [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($account?->id)],
             'role' => ['required', Rule::in($ownAccount ? [$account->role] : array_keys($this->roleOptions($manager)))],
+            'region_id' => [Rule::requiredIf($regional), 'nullable', 'integer'],
             'province_id' => [Rule::requiredIf($provincial), 'nullable', 'integer'],
             'municipality_id' => [Rule::requiredIf($municipal), 'nullable', 'integer'],
             'is_active' => ['nullable', 'boolean'],
@@ -159,9 +164,21 @@ class AdminController extends Controller
             // staff toward predictable substitutions. The breach lookup is
             // k-anonymous and passes if the service cannot be reached, so an office
             // without internet can still create accounts.
-            'password' => [! $account || ($account->isSuperAdmin() && ! $account->is_active && ! empty($input['is_active'])) ? 'required' : 'nullable', 'string', Password::min(12)->uncompromised(), 'confirmed'],
+            'password' => [! $account || (($account->isSuperAdmin() || $account->isRegionalHead()) && ! $account->is_active && ! empty($input['is_active'])) ? 'required' : 'nullable', 'string', Password::min(12)->uncompromised(), 'confirmed'],
         ])->validate();
 
+        if ($regional) {
+            $region = Region::query()->active()->whereKey($data['region_id'])->lockForUpdate()->first();
+            if (! $region || (! $manager->isSystemOwner() && ! $ownAccount)) {
+                throw ValidationException::withMessages(['region_id' => 'Select an active region. Only the System Owner assigns Regional Heads.']);
+            }
+            $data['region_id'] = (int) $region->id;
+        } elseif ($account?->region_id !== null) {
+            $data['region_id'] = null;
+        } else {
+            // Ignore crafted region assignments on roles that do not use them.
+            unset($data['region_id']);
+        }
         if ($provincial) {
             $province = Province::query()->whereKey($data['province_id'])->where('is_active', true)->lockForUpdate()->first();
             if (! $province || ! $manager->canAccessProvince($province->id)) {
@@ -196,9 +213,11 @@ class AdminController extends Controller
         return [
             'manager' => $manager,
             'municipalities' => $this->municipalityAccess->choices($manager),
-            'provinces' => Province::query()->where('is_active', true)
-                ->when(! $manager->isSystemOwner(), fn ($query) => $query->whereKey($manager->province_id))
+            'provinces' => $this->municipalityAccess->scopeProvinces(Province::query()->active(), $manager)
                 ->orderBy('name')->get(['id', 'name']),
+            // Keep the existing office forms usable during the additive schema rollout.
+            'regions' => $manager->isSystemOwner() && Schema::hasTable('regions')
+                ? Region::query()->active()->orderBy('name')->get(['id', 'name']) : collect(),
             'roleOptions' => $this->roleOptions($manager),
             'isMunicipalHeadManager' => $manager->isMunicipalHead(),
         ];
@@ -215,8 +234,11 @@ class AdminController extends Controller
             User::ROLE_MUNICIPAL_HEAD => 'Head Agriculturist',
             User::ROLE_MUNICIPAL_STAFF => 'Municipal Staff',
         ];
-        if ($manager->isSystemOwner() || $forFilter) {
+        if ($manager->canChooseProvince() || $forFilter) {
             $roles = [User::ROLE_SUPER_ADMIN => 'Super Admin', ...$roles];
+        }
+        if ($manager->isSystemOwner() || ($manager->isRegionalHead() && $forFilter)) {
+            $roles = [User::ROLE_REGIONAL_HEAD => 'Regional Head', ...$roles];
         }
         if ($manager->isSystemOwner() && $forFilter) {
             $roles = [User::ROLE_SYSTEM_OWNER => 'System Owner', ...$roles];
@@ -251,10 +273,23 @@ class AdminController extends Controller
         if ($manager->isMunicipalHead()) {
             return $query->where('role', User::ROLE_MUNICIPAL_STAFF)->where('municipality_id', $manager->municipality_id);
         }
+        if ($manager->isRegionalHead()) {
+            return $query->where(function (Builder $scope) use ($manager): void {
+                $scope->whereKey($manager->id)->orWhere(function (Builder $accounts) use ($manager): void {
+                    $accounts->where(function (Builder $provincial) use ($manager): void {
+                        $provincial->whereIn('role', User::PROVINCIAL_ROLES)
+                            ->whereIn('province_id', $this->municipalityAccess->scopeProvinces(Province::query(), $manager)->select('provinces.id'));
+                    })->orWhere(function (Builder $municipal) use ($manager): void {
+                        $municipal->whereIn('role', User::MUNICIPAL_ROLES)
+                            ->whereIn('municipality_id', $this->municipalityAccess->scopeMunicipalities(Municipality::query(), $manager)->select('municipalities.id'));
+                    });
+                });
+            });
+        }
 
         return $query->where(function ($scope) use ($manager) {
             $scope->whereKey($manager->id)->orWhere(function ($sub) use ($manager) {
-                $sub->whereNotIn('role', [User::ROLE_SYSTEM_OWNER, User::ROLE_SUPER_ADMIN]);
+                $sub->whereNotIn('role', [User::ROLE_SYSTEM_OWNER, User::ROLE_REGIONAL_HEAD, User::ROLE_SUPER_ADMIN]);
                 $this->scopeUsersToProvince($sub, (int) $manager->province_id);
             });
         });

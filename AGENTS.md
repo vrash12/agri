@@ -211,14 +211,15 @@ The supported office roles are constants in `App\Models\User`. Farmer portal ide
 
 | Role | Operational visibility | Operational writes | User management | Backup Folder | Audit Trail |
 | --- | --- | --- | --- | --- | --- |
-| `system_owner` | All configured provinces | No routine operational writes; may manage geofences | Create/manage province Super Admins and lower roles; own privileges and all owner accounts protected | No access | Global access and CSV export |
+| `system_owner` | All configured provinces | No routine operational writes; may manage geofences | Create/manage Regional Heads, province Super Admins and lower roles; own privileges and all owner accounts protected | No access | Global access and CSV export |
+| `regional_head` | Assigned region's active provinces and separate city scopes | Read-only, including geofences | Provincial Super Admins and lower roles within the region; own profile only | No access | Assigned provinces' snapshots and CSV export; global/unknown events excluded |
 | `super_admin` | Assigned province only | No routine operational writes; may manage geofences in own province | Provincial and municipal staff in own province; own profile only; no peer/owner management | No access | Own province snapshots and CSV export |
 | `provincial_staff` | Assigned province only | Yes; must choose an authorized municipality for new records | No | Own province, subject to policy | No |
 | `provincial_vet` | Assigned province, Animal Health only | Yes, Animal Health only; must choose the municipality for new records | No | No access | No |
 | `municipal_head` | Assigned municipality only | Yes | May manage only `municipal_staff` in the same municipality | Assigned municipality only | No |
 | `municipal_staff` | Assigned municipality only | Yes | No | Assigned municipality only | No |
 
-All accounts must be active. Provincial roles require an existing active province; municipal roles require an existing active municipality and supervising province. `EnsureAccountScope` checks authenticated application requests, and the Sanctum user endpoint uses the same check. Login independently validates scope. UI visibility is not security: controllers must still call policies for every protected action.
+All accounts must be active. Regional Heads require an active region with no province/municipality assignment; provincial roles require an existing active province; municipal roles require an existing active municipality and supervising province. Only the System Owner assigns Regional Heads. `EnsureAccountScope` checks authenticated application requests, and the Sanctum user endpoint uses the same check. Login independently validates scope. UI visibility is not security: controllers must still call policies for every protected action.
 
 ### Authentication workflow
 
@@ -257,6 +258,7 @@ Deploy the additive `2026_09_20_000100_create_farmer_portal_accounts_table.php` 
 Operational ownership remains the numeric foreign key `municipality_id`, not the human-readable `farm_municipality` field. Province supervision uses `municipalities.province_id -> provinces.id` and `users.province_id` for provincial roles. The legacy municipality `province` string remains a display/compatibility field and must never decide access.
 
 - Only `system_owner` has global visibility. Null, inactive, missing, or unsupported scope fails closed.
+- `regional_head` reads are scoped through `provinces.region_id` and `users.region_id`, including explicitly configured independent-city scopes. `MunicipalityAccess::scopeProvinces()` and `scopeMunicipalities()` enforce this before lists, maps, aggregates or exports. Regional Heads manage only provincial/lower accounts in their region, cannot edit operational records or geofences, and cannot manage owner/peer identities or their own privileges. See `docs/REGIONAL_SUPERVISION.md` for the additive migration and explicit membership configuration; no municipality ownership is changed.
 - `MunicipalityAccess::scopeMunicipalities()` scopes municipality queries; `scope()`, `choices()`, and `resolveForWrite()` enforce province or municipality ownership for operational work.
 - `User::canAccessAllMunicipalities()` is a compatibility UI helper for choosing multiple municipalities within authorized scope; it is never permission to return an unfiltered query.
 - System Owner account setup and province migration are explicit operations documented in `PROVINCE_SUPERVISION.md`; never guess assignments or promote an arbitrary account automatically.
@@ -657,7 +659,7 @@ Functions:
 - list, search, filter, paginate, create, edit, activate/deactivate, change role, reset password, and delete accounts;
 - hash every new or changed password with Laravel `Hash`;
 - require at least 12 characters and refuse passwords found in a known breach corpus, using Laravel's k-anonymous `uncompromised()` check. `AppServiceProvider` binds that verifier with a three-second timeout, and an unreachable service is treated as "not breached" so an office without connectivity can still create accounts. Composition rules are deliberately not used; length and the breach check are the controls;
-- require at least eight characters and confirmation in account forms;
+- require password confirmation in account forms;
 - require an active municipality for municipal roles and clear `municipality_id` for provincial roles;
 - let province Super Admins create `provincial_vet` accounts assigned to their province without a municipality; these accounts are restricted to province-wide Animal Health routes and policies;
 - permit only one active municipal head per municipality;
@@ -665,7 +667,8 @@ Functions:
 - let municipal heads manage only municipal-staff accounts in their municipality;
 - let province Super Admins manage only provincial and municipal staff in their province, with profile-only edits to their own account;
 - let the System Owner create, assign, activate, edit, or delete province Super Admins and lower roles, while preventing own privilege changes and all System Owner deletion/creation in the web UI;
-- require a new password when activating an inactive Super Admin prepared by the setup command;
+- let the System Owner manage Regional Heads; Regional Heads manage provincial Super Admins/lower accounts only in their assigned region. Regional assignment appears only for that role and self-assignment stays fixed. Normal password validation remains unchanged; explicit private initial provisioning is not a reusable validation bypass;
+- require a new password when activating an inactive Super Admin or Regional Head;
 - reauthorize the freshly locked manager and target inside account mutations before saving.
 
 Passwords are one-way hashes and cannot be retrieved. Developers may reset a password, but must never attempt to display existing passwords or store plaintext credentials.

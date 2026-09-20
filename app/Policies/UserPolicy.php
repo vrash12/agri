@@ -15,7 +15,7 @@ class UserPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->isSystemOwner() || $user->isSuperAdmin() || $user->isMunicipalHead();
+        return $user->canOverseeSystem() || $user->isMunicipalHead();
     }
 
     public function create(User $user): bool
@@ -30,7 +30,7 @@ class UserPolicy
 
     public function update(User $user, User $account): bool
     {
-        if ($user->is($account) && ($user->isSystemOwner() || $user->isSuperAdmin())) {
+        if ($user->is($account) && $user->canOverseeSystem()) {
             return true;
         }
 
@@ -52,6 +52,16 @@ class UserPolicy
 
         if ($user->isSystemOwner()) {
             return true;
+        }
+
+        if ($account->isRegionalHead()) {
+            return false;
+        }
+
+        if ($user->isRegionalHead()) {
+            return $account->requiresProvince()
+                ? $user->canAccessProvince($account->province_id)
+                : ($account->isMunicipalUser() && $user->canAccessMunicipality($account->municipality_id));
         }
 
         if ($user->isSuperAdmin()) {

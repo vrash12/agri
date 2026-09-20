@@ -52,6 +52,7 @@
           ? (($user->province?->name ?: 'Unassigned province') . ' Provincial Agriculture Office')
           : (($municipalityName ?: 'Unassigned') . ' Municipal Agriculture Office'));
   $scopeLabel = $user->scopeLabel();
+  if ($user->isRegionalHead()) $officeLabel = $scopeLabel . ' Regional Agriculture Office';
 
   $mappingCoverage = max(0, min(100, (float) ($stats['mapping_coverage'] ?? 0)));
   $attentionCategories = collect(['unmapped_farmers', 'farmers_missing_ffrs', 'farmers_missing_location', 'machineries_needing_attention'])
@@ -481,7 +482,7 @@
       <div class="ops-reports-content">
       <div class="ops-panel-header ops-municipality-heading">
         <div>
-          <span class="ops-panel-kicker">{{ $user->isSystemOwner() ? 'System administration' : 'Province administration' }}</span>
+          <span class="ops-panel-kicker">{{ $user->isSystemOwner() ? 'System administration' : ($user->isRegionalHead() ? 'Regional administration' : 'Province administration') }}</span>
           <h2>Municipality performance</h2>
           <p>Compare local offices, program delivery, staffing, parcel coverage, and records that need attention.</p>
         </div>

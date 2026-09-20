@@ -32,7 +32,7 @@ class MunicipalityBoundaryPolicy
 
     public function create(User $user): bool
     {
-        return $user->canOverseeSystem() && $user->hasUsableScope();
+        return ($user->isSystemOwner() || $user->isSuperAdmin()) && $user->hasUsableScope();
     }
 
     public function import(User $user): bool

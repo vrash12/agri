@@ -87,7 +87,7 @@ class AuditModelObserver
                 'auditable' => $model,
                 // Reassignment history contains data from both scopes. Only the
                 // System Owner can review this cross-province administrative event.
-                'owner_only' => $event === 'updated' && ($model->wasChanged('province_id') || $this->changedMunicipalityProvince($model)),
+                'owner_only' => $event === 'updated' && ($model->wasChanged('region_id') || $model->wasChanged('province_id') || $this->changedMunicipalityProvince($model)),
                 'old_values' => $oldValues,
                 'new_values' => $newValues,
                 'metadata' => $metadata,

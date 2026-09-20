@@ -98,9 +98,25 @@
         @endif
       </div>
 
+      <div class="user-field {{ $selectedRole === \App\Models\User::ROLE_REGIONAL_HEAD ? '' : 'is-hidden' }}" id="regionField">
+        <label for="region_id">Region <span>*</span></label>
+        @if($lockedAssignment)
+          <input type="hidden" name="region_id" value="{{ $account->region_id }}">
+          <div class="locked-value"><strong>{{ $account->region?->name ?? 'Region not assigned' }}</strong><small>Your region assignment is fixed.</small></div>
+        @elseif($manager->isSystemOwner())
+          <select class="module-input input js-select" id="region_id" name="region_id">
+            <option value="">— Select region —</option>
+            @foreach($regions as $region)
+              <option value="{{ $region->id }}" @selected((int) old('region_id', $account->region_id) === (int) $region->id)>{{ $region->name }}</option>
+            @endforeach
+          </select>
+          <small>Read-only oversight and account management across this region, including its separate city scopes.</small>
+        @endif
+      </div>
+
       <div class="user-field {{ in_array($selectedRole, \App\Models\User::PROVINCIAL_ROLES, true) ? '' : 'is-hidden' }}" id="provinceField">
         <label for="province_id">Province <span>*</span></label>
-        @if($manager->isSystemOwner() && !$lockedAssignment)
+        @if($manager->canChooseProvince() && !$lockedAssignment)
           <select class="module-input input js-select" id="province_id" name="province_id">
             <option value="">— Select province —</option>
             @foreach($provinces as $province)
@@ -134,7 +150,7 @@
                 value="{{ $municipality->id }}"
                 @selected((int) $selectedMunicipality === (int) $municipality->id)
               >
-                {{ $municipality->name }}{{ $manager->isSystemOwner() ? ' · ' . $municipality->province : '' }}
+                {{ $municipality->name }}{{ $manager->canChooseProvince() ? ' · ' . $municipality->province : '' }}
               </option>
             @endforeach
           </select>
@@ -232,12 +248,17 @@
     const provinceField = document.getElementById('provinceField');
     const provinceSelect = document.getElementById('province_id');
     const provincialRoles = ['super_admin', 'provincial_staff', 'provincial_vet'];
+    const regionField = document.getElementById('regionField');
+    const regionSelect = document.getElementById('region_id');
 
     function syncMunicipalityField() {
       if (!roleSelect) return;
 
       const municipal = municipalRoles.includes(roleSelect.value);
       const provincial = provincialRoles.includes(roleSelect.value);
+      const regional = roleSelect.value === 'regional_head';
+      regionField?.classList.toggle('is-hidden', !regional);
+      if (regionSelect) regionSelect.required = regional;
       municipalityField?.classList.toggle('is-hidden', !municipal);
       provinceField?.classList.toggle('is-hidden', !provincial);
       if (municipalitySelect) municipalitySelect.required = municipal;

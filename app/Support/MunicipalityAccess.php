@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Municipality;
+use App\Models\Province;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -34,8 +35,26 @@ class MunicipalityAccess
         if ($user->requiresProvince()) {
             return $query->where('municipalities.province_id', $user->province_id);
         }
+        if ($user->isRegionalHead()) {
+            return $query->whereIn('municipalities.province_id', $this->scopeProvinces(Province::query(), $user)->select('provinces.id'));
+        }
 
         return $query->whereKey($user->municipality_id);
+    }
+
+    public function scopeProvinces(Builder $query, User $user): Builder
+    {
+        if (! $user->hasUsableScope()) {
+            return $query->whereRaw('1 = 0');
+        }
+        if ($user->isSystemOwner()) {
+            return $query;
+        }
+        if ($user->isRegionalHead()) {
+            return $query->where('provinces.region_id', $user->region_id)->where('provinces.is_active', true);
+        }
+
+        return $query->whereKey($user->requiresProvince() ? $user->province_id : $user->municipality?->province_id);
     }
 
     public function applyOptionalFilter(Builder $query, User $user, mixed $requestedMunicipalityId, ?string $qualifiedColumn = null): Builder

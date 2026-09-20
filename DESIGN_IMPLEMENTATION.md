@@ -1,5 +1,9 @@
 # Design and UX implementation record
 
+## Regional account assignment — September 21, 2026
+
+The existing user-management form now provides a Region selector for System Owners assigning Regional Heads. Regional Heads see only permitted provinces/cities when assigning provincial accounts, retain a fixed own assignment, and see their region in navigation and dashboards. Shared form styles, error messages and record-version controls are retained. Verification and deployment status are recorded in `docs/REGIONAL_SUPERVISION.md`.
+
 ## Ramos barangay reference layer — September 20, 2026
 
 Municipality geofences now includes a read-only barangay panel using the existing

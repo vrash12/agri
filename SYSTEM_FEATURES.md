@@ -4,6 +4,8 @@ Deployment status: the September 20, 2026 Hostinger release includes the welcome
 
 ## 1. System overview
 
+Regional Heads can oversee the active provinces and separate city scopes in their assigned region, view operational reports/maps, and manage provincial heads and lower accounts there. Operational editing and geofence editing remain unavailable to them. Provincial heads use the province-limited Super Admin role. The System Owner manages Regional Head assignments. See `docs/REGIONAL_SUPERVISION.md` for setup and deployment status.
+
 The system uses the **AgriGOV** name and leaf-and-field logo across its public pages, office login, application navigation, and browser tabs. Official office seals remain on farmer registry cards; the cards identify AgriGOV as the application.
 
 The Agriculture Information System is a Laravel and MySQL platform for multiple supervised provinces for managing agricultural records across the Provincial Agriculture Office and participating municipal agriculture offices. It combines farmer registration, GIS land mapping, agricultural and fisheries assistance, animal-health services, cooperative management, machinery monitoring, protected files, dashboards, reporting, user administration, and audit records in one municipality-aware system.
@@ -505,7 +507,7 @@ The Backup Folder is a protected document repository. It is not an automatic dat
 - Assign an active province to Super Admin, Provincial Staff, and Provincial Veterinary Office accounts.
 - Clear municipality assignment for provincial roles.
 - Reset passwords securely.
-- Require password confirmation and a minimum of eight characters.
+- Require password confirmation, at least twelve characters and a breached-password check in normal account forms.
 - Prevent more than one active Municipal Head for the same municipality.
 - Prevent self-deletion.
 - System Owners can manage provincial Super Admin accounts. Super Admins cannot manage other Super Admins or the System Owner.

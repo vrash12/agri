@@ -7,7 +7,7 @@
   <section class="user-editor-hero">
     <div>
       <span class="user-editor-eyebrow">
-        {{ $manager->isSystemOwner() ? 'System Administration' : ($isMunicipalHeadManager ? 'Municipal Administration' : $manager->province?->name . ' Administration') }}
+        {{ $manager->isSystemOwner() ? 'System Administration' : ($isMunicipalHeadManager ? 'Municipal Administration' : $manager->scopeLabel() . ' Administration') }}
       </span>
       <h1>{{ $isMunicipalHeadManager ? 'Edit Municipal Staff' : 'Edit User Account' }}</h1>
       <p>{{ $isOwnAccount ? 'Update your profile details or password.' : "Update {$account->name}'s profile, access assignment, status, or password." }}</p>

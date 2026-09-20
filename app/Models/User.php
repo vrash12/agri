@@ -21,6 +21,8 @@ class User extends Authenticatable
 
     public const ROLE_SYSTEM_OWNER = 'system_owner';
 
+    public const ROLE_REGIONAL_HEAD = 'regional_head';
+
     public const ROLE_SUPER_ADMIN = 'super_admin';
 
     public const ROLE_PROVINCIAL_STAFF = 'provincial_staff';
@@ -36,6 +38,7 @@ class User extends Authenticatable
      */
     public const ROLES = [
         self::ROLE_SYSTEM_OWNER,
+        self::ROLE_REGIONAL_HEAD,
         self::ROLE_SUPER_ADMIN,
         self::ROLE_PROVINCIAL_STAFF,
         self::ROLE_PROVINCIAL_VET,
@@ -82,6 +85,7 @@ class User extends Authenticatable
         'role',
         'municipality_id',
         'province_id',
+        'region_id',
         'is_active',
         'last_login_at',
     ];
@@ -118,6 +122,7 @@ class User extends Authenticatable
         'last_login_at' => 'datetime',
         'municipality_id' => 'integer',
         'province_id' => 'integer',
+        'region_id' => 'integer',
         'is_active' => 'boolean',
     ];
 
@@ -187,6 +192,21 @@ class User extends Authenticatable
         return $this->hasRole(self::ROLE_SYSTEM_OWNER);
     }
 
+    public function region(): BelongsTo
+    {
+        return $this->belongsTo(Region::class);
+    }
+
+    public function isRegionalHead(): bool
+    {
+        return $this->hasRole(self::ROLE_REGIONAL_HEAD);
+    }
+
+    public function canChooseProvince(): bool
+    {
+        return $this->isSystemOwner() || $this->isRegionalHead();
+    }
+
     public function requiresProvince(): bool
     {
         return $this->hasAnyRole(self::PROVINCIAL_ROLES);
@@ -194,7 +214,7 @@ class User extends Authenticatable
 
     public function canOverseeSystem(): bool
     {
-        return $this->isActive() && ($this->isSystemOwner() || $this->isSuperAdmin());
+        return $this->isActive() && ($this->isSystemOwner() || $this->isRegionalHead() || $this->isSuperAdmin());
     }
 
     public function hasUsableScope(): bool
@@ -204,6 +224,10 @@ class User extends Authenticatable
         }
         if ($this->isSystemOwner()) {
             return true;
+        }
+        if ($this->isRegionalHead()) {
+            return $this->region_id !== null && $this->province_id === null && $this->municipality_id === null
+                && Region::query()->active()->whereKey($this->region_id)->exists();
         }
         if ($this->requiresProvince()) {
             return $this->province_id !== null && Province::query()->active()->whereKey($this->province_id)->exists();
@@ -216,6 +240,8 @@ class User extends Authenticatable
     public function canAccessProvince(?int $provinceId): bool
     {
         return $this->hasUsableScope() && ($this->isSystemOwner()
+            || ($this->isRegionalHead() && $provinceId !== null && Province::query()->active()
+                ->whereKey($provinceId)->where('region_id', $this->region_id)->exists())
             || ($this->requiresProvince() && $provinceId !== null && $this->province_id === $provinceId));
     }
 
@@ -223,6 +249,9 @@ class User extends Authenticatable
     {
         if ($this->isSystemOwner()) {
             return 'All supervised provinces';
+        }
+        if ($this->isRegionalHead()) {
+            return $this->region?->name ?? 'Region not assigned';
         }
         if ($this->requiresProvince()) {
             return $this->province?->name ?? 'Province not assigned';
@@ -249,7 +278,7 @@ class User extends Authenticatable
      */
     public function isProvincialUser(): bool
     {
-        return $this->isSystemOwner() || $this->requiresProvince();
+        return $this->isSystemOwner() || $this->isRegionalHead() || $this->requiresProvince();
     }
 
     /**
@@ -306,6 +335,10 @@ class User extends Authenticatable
         }
         if ($municipalityId === null) {
             return false;
+        }
+        if ($this->isRegionalHead()) {
+            return Municipality::query()->active()->whereKey($municipalityId)
+                ->whereHas('supervisingProvince', fn (Builder $query) => $query->active()->where('region_id', $this->region_id))->exists();
         }
         if ($this->requiresProvince()) {
             return Municipality::query()->active()->whereKey($municipalityId)->where('province_id', $this->province_id)->exists();
@@ -371,6 +404,7 @@ class User extends Authenticatable
     {
         return match ($this->role) {
             self::ROLE_SYSTEM_OWNER => 'System Owner',
+            self::ROLE_REGIONAL_HEAD => 'Regional Head',
             self::ROLE_SUPER_ADMIN => 'Super Admin',
             self::ROLE_PROVINCIAL_STAFF => 'Provincial Staff',
             self::ROLE_PROVINCIAL_VET => 'Provincial Veterinary Office',
@@ -387,6 +421,9 @@ class User extends Authenticatable
     {
         if ($this->isSystemOwner()) {
             return 'System Administration';
+        }
+        if ($this->isRegionalHead()) {
+            return 'Regional Agriculture Office';
         }
         if ($this->isProvincialVeterinaryOffice()) {
             return 'Provincial Veterinary Office';

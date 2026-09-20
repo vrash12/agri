@@ -1039,6 +1039,7 @@
 
       $roleLabels = [
         'system_owner' => 'System Owner',
+        'regional_head' => 'Regional Head',
         'super_admin' => 'Super Admin',
         'provincial_staff' => 'Provincial Staff',
         'provincial_vet' => 'Provincial Veterinary Office',
