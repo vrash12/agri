@@ -203,7 +203,7 @@ Successful imports clear the target boundary caches and attribute each new bound
 
 ## Bulacan municipality and component-city reference boundaries
 
-`bulacan_municipality_reference_boundaries.geojson` contains exactly the twenty-four features used by `BulacanMunicipalityBoundarySeeder`: the 21 Bulacan municipalities and the component cities of Malolos, Meycauayan, and San Jose del Monte. These are municipality-level boundaries. They replace the single province-level ADM2 reference imported by `BulacanProvinceBoundarySeeder`, which covered the same land.
+`bulacan_municipality_reference_boundaries.geojson` contains exactly the twenty-four features used by `BulacanMunicipalityBoundarySeeder`: the 20 Bulacan municipalities and the component cities of Baliwag, Malolos, Meycauayan, and San Jose del Monte (legacy snapshot spelling `Baliuag`). These are municipality-level boundaries. They replace the single province-level ADM2 reference imported by `BulacanProvinceBoundarySeeder`, which covered the same land.
 
 - Dataset: geoBoundaries `gbOpen` Philippines ADM3; boundary year 2020
 - Pinned revision: `9469f09`
@@ -278,153 +278,24 @@ The seeder is idempotent. It keeps the original demo cohort of 10 synthetic farm
 
 ## Negros Island Region municipality reference boundaries
 
-The Negros Island Region (Region XVIII) was created in 2024. This system models provinces rather than regions, so the region arrives as its three provinces. The PSA area service still files them under their former regions — Negros Occidental under Region VI and Negros Oriental and Siquijor under Region VII — which affects none of the figures below but is worth knowing when comparing against that source.
+The four pinned snapshots cover 63 municipalities/cities: Negros Occidental (31), Negros Oriental (25), Siquijor (6), and Bacolod City (1). The owner selected full-region coverage including Siquijor and a separate Bacolod supervision scope. Bacolod is excluded from Negros Occidental administrator access.
 
-All three imports share one pinned source revision and one verification method, described once here and not repeated per province.
+Current PSGC metadata uses Region XVIII prefix `18`; the older 9-digit and 10-digit codes remain compatible lookup aliases. Existing workspace names, IDs, codes, geometry and history are preserved. The 2020 geoBoundaries coordinates are unchanged. All references remain approximate planning boundaries requiring LGU/NAMRIA verification before official use.
 
-**How the features were chosen.** The geoBoundaries ADM3 layer carries no province attribute, so each of the 1,647 Philippine features was assigned by testing its centroid against the geoBoundaries ADM2 polygon for the province, using the application's own `GeoGeometry`. Name matching was never used to select a feature, which is what makes the repeated names above safe.
+Run only the explicit `NegrosOccidentalMunicipalityBoundarySeeder`, `NegrosOrientalMunicipalityBoundarySeeder`, `SiquijorMunicipalityBoundarySeeder`, and `BacolodCityBoundarySeeder` after a verified backup. An existing Bacolod workspace under Negros Occidental requires an explicit reviewed ownership transfer first; seeders reject wrong supervision and never move it automatically. Imports create no accounts or operational records and remain excluded from `DatabaseSeeder` and automatic deployment.
 
-**How the choice was checked.** Three independent agreements, none of which relies on the others:
+See [Negros Island sources and deployment requirements](../../../docs/NEGROS_ISLAND_BOUNDARY_SOURCES.md) for current identities, checksums, attribution, accuracy limitations and explicit commands. The [local setup record](../../../docs/NEGROS_ISLAND_LOCAL_SETUP_2026_09_20.md) records the authorized Bacolod separation and verification. Production has not been changed by this update.
 
-1. The Philippine Statistics Authority area service returns exactly 63 LGUs for these three provinces, split 32 / 25 / 6 — the same split the geometry produced, and every name matched with none left over on either side.
-2. Every geometry's bounding box agrees with the PSA record for the same LGU. The **worst intersection-over-union across all 63 is 0.9904**.
-3. Computed areas differ from the PSA reference by **at most 1.41%** (Pulupandan). The importer rejects anything over 3%.
+## Region I (Ilocos Region)
 
-**Overlap.** No geometry in the region overlaps another, nor any of the 56 existing Tarlac, Benguet, Baguio or Bulacan references. Shared borders between neighbours are shared edges, not overlapping interiors.
+The four `ilocos_norte`, `ilocos_sur`, `la_union`, and `pangasinan_municipality_reference_boundaries.geojson` snapshots cover 125 municipalities/cities (23/34/20/48). Their named province seeders use the shared atomic importer, checksum and identity checks, preserve existing records, and create no accounts or operational data. They are not registered in `DatabaseSeeder`.
 
-**A naming limitation this import ran into.** `municipalities.name` and `municipalities.code` are both unique across the whole table, so two provinces cannot each hold a workspace called San Jose. Tarlac already had one, so Negros Oriental's arrives as **San Jose (Negros Oriental)** with the code `SAN_JOSE_NEGROS_ORIENTAL`. This will recur — San Isidro, Santa Cruz and San Miguel are common across Philippine provinces. Making the constraint `(province_id, name)` instead would fix it properly, but that is a change to a shared table with existing data and belongs to an office decision rather than to a boundary import.
+See [Region I provenance and explicit import instructions](../../../docs/REGION_I_BOUNDARY_SOURCES.md) for all source identities, checksums, measurements, repeated-name qualification, Dagupan’s geographic grouping, and Paoay’s lake-inclusive area convention.
 
-These are approximate planning boundaries. They are not cadastral or survey-grade and require LGU or NAMRIA verification before official use.
+## Region III (Central Luzon)
 
-### Negros Occidental
+The five new province snapshots and two independent-city snapshots add 88 references to the existing 42 Tarlac/Bulacan references. Angeles City and Olongapo City have separate ownership scopes, as selected by the owner. Source coordinates remain pinned and unchanged. See [Region III sources and explicit imports](../../../docs/REGION_III_BOUNDARY_SOURCES.md) for checksums, identities, current city counts, scope rules and the concave-boundary overlap correction.
 
-`negros_occidental_municipality_reference_boundaries.geojson` contains exactly the thirty-two features used by `NegrosOccidentalMunicipalityBoundarySeeder`: 19 municipalities, 12 component cities, and Bacolod City.
+## Region II / Cagayan Valley references
 
-Bacolod City is a highly urbanized city and administratively independent of the province. It is stored under Negros Occidental because that is where it sits, and because Baguio City is already recorded under Benguet in exactly the same way. Splitting it into its own workspace later needs no change to the geometry.
-
-- Dataset: geoBoundaries `gbOpen` Philippines ADM3; boundary year 2020
-- Pinned revision: `9469f09`; retrieved 2026-09-18
-- Upstream sources: NAMRIA, Philippine Statistics Authority, OCHA Philippines
-- License: CC BY 3.0 IGO
-- [Pinned simplified source](https://media.githubusercontent.com/media/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/PHL/ADM3/geoBoundaries-PHL-ADM3_simplified.geojson)
-- [PSA identity reference](https://psa.gov.ph/classification/psgc/citimuni/0604500000)
-- [GeoRiskPH/PSA area reference](https://ulap-nga.georisk.gov.ph/arcgis/rest/services/PSA/Municipal/MapServer/0)
-- Line-ending-normalized SHA-256: `3db7a05511d7d6ccd17f0aafcf6e08f97802db9b0e85d9dd4b6a18f128426661`
-
-| Workspace | PSGC | Legacy PSGC | geoBoundaries shape ID | Reference hectares | Computed hectares | Deviation | Vertices |
-| --- | --- | --- | --- | ---: | ---: | ---: | ---: |
-| Bacolod City | `0630200000` | `064501000` | `30758251B10359126771558` | 16,237.786580 | 16,358.9941 | 0.75% | 110 |
-| Bago City | `0604502000` | `064502000` | `30758251B44456462498857` | 40,686.691581 | 40,915.0028 | 0.56% | 130 |
-| Binalbagan | `0604503000` | `064503000` | `30758251B163560276547` | 18,487.513708 | 18,646.7580 | 0.86% | 118 |
-| Cadiz City | `0604504000` | `064504000` | `30758251B74690587258532` | 52,657.216412 | 52,972.5492 | 0.60% | 96 |
-| Calatrava | `0604505000` | `064505000` | `30758251B51763303574827` | 28,768.627437 | 28,932.2618 | 0.57% | 106 |
-| Candoni | `0604506000` | `064506000` | `30758251B37131808105677` | 29,537.757168 | 29,721.2905 | 0.62% | 13 |
-| Cauayan | `0604507000` | `064507000` | `30758251B70595272616613` | 46,970.718450 | 47,284.4564 | 0.67% | 101 |
-| Escalante City | `0604509000` | `064509000` | `30758251B93268177737855` | 19,228.449122 | 19,369.7813 | 0.73% | 107 |
-| Himamaylan City | `0604510000` | `064510000` | `30758251B87460719980042` | 36,349.722689 | 36,531.9410 | 0.50% | 69 |
-| Kabankalan City | `0604515000` | `064515000` | `30758251B39137179877227` | 65,925.855780 | 66,330.5348 | 0.61% | 56 |
-| Sipalay City | `0604527000` | `064527000` | `30758251B39035544266980` | 32,746.862395 | 32,921.9423 | 0.54% | 131 |
-| Talisay City | `0604528000` | `064528000` | `30758251B1176164020832` | 19,348.153160 | 19,490.2210 | 0.73% | 61 |
-| Victorias City | `0604531000` | `064531000` | `30758251B44366819417362` | 10,576.454354 | 10,613.6162 | 0.35% | 64 |
-| Enrique B. Magalona | `0604508000` | `064508000` | `30758251B93552266540793` | 13,892.611796 | 14,006.6113 | 0.82% | 144 |
-| Hinigaran | `0604511000` | `064511000` | `30758251B50394625091243` | 15,271.718665 | 15,371.5433 | 0.65% | 66 |
-| Hinoba-An | `0604512000` | `064512000` | `30758251B90502148254132` | 40,203.820970 | 40,488.3074 | 0.71% | 90 |
-| Ilog | `0604513000` | `064513000` | `30758251B19549547171132` | 29,403.235825 | 29,628.9206 | 0.77% | 82 |
-| Isabela | `0604514000` | `064514000` | `30758251B76125738133682` | 19,144.249356 | 19,279.7267 | 0.71% | 89 |
-| La Carlota City | `0604516000` | `064516000` | `30758251B4643469409429` | 12,707.879216 | 12,807.8706 | 0.79% | 81 |
-| La Castellana | `0604517000` | `064517000` | `30758251B45255679920724` | 21,583.519192 | 21,742.0160 | 0.73% | 47 |
-| Manapla | `0604518000` | `064518000` | `30758251B2817508515429` | 9,945.808282 | 10,042.7773 | 0.97% | 70 |
-| Moises Padilla | `0604519000` | `064519000` | `30758251B86559237055177` | 14,059.833533 | 14,121.3200 | 0.44% | 49 |
-| Murcia | `0604520000` | `064520000` | `30758251B26190802664029` | 27,942.637566 | 28,133.0972 | 0.68% | 103 |
-| Pontevedra | `0604521000` | `064521000` | `30758251B40366129803792` | 11,155.622053 | 11,209.1971 | 0.48% | 58 |
-| Pulupandan | `0604522000` | `064522000` | `30758251B33327911617473` | 1,679.651141 | 1,703.2627 | 1.41% | 24 |
-| Sagay City | `0604523000` | `064523000` | `30758251B74171926345191` | 29,235.896647 | 29,396.5460 | 0.55% | 210 |
-| Salvador Benedicto | `0604532000` | `064532000` | `30758251B86894559838043` | 21,767.307771 | 21,877.9592 | 0.51% | 87 |
-| San Carlos City | `0604524000` | `064524000` | `30758251B8075335495854` | 40,775.872809 | 41,029.7953 | 0.62% | 192 |
-| San Enrique | `0604525000` | `064525000` | `30758251B11825035117570` | 2,826.909798 | 2,831.4814 | 0.16% | 21 |
-| Silay City | `0604526000` | `064526000` | `30758251B60701013344406` | 20,936.961842 | 21,070.2970 | 0.64% | 107 |
-| Toboso | `0604529000` | `064529000` | `30758251B45465879841482` | 11,800.603756 | 11,880.1926 | 0.67% | 45 |
-| Valladolid | `0604530000` | `064530000` | `30758251B22103021346639` | 4,024.098190 | 4,038.1016 | 0.35% | 24 |
-
-```bash
-php artisan db:seed --class=NegrosOccidentalMunicipalityBoundarySeeder
-```
-
-The import creates or reuses each unambiguous active workspace, activates one idempotent planning reference per workspace, refuses overlap with any other active boundary, and records an audit event attributed to an active System Owner. Ambiguous identities, a workspace assigned to another province, an inactive workspace, or a conflicting active boundary stop the whole province inside one transaction. No accounts, farmers, parcels or assistance records are created. The seeder is deliberately excluded from `DatabaseSeeder` and from automatic deployment.
-
-### Negros Oriental
-
-`negros_oriental_municipality_reference_boundaries.geojson` contains exactly the twenty-five features used by `NegrosOrientalMunicipalityBoundarySeeder`: 19 municipalities and 6 cities.
-
-Four of these names exist in other provinces as well — La Libertad in Zamboanga del Norte, Valencia in Bukidnon, Santa Catalina in Ilocos Sur, and San Jose in several. None of them can be confused here, because features were selected by testing each candidate's centroid against the geoBoundaries ADM2 polygon for this province rather than by name.
-
-- Dataset: geoBoundaries `gbOpen` Philippines ADM3; boundary year 2020
-- Pinned revision: `9469f09`; retrieved 2026-09-18
-- Upstream sources: NAMRIA, Philippine Statistics Authority, OCHA Philippines
-- License: CC BY 3.0 IGO
-- [Pinned simplified source](https://media.githubusercontent.com/media/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/PHL/ADM3/geoBoundaries-PHL-ADM3_simplified.geojson)
-- [PSA identity reference](https://psa.gov.ph/classification/psgc/citimuni/0704600000)
-- [GeoRiskPH/PSA area reference](https://ulap-nga.georisk.gov.ph/arcgis/rest/services/PSA/Municipal/MapServer/0)
-- Line-ending-normalized SHA-256: `ce8eb57cf05fe08ae8e76c176fd7f78832569b3a91a480f98d6c2b55ec027dbc`
-
-| Workspace | PSGC | Legacy PSGC | geoBoundaries shape ID | Reference hectares | Computed hectares | Deviation | Vertices |
-| --- | --- | --- | --- | ---: | ---: | ---: | ---: |
-| Amlan | `0704601000` | `074601000` | `30758251B50636289749121` | 5,926.749558 | 5,978.2892 | 0.87% | 39 |
-| Ayungon | `0704602000` | `074602000` | `30758251B30231816662876` | 24,852.165533 | 25,031.0374 | 0.72% | 64 |
-| Bacong | `0704603000` | `074603000` | `30758251B375051523504` | 4,042.294731 | 4,084.0460 | 1.03% | 18 |
-| Bais City | `0704604000` | `074604000` | `30758251B97079733925928` | 25,248.938119 | 25,475.3352 | 0.90% | 108 |
-| Basay | `0704605000` | `074605000` | `30758251B60263736267026` | 16,811.145658 | 16,956.6629 | 0.87% | 78 |
-| Bindoy | `0704607000` | `074607000` | `30758251B7642209697633` | 15,653.732985 | 15,755.7211 | 0.65% | 59 |
-| Canlaon City | `0704608000` | `074608000` | `30758251B22693356898691` | 14,751.859433 | 14,843.5300 | 0.62% | 40 |
-| Bayawan City | `0704606000` | `074606000` | `30758251B98971931409152` | 69,964.126810 | 70,456.3906 | 0.70% | 175 |
-| Guihulngan City | `0704611000` | `074611000` | `30758251B60818257765105` | 37,502.314301 | 37,785.2967 | 0.76% | 74 |
-| Tanjay City | `0704621000` | `074621000` | `30758251B79018653951628` | 22,841.921660 | 22,992.1996 | 0.66% | 79 |
-| Dauin | `0704609000` | `074609000` | `30758251B3670515091156` | 8,077.685876 | 8,160.4562 | 1.02% | 25 |
-| Dumaguete City | `0704610000` | `074610000` | `30758251B75296993492221` | 3,430.800820 | 3,434.0389 | 0.09% | 19 |
-| Jimalalud | `0704612000` | `074612000` | `30758251B35162320168665` | 15,476.719892 | 15,589.6027 | 0.73% | 23 |
-| La Libertad | `0704613000` | `074613000` | `30758251B96075835138209` | 15,148.227410 | 15,248.3770 | 0.66% | 26 |
-| Mabinay | `0704614000` | `074614000` | `30758251B10017268667222` | 34,614.837036 | 34,724.9492 | 0.32% | 86 |
-| Manjuyod | `0704615000` | `074615000` | `30758251B66064059312986` | 12,769.815476 | 12,839.3607 | 0.55% | 79 |
-| Pamplona | `0704616000` | `074616000` | `30758251B24092981342629` | 22,290.549506 | 22,356.5564 | 0.30% | 39 |
-| San Jose | `0704617000` | `074617000` | `30758251B66844761060701` | 5,179.321878 | 5,204.5061 | 0.49% | 34 |
-| Santa Catalina | `0704618000` | `074618000` | `30758251B88269025865066` | 41,438.112151 | 41,751.4876 | 0.76% | 122 |
-| Siaton | `0704619000` | `074619000` | `30758251B76231588734027` | 42,766.148779 | 42,999.2538 | 0.55% | 141 |
-| Sibulan | `0704620000` | `074620000` | `30758251B92406697043602` | 15,972.468123 | 16,118.4305 | 0.91% | 32 |
-| Tayasan | `0704622000` | `074622000` | `30758251B37133567842554` | 17,727.108023 | 17,812.1371 | 0.48% | 32 |
-| Valencia | `0704623000` | `074623000` | `30758251B45812920134288` | 16,280.599249 | 16,362.8555 | 0.51% | 31 |
-| Vallehermoso | `0704624000` | `074624000` | `30758251B9618582640277` | 9,274.314897 | 9,321.0184 | 0.50% | 36 |
-| Zamboanguita | `0704625000` | `074625000` | `30758251B7316515610413` | 15,343.284120 | 15,457.5066 | 0.74% | 59 |
-
-```bash
-php artisan db:seed --class=NegrosOrientalMunicipalityBoundarySeeder
-```
-
-The import creates or reuses each unambiguous active workspace, activates one idempotent planning reference per workspace, refuses overlap with any other active boundary, and records an audit event attributed to an active System Owner. Ambiguous identities, a workspace assigned to another province, an inactive workspace, or a conflicting active boundary stop the whole province inside one transaction. No accounts, farmers, parcels or assistance records are created. The seeder is deliberately excluded from `DatabaseSeeder` and from automatic deployment.
-
-### Siquijor
-
-`siquijor_municipality_reference_boundaries.geojson` contains exactly the six features used by `SiquijorMunicipalityBoundarySeeder` — the whole island province. The municipality of Siquijor shares its name with the province; the workspace keeps the municipality name.
-
-- Dataset: geoBoundaries `gbOpen` Philippines ADM3; boundary year 2020
-- Pinned revision: `9469f09`; retrieved 2026-09-18
-- Upstream sources: NAMRIA, Philippine Statistics Authority, OCHA Philippines
-- License: CC BY 3.0 IGO
-- [Pinned simplified source](https://media.githubusercontent.com/media/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/PHL/ADM3/geoBoundaries-PHL-ADM3_simplified.geojson)
-- [PSA identity reference](https://psa.gov.ph/classification/psgc/citimuni/0706100000)
-- [GeoRiskPH/PSA area reference](https://ulap-nga.georisk.gov.ph/arcgis/rest/services/PSA/Municipal/MapServer/0)
-- Line-ending-normalized SHA-256: `5338e3a60ca84516019321dfe056a0fc352c15ffbc38a4feff3dcd423c8e2a36`
-
-| Workspace | PSGC | Legacy PSGC | geoBoundaries shape ID | Reference hectares | Computed hectares | Deviation | Vertices |
-| --- | --- | --- | --- | ---: | ---: | ---: | ---: |
-| Enrique Villanueva | `0706101000` | `076101000` | `30758251B12637401805285` | 2,629.750201 | 2,661.3248 | 1.20% | 33 |
-| Larena | `0706102000` | `076102000` | `30758251B58465916430151` | 4,108.440665 | 4,145.6193 | 0.91% | 47 |
-| Lazi | `0706103000` | `076103000` | `30758251B49075027129395` | 7,047.317244 | 7,099.3137 | 0.74% | 43 |
-| Maria | `0706104000` | `076104000` | `30758251B45396932451822` | 5,664.253478 | 5,731.1743 | 1.18% | 54 |
-| San Juan | `0706105000` | `076105000` | `30758251B12332276302021` | 4,024.321526 | 4,032.9284 | 0.21% | 48 |
-| Siquijor | `0706106000` | `076106000` | `30758251B71387884042840` | 8,483.689999 | 8,547.4435 | 0.75% | 83 |
-
-```bash
-php artisan db:seed --class=SiquijorMunicipalityBoundarySeeder
-```
-
-The import creates or reuses each unambiguous active workspace, activates one idempotent planning reference per workspace, refuses overlap with any other active boundary, and records an audit event attributed to an active System Owner. Ambiguous identities, a workspace assigned to another province, an inactive workspace, or a conflicting active boundary stop the whole province inside one transaction. No accounts, farmers, parcels or assistance records are created. The seeder is deliberately excluded from `DatabaseSeeder` and from automatic deployment.
+Six pinned snapshots supply 93 city/municipality boundaries: Batanes 6, Cagayan 29, Isabela 36, Nueva Vizcaya 15, Quirino 6 and Santiago City 1. Santiago has a separately authorized supervision scope. Sources, identity/area checks, checksums, commands and deployment limitations are in [REGION_II_BOUNDARY_SOURCES.md](../../../docs/REGION_II_BOUNDARY_SOURCES.md). These are explicit, idempotent maintenance imports; no automatic seeding, accounts or operational samples. Back up before importing and wrap a complete regional addition in one transaction.

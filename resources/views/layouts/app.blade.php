@@ -6,6 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>@yield('title', 'Agriculture Information System') | AgriGOV</title>
+  @auth
+    <script src="{{ asset('js/session-history.js') }}?v={{ filemtime(public_path('js/session-history.js')) }}"></script>
+  @endauth
 
   <!-- Roboto -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1092,7 +1095,7 @@
               'description' => 'Inputs, fingerlings, and gear',
               'icon' => 'seed',
               'route' => 'rice-seed-distributions.index',
-              'patterns' => ['rice-seed-distributions.*'],
+              'patterns' => ['rice-seed-distributions.*', 'assistance-coverage.*'],
               'badge' => $operationBadge,
             ],
             [

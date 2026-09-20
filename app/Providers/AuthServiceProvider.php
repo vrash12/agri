@@ -35,6 +35,7 @@ class AuthServiceProvider extends ServiceProvider
      */
     protected $policies = [
         \App\Models\FarmerPortalAccount::class => \App\Policies\FarmerPortalAccountPolicy::class,
+        \App\Models\ParcelCropSeason::class => \App\Policies\ParcelCropSeasonPolicy::class,
         AgriculturalMachinery::class => AgriculturalMachineryPolicy::class,
         Farmer::class => FarmerPolicy::class,
         FarmPlot::class => FarmPlotPolicy::class,

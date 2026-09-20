@@ -9,6 +9,7 @@ use App\Models\FarmPlot;
 use App\Models\Municipality;
 use App\Models\MunicipalityBoundary;
 use App\Support\AuditTrail;
+use App\Support\BarangayBoundaryReferences;
 use App\Support\ConcurrentWrite;
 use App\Support\GeoGeometry;
 use App\Support\MunicipalityAccess;
@@ -35,7 +36,7 @@ class MunicipalityBoundaryController extends Controller
         $this->middleware('auth');
     }
 
-    public function index(Request $request)
+    public function index(Request $request, BarangayBoundaryReferences $barangayReferences)
     {
         $this->authorize('viewAny', MunicipalityBoundary::class);
 
@@ -61,6 +62,7 @@ class MunicipalityBoundaryController extends Controller
 
         return view('municipality_boundaries.index', [
             'municipalities' => $municipalities,
+            'barangayMunicipalityIds' => $barangayReferences->availableMunicipalityIds($request->user()),
             'boundaries' => $boundaries,
             'canManageBoundaries' => $request->user()->can('create', MunicipalityBoundary::class),
             'googleMapsApiKey' => (string) config('services.google_maps.key', ''),

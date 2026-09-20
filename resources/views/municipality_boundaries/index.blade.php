@@ -18,6 +18,7 @@
   .geo-grid{display:grid;grid-template-columns:minmax(0,1fr) 360px;min-height:650px}.geo-map-wrap{position:relative;min-width:0;background:#e8eef2}.geo-map{width:100%;height:650px}.geo-map-message{position:absolute;z-index:4;left:16px;top:16px;max-width:330px;padding:11px 13px;border-radius:10px;background:rgba(20,39,29,.92);color:#fff;font-size:12px;line-height:1.5;box-shadow:0 8px 22px rgba(0,0,0,.18)}.geo-map-legend{position:absolute;z-index:3;left:14px;bottom:14px;display:flex;gap:11px;padding:8px 10px;border:1px solid #dfe5e0;border-radius:9px;background:rgba(255,255,255,.94);font-size:12px;font-weight:700}.geo-map-legend span{display:flex;align-items:center;gap:5px}.geo-map-legend i{width:13px;height:7px;border-radius:2px}.geo-map-legend .active{background:#15803d}.geo-map-legend .draft{border:2px dashed #d68b16;background:#fff3d8}.geo-map-legend .parcel{background:#2563eb}
   .geo-panel{min-width:0;border-left:1px solid #dde6df;background:#fbfdfb}.geo-panel-head{padding:16px;border-bottom:1px solid #e0e8e2;background:#fff}.geo-panel-head small{color:#08713d;font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:none}.geo-panel-head h2{margin:4px 0 2px;font-size:19px;font-weight:700}.geo-panel-head p{margin:0;color:#6a776f;font-size:12px;line-height:1.45}.geo-panel-scroll{height:560px;overflow:auto;padding:12px}.geo-empty{padding:24px 15px;border:1px dashed #cfdcd3;border-radius:12px;text-align:center;color:#68756d;font-size:12px;line-height:1.55;background:#fff}.geo-mini-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-bottom:12px}.geo-mini{padding:10px;border:1px solid #dfe7e1;border-radius:10px;background:#fff}.geo-mini span{display:block;color:#68766e;font-size:12px;font-weight:700;text-transform:none}.geo-mini strong{display:block;margin-top:3px;font-size:15px;font-weight:700}.geo-section-title{display:flex;align-items:center;justify-content:space-between;margin:14px 0 7px;font-size:12px;font-weight:700}.geo-boundary-card,.geo-review-card{padding:10px;border:1px solid #dce5df;border-radius:11px;background:#fff;margin-bottom:7px}.geo-boundary-card.active{border-color:#8ac9a2;box-shadow:inset 3px 0 #19824a}.geo-boundary-top{display:flex;align-items:flex-start;justify-content:space-between;gap:7px}.geo-boundary-card strong{font-size:12px}.geo-badge{display:inline-flex;padding:4px 6px;border-radius:999px;background:#edf3ef;color:#56645b;font-size:12px;font-weight:700;text-transform:none}.geo-badge.active{background:#e2f5e9;color:#08713d}.geo-badge.draft{background:#fff1d7;color:#986000}.geo-boundary-meta{margin-top:6px;color:#69776f;font-size:12px}.geo-card-actions{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.geo-card-actions .geo-btn{min-height:29px;padding:5px 8px;font-size:12px}.geo-review-card{cursor:pointer}.geo-review-card:hover{border-color:#9db5a5}.geo-review-top{display:flex;justify-content:space-between;gap:8px}.geo-review-card strong{font-size:12px}.geo-review-card p{margin:5px 0 0;color:#6a776f;font-size:12px}.geo-review-status{font-size:12px;font-weight:700;text-transform:none}.geo-review-status.outside,.geo-review-status.invalid{color:#b42318}.geo-review-status.partial{color:#b15b00}.geo-review-status.near_boundary{color:#9b7100}
   .geo-editor{position:absolute;z-index:5;right:14px;top:14px;width:min(360px,calc(100% - 28px));padding:13px;border:1px solid #cbd8cf;border-radius:13px;background:rgba(255,255,255,.97);box-shadow:0 16px 42px rgba(0,0,0,.18)}.geo-editor[hidden]{display:none}.geo-editor h3{margin:0;font-size:14px;font-weight:700}.geo-editor p{margin:4px 0 10px;color:#65736a;font-size:12px;line-height:1.45}.geo-editor-grid{display:grid;grid-template-columns:1fr 95px;gap:7px}.geo-editor .geo-field{margin-bottom:8px}.geo-editor-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}.geo-check{display:flex;align-items:flex-start;gap:7px;margin:8px 0;color:#536159;font-size:12px;line-height:1.45}.geo-check input{margin-top:1px}.geo-draw-state{display:flex;align-items:center;gap:6px;padding:7px 9px;border-radius:8px;background:#eef7f1;color:#176d3e;font-size:12px;font-weight:700}
+  .geo-editor .geo-editor-feedback{margin:10px 0;padding:10px;border-left:3px solid var(--ui-danger);border-radius:4px;background:#FAEFED;color:var(--ui-danger);font-size:14px;line-height:1.5}
   .geo-dialog{width:min(480px,calc(100% - 28px));padding:0;border:0;border-radius:16px;box-shadow:0 25px 70px rgba(0,0,0,.28)}.geo-dialog::backdrop{background:rgba(11,27,18,.52)}.geo-dialog-head{display:flex;align-items:flex-start;justify-content:space-between;padding:16px;border-bottom:1px solid #e0e7e2}.geo-dialog-head h3{margin:0;font-size:17px;font-weight:700}.geo-dialog-head p{margin:4px 0 0;color:#65736b;font-size:12px}.geo-dialog-body{padding:16px}.geo-dialog-grid{display:grid;grid-template-columns:1fr 120px;gap:10px}.geo-dialog-actions{display:flex;justify-content:flex-end;gap:7px;padding:12px 16px;border-top:1px solid #e0e7e2;background:#f9fbf9}.geo-file{height:auto!important;padding:9px!important}.geo-toast{position:fixed;z-index:9999;right:18px;bottom:18px;max-width:390px;padding:11px 14px;border-radius:10px;background:#173a27;color:#fff;font-size:12px;font-weight:700;box-shadow:0 12px 34px rgba(0,0,0,.22)}.geo-toast.bad{background:#9b2c25}.geo-toast[hidden]{display:none}
   @media(max-width:1100px){.geo-stats{grid-template-columns:repeat(3,1fr)}.geo-grid{grid-template-columns:1fr}.geo-panel{border-left:0;border-top:1px solid #dde6df}.geo-panel-scroll{height:auto;max-height:520px}.geo-map,.geo-grid{min-height:560px}.geo-map{height:560px}}
   @media(max-width:700px){.geo-title-row{display:block}.geo-actions{justify-content:flex-start;margin-top:13px}.geo-stats{grid-template-columns:repeat(2,1fr)}.geo-toolbar{align-items:stretch;flex-direction:column}.geo-search,.geo-select{max-width:none}.geo-toolbar .geo-btn{width:100%}.geo-map,.geo-grid{min-height:480px}.geo-map{height:480px}.geo-dialog-grid,.geo-editor-grid{grid-template-columns:1fr}}
@@ -41,6 +42,17 @@
   .geo-opacity-scale{display:flex;justify-content:space-between;font-size:12px;color:var(--ui-text-muted)}
   .geo-opacity p{margin:8px 0 0;font-size:12px;color:var(--ui-text-muted)}
   .geo-boundary-label{padding:4px 8px;border:1px solid var(--ui-text);border-radius:6px;background:var(--ui-accent-soft);box-shadow:0 1px 4px rgba(0,0,0,.35)}
+  .geo-barangays{padding:16px;border-bottom:1px solid var(--ui-border);background:var(--ui-surface)}
+  .geo-barangays h3{margin:0 0 8px;font-size:15px}
+  .geo-barangays p{margin:8px 0;font-size:12px;color:var(--ui-text-muted);line-height:1.5}
+  .geo-barangays .geo-check{font-size:14px;color:var(--ui-text);align-items:center;min-height:36px}
+  .geo-barangays input[type=checkbox]{width:18px;height:18px;accent-color:var(--ui-primary)}
+  .geo-barangay-actions{display:flex;gap:8px;align-items:flex-end}
+  .geo-barangay-actions .geo-field{flex:1;min-width:0}
+  .geo-barangay-label{padding:3px 6px;border:1px solid #146c68;border-radius:4px;background:#fff;color:#173a27}
+  .geo-barangays a{color:var(--ui-primary);text-decoration:underline}
+  .geo-barangays [hidden]{display:none}
+  @media(min-width:1101px){.geo-panel{display:flex;flex-direction:column;height:650px;overflow:auto}.geo-panel-scroll{height:auto;overflow:visible}.geo-panel-head,.geo-barangays{flex-shrink:0}}
   .geo-toolbar{flex-wrap:wrap}
   .geo-field{flex-basis:200px}
   .geo-field.geo-search{flex-basis:180px}
@@ -154,7 +166,9 @@
               <select id="editorStatus"><option value="draft">Draft for review</option><option value="active">Active official boundary</option></select>
             </div>
             <label class="geo-check"><input type="checkbox" id="replaceConfirmed"> I confirm replacement if this municipality already has an active official boundary.</label>
+            <p>Name and color changes do not require replacement confirmation.</p>
             <div class="geo-draw-state" id="drawState">0 points placed</div>
+            <p class="geo-editor-feedback" id="editorFeedback" role="alert" tabindex="-1" hidden></p>
             <div class="geo-editor-actions">
               <button class="geo-btn" type="button" id="undoPoint">Undo point</button>
               <button class="geo-btn" type="button" id="clearPoints">Clear</button>
@@ -171,6 +185,19 @@
           <h2 id="panelTitle">{{ $canChooseMunicipality ? 'Boundary overview' : $assignedMunicipality?->name }}</h2>
           <p id="panelDescription">{{ $canChooseMunicipality ? 'Select one municipality to inspect its active boundary and parcel placement.' : 'Review your boundary and parcels needing attention.' }}</p>
         </div>
+        <section class="geo-barangays" id="barangayControls" aria-labelledby="barangayHeading" aria-busy="false">
+          <h3 id="barangayHeading">Barangay boundaries</h3>
+          <label class="geo-check"><input type="checkbox" id="showBarangays" checked disabled aria-describedby="barangayStatus"> Show planning references</label>
+          <p id="barangayStatus" role="status">Select a municipality to see available barangay boundaries. The map must finish loading first.</p>
+          <p id="barangayEditingNote" hidden>Barangay boundaries are hidden while editing the municipality boundary.</p>
+          <div class="geo-barangay-actions">
+            <div class="geo-field"><label for="barangaySelect">Barangay</label><select id="barangaySelect" disabled><option value="">All barangays</option></select></div>
+            <button type="button" class="geo-btn" id="focusBarangay" disabled>Focus</button>
+          </div>
+          <button type="button" class="geo-btn" id="retryBarangays" hidden>Try again</button>
+          <details id="barangaySource" hidden><summary>Source &amp; accuracy</summary><p id="barangaySourceNote"></p><p><a id="barangaySourceLink" target="_blank" rel="noopener noreferrer">Boundary source</a></p></details>
+          <noscript><p>Enable JavaScript to display barangay boundaries.</p></noscript>
+        </section>
         <div class="geo-panel-scroll" id="panelContent">
           <div class="geo-empty">{{ $canChooseMunicipality ? 'The map is showing all available municipality geofences. Use the municipality selector to load detailed parcel checks.' : 'Your boundary and parcel checks appear here when the map is available.' }}</div>
         </div>
@@ -213,6 +240,8 @@
     assignedMunicipalityId: @json($assignedMunicipality?->id),
     csrf: @json(csrf_token()),
     dataUrl: @json(route('municipality-boundaries.data')),
+    barangayUrl: @json(route('municipality-boundaries.barangays')),
+    barangayMunicipalityIds: @json($barangayMunicipalityIds),
     storeUrl: @json(route('municipality-boundaries.store')),
     importUrl: @json(route('municipality-boundaries.import')),
     updateTemplate: @json(route('municipality-boundaries.update', ['boundary' => '__ID__'])),
@@ -224,5 +253,6 @@
   };
 </script>
 @php($municipalityBoundaryScriptVersion = @filemtime(public_path('js/municipality-boundaries.js')) ?: 1)
+<script src="{{ asset('js/barangay-boundaries.js') }}?v={{ @filemtime(public_path('js/barangay-boundaries.js')) ?: 1 }}"></script>
 <script src="{{ asset('js/municipality-boundaries.js') }}?v={{ $municipalityBoundaryScriptVersion }}"></script>
 @endpush

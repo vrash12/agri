@@ -110,6 +110,41 @@ class DashboardPresentationTest extends TestCase
         $this->assertStringContainsString('availability_status=available', $html);
     }
 
+    public function test_new_graphs_keep_real_zeros_null_gaps_and_units_visible_in_figures(): void
+    {
+        $this->signInForView(User::ROLE_SUPER_ADMIN);
+        $metric = ['title' => 'Test production', 'labels' => ['Recorded zero', 'Missing harvest'],
+            'series' => [['name' => 'Rice', 'unit' => 'kg', 'decimals' => 3, 'values' => [0, null]]],
+            'not_recorded' => null, 'has_data' => true];
+        $html = (string) $this->view('dashboard', ['reportYear' => 2024, 'reportYears' => [2026, 2024],
+            'dashboardMetrics' => [
+                'production_by_commodity' => $metric, 'municipality_comparison' => $metric,
+                'machinery_condition_by_type' => $metric, 'machinery_availability_by_type' => $metric,
+                'animal_health_by_month' => $metric, 'fingerlings_by_municipality' => $metric,
+            ]]);
+        $document = new \DOMDocument();
+        @$document->loadHTML($html);
+        $xpath = new \DOMXPath($document);
+        foreach (['chartMachineryCondition', 'chartMachineryAvailability', 'chartAnimalHealthMonthly', 'chartFingerlingsByMunicipality', 'chartProductionByCommodity'] as $id) {
+            $this->assertSame(1, $xpath->query('//canvas[@id="'.$id.'"]')->length);
+        }
+        $this->assertSame(1, $xpath->query('//select[@id="productionIndicatorPicker"]')->length);
+        $this->assertSame('2024', $xpath->query('//select[@name="report_year"]/option[@selected]')->item(0)->textContent);
+        $this->assertGreaterThan(0, $xpath->query('//td[text()="0.000"]')->length);
+        $this->assertGreaterThan(0, $xpath->query('//td[text()="Not recorded"]')->length);
+        $this->assertStringContainsString('Rice (kg)', $html);
+        $this->assertStringContainsString('Apply year', $html);
+    }
+
+    public function test_reporting_year_submission_leaves_reports_open_without_javascript(): void
+    {
+        $this->signInForView(User::ROLE_MUNICIPAL_STAFF);
+        request()->query->set('report_year', '2024');
+        $html = (string) $this->view('dashboard', ['reportYear' => 2024]);
+        $this->assertMatchesRegularExpression('/<details[^>]+id="dashboardReports"[^>]+open/', $html);
+        $this->assertStringContainsString('method="GET"', $html);
+    }
+
     private function signInForView(string $role): void
     {
         $user = new User([

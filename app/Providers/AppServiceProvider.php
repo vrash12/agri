@@ -50,6 +50,7 @@ class AppServiceProvider extends ServiceProvider
         Paginator::defaultSimpleView('vendor.pagination.simple-agri');
 
         foreach ([
+            \App\Models\ParcelCropSeason::class,
             AgriculturalMachinery::class,
             Farmer::class,
             FarmPlot::class,

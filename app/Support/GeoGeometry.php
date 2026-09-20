@@ -234,11 +234,13 @@ final class GeoGeometry
                     }
                 }
 
-                [$firstLng, $firstLat] = $this->ringCentroid($firstPolygon[0]);
-                [$secondLng, $secondLat] = $this->ringCentroid($secondPolygon[0]);
+                // A concave polygon's centroid can lie in its neighbour or in a hole.
+                // Only points verified inside their own polygon can prove containment.
+                $firstInterior = $this->polygonInteriorPoint($firstPolygon);
+                $secondInterior = $this->polygonInteriorPoint($secondPolygon);
                 if (
-                    $this->pointInPolygon([$firstLng, $firstLat], $secondPolygon, false)
-                    || $this->pointInPolygon([$secondLng, $secondLat], $firstPolygon, false)
+                    ($firstInterior !== null && $this->pointInPolygon($firstInterior, $secondPolygon, false))
+                    || ($secondInterior !== null && $this->pointInPolygon($secondInterior, $firstPolygon, false))
                 ) {
                     return true;
                 }
@@ -246,6 +248,58 @@ final class GeoGeometry
         }
 
         return false;
+    }
+
+    /**
+     * Find a strict interior point, including for concave rings and polygons with holes.
+     * A scanline between vertex latitudes avoids vertex/edge ambiguity. Crossing pairs
+     * include hole edges, so their midpoints remain in the polygon's filled area.
+     *
+     * @param  array<int, array<int, array{0:float,1:float}>>  $polygon
+     * @return array{0:float,1:float}|null
+     */
+    private function polygonInteriorPoint(array $polygon): ?array
+    {
+        [$lng, $lat] = $this->ringCentroid($polygon[0]);
+        if ($this->pointInPolygon([$lng, $lat], $polygon, false)) {
+            return [$lng, $lat];
+        }
+
+        $latitudes = [];
+        foreach ($polygon as $ring) {
+            foreach ($ring as $point) {
+                $latitudes[] = $point[1];
+            }
+        }
+        $latitudes = array_values(array_unique($latitudes, SORT_REGULAR));
+        sort($latitudes, SORT_NUMERIC);
+        $largestGap = 0.0;
+        for ($index = 1; $index < count($latitudes); $index++) {
+            $gap = $latitudes[$index] - $latitudes[$index - 1];
+            if ($gap > $largestGap) {
+                $largestGap = $gap;
+                $lat = ($latitudes[$index] + $latitudes[$index - 1]) / 2;
+            }
+        }
+
+        $crossings = [];
+        foreach ($polygon as $ring) {
+            for ($index = 0; $index < count($ring) - 1; $index++) {
+                [$start, $end] = [$ring[$index], $ring[$index + 1]];
+                if (($start[1] > $lat) !== ($end[1] > $lat)) {
+                    $crossings[] = $start[0] + ($lat - $start[1]) * ($end[0] - $start[0]) / ($end[1] - $start[1]);
+                }
+            }
+        }
+        sort($crossings, SORT_NUMERIC);
+        for ($index = 0; $index + 1 < count($crossings); $index += 2) {
+            $point = [($crossings[$index] + $crossings[$index + 1]) / 2, $lat];
+            if ($this->pointInPolygon($point, $polygon, false)) {
+                return $point;
+            }
+        }
+
+        return null;
     }
 
     /** @param  array<string, mixed>  $geometry */

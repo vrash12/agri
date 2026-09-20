@@ -88,3 +88,12 @@ The owner explicitly chose to match Hostinger's Baguio separation. The existing 
 The local change used a transaction, row locks, private pre-change account/scope backup outside the repository, and owner-only audit entries. All four scope checks passed, stored password hashes matched their source, Benguet admin access to Baguio was denied while La Trinidad remained accessible, and fingerprints of eight operational tables plus unrelated account records were unchanged. This is local data setup, not a migration or a change to default installation behavior.
 
 After synchronization, the owner explicitly requested a shared development password for these four localhost accounts. Their local hashes were replaced and verified, remembered-login tokens cleared, and roles/scope preserved. An encrypted pre-change backup and owner-only audit events were retained. Local passwords therefore no longer mirror Hostinger; production passwords were unchanged. The normal user-management password policy was not modified.
+
+
+## Local Bacolod separation — 2026-09-20
+
+For the full Negros Island Region setup, the owner explicitly selected a separate Bacolod City access scope. Local Bacolod municipality 5404 was moved from supervising province 502 (Negros Occidental) to a new active Bacolod City scope. Its ID, name, code, existing boundary and historical audits were preserved. No Bacolod accounts or operational records existed, and all existing account and operational rows remained unchanged.
+
+The change followed a verified private database backup and ran under a municipality mutation lock, freshness check and transaction. One owner-only scope-change audit was required before commit. The four named region seeders then verified the existing references without inserting duplicates. Local checks returned 31 Negros Occidental, 25 Negros Oriental, six Siquijor and one Bacolod City municipality/city, with Bacolod excluded from Negros Occidental administrator access. Historical audit province snapshots were not rewritten.
+
+This is a local ownership setup, not an automatic migration. A production Bacolod transfer requires its own explicit authorization and review of live accounts and records. See `docs/NEGROS_ISLAND_BOUNDARY_SOURCES.md` and `docs/NEGROS_ISLAND_LOCAL_SETUP_2026_09_20.md`.

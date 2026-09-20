@@ -423,7 +423,10 @@ class RiceSeedDistributionController extends Controller
         $this->authorize('import', RiceSeedDistribution::class);
 
         $validated = $request->validate([
-            'file' => ['required', 'file', 'mimes:xlsx,xls'],
+            // Bounded, and stopping at the first failure so a rejected upload is
+            // never handed to the spreadsheet reader. See the farmer import for the
+            // sizing; the NRP workbook is the same shape.
+            'file' => ['bail', 'required', 'file', 'max:10240', 'mimes:xlsx,xls'],
             'municipality_id' => ['nullable', 'integer'],
         ]);
 

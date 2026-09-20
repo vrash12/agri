@@ -44,6 +44,10 @@ class DashboardController extends Controller
         abort_unless($user->hasUsableScope(), 403, 'Your account does not have an active workspace.');
 
         $currentYear = (int) now()->year;
+        $validated = $request->validate(['report_year' => ['nullable', 'integer', 'between:1900,2100']]);
+        $reportYear = (int) ($validated['report_year'] ?? $currentYear);
+        $reportYears = collect($this->metrics->reportingYears($user))->push($reportYear)
+            ->unique()->sortDesc()->values()->all();
 
         /*
         |--------------------------------------------------------------------------
@@ -439,11 +443,13 @@ class DashboardController extends Controller
             'quantity_by_unit' => $this->metrics->quantityByUnit($user),
             'mapping_coverage' => $this->metrics->mappingCoverage($user),
             'animal_health_by_service' => $this->metrics->animalHealthByServiceType($user),
+            'animal_health_by_month' => $this->metrics->animalHealthByMonth($user, $reportYear),
             'fisheries_assistance' => $this->metrics->fisheriesAssistance($user),
-            'machinery_by_condition' => $this->metrics->machineryByCondition($user),
-            'machinery_by_availability' => $this->metrics->machineryByAvailability($user),
+            'fingerlings_by_municipality' => $this->metrics->fingerlingsByMunicipality($user, $reportYear),
+            'machinery_condition_by_type' => $this->metrics->machineryConditionByType($user),
+            'machinery_availability_by_type' => $this->metrics->machineryAvailabilityByType($user),
             'production_by_commodity' => $this->metrics->productionByCommodity($user),
-            'municipality_comparison' => $this->metrics->municipalityComparison($user),
+            'municipality_comparison' => $this->metrics->municipalityComparison($user, $reportYear),
         ];
 
         return view('dashboard', compact(
@@ -455,7 +461,9 @@ class DashboardController extends Controller
             'recentPlots',
             'municipalityStats',
             'provinceOverview',
-            'currentYear'
+            'currentYear',
+            'reportYear',
+            'reportYears'
         ));
     }
 

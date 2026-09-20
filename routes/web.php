@@ -8,9 +8,9 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FarmerController;
-use App\Http\Controllers\HarvestRecordController;
 use App\Http\Controllers\FarmersCooperativeController;
 use App\Http\Controllers\FarmPlotController;
+use App\Http\Controllers\HarvestRecordController;
 use App\Http\Controllers\MunicipalityBoundaryController;
 use App\Http\Controllers\RiceDistributionBatchController;
 use App\Http\Controllers\RiceSeedDistributionController;
@@ -120,11 +120,19 @@ Route::middleware([
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->name('dashboard');
 
+    Route::get('/assistance-coverage', [\App\Http\Controllers\AssistanceCoverageController::class, 'index'])
+        ->name('assistance-coverage.index');
+    Route::get('/assistance-coverage/boundaries', [\App\Http\Controllers\AssistanceCoverageController::class, 'boundaries'])
+        ->middleware('throttle:60,1')->name('assistance-coverage.boundaries');
+
     Route::get('/municipality-boundaries', [MunicipalityBoundaryController::class, 'index'])
         ->name('municipality-boundaries.index');
     Route::get('/municipality-boundaries/data', [MunicipalityBoundaryController::class, 'data'])
         ->middleware('throttle:30,1')
         ->name('municipality-boundaries.data');
+    Route::get('/municipality-boundaries/barangays', \App\Http\Controllers\BarangayBoundaryController::class)
+        ->middleware('throttle:30,1')
+        ->name('municipality-boundaries.barangays');
     Route::get('/municipality-boundaries/{boundary}/snapshot-base', [MunicipalityBoundaryController::class, 'snapshotBase'])
         ->middleware('throttle:12,1')
         ->name('municipality-boundaries.snapshot-base');
@@ -134,6 +142,7 @@ Route::middleware([
     Route::post('/municipality-boundaries', [MunicipalityBoundaryController::class, 'store'])
         ->name('municipality-boundaries.store');
     Route::post('/municipality-boundaries/import', [MunicipalityBoundaryController::class, 'import'])
+        ->middleware('throttle:6,1')
         ->name('municipality-boundaries.import');
     Route::put('/municipality-boundaries/{boundary}', [MunicipalityBoundaryController::class, 'update'])
         ->name('municipality-boundaries.update');
@@ -231,12 +240,19 @@ Route::middleware([
     Route::post(
         '/farm-plots/import-kml',
         [FarmPlotController::class, 'importKml']
-    )->name('farm-plots.import');
+    )->middleware('throttle:6,1')->name('farm-plots.import');
 
     Route::get(
         '/farm-plots/all',
         [FarmPlotController::class, 'all']
     )->name('farm-plots.all');
+
+    Route::get('/farm-plots/crop-layer', [\App\Http\Controllers\ParcelCropSeasonController::class, 'layer'])
+        ->name('farm-plots.crop-layer');
+    Route::get('/farm-plots/{plot}/seasonal-crops', [\App\Http\Controllers\ParcelCropSeasonController::class, 'edit'])
+        ->name('farm-plots.seasonal-crops.edit');
+    Route::post('/farm-plots/{plot}/seasonal-crops', [\App\Http\Controllers\ParcelCropSeasonController::class, 'store'])
+        ->name('farm-plots.seasonal-crops.store');
 
     Route::get(
         '/farm-plots/{plot}/static-map',
@@ -297,6 +313,7 @@ Route::middleware([
         ->name('farmers.import.form');
 
     Route::post('/farmers/import', [FarmerController::class, 'import'])
+        ->middleware('throttle:6,1')
         ->name('farmers.import');
 
     Route::get(
@@ -380,7 +397,7 @@ Route::middleware([
     Route::post(
         '/rice-seed-distributions/import',
         [RiceSeedDistributionController::class, 'import']
-    )->name('rice-seed-distributions.import');
+    )->middleware('throttle:6,1')->name('rice-seed-distributions.import');
 
     Route::get(
         '/rice-seed-distributions/export',

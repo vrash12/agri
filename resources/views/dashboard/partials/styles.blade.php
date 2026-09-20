@@ -278,6 +278,15 @@
   .ops-metric-picker { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--ops-muted); }
   .ops-metric-picker select { padding: 7px 10px; border: 1px solid var(--ui-control-border); border-radius: var(--ui-radius-control); background: #fff; color: var(--ops-ink); font: inherit; font-size: 13px; }
   .ops-metric-picker select:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 1px; }
+  .ops-metric-picker { min-width: 0; }
+  .ops-metric-picker select { max-width: 100%; min-height: 42px; font-size: 16px; }
+  .ops-report-filter { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; padding: 0 20px 16px; }
+  .ops-report-filter p { flex-basis: 100%; margin: 0; color: var(--ops-muted); font-size: 14px; line-height: 1.5; }
+  .ops-report-filter label { min-width: 130px; }
+  .ops-panel-header > .ops-metric-picker { max-width: 100%; }
+  .ops-comparison-header { flex-wrap: wrap; }
+  .ops-comparison-header > div { flex: 1 1 320px; }
+  .ops-comparison-header > .ops-metric-picker { flex: 1 1 300px; max-width: 430px; }
   @media (max-width:620px) {
     .ops-metric-grid { grid-template-columns: 1fr; padding: 12px; gap: 12px; }
     .ops-metric-canvas { height: 240px; }

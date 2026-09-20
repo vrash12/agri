@@ -1,5 +1,7 @@
 # Welcome page service photography
 
+For the current 20-photo hero and its five collage layouts, see [WELCOME_COLLAGE_PHOTOS.md](WELCOME_COLLAGE_PHOTOS.md). The service thumbnail sources below remain unchanged.
+
 These authentic Philippine photographs illustrate the types of agricultural work supported by the system. They do not identify system users, assistance recipients, local program availability, or equipment owned by a participating municipality. The photographs and depicted people must not be described as beneficiaries or as endorsing the system.
 
 Source descriptions, authors, and licenses were checked through the Wikimedia Commons file pages and `imageinfo` API on 18 September 2026. Each saved JPEG was opened and visually inspected. No image content was generated, retouched, or locally recompressed. The page may crop the photographs using CSS; identify that display cropping in the public credits.

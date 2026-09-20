@@ -3,15 +3,16 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Find farmer services, Department of Agriculture resources, and guidance for your visit to the municipal agriculture office.">
+    <meta name="description" content="Explore AgriGOV's farmer records, parcel maps, assistance tracking, and reports. Find local agriculture services and official DA resources.">
     <meta name="theme-color" content="#236344">
     <title>Farmer services | AgriGOV</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     @include('partials.design-tokens')
-    <link rel="stylesheet" href="{{ asset('css/welcome.css') }}">
-    <script src="{{ asset('js/welcome.js') }}" defer></script>
+    <link rel="stylesheet" href="{{ asset('css/welcome.css') }}?v={{ filemtime(public_path('css/welcome.css')) }}">
+    <script src="{{ asset('js/welcome.js') }}?v={{ filemtime(public_path('js/welcome.js')) }}" defer></script>
+    <script src="{{ asset('js/welcome-slideshow.js') }}?v={{ filemtime(public_path('js/welcome-slideshow.js')) }}" defer></script>
     @include('partials.branding-head')
 </head>
 <body class="welcome-page" id="top">
@@ -31,9 +32,9 @@
             <button class="welcome-menu" type="button" aria-expanded="false" aria-controls="welcome-navigation" hidden>Menu <span aria-hidden="true">☰</span></button>
             <nav id="welcome-navigation" aria-label="Main navigation">
                 <a href="#services">Services</a>
+                <a href="#system">About AgriGOV</a>
                 <a href="#initiatives">DA initiatives</a>
                 <a href="{{ route('farmer-portal.login') }}">Farmer sign in</a>
-                <a href="#visit">Before your visit</a>
                 <a class="welcome-button welcome-office-link" href="{{ route('login') }}">Office sign in</a>
             </nav>
         </div>
@@ -42,32 +43,26 @@
     <main id="main-content" tabindex="-1">
         <section class="welcome-hero welcome-container" aria-labelledby="welcome-title">
             <div class="welcome-hero-copy">
-                <p class="welcome-kicker">Your guide to local agriculture services</p>
-                <h1 id="welcome-title" lang="fil">Mas malapit ang serbisyo sa magsasaka.</h1>
-                <p class="welcome-hero-intro">Find support for your farm, practical information for your next season, and the right place to ask for help.</p>
-                <a class="welcome-button" href="#services">Find farmer services <span aria-hidden="true">↓</span></a>
-                <p class="welcome-hero-note" lang="fil">Para sa mga magsasaka, mangingisda, at mga komunidad na kanilang pinapakain.</p>
+                <p class="welcome-kicker">Farmer services &amp; records</p>
+                <h1 id="welcome-title" lang="fil"><span class="welcome-title-line">Mas malapit </span><span class="welcome-title-line">ang serbisyo </span><span class="welcome-title-highlight">sa magsasaka.</span></h1>
+                <p class="welcome-hero-intro">Find local agriculture services, view your farm records, and get ready for your next office visit.</p>
+                <div class="welcome-hero-actions"><a class="welcome-button" href="#services">Find farmer services <span aria-hidden="true">↓</span></a><a class="welcome-button welcome-button-secondary" href="{{ route('farmer-portal.login') }}">Farmer sign in <span aria-hidden="true">→</span></a></div>
+                <div class="welcome-hero-help"><span class="welcome-help-symbol" aria-hidden="true">i</span><p class="welcome-hero-note"><strong>First time here?</strong> Your agriculture office can help you verify your record and activate your farmer account.</p></div>
             </div>
-            <figure class="welcome-hero-figure">
-                <img class="welcome-field-photo" src="{{ asset('images/welcome/rice-fields.jpg') }}" width="1280" height="960" alt="Golden rice fields beneath a blue sky in Murcia, Negros Occidental" fetchpriority="high">
-                <figcaption>
-                    <span class="welcome-photo-label">Supporting the people who grow our food</span>
-                    <span>Rice fields in Murcia, Negros Occidental</span>
-                </figcaption>
-            </figure>
+            @include('partials.welcome-slideshow')
         </section>
 
         <section class="welcome-season" aria-label="Season planning">
             <div class="welcome-container welcome-season-inner">
-                <div><span class="welcome-season-label">Before you head to the field</span><p>Make the weather part of your plan.</p></div>
+                <div data-welcome-reveal><span class="welcome-season-label">Before you head to the field</span><p>Make the weather part of your plan.</p></div>
                 <p>Check official forecasts and advisories before planting, harvesting, or going out to sea.</p>
                 <a href="https://pagasa.dost.gov.ph/agri-weather" class="welcome-text-link">Check PAGASA <span aria-hidden="true">↗</span></a>
             </div>
         </section>
 
         <section class="welcome-services welcome-container welcome-section" id="services" aria-labelledby="services-title">
-            <div class="welcome-section-heading">
-                <div><p class="welcome-section-label">Farmer services</p><h2 id="services-title">What do you need help with?</h2></div>
+            <div class="welcome-section-heading" data-welcome-reveal>
+                <div><p class="welcome-section-label"><span class="welcome-section-number" aria-hidden="true">01</span> Farmer services</p><h2 id="services-title">What do you need help with?</h2></div>
                 <p>Your local agriculture office is your starting point. Choose a service to see what to discuss with the staff.</p>
             </div>
             <div class="welcome-service-list">
@@ -99,9 +94,56 @@
             <p class="welcome-service-footnote">Services are coordinated by the responsible local office. Confirm current requirements and schedules before travelling.</p>
         </section>
 
+        <section class="welcome-system welcome-section" id="system" aria-labelledby="system-title">
+            <div class="welcome-container welcome-system-layout">
+                <div class="welcome-system-intro">
+                    <p class="welcome-section-label"><span class="welcome-section-number" aria-hidden="true">02</span> Inside AgriGOV</p>
+                    <h2 id="system-title" data-welcome-reveal>Your records.<br><span>A clearer picture</span><br>of the field.</h2>
+                    <div class="welcome-system-copy">
+                        <p>Keep farmer information, farm maps, and service records together. Plan your office’s work and follow up with the people you serve.</p>
+                        <a class="welcome-button welcome-system-entry" href="{{ route('login') }}">Enter your office workspace <span aria-hidden="true">→</span></a>
+                        <p class="welcome-system-note">Your role and assigned area determine which records and tools you can use.</p>
+                    </div>
+                </div>
+                <div class="welcome-toolkit" aria-labelledby="toolkit-title">
+                    <div class="welcome-toolkit-heading">
+                        <h3 id="toolkit-title">Your everyday office tools</h3>
+                        <p>Select a tool to see what it includes.</p>
+                    </div>
+                    <div class="welcome-feature-list">
+                        <details class="welcome-tool">
+                            <summary><span class="welcome-tool-number" aria-hidden="true">01</span><span><strong>Farmer records</strong><small>Know the people you serve.</small></span><span class="welcome-plus" aria-hidden="true"></span></summary>
+                            <div class="welcome-tool-body"><p>Keep profiles, FFRS/RSBSA details, registry cards, and service history together.</p></div>
+                        </details>
+                        <details class="welcome-tool">
+                            <summary><span class="welcome-tool-number" aria-hidden="true">02</span><span><strong>Parcel maps &amp; seasons</strong><small>See what grows, where and when.</small></span><span class="welcome-plus" aria-hidden="true"></span></summary>
+                            <div class="welcome-tool-body"><p>Map farm parcels, review boundaries, and record crops by year and dry or wet season.</p></div>
+                        </details>
+                        <details class="welcome-tool">
+                            <summary><span class="welcome-tool-number" aria-hidden="true">03</span><span><strong>Assistance releases</strong><small>Follow the support already given.</small></span><span class="welcome-plus" aria-hidden="true"></span></summary>
+                            <div class="welcome-tool-body"><p>Track seeds, fertilizer, fingerlings, feed, and fishing gear, with recipient and quantity details.</p></div>
+                        </details>
+                        <details class="welcome-tool">
+                            <summary><span class="welcome-tool-number" aria-hidden="true">04</span><span><strong>Animal-health services</strong><small>Keep each service on record.</small></span><span class="welcome-plus" aria-hidden="true"></span></summary>
+                            <div class="welcome-tool-body"><p>Record vaccination, deworming, vitamins, and treatment by species and municipality.</p></div>
+                        </details>
+                        <details class="welcome-tool">
+                            <summary><span class="welcome-tool-number" aria-hidden="true">05</span><span><strong>Cooperatives &amp; machinery</strong><small>Keep track of groups and equipment.</small></span><span class="welcome-plus" aria-hidden="true"></span></summary>
+                            <div class="welcome-tool-body"><p>Maintain membership records and monitor equipment condition and availability.</p></div>
+                        </details>
+                        <details class="welcome-tool">
+                            <summary><span class="welcome-tool-number" aria-hidden="true">06</span><span><strong>Reports &amp; oversight</strong><small>Turn recorded activity into a plan.</small></span><span class="welcome-plus" aria-hidden="true"></span></summary>
+                            <div class="welcome-tool-body"><p>Review service trends, mapping coverage, and municipality reports for office planning.</p></div>
+                        </details>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <section class="welcome-initiatives welcome-section" id="initiatives" aria-labelledby="initiatives-title">
             <div class="welcome-container">
-                <div class="welcome-section-heading"><div><p class="welcome-section-label">DA initiatives &amp; resources</p><h2 id="initiatives-title">Programs and learning,<br>straight from the source.</h2></div><p>Go directly to the agencies behind the programs. These links open their official websites.</p></div>
+                <a class="welcome-da-identity" href="https://www.da.gov.ph/"><img src="{{ asset('images/da.jpg') }}" alt="Department of Agriculture seal" width="80" height="80" loading="lazy" decoding="async"><span><small>Official program information</small><strong>Department of Agriculture</strong><span>Visit the DA website <span aria-hidden="true">↗</span></span></span></a>
+                <div class="welcome-section-heading" data-welcome-reveal><div><p class="welcome-section-label"><span class="welcome-section-number" aria-hidden="true">03</span> DA initiatives &amp; resources</p><h2 id="initiatives-title">Programs and learning,<br>straight from the source.</h2></div><p>Go directly to the agencies behind the programs. These links open their official websites.</p></div>
                 <div class="welcome-resource-layout">
                     <article class="welcome-feature-resource">
                         <span class="welcome-resource-source">Department of Agriculture</span>
@@ -121,7 +163,7 @@
         </section>
 
         <section class="welcome-visit welcome-container welcome-section" id="visit" aria-labelledby="visit-title">
-            <div><p class="welcome-section-label">Before your visit</p><h2 id="visit-title">A little preparation<br>goes a long way.</h2><p>Visit the agriculture office of the municipality where your farm or livelihood is registered. For animal-health concerns, ask for the responsible veterinary office.</p><p class="welcome-visit-note">Requirements vary by service. Confirm the office location, schedule, and required documents with your LGU before you go.</p></div>
+            <div><p class="welcome-section-label"><span class="welcome-section-number" aria-hidden="true">04</span> Before your visit</p><h2 id="visit-title" data-welcome-reveal>A little preparation<br>goes a long way.</h2><p>Visit the agriculture office of the municipality where your farm or livelihood is registered. For animal-health concerns, ask for the responsible veterinary office.</p><p class="welcome-visit-note">Requirements vary by service. Confirm the office location, schedule, and required documents with your LGU before you go.</p></div>
             <div class="welcome-checklist"><h3>Have these details ready, if available</h3><ul><li><span>Your farmer information</span><p>RSBSA number or farmer registry card, and your current contact details.</p></li><li><span>Your farm or livelihood details</span><p>Barangay, municipality, crops or species, and the area or activity concerned.</p></li><li><span>Your previous assistance or service</span><p>Relevant release slips, service records, or other documents related to your inquiry.</p></li><li><span>What you need help with</span><p>The program, record correction, or service you would like to discuss.</p></li></ul></div>
         </section>
 
@@ -133,6 +175,7 @@
         <details class="welcome-photo-credit" id="photo-credit">
             <summary>Photography &amp; credits</summary>
             <p>Scenes of farming and fishing in the Philippines. Photographs from Wikimedia Commons, cropped for display.</p>
+            <p>Slideshow photographs and their licenses are listed in <a href="{{ asset('photo-credits.html') }}">Image sources</a>. The DA seal identifies the linked Department of Agriculture resources.</p>
             <ul>
                 <li>Rice fields, Murcia: <a href="https://commons.wikimedia.org/wiki/File:Rice_fields_under_the_clear_blue_sky.jpg">Mark Daniel Lecciones</a> · <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>.</li>
                 <li>Rice planting, Happao: <a href="https://commons.wikimedia.org/wiki/File:Planting_rice_in_the_Happao_terraces.jpg">BENNY GROSS.1</a> · <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>.</li>

@@ -232,7 +232,7 @@ class BulacanMunicipalityBoundarySeeder extends Seeder
             self::MUNICIPALITIES, self::SUPERSEDED_BOUNDARY
         );
 
-        $this->command?->info('Ready: the 21 Bulacan municipality and 3 component-city planning/reference geofences are active.');
+        $this->command?->info('Ready: the 24 Bulacan city and municipality planning/reference geofences are active.');
         $this->command?->warn('Any active Bulacan province reference was archived; these approximate boundaries require LGU/NAMRIA verification before official use.');
     }
 }

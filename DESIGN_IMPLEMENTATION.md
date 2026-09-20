@@ -1,5 +1,97 @@
 # Design and UX implementation record
 
+## Ramos barangay reference layer — September 20, 2026
+
+Municipality geofences now includes a read-only barangay panel using the existing
+form/button styles and green theme. Selecting Ramos loads nine reference outlines;
+a checkbox controls visibility and a labeled selector plus Focus action supports
+keyboard navigation. White-cased green outlines remain visible over satellite
+imagery and opaque municipality fills. Selected outlines use an amber highlight;
+farm parcels remain above the layer. Labels are limited to close zooms or the
+selected barangay. Source/accuracy information uses a native disclosure.
+
+The layer has loading, unavailable, timeout, retry and edit-mode states. Old
+requests and overlays are cleared when changing municipality. Geometry remains
+outside the initial HTML; there are no third-party boundary requests at runtime.
+Desktop sidebar content scrolls within the map height, and mobile retains the
+existing map-first stacked layout. Automated scope, geometry, rendering and
+interaction checks pass; signed-in Google Maps visual acceptance is pending.
+This pilot is local only. See `docs/RAMOS_BARANGAY_BOUNDARIES.md`.
+
+## Homepage collage — September 20, 2026
+
+The public welcome page now uses the requested neobrutalist treatment: tilted
+photo prints, dark borders, square controls, solid shadows, warm neutral paper,
+and shared green/yellow colors. Farmer services precede office features; farmer
+and office sign-in remain clearly labeled. Interactive controls stay level, native
+disclosures remain keyboard-accessible, and the slideshow retains pause and
+reduced-motion support. Six PHP and thirteen JS tests pass; browser checks found
+no overflow at eight widths from 320 to 1440 pixels. This redesign is local and
+has not been deployed. See `docs/WELCOME_PAGE.md` for verification and scope.
+
+The follow-up refines the hero with a three-line heading, yellow text emphasis,
+shorter introduction, aligned actions and separate first-visit guidance. Brief
+press, link, photo-frame and disclosure feedback is complemented by active-section
+navigation and one-time heading entry motion. Fragment links retain native history
+and move keyboard focus to the destination. Reduced motion removes decorative
+movement; content never depends on animation to become visible. The follow-up
+passes six PHP tests and twenty JS tests, with responsive and keyboard checks
+recorded in `docs/WELCOME_PAGE.md`. It remains local.
+
+Inside AgriGOV now pairs a larger green/yellow headline and office entry with one
+bordered paper-style toolkit. Six numbered native disclosures keep short benefits
+visible and expand to show the actual module capabilities. Hover, plus/minus and
+opening feedback reuse the existing low-motion treatment. Focus is green on the
+light toolkit and yellow on the surrounding dark surface. The toolkit becomes a
+single column on small phones. See the same welcome-page record for verification;
+this section refinement remains local.
+
+The expanded hero now has 20 distinct photographs in five four-photo collages.
+Each uses different proportions and placements, with landscape, portrait and
+small tilted prints. The complete optimized set is about 1.95 MB; only the current
+and upcoming collages load during playback. Photo-specific failure fallbacks,
+keyboard pause and reduced motion remain. All five layouts passed responsive
+checks at seven widths from 320 to 1440 pixels. Six PHP and sixteen slideshow JS
+tests pass. Sources, credits and deployment assets are documented in
+`docs/WELCOME_COLLAGE_PHOTOS.md`. This expansion remains local.
+
+## Assistance coverage map — September 19, 2026
+
+Agriculture & Fisheries now links to a read-only municipality assistance report.
+Shared module fields filter assistance type, program/sheet reference, and recorded
+planting period. Applied-filter text remains beside three clearly defined totals.
+A lazy Google map colors active municipality polygons by release-count ranges;
+the accessible figures table remains available without JavaScript or map access.
+Small screens reflow the filters and table into labeled rows. Missing periods,
+quantities, farmer links, and boundaries are explained without inventing seasons
+or parcel coverage. No operational writes or migration; local implementation only.
+See `docs/ASSISTANCE_COVERAGE_MAP.md` for semantics, limits, and verification.
+
+## Welcome slideshow and system guide — September 19, 2026
+
+The public homepage now pairs its farmer-service introduction with five full-size
+Philippine agriculture photos. A restrained toolbar provides photograph selection
+and pause; hidden tabs, keyboard interaction, and reduced-motion preferences are
+handled. The first photo and service guidance work without JavaScript. About
+AgriGOV explains six actual office capabilities, including dry/wet seasonal crop
+records, in a green section with open text rows. The existing DA seal accompanies
+the official resource link. All photos retain public source/license credits.
+This refresh is local, not deployed. See `docs/WELCOME_PAGE.md` for release scope
+and verification.
+
+## Dashboard graph follow-up — September 19, 2026
+
+The dashboard now links directly to its graphs and reports. Equipment-type status
+bars, monthly animal-health service bars, fingerling quantity bars, and municipality
+production comparisons use the shared panels and accessible figures tables. A
+reporting-year form preserves the selected year without requiring JavaScript; a
+commodity/unit selector prevents mixed-unit production graphs. Missing harvest
+records remain distinct from entered zero production. See
+[dashboard verification](docs/DASHBOARD_ENHANCEMENTS_2026_09_19.md) for focused
+tests, browser checks, and deployment status. The changes are local, not deployed.
+
+## Earlier implementation record
+
 Updated: September 8, 2026. Roadmap: [DESIGN_SYSTEM.md, section 18](DESIGN_SYSTEM.md#18-implementation-milestones).
 
 The main interfaces now use simpler defaults and shared management-system styling. This is a local implementation awaiting staff and staging review. It does not change role permissions or municipality ownership, and it has not been deployed.
@@ -162,6 +254,29 @@ Verification: 18 OperationsPresentationTest cases passed using isolated SQLite; 
 ### Continuous login gallery — September 18, 2026
 
 The login now loops eight local photographs without Pause/Play, arrows, a counter, or a credits disclosure beside the images. Five added scenes cover livestock, fishing, rice harvest, vegetable harvest, and rice drying. Required author/source/license credits are on `public/photo-credits.html`, linked from the login footer. Reduced motion keeps images still; hidden tabs suspend rotation. Upcoming images load one at a time ahead of display. This supersedes the earlier three-photo control layout.
+
+## Seasonal parcel crop layer — 2026-09-19
+
+The Parcel Map has a full-width **Crops by season** disclosure with layer, year,
+dry/wet season, and crop controls. A labeled color legend counts loaded parcels;
+hover details identify the selected reporting period. Staff use the **Seasonal
+crops** action beside each parcel to open a scoped form with year/season history,
+optional source notes, validation recovery, and stale-edit protection. The form
+uses shared module fields and operations styles; oversight accounts see a read-only
+record. Missing crops are explicitly Not recorded, and saved parcel colors remain
+available as the default layer.
+
+Verification: 14 focused PHP and 23 JavaScript tests, Pint, syntax checks, Blade
+compilation, and route checks passed. Browser checks covered desktop/phone form
+and control layouts, period selection, and the real Google 3D map using synthetic
+parcels. Crop coloring, rice-only filtering, dry/wet changes, and restoring saved
+colors worked. The full map check also resolved a Google beta polygon-constructor
+failure by assigning its path after construction. No parcel geometry was changed.
+The additive crop table is installed on localhost and Hostinger after backups.
+Hostinger deployment completed on 2026-09-19 at 12:03:09 UTC with 64 read-only
+checks passing and existing records unchanged. Signed-in production browser
+submissions and office-data acceptance remain pending. See
+`docs/SEASONAL_CROPS_DEPLOYMENT_2026_09_19.md`.
 
 ## Farmer portal — September 20, 2026
 

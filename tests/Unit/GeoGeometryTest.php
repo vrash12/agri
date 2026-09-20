@@ -128,6 +128,56 @@ class GeoGeometryTest extends TestCase
         $this->assertTrue($this->geometry->overlaps($first, $identical));
     }
 
+    public function test_a_concave_boundary_does_not_overlap_the_neighbour_in_its_notch(): void
+    {
+        $concave = $this->geometry->prepare($this->notchedBoundary());
+        $neighbour = $this->geometry->prepare([
+            'type' => 'Polygon',
+            'coordinates' => [[[1, 1], [3, 1], [3, 4], [1, 4], [1, 1]]],
+        ]);
+
+        $this->assertFalse($this->geometry->overlaps($concave, $neighbour));
+        $this->assertFalse($this->geometry->overlaps($neighbour, $concave));
+        $this->assertTrue($this->geometry->overlaps($concave, $concave));
+        $this->assertTrue($this->geometry->overlaps($concave, $this->square(0.2, 2, 0.3)));
+        $this->assertTrue($this->geometry->overlaps($concave, $this->square(0.8, 2, 0.5)));
+    }
+
+    public function test_a_hole_is_not_filled_by_the_centroid_overlap_check(): void
+    {
+        $outer = $this->square(0, 0, 4);
+        $island = $this->square(1, 1, 2);
+        $outer['coordinates'][] = $island['coordinates'][0];
+        $outer = $this->geometry->prepare($outer);
+        $island = $this->geometry->prepare($island);
+
+        $this->assertFalse($this->geometry->overlaps($outer, $island));
+        $this->assertFalse($this->geometry->overlaps($island, $outer));
+        $this->assertTrue($this->geometry->overlaps($outer, $outer));
+        $this->assertTrue($this->geometry->overlaps($outer, $this->square(0.1, 0.1, 0.3)));
+    }
+
+    public function test_concave_multipolygon_parts_keep_real_overlap_detection(): void
+    {
+        $multi = $this->geometry->prepare([
+            'type' => 'MultiPolygon',
+            'coordinates' => [$this->notchedBoundary()['coordinates'], $this->square(6, 0, 2)['coordinates']],
+        ]);
+
+        $this->assertTrue($this->geometry->overlaps($multi, $multi));
+        $this->assertTrue($this->geometry->overlaps($multi, $this->square(6.2, 0.2, 0.3)));
+        $this->assertFalse($this->geometry->overlaps($multi, $this->square(1.2, 1.2, 1.5)));
+    }
+
+    /** @return array<string, mixed> */
+    private function notchedBoundary(): array
+    {
+        return [
+            'type' => 'Polygon',
+            'coordinates' => [[[0, 0], [4, 0], [4, 4], [3, 4], [3, 1], [1, 1], [1, 4], [0, 4], [0, 0]]],
+        ];
+    }
+
     /** @return array<string, mixed> */
     private function square(float $lng, float $lat, float $size): array
     {

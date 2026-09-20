@@ -34,8 +34,8 @@ use Illuminate\Support\Collection;
  *   without a parcel inventory, so it is never produced.
  * - Machinery condition and availability are separate dimensions.
  * - No composite municipality score, index or ranking is produced.
- * - A row whose grouping value is missing is reported under `not_recorded`, never
- *   folded into a zero bucket and never silently dropped. The one exception is a
+ * - A row whose grouping value is missing is reported under `not_recorded` or an
+ *   explicitly labelled missing-classification bucket, never silently dropped. A
  *   row with no municipality at all: it belongs to no province either, so only an
  *   account that sees everything is told about it. See `unownedCount()`.
  *
@@ -46,6 +46,10 @@ use Illuminate\Support\Collection;
  *       'labels'       => string[],
  *       'series'       => [ ['name','unit','decimals','values'], ... ],
  *       'not_recorded' => null | ['label' => string, 'count' => int],
+ *       // Optional: distinguish a recorded zero from no complete records.
+ *       'has_data'     => bool,
+ *       // Optional: records whose reporting year cannot be assigned.
+ *       'undated'      => null | ['label' => string, 'count' => int],
  *     ]
  *
  * Every series' `values` array is the same length as `labels`.
@@ -250,6 +254,99 @@ class DashboardMetrics
         );
     }
 
+    /** @return array<string, mixed> */
+    public function animalHealthByMonth(User $user, int $year): array
+    {
+        $base = $this->inYear($this->scoped(AntiRabiesVaccination::query(), $user), 'vaccination_date', $year);
+        $month = $this->datePartExpression($base, 'month', 'vaccination_date');
+        $rows = (clone $base)->whereNotNull('service_type')->where('service_type', '!=', '')
+            ->selectRaw($month.' as month_number, service_type, COUNT(*) as total')
+            ->groupByRaw($month)->groupBy('service_type')->get();
+        $types = AntiRabiesVaccination::SERVICE_TYPE_LABELS;
+        foreach ($rows->pluck('service_type')->unique()->sort() as $type) {
+            $types[$type] ??= $type;
+        }
+
+        $series = [];
+        foreach ($types as $type => $label) {
+            $totals = $rows->where('service_type', $type)->keyBy('month_number');
+            $series[] = $this->series($label, 'services', array_map(
+                fn ($monthNumber) => (int) ($totals->get($monthNumber)->total ?? 0),
+                range(1, 12)
+            ));
+        }
+
+        return $this->metric(
+            'Animal-health services by month · '.$year,
+            ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            $series,
+            $this->missing(
+                (clone $base)->where(fn (Builder $q) => $q->whereNull('service_type')->orWhere('service_type', ''))->count(),
+                'Services in '.$year.' with no service type recorded'
+            )
+        ) + [
+            'has_data' => $rows->isNotEmpty(),
+            'undated' => $this->missing($this->scoped(AntiRabiesVaccination::query(), $user)
+                ->whereNull('vaccination_date')->count(), 'Services with no service date recorded'),
+        ];
+    }
+
+    /** @return array<int, int> */
+    public function reportingYears(User $user): array
+    {
+        $years = $this->scoped(HarvestRecord::query(), $user)
+            ->whereBetween('harvest_year', [1900, 2100])->distinct()->pluck('harvest_year');
+
+        foreach ([
+            [AntiRabiesVaccination::query(), 'vaccination_date'],
+            [RiceSeedDistribution::query(), 'date_received'],
+        ] as [$query, $column]) {
+            $query = $this->scoped($query, $user);
+            $expression = $this->datePartExpression($query, 'year', $column);
+            $rows = $query->where($column, '>=', '1900-01-01')->where($column, '<', '2101-01-01')
+                ->selectRaw($expression.' as report_year')->distinct()->get();
+            $years = $years->concat($rows->pluck('report_year'));
+        }
+
+        return $years->push((int) now()->year)->map(fn ($year) => (int) $year)
+            ->unique()->sortDesc()->values()->all();
+    }
+
+    /** @return array<string, mixed> */
+    public function fingerlingsByMunicipality(User $user, int $year): array
+    {
+        $municipalities = $this->activeMunicipalities($user);
+        $base = $this->inYear($this->scoped(RiceSeedDistribution::query(), $user), 'date_received', $year)
+            ->whereIn('municipality_id', $municipalities->pluck('id'))
+            ->where('input_category', 'fish_fingerlings');
+        // Legacy quantity lives in kgs_received even for pieces; its unit decides
+        // whether the amount can honestly be counted as fingerlings.
+        $rows = (clone $base)->groupBy('municipality_id')
+            ->selectRaw('municipality_id, COUNT(*) as releases')
+            ->selectRaw("SUM(CASE WHEN quantity_unit = 'piece' AND kgs_received IS NOT NULL THEN 1 ELSE 0 END) as complete_releases")
+            ->selectRaw("SUM(CASE WHEN quantity_unit = 'piece' AND kgs_received IS NOT NULL THEN kgs_received ELSE 0 END) as total")
+            ->get()->keyBy('municipality_id');
+        $values = $municipalities->map(function ($municipality) use ($rows) {
+            $row = $rows->get($municipality->id);
+
+            return $row && (int) $row->complete_releases === 0 ? null : (float) ($row->total ?? 0);
+        })->all();
+        $missing = (int) $rows->sum(fn ($row) => (int) $row->releases - (int) $row->complete_releases);
+
+        return $this->metric(
+            'Fingerlings released by municipality · '.$year,
+            $municipalities->pluck('name')->all(),
+            [$this->series('Fingerlings released', 'pieces', $values, 2)],
+            $this->missing($missing, 'Fingerling releases in '.$year.' with a missing quantity or a unit other than pieces')
+        ) + [
+            'has_data' => $rows->sum('complete_releases') > 0,
+            'undated' => $this->missing($this->scoped(RiceSeedDistribution::query(), $user)
+                ->whereIn('municipality_id', $municipalities->pluck('id'))
+                ->where('input_category', 'fish_fingerlings')->whereNull('date_received')->count(),
+                'Fingerling releases with no release date recorded'),
+        ];
+    }
+
     /**
      * Fisheries assistance by category.
      *
@@ -312,6 +409,61 @@ class DashboardMetrics
         );
     }
 
+    /** @return array<string, mixed> */
+    public function machineryConditionByType(User $user): array
+    {
+        return $this->machineryByType($user, 'condition_status', AgriculturalMachinery::CONDITIONS,
+            'Machinery condition by equipment type', 'Condition not recorded');
+    }
+
+    /** @return array<string, mixed> */
+    public function machineryAvailabilityByType(User $user): array
+    {
+        return $this->machineryByType($user, 'availability_status', AgriculturalMachinery::AVAILABILITY_STATUSES,
+            'Machinery availability by equipment type', 'Availability not recorded');
+    }
+
+    /**
+     * Missing and unrecognized legacy values remain visible as labelled buckets.
+     *
+     * @param  array<string, string>  $statuses
+     * @return array<string, mixed>
+     */
+    private function machineryByType(User $user, string $column, array $statuses, string $title, string $missingStatus): array
+    {
+        $rows = $this->scoped(AgriculturalMachinery::query(), $user)
+            ->selectRaw('category, '.$column.' as status, COUNT(*) as total')
+            ->groupBy('category', $column)->get();
+        $categories = [];
+        foreach (AgriculturalMachinery::CATEGORIES as $key => $label) {
+            if ($rows->contains('category', $key)) {
+                $categories[$key] = $label;
+            }
+        }
+        foreach ($rows as $row) {
+            $category = (string) $row->category;
+            $status = (string) $row->status;
+            $categories[$category] ??= $category !== '' ? $category : 'Equipment type not recorded';
+            $statuses[$status] ??= $status !== '' ? $status : $missingStatus;
+        }
+        $totals = [];
+        foreach ($rows as $row) {
+            // NULL and empty legacy values have the same missing-value meaning.
+            $category = (string) $row->category;
+            $status = (string) $row->status;
+            $totals[$category][$status] = ($totals[$category][$status] ?? 0) + (int) $row->total;
+        }
+        $series = [];
+        foreach ($statuses as $status => $label) {
+            $series[] = $this->series($label, 'units', array_map(
+                fn ($category) => $totals[$category][$status] ?? 0,
+                array_keys($categories)
+            ));
+        }
+
+        return $this->metric($title, array_values($categories), $series) + ['has_data' => $rows->isNotEmpty()];
+    }
+
     /**
      * Recorded harvest over time, one series per commodity.
      *
@@ -353,8 +505,8 @@ class DashboardMetrics
             $series[] = $this->series(
                 HarvestRecord::COMMODITY_LABELS[$commodity] ?? $commodity,
                 HarvestRecord::QUANTITY_UNIT_LABELS[$unit] ?? ($unit ?: 'unit not recorded'),
-                $years->map(fn ($year) => (float) ($byYear[(int) $year]->total ?? 0))->all(),
-                2
+                $years->map(fn ($year) => $byYear->has((int) $year) ? (float) $byYear[(int) $year]->total : null)->all(),
+                3
             );
         }
 
@@ -368,7 +520,7 @@ class DashboardMetrics
                     ->count(),
                 'Harvest records with no year or no quantity recorded'
             )
-        );
+        ) + ['has_data' => $rows->isNotEmpty()];
     }
 
     /**
@@ -388,13 +540,9 @@ class DashboardMetrics
      *
      * @return array<string, mixed>|null
      */
-    public function municipalityComparison(User $user): ?array
+    public function municipalityComparison(User $user, ?int $reportYear = null): ?array
     {
-        $municipalities = $this->municipalityAccess
-            ->scopeMunicipalities(Municipality::query(), $user)
-            ->active()
-            ->orderBy('name')
-            ->get(['municipalities.id', 'municipalities.name']);
+        $municipalities = $this->activeMunicipalities($user);
 
         if ($municipalities->count() < 2) {
             return null;
@@ -430,12 +578,62 @@ class DashboardMetrics
             $columns['beneficiaries'][] = (int) ($beneficiaries[$municipality->id] ?? 0);
         }
 
-        return $this->metric('Municipality comparison', $municipalities->pluck('name')->all(), [
+        $series = [
             $this->series('Registered farmers', 'farmers', $columns['farmers']),
             $this->series('Farmers with a mapped parcel', 'farmers', $columns['mapped']),
             $this->series('Assistance releases', 'releases', $columns['releases']),
             $this->series('Unique beneficiaries', 'farmers', $columns['beneficiaries']),
-        ]);
+        ];
+        $reportYear ??= (int) now()->year;
+        $harvests = HarvestRecord::query()->whereIn('municipality_id', $ids)->where('harvest_year', $reportYear);
+        $production = (clone $harvests)->whereNotNull('commodity')->where('commodity', '!=', '')
+            ->whereNotNull('quantity')->whereIn('quantity_unit', array_keys(HarvestRecord::QUANTITY_UNIT_LABELS))
+            ->groupBy('municipality_id', 'commodity', 'quantity_unit')->orderBy('commodity')->orderBy('quantity_unit')
+            ->selectRaw('municipality_id, commodity, quantity_unit, SUM(quantity) as total')->get();
+        foreach ($production->groupBy(fn ($row) => $row->commodity.'|'.$row->quantity_unit) as $group) {
+            $first = $group->first();
+            $totals = $group->keyBy('municipality_id');
+            $series[] = $this->series(
+                'Production '.$reportYear.' · '.(HarvestRecord::COMMODITY_LABELS[$first->commodity] ?? $first->commodity),
+                HarvestRecord::QUANTITY_UNIT_LABELS[$first->quantity_unit],
+                $municipalities->map(fn ($municipality) => $totals->has($municipality->id)
+                    ? (float) $totals->get($municipality->id)->total : null)->all(),
+                3
+            );
+        }
+        $missing = (clone $harvests)->where(fn (Builder $q) => $q
+            ->whereNull('commodity')->orWhere('commodity', '')->orWhereNull('quantity')
+            ->orWhereNull('quantity_unit')->orWhereNotIn('quantity_unit', array_keys(HarvestRecord::QUANTITY_UNIT_LABELS)))->count();
+
+        return $this->metric('Municipality comparison', $municipalities->pluck('name')->all(), $series,
+            $this->missing($missing, 'Harvest records in '.$reportYear.' with a missing commodity, quantity, or recognized unit')) + [
+                'undated' => $this->missing(HarvestRecord::query()->whereIn('municipality_id', $ids)
+                    ->whereNull('harvest_year')->count(), 'Harvest records with no harvest year recorded'),
+            ];
+    }
+
+    /** @return Collection<int, Municipality> */
+    private function activeMunicipalities(User $user): Collection
+    {
+        return $this->municipalityAccess->scopeMunicipalities(Municipality::query(), $user)
+            ->active()->orderBy('name')->get(['municipalities.id', 'municipalities.name']);
+    }
+
+    private function inYear(Builder $query, string $column, int $year): Builder
+    {
+        return $query->where($column, '>=', $year.'-01-01')->where($column, '<', ($year + 1).'-01-01');
+    }
+
+    private function datePartExpression(Builder $query, string $part, string $column): string
+    {
+        $wrapped = $query->getQuery()->getGrammar()->wrap($column);
+        if ($query->getConnection()->getDriverName() === 'sqlite') {
+            $format = $part === 'month' ? '%m' : '%Y';
+
+            return "CAST(strftime('".$format."', ".$wrapped.') AS INTEGER)';
+        }
+
+        return ($part === 'month' ? 'MONTH' : 'YEAR').'('.$wrapped.')';
     }
 
     /**
@@ -657,7 +855,7 @@ class DashboardMetrics
     }
 
     /**
-     * @param  array<int, int|float>  $values
+     * @param  array<int, int|float|null>  $values
      * @return array<string, mixed>
      */
     private function series(string $name, string $unit, array $values, int $decimals = 0): array

@@ -18,6 +18,7 @@
   const state = {
     map: null,
     info: null,
+    barangays: null,
     boundaryOverlays: new Map(),
     boundaryFills: new Map(),
     fillOpacity: .2,
@@ -27,6 +28,8 @@
     selectedMunicipality: '',
     selectedBoundary: null,
     editorMode: null,
+    editorRevision: 0,
+    savingBoundary: false,
     editableOverlay: null,
     originalEditorCoordinates: new Map(),
     draftPoints: [],
@@ -34,6 +37,14 @@
     mapClick: null,
     currentPayload: null,
     loadRevision: 0,
+    loadController: null,
+    loadingMunicipality: '',
+    renderRevision: 0,
+    renderFrame: null,
+    renderTimer: null,
+    searchTimer: null,
+    visibleBoundaryIds: new Set(),
+    boundaryBounds: new WeakMap(),
   };
 
   const el = id => document.getElementById(id);
@@ -65,9 +76,13 @@
 
   async function request(url, options) {
     const response = await fetch(url, Object.assign({headers: {'Accept': 'application/json'}}, options || {}));
-    let payload = {};
-    try { payload = await response.json(); } catch (ignore) {}
-    if (!response.ok) throw new Error(errorMessage(payload, 'Request failed (' + response.status + ').'));
+    let payload = null;
+    try { payload = await response.json(); } catch (ignore) { /* Report an unexpected HTML/login response below. */ }
+    if (response.status === 401 || response.status === 419 || (response.redirected && !payload)) {
+      throw new Error('Your sign-in session has expired. Sign in again in another tab, then reload this workspace before saving.');
+    }
+    if (!response.ok) throw new Error(errorMessage(payload, 'The request failed (' + response.status + '). Please try again.'));
+    if (!payload || typeof payload !== 'object') throw new Error('The server did not confirm the request. Reload this workspace before trying again.');
     return payload;
   }
 
@@ -84,8 +99,24 @@
     return polygon.map(ring => ring.map(point => ({lat: Number(point[1]), lng: Number(point[0])})));
   }
 
+  function boundaryFillOpacity(id, scale) {
+    // The editor replaces the saved fill; stacking both obscures preview colors
+    // and makes the actual opacity higher than the slider value.
+    const editing = state.editorMode === 'edit' && String(state.selectedBoundary?.id) === String(id);
+    return editing ? 0 : state.fillOpacity * scale;
+  }
+
+  function applyFillOpacity() {
+    state.boundaryFills.forEach((group, id) => group.overlays.forEach(overlay => {
+      overlay.setOptions({fillOpacity: boundaryFillOpacity(id, group.scale)});
+    }));
+    if (state.editableOverlay) {
+      state.editableOverlay.setOptions({fillOpacity: state.fillOpacity * (state.selectedBoundary?.status === 'draft' ? .5 : 1)});
+    }
+    if (state.draftOverlay) state.draftOverlay.setOptions({fillOpacity: state.fillOpacity * .5});
+  }
+
   function drawBoundary(boundary) {
-    removeBoundary(boundary.id);
     const fills = [];
     const fillScale = boundary.status === 'draft' ? .5 : 1;
     const overlays = geometryPolygons(boundary.geojson).flatMap(polygon => {
@@ -107,7 +138,7 @@
         strokeOpacity: 1,
         strokeWeight: boundary.status === 'draft' ? 3 : 4,
         fillColor: boundary.color,
-        fillOpacity: state.fillOpacity * fillScale,
+        fillOpacity: boundaryFillOpacity(boundary.id, fillScale),
         clickable: true,
         zIndex: boundary.status === 'active' ? 2 : 1,
       });
@@ -127,7 +158,7 @@
 
     if (boundary.status === 'active') {
       const marker = new google.maps.Marker({
-        map: state.map,
+        map: state.selectedMunicipality || state.map.getZoom() >= 10 ? state.map : null,
         position: {lat: Number(boundary.centroid_lat), lng: Number(boundary.centroid_lng)},
         label: {text: String(boundary.municipality_name || ''), color: '#20362c', fontSize: '12px', fontWeight: '700', className: 'geo-boundary-label'},
         icon: {path: google.maps.SymbolPath.CIRCLE, scale: 0},
@@ -136,6 +167,7 @@
       });
       state.labels.set(String(boundary.id), marker);
     }
+    state.visibleBoundaryIds.add(String(boundary.id));
   }
 
   function removeBoundary(id) {
@@ -145,14 +177,99 @@
     const label = state.labels.get(String(id));
     if (label) label.setMap(null);
     state.labels.delete(String(id));
+    state.visibleBoundaryIds.delete(String(id));
+  }
+
+  function boundsForBoundary(boundary) {
+    if (state.boundaryBounds.has(boundary)) return state.boundaryBounds.get(boundary);
+    const bounds = {south: Infinity, north: -Infinity, west: Infinity, east: -Infinity};
+    geometryPolygons(boundary.geojson).forEach(polygon => polygon.forEach(ring => ring.forEach(point => {
+      bounds.south = Math.min(bounds.south, Number(point[1]));
+      bounds.north = Math.max(bounds.north, Number(point[1]));
+      bounds.west = Math.min(bounds.west, Number(point[0]));
+      bounds.east = Math.max(bounds.east, Number(point[0]));
+    })));
+    state.boundaryBounds.set(boundary, bounds);
+    return bounds;
+  }
+
+  function currentBoundaries() {
+    const selected = String(state.selectedMunicipality || '');
+    return state.boundaries.filter(boundary => boundary.status !== 'archived'
+      && (!selected || String(boundary.municipality_id) === selected));
+  }
+
+  function setBoundaryVisible(id, visible) {
+    const attached = state.visibleBoundaryIds.has(id);
+    if (visible !== attached) {
+      (state.boundaryOverlays.get(id) || []).forEach(overlay => overlay.setMap(visible ? state.map : null));
+      if (visible) state.visibleBoundaryIds.add(id);
+      else state.visibleBoundaryIds.delete(id);
+    }
+    const label = state.labels.get(id);
+    const labelMap = visible && (state.selectedMunicipality || state.map.getZoom() >= 10) ? state.map : null;
+    if (label && label.getMap() !== labelMap) label.setMap(labelMap);
+  }
+
+  function trimBoundaryCache() {
+    // Retain nearby/recent shapes without keeping an unlimited off-screen map cache.
+    for (const id of state.boundaryOverlays.keys()) {
+      if (state.boundaryOverlays.size <= 160) break;
+      if (!state.visibleBoundaryIds.has(id)) removeBoundary(id);
+    }
   }
 
   function renderBoundaries() {
-    Array.from(state.boundaryOverlays.keys()).forEach(removeBoundary);
-    const selected = String(state.selectedMunicipality || '');
-    state.boundaries
-      .filter(boundary => boundary.status !== 'archived' && (!selected || String(boundary.municipality_id) === selected))
-      .forEach(drawBoundary);
+    const revision = ++state.renderRevision;
+    if (state.renderFrame !== null) cancelAnimationFrame(state.renderFrame);
+    const viewport = state.map.getBounds();
+    const northEast = viewport?.getNorthEast();
+    const southWest = viewport?.getSouthWest();
+    // A margin prevents shapes at the screen edge from flashing while panning.
+    const latMargin = viewport ? (northEast.lat() - southWest.lat()) * .15 : 0;
+    const lngMargin = viewport ? (northEast.lng() - southWest.lng()) * .15 : 0;
+    const visible = currentBoundaries().filter(boundary => {
+      if (state.selectedMunicipality) return true;
+      if (!viewport) return false; // Maps supplies the first viewport on idle.
+      const bounds = boundsForBoundary(boundary);
+      const latitudeMatches = bounds.north >= southWest.lat() - latMargin && bounds.south <= northEast.lat() + latMargin;
+      // A viewport crossing the date line must not discard Philippine boundaries.
+      return latitudeMatches && (southWest.lng() > northEast.lng()
+        || (bounds.east >= southWest.lng() - lngMargin && bounds.west <= northEast.lng() + lngMargin));
+    });
+    const wanted = new Set(visible.map(boundary => String(boundary.id)));
+    state.boundaryOverlays.forEach((overlays, id) => setBoundaryVisible(id, wanted.has(id)));
+    const pending = visible.filter(boundary => !state.boundaryOverlays.has(String(boundary.id)));
+    let index = 0;
+    function drawBatch() {
+      if (revision !== state.renderRevision) return;
+      state.renderFrame = null;
+      const start = performance.now();
+      let count = 0;
+      while (index < pending.length && count < 12) {
+        drawBoundary(pending[index++]);
+        count++;
+        if (performance.now() - start >= 8) break;
+      }
+      trimBoundaryCache();
+      if (index < pending.length) state.renderFrame = requestAnimationFrame(drawBatch);
+    }
+    trimBoundaryCache();
+    if (pending.length) state.renderFrame = requestAnimationFrame(drawBatch);
+  }
+
+  function scheduleBoundaryRender() {
+    clearTimeout(state.renderTimer);
+    state.renderTimer = setTimeout(renderBoundaries, 80);
+  }
+
+  function mergeBoundaries(municipalityId, boundaries) {
+    const previous = state.boundaries.filter(boundary => String(boundary.municipality_id) === String(municipalityId));
+    previous.forEach(boundary => {
+      const replacement = boundaries.find(item => item.id === boundary.id);
+      if (!replacement || JSON.stringify(replacement) !== JSON.stringify(boundary)) removeBoundary(boundary.id);
+    });
+    state.boundaries = state.boundaries.filter(boundary => String(boundary.municipality_id) !== String(municipalityId)).concat(boundaries);
   }
 
   function clearParcels() {
@@ -186,28 +303,51 @@
   function fitVisible() {
     const bounds = new google.maps.LatLngBounds();
     let count = 0;
-    state.boundaryOverlays.forEach(overlays => overlays.forEach(overlay => overlay.getPaths().forEach(path => path.forEach(point => { bounds.extend(point); count++; }))));
-    state.parcelOverlays.forEach(overlay => overlay.getPath().forEach(point => { bounds.extend(point); count++; }));
+    // Fit the complete selection even when rendering has culled or not yet drawn it.
+    currentBoundaries().forEach(boundary => {
+      const box = boundsForBoundary(boundary);
+      if (!Number.isFinite(box.south)) return;
+      bounds.extend({lat: box.south, lng: box.west});
+      bounds.extend({lat: box.north, lng: box.east});
+      count++;
+    });
+    (state.currentPayload?.parcels || []).forEach(parcel => (parcel.polygon || []).forEach(point => {
+      bounds.extend({lat: Number(point.lat), lng: Number(point.lng)}); count++;
+    }));
     if (count) state.map.fitBounds(bounds, 34);
     else resetDefaultView();
   }
 
   function resetDefaultView() { state.map.setCenter(defaultViewport.center); state.map.setZoom(defaultViewport.zoom); }
 
-  async function loadMunicipality(id, selectedBoundaryId) {
+  async function loadMunicipality(id, selectedBoundaryId, force) {
     if (!settings.canChooseMunicipality) id = settings.assignedMunicipalityId;
+    id = id ? String(id) : '';
+    clearTimeout(state.searchTimer);
+    if (!force && id && id === state.selectedMunicipality && (state.loadingMunicipality === id || state.currentPayload)) {
+      cancelEditor();
+      if (selectedBoundaryId && state.currentPayload) {
+        state.selectedBoundary = state.currentPayload.boundaries.find(boundary => String(boundary.id) === String(selectedBoundaryId)) || null;
+      }
+      return;
+    }
     const revision = ++state.loadRevision;
-    state.selectedMunicipality = id ? String(id) : '';
+    state.loadController?.abort();
+    state.loadController = null;
+    state.loadingMunicipality = id;
+    state.selectedMunicipality = id;
+    state.selectedBoundary = null;
     cancelEditor();
+    state.barangays?.selectMunicipality(id);
     clearParcels();
     state.currentPayload = null;
     el('downloadSnapshot').disabled = true;
+    renderBoundaries();
 
     // Only a province-wide account can clear the selection; a municipal
     // account always has its own workspace loaded.
     if (settings.canChooseMunicipality) {
         if (!id) {
-          renderBoundaries();
           el('panelEyebrow').textContent = 'Province-wide view';
           el('panelTitle').textContent = 'Boundary overview';
           el('panelDescription').textContent = 'Select one municipality to inspect its active boundary and parcel placement.';
@@ -224,12 +364,15 @@
 
     el('mapMessage').textContent = 'Loading ' + municipalityName(id) + ' boundary and parcels…';
     panel.innerHTML = '<div class="geo-empty" role="status">Loading boundary and parcel checks…</div>';
+    fitVisible();
+    const controller = new AbortController();
+    state.loadController = controller;
     try {
-      const payload = await request(settings.dataUrl + '?municipality_id=' + encodeURIComponent(id));
+      const payload = await request(settings.dataUrl + '?municipality_id=' + encodeURIComponent(id), {signal: controller.signal});
       if (revision !== state.loadRevision) return;
       state.currentPayload = payload;
       el('downloadSnapshot').disabled = !payload.snapshot;
-      state.boundaries = state.boundaries.filter(item => String(item.municipality_id) !== String(id)).concat(payload.boundaries);
+      mergeBoundaries(id, payload.boundaries);
       state.selectedBoundary = selectedBoundaryId ? payload.boundaries.find(item => String(item.id) === String(selectedBoundaryId)) : payload.boundaries[0] || null;
       renderBoundaries();
       drawParcels(payload.parcels || []);
@@ -240,10 +383,15 @@
         : payload.municipality.name + ' has no active official boundary. Parcels cannot be classified yet.';
       fitVisible();
     } catch (error) {
-      if (revision !== state.loadRevision) return;
+      if (revision !== state.loadRevision || error.name === 'AbortError') return;
       toast(error.message, true);
       el('mapMessage').textContent = 'The municipality workspace could not be loaded.';
       panel.innerHTML = '<div class="geo-empty">Boundary and parcel checks could not be loaded. <button type="button" class="geo-btn" data-retry-workspace>Try again</button></div>';
+    } finally {
+      if (revision === state.loadRevision) {
+        state.loadingMunicipality = '';
+        state.loadController = null;
+      }
     }
   }
 
@@ -473,14 +621,27 @@
   }
 
   function focusOverlay(overlays) {
+    if (!overlays.length) return;
     const bounds = new google.maps.LatLngBounds();
     overlays.forEach(overlay => overlay.getPaths().forEach(path => path.forEach(point => bounds.extend(point))));
+    state.map.fitBounds(bounds, 48);
+  }
+
+  function focusBoundary(id) {
+    const boundary = state.boundaries.find(item => String(item.id) === String(id));
+    if (!boundary) return;
+    const box = boundsForBoundary(boundary);
+    if (!Number.isFinite(box.south)) return;
+    const bounds = new google.maps.LatLngBounds();
+    bounds.extend({lat: box.south, lng: box.west});
+    bounds.extend({lat: box.north, lng: box.east});
     state.map.fitBounds(bounds, 48);
   }
 
   function startDrawing() {
     cancelEditor();
     state.editorMode = 'create';
+    state.barangays?.setEditing(true);
     state.draftPoints = [];
     el('boundaryEditor').hidden = false;
     el('editorTitle').textContent = 'Draw a municipality boundary';
@@ -508,6 +669,7 @@
       return;
     }
     state.editorMode = 'edit';
+    state.barangays?.setEditing(true);
     state.selectedBoundary = boundary;
     el('boundaryEditor').hidden = false;
     el('editorTitle').textContent = 'Edit municipality boundary';
@@ -518,19 +680,20 @@
     el('editorColor').value = String(boundary.color).toLowerCase();
     el('editorStatusField').hidden = true;
     el('replaceConfirmed').checked = false;
-    state.editableOverlay = new google.maps.Polygon({paths: googlePaths(polygons[0]), strokeColor: boundary.color, strokeWeight: 4, fillColor: boundary.color, fillOpacity: .24, editable: true, zIndex: 20});
+    state.editableOverlay = new google.maps.Polygon({paths: googlePaths(polygons[0]), strokeColor: boundary.color, strokeWeight: 4, fillColor: boundary.color, fillOpacity: state.fillOpacity * (boundary.status === 'draft' ? .5 : 1), editable: true, zIndex: 20});
     // Keep source coordinates for untouched vertices: map normalization must not move shared borders.
     state.editableOverlay.getPath().getArray().forEach((point, index) => {
       state.originalEditorCoordinates.set(point.lng() + ':' + point.lat(), polygons[0][0][index].slice(0, 2));
     });
     state.editableOverlay.setMap(state.map);
+    applyFillOpacity();
     updateDrawState();
     focusOverlay([state.editableOverlay]);
   }
 
   function refreshDraftOverlay() {
     if (state.draftOverlay) state.draftOverlay.setMap(null);
-    state.draftOverlay = new google.maps.Polygon({paths: state.draftPoints, strokeColor: el('editorColor').value, strokeWeight: 3, fillColor: el('editorColor').value, fillOpacity: .18, zIndex: 20});
+    state.draftOverlay = new google.maps.Polygon({paths: state.draftPoints, strokeColor: el('editorColor').value, strokeWeight: 3, fillColor: el('editorColor').value, fillOpacity: state.fillOpacity * .5, zIndex: 20});
     state.draftOverlay.setMap(state.map);
     updateDrawState();
   }
@@ -542,7 +705,9 @@
   }
 
   function cancelEditor() {
+    state.barangays?.setEditing(false);
     if (!settings.canManage) return;
+    state.editorRevision++;
     if (state.mapClick) google.maps.event.removeListener(state.mapClick);
     state.mapClick = null;
     if (state.draftOverlay) state.draftOverlay.setMap(null);
@@ -552,7 +717,17 @@
     state.originalEditorCoordinates.clear();
     state.draftPoints = [];
     state.editorMode = null;
+    applyFillOpacity();
+    showEditorFeedback('');
     if (el('boundaryEditor')) el('boundaryEditor').hidden = true;
+  }
+
+  function showEditorFeedback(message) {
+    const feedback = el('editorFeedback');
+    if (!feedback) return;
+    feedback.textContent = message;
+    feedback.hidden = !message;
+    if (message) feedback.focus?.();
   }
 
   function pointsToGeoJson(points, originalCoordinates) {
@@ -569,13 +744,15 @@
   }
 
   async function saveEditor() {
+    if (state.savingBoundary || !state.editorMode) return;
+    showEditorFeedback('');
     const editing = state.editorMode === 'edit';
     const points = editing && state.editableOverlay ? state.editableOverlay.getPath().getArray() : state.draftPoints;
-    if (points.length < 3) return toast('Place at least three boundary points.', true);
+    if (points.length < 3) return showEditorFeedback('Place at least three boundary points before saving.');
     const municipalityId = el('editorMunicipality').value;
-    if (!municipalityId) return toast('Select the municipality first.', true);
+    if (!municipalityId) return showEditorFeedback('Select the municipality first.');
     const name = el('editorName').value.trim();
-    if (!name) return toast('Enter a boundary name.', true);
+    if (!name) return showEditorFeedback('Enter a boundary name.');
 
     const body = {
       name: name,
@@ -583,8 +760,14 @@
       replace_confirmed: el('replaceConfirmed').checked ? 1 : 0,
     };
     const geometry = pointsToGeoJson(points, editing ? state.originalEditorCoordinates : null);
-    if (!editing || JSON.stringify(geometry) !== JSON.stringify(state.selectedBoundary.geojson)) {
+    // GeoJSON object key order is not a shape change. Styling saves must never
+    // submit geometry merely because the stored JSON lists coordinates first.
+    if (!editing || geometry.type !== state.selectedBoundary.geojson.type
+      || JSON.stringify(geometry.coordinates) !== JSON.stringify(state.selectedBoundary.geojson.coordinates)) {
       body.geojson = geometry;
+    }
+    if (editing && body.geojson && state.selectedBoundary.status === 'active' && !body.replace_confirmed) {
+      return showEditorFeedback('The boundary points changed. Check the replacement confirmation before saving the new shape. Name and color changes alone do not need this confirmation.');
     }
     let url = settings.storeUrl;
     let method = 'POST';
@@ -597,13 +780,31 @@
       body.status = el('editorStatus').value;
     }
 
+    const revision = state.editorRevision;
+    const saveButton = el('saveBoundary');
+    state.savingBoundary = true;
+    saveButton.disabled = true;
+    saveButton.textContent = 'Saving…';
     try {
       const payload = await request(url, {method, headers: {'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': settings.csrf}, body: JSON.stringify(body)});
+      if (!payload.boundary?.id) throw new Error('The server did not confirm the save. Reload this workspace before trying again.');
       toast(payload.message);
-      cancelEditor();
-      filter.value = String(municipalityId);
-      await loadMunicipality(municipalityId, payload.boundary.id);
-    } catch (error) { toast(error.message, true); }
+      if (revision === state.editorRevision) {
+        cancelEditor();
+        filter.value = String(municipalityId);
+        await loadMunicipality(municipalityId, payload.boundary.id, true);
+      }
+    } catch (error) {
+      const message = error instanceof TypeError
+        ? 'Unable to confirm the save. Check your connection and reload this workspace before trying again.'
+        : error.message;
+      if (revision === state.editorRevision) showEditorFeedback(message);
+      toast(message, true);
+    } finally {
+      state.savingBoundary = false;
+      saveButton.disabled = false;
+      saveButton.textContent = 'Save boundary';
+    }
   }
 
   async function changeStatus(boundary, action) {
@@ -614,7 +815,7 @@
     try {
       const payload = await request(endpoint(action === 'activate' ? settings.activateTemplate : settings.archiveTemplate, boundary.id), {method: 'POST', headers: {'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': settings.csrf}, body: JSON.stringify(body)});
       toast(payload.message);
-      await loadMunicipality(boundary.municipality_id, payload.boundary.id);
+      await loadMunicipality(boundary.municipality_id, payload.boundary.id, true);
     } catch (error) { toast(error.message, true); }
   }
 
@@ -625,19 +826,22 @@
     el('downloadSnapshot').addEventListener('click', downloadMunicipalitySnapshot);
     el('boundarySearch')?.addEventListener('input', event => {
       const value = event.target.value.trim().toLowerCase();
+      clearTimeout(state.searchTimer);
       if (!value) return;
-      const match = settings.municipalities.find(item => item.name.toLowerCase().includes(value));
-      if (match) { filter.value = String(match.id); loadMunicipality(match.id); }
+      state.searchTimer = setTimeout(() => {
+        const match = settings.municipalities.find(item => item.name.toLowerCase().includes(value));
+        if (match) { filter.value = String(match.id); loadMunicipality(match.id); }
+      }, 250);
     });
 
     panel.addEventListener('click', event => {
-      if (event.target.closest('[data-retry-workspace]')) loadMunicipality(state.selectedMunicipality);
+      if (event.target.closest('[data-retry-workspace]')) loadMunicipality(state.selectedMunicipality, null, true);
       const focusBoundaryButton = event.target.closest('[data-focus-boundary]');
       const editButton = event.target.closest('[data-edit-boundary]');
       const activateButton = event.target.closest('[data-activate-boundary]');
       const archiveButton = event.target.closest('[data-archive-boundary]');
       const plotCard = event.target.closest('[data-focus-plot]');
-      if (focusBoundaryButton) focusOverlay(state.boundaryOverlays.get(String(focusBoundaryButton.dataset.focusBoundary)) || []);
+      if (focusBoundaryButton) focusBoundary(focusBoundaryButton.dataset.focusBoundary);
       if (editButton) editBoundary(state.boundaries.find(item => String(item.id) === String(editButton.dataset.editBoundary)));
       if (activateButton) changeStatus(state.boundaries.find(item => String(item.id) === String(activateButton.dataset.activateBoundary)), 'activate');
       if (archiveButton) changeStatus(state.boundaries.find(item => String(item.id) === String(archiveButton.dataset.archiveBoundary)), 'archive');
@@ -661,7 +865,7 @@
       const data = new FormData(event.currentTarget);
       try {
         const payload = await request(settings.importUrl, {method:'POST', headers:{'Accept':'application/json','X-CSRF-TOKEN':settings.csrf}, body:data});
-        toast(payload.message); el('importDialog').close(); event.currentTarget.reset(); el('importColor').value='#15803d'; filter.value=String(payload.boundary.municipality_id); await loadMunicipality(payload.boundary.municipality_id,payload.boundary.id);
+        toast(payload.message); el('importDialog').close(); event.currentTarget.reset(); el('importColor').value='#15803d'; filter.value=String(payload.boundary.municipality_id); await loadMunicipality(payload.boundary.municipality_id,payload.boundary.id,true);
       } catch (error) { toast(error.message, true); }
     });
   }
@@ -671,22 +875,26 @@
     if (settings.mapId) options.mapId = settings.mapId;
     state.map = new google.maps.Map(el('geofenceMap'), options);
     state.info = new google.maps.InfoWindow();
-    state.boundaries.forEach(drawBoundary);
+    if (window.createBarangayBoundaryLayer) {
+      state.barangays = window.createBarangayBoundaryLayer({map: state.map, request, url: settings.barangayUrl, municipalityIds: settings.barangayMunicipalityIds || []});
+    }
     bindUi();
     fitVisible();
+    state.map.addListener('idle', scheduleBoundaryRender);
+    renderBoundaries();
     if (filter.value) loadMunicipality(filter.value);
   };
 
-  el('geofenceOpacity').addEventListener('input', event => {
+  function updateFillOpacity(event) {
     const value = Number(event.target.value);
     const percentage = Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 20;
     state.fillOpacity = percentage / 100;
     el('geofenceOpacityValue').value = percentage + '%';
     event.target.setAttribute('aria-valuetext', percentage + '% color opacity');
-    state.boundaryFills.forEach(group => group.overlays.forEach(overlay => {
-      overlay.setOptions({fillOpacity: state.fillOpacity * group.scale});
-    }));
-  });
+    applyFillOpacity();
+  }
+  el('geofenceOpacity').addEventListener('input', updateFillOpacity);
+  el('geofenceOpacity').addEventListener('change', updateFillOpacity);
 
   if (!settings.key) {
     el('mapMessage').textContent = 'Google Maps is not configured. Add GOOGLE_MAPS_API_KEY and clear Laravel configuration cache.';

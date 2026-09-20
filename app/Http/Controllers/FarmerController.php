@@ -669,7 +669,12 @@ class FarmerController extends Controller
         $user = $this->authenticatedUser($request);
 
         $rules = [
-            'file' => ['required', 'file', 'mimes:xlsx,xls'],
+            // Bounded, and stopping at the first failure so a rejected upload is
+            // never handed to the spreadsheet reader. 10 MB is roughly seventeen
+            // times the largest registry workbook the office has actually sent
+            // (589 KB), and a workbook is compressed, so a file anywhere near the
+            // cap is a decompression bomb rather than a municipality.
+            'file' => ['bail', 'required', 'file', 'max:10240', 'mimes:xlsx,xls'],
         ];
 
         if ($user->isProvincialUser()) {

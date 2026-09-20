@@ -32,7 +32,7 @@
         <tr>
           <th scope="row">{{ $figureLabel }}</th>
           @foreach($figureSeries as $figureColumn)
-            <td class="module-numeric">{{ number_format((float) ($figureColumn['values'][$figureIndex] ?? 0), $figureColumn['decimals'] ?? 0) }}</td>
+            <td class="module-numeric">{{ isset($figureColumn['values'][$figureIndex]) ? number_format((float) $figureColumn['values'][$figureIndex], $figureColumn['decimals'] ?? 0) : 'Not recorded' }}</td>
           @endforeach
         </tr>
       @empty
@@ -43,5 +43,8 @@
 </div>
 @if(! empty($metric['not_recorded']))
   {{-- Shown rather than folded into a zero bucket: the records exist, the grouping value does not. --}}
-  <p class="module-hint">{{ $metric['not_recorded']['label'] }}: {{ number_format((int) $metric['not_recorded']['count']) }} — not shown above because the value was never recorded.</p>
+  <p class="module-hint">{{ $metric['not_recorded']['label'] }}: {{ number_format((int) $metric['not_recorded']['count']) }}. These records are excluded from the figures above.</p>
+@endif
+@if(! empty($metric['undated']))
+  <p class="module-hint">{{ $metric['undated']['label'] }}: {{ number_format((int) $metric['undated']['count']) }}. No reporting year can be assigned.</p>
 @endif

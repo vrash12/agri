@@ -11,10 +11,15 @@ The application is designed for multiple offices using the system at the same ti
 ### Public farmer welcome page
 
 - Visitors to the homepage can read guides to farmer registration, crop inputs, fisheries assistance, animal health, farm mapping, cooperatives, and machinery inquiries.
+- The local homepage redesign presents farming/fishing photographs as a bold collage, with services before the system overview, separate farmer/office sign-in, keyboard-friendly disclosures, and a controllable slideshow. Its layout adapts to phones and respects reduced motion; this visual redesign is not yet deployed.
+- A clearer three-line welcome message highlights the farmer audience. Buttons, links, photo frames, and service disclosures give subtle visual feedback; section shortcuts preserve keyboard focus and mark the current section. Reduced-motion preferences remove the decorative movement.
 - Official DA, RSBSA Finder, PhilRice, ATI, BFAR, and PAGASA links provide program, learning, and weather information.
 - An office-visit checklist helps visitors prepare their information; the local office confirms requirements, schedules, and eligibility.
 - Mobile navigation and keyboard-accessible service disclosures work alongside a separate office sign-in entry.
 - Credited Philippine agriculture photographs illustrate the services, including rice farming, fisheries, livestock, and machinery.
+- Twenty photographs show Philippine farming, fishing, crops and livestock in five different collages, with four photos per view, collage selection and pause controls. Reduced-motion preferences keep the collage still; the first four photos work without JavaScript.
+- About AgriGOV explains farmer records, parcel maps and dry/wet seasonal crops, assistance releases, animal-health services, cooperatives/machinery, and reports. The DA seal accompanies official DA resource links.
+- Inside AgriGOV groups these six capabilities in an expandable office-tools panel, with short benefits and an office sign-in button. Tool descriptions open by click or keyboard without requiring JavaScript; the layout stacks on phones.
 - The page displays no private records or operational totals and does not offer public applications, account registration, or equipment bookings.
 - Signed-in users keep their existing dashboard or Animal Health destination.
 
@@ -56,6 +61,7 @@ The application is designed for multiple offices using the system at the same ti
 - Successful, failed, and blocked login auditing.
 - Sign-in attempts are limited to five per email address from one device before a five-minute lockout, which is recorded once in the audit trail. Signing in successfully clears the count, and a lockout on one account never blocks a colleague signing in from the same office.
 - Secure logout with session invalidation and CSRF-token regeneration.
+- Signed-in pages use non-storable responses; restoring a page with the browser's Back/Forward cache hides its old contents and reloads it to check the current sign-in session.
 - Automatic logout after 15 minutes of inactivity.
 - One-minute session-expiration warning.
 - Activity synchronization across browser tabs.
@@ -101,6 +107,14 @@ Implementation status and remaining staff/staging checks are documented in [DESI
 - A default view with four key figures, up to three common actions, attention items, and five recent assistance releases.
 - Attention shortcuts open farmers missing parcels, FFRS numbers, or locations and machinery requiring maintenance.
 - Reports disclosure for detailed totals, current-month activity, charts, recent services, and parcel activity; chart loading starts when opened and monthly figures remain available without charts.
+- A **View graphs and reports** shortcut near the dashboard heading.
+- Machinery condition and availability charts grouped by equipment type, with missing inventory classifications shown explicitly.
+- Monthly animal-health graphs showing service counts by vaccination, deworming, vitamins/supplementation, and treatment.
+- Fingerlings distributed by active municipality, measured in pieces separately from release counts and beneficiaries.
+- A reporting-year selector for monthly animal-health services, fingerling quantities, and municipality production comparisons. Other totals retain their stated reporting periods.
+- Production comparisons by municipality, commodity, and unit for accounts with multiple active municipalities in scope; no combined score or mixed-unit total.
+- A commodity/unit selector for the yearly production trend, with missing harvest entries distinguished from recorded zero production.
+- Figures tables behind every graph, including notices for incomplete or undated records; they remain usable when charts cannot load.
 
 ### System Owner and Super Administrator dashboards
 
@@ -174,6 +188,11 @@ Implementation status and remaining staff/staging checks are documented in [DESI
 - Parcel boundaries are displayed without unnecessary centroid pins.
 - Large 3D parcel collections draw in batches using one interactive shape per parcel. The overview uses lighter display outlines, while selection and close inspection restore full detail. Stored boundaries, measured areas, editing, and exports retain their original coordinates.
 - Municipality-scoped parcel loading prevents parcels from different municipalities from being mixed.
+- **Crops by season:** select a year and dry/wet season to color parcels by recorded rice/palay, corn, vegetables, root crops, fruit, legumes, mixed crops, or other crops. A crop filter and labeled legend show the classifications and counts for loaded parcels.
+- Staff record and correct a parcel's seasonal crop from the **Seasonal crops** action beside that parcel. Optional notes can identify crops grown together or the source of the observation; saved seasons remain available for review.
+- Super Admin and System Owner accounts may inspect seasonal crops but cannot change them. Municipality ownership, audit logging, and stale-edit protection apply to crop records.
+- Missing crop records appear in gray as **Not recorded**. This does not mean fallow. Seasonal classifications do not establish current planting, planted hectares, or production; assistance and harvest records are not automatically assigned to parcels.
+- Switching back to **Saved parcel colors** restores the original display. Crop styling does not alter parcel boundaries, saved colors, or exports. Loading/error states are distinct from missing crop records.
 - Authorized selected-farmer KML and KMZ import.
 - Server-side KML and XML bulk parcel import for one municipality.
 - Import matching by parcel code, full name, surname and barangay, unique surname, and controlled fallback matching.
@@ -191,7 +210,9 @@ Implementation status and remaining staff/staging checks are documented in [DESI
 - The sidebar office label uses the assigned workspace's municipality and province rather than a fixed province name.
 - Display of active, draft, and archived boundary records.
 - Distinct boundary colors and municipality labels.
+- Faster map browsing through reusable shapes, drawing in small batches, and hiding off-screen boundaries. Municipality names appear when zoomed in or when one municipality is selected. Search waits for typing to pause and cancels superseded requests. Stored coordinates, editing precision, and snapshot exports retain full detail.
 - Brighter boundary edges and municipality label badges for satellite visibility. Map tools includes a Geofence color opacity slider from 0% (clear fill) to 100% (solid fill), starting at 20%; outlines remain visible and drafts retain lighter fill. The setting applies to the current map view and survives municipality changes on that page without changing saved boundary colors or exported snapshots.
+- The opacity slider also controls editing and drawing previews. The saved fill is suppressed while its boundary is being edited, then restored on cancel, so it does not obscure the preview color.
 - Fit-to-boundary and reset controls; municipal users stay on their own boundary and parcels.
 - Active official geofences are also displayed beneath parcels in the Farmers 3D map, with a show/hide control and scope-aware camera fitting.
 - Boundary creation and modification by the System Owner or the assigned province Super Administrator.
@@ -212,12 +233,19 @@ Implementation status and remaining staff/staging checks are documented in [DESI
 - Detection of overlapping active municipality boundaries.
 - Shared municipality edges are allowed when they do not create an actual overlap.
 - Changing a boundary's name or color preserves its saved shape. Vertex edits retain untouched shared-border coordinates at their original precision, preventing rounding from creating false overlap errors; genuine overlaps remain blocked.
+- Save boundary shows a saving indicator, prevents repeated submissions, and keeps failed edits with a persistent explanation beside the save controls. Expired sessions are explained clearly. Name/color-only updates do not require geometry replacement confirmation; changing an active shape still does.
 - Optimistic locking and municipality-level mutation locks for concurrent edits.
-- Explicit, idempotent reference imports cover all 18 Tarlac workspaces (17 municipalities and Tarlac City), all 24 Bulacan workspaces (21 municipalities and the component cities of Malolos, Meycauayan, and San Jose del Monte), Baguio City, and all thirteen Benguet municipalities.
+- Explicit, idempotent reference imports cover all 18 Tarlac workspaces (17 municipalities and Tarlac City), all 24 Bulacan workspaces (20 municipalities and the component cities of Baliwag, Malolos, Meycauayan, and San Jose del Monte; legacy workspace spelling `Baliuag` is preserved), Baguio City, and all thirteen Benguet municipalities.
 - Reference files must be imported into each deployment's database before their boundaries appear on maps; deploying the code alone does not activate geofences. The Bulacan importer recognizes the legacy workspace code without renaming or replacing its existing records.
+- Region III coverage totals 130 municipality/city references across seven provinces and the separate Angeles City and Olongapo City scopes. Provincial administrators cannot access either independent city through Pampanga or Zambales. The 88 additional references preserve existing Tarlac/Bulacan data; a coarse Bulacan province outline is retained as archived history when replaced by municipality boundaries. No accounts or sample records are created. See `docs/REGION_III_BOUNDARY_SOURCES.md`.
+- Region I has explicit planning-reference imports for 125 cities and municipalities: Ilocos Norte (23), Ilocos Sur (34), La Union (20), and Pangasinan (48). Repeated town names are labeled with their province. Imports preserve existing data, stop on conflicts, and create no accounts or sample records. Paoay’s reference includes its lake; boundary area is not farmland area. Dagupan is in the geographic Pangasinan planning group. These approximate boundaries require LGU/NAMRIA verification before official use. See `docs/REGION_I_BOUNDARY_SOURCES.md`.
+- Region II has 93 planning-reference geofences: Batanes (6), Cagayan (29), Isabela (36), Nueva Vizcaya (15), Quirino (6), and Santiago City (1). Santiago has its own access scope and is excluded from Isabela administrator access. Repeated names are province-qualified; existing records are preserved. These imports create no accounts or sample farmer records. See `docs/REGION_II_BOUNDARY_SOURCES.md`.
+
+- Negros Island Region has 63 municipality/city planning-reference geofences: Negros Occidental (31), Negros Oriental (25), Siquijor (6), and Bacolod City (1). Bacolod has its own access scope and is excluded from Negros Occidental administrator access. The local setup preserves the existing geofences and farm records, updates source identifiers and separates Bacolod supervision. These are approximate planning references requiring LGU/NAMRIA verification before official use. No accounts are created. This scope update is local, not deployed; see `docs/NEGROS_ISLAND_BOUNDARY_SOURCES.md`.
+- Ramos, Tarlac has nine barangay planning-reference outlines. Select Ramos in Municipality geofences, choose a barangay to highlight it and press Focus to zoom. Includes a visibility toggle, labels, PSGC codes and source/accuracy notes. These simplified references require local validation; they do not assign farmers/parcels, change official boundaries, determine eligibility or appear in municipality snapshots. Access follows existing municipality/province permissions. Implemented locally, not deployed; see `docs/RAMOS_BARANGAY_BOUNDARIES.md`.
 - A separate boundary-only Tarlac import adds Bamban, Capas, Gerona, La Paz, Mayantoc, Moncada, Pura, San Clemente, San Jose, San Manuel, Santa Ignacia, and Victoria. It preserves the six existing references and archived boundary history, creates no sample operational records, and stops the entire import if any boundary or workspace conflicts. The pinned municipality identities and areas are checked against PSA/GeoRiskPH references. These approximate planning boundaries require LGU/NAMRIA verification before official use; normal municipality isolation and parcel geofence validation apply once active.
 - The province-level Bulacan import is stored as a clearly labeled ADM2 planning/reference boundary and does not create farmers or operational records.
-- A separate Bulacan municipality import adds all 21 municipalities and the 3 component cities as ADM3 planning references. It creates missing workspaces or reuses existing active ones and creates no users or sample operational records. Two workspaces deliberately differ from the source wording: the municipality is named Bulakan, because the source spelling is identical to the Bulacan province workspace, and the three cities follow the existing "Tarlac City" wording.
+- A separate Bulacan municipality import adds all 20 municipalities and the 4 component cities (including Baliwag, stored with the legacy `Baliuag` spelling) as ADM3 planning references. It creates missing workspaces or reuses existing active ones and creates no users or sample operational records. Two workspaces deliberately differ from the source wording: the municipality is named Bulakan, because the source spelling is identical to the Bulacan province workspace, and the three cities follow the existing "Tarlac City" wording.
 - Because a province boundary contains every municipality inside it, the two cannot both stay active. The municipality import archives the active Bulacan province reference as superseded, records that in the audit trail with its reason, and leaves the province workspace and its archived history otherwise untouched; re-running the province import restores the province-level view. Any other conflicting boundary stops the entire import and the archival is rolled back with it.
 - The Baguio import uses a pinned city-level boundary from geoBoundaries, checked against PSA identity and area references. It creates or reuses the Baguio workspace without creating sample records, preserves an existing different active boundary, and applies the normal parcel validation once active. The boundary is an approximate planning reference requiring LGU/NAMRIA verification before official use.
 - La Trinidad, Atok, and Tublay have a separate import using verified municipality features from the same pinned dataset. It creates or reuses their Benguet workspaces and activates all three references together, preserving existing different active boundaries and creating no sample records. Any conflict stops the entire import. These planning references retain normal municipality isolation and require LGU/NAMRIA verification before official use.
@@ -318,6 +346,24 @@ The historical database name remains `rice_seed_distributions`, but the module s
 - Chunked filtered CSV export with spreadsheet-formula protection.
 - NRP Excel import with municipality-scoped FFRS and RSBSA matching.
 - Certified, Registered, and Not Specified seed classes, with imported legacy values kept editable.
+
+### Assistance coverage map
+
+- Open **Agriculture & Fisheries → Assistance coverage map** to compare recorded
+  releases by municipality in an authorized province or independent-city scope.
+- Filter by municipality, assistance type, exact program/sheet reference, planting
+  year, and dry/wet season. Program and planting period currently come from rice
+  distribution sheets; legacy and other releases remain available under All
+  seasons / All years or Not recorded. Seasons are never guessed from dates.
+- View release counts, distinct linked farmer records, and quantities separated
+  by unit. Incomplete period, farmer-link, and quantity data are disclosed.
+- Open the map on demand. Municipality colors represent recorded release counts;
+  gray means no matching releases, not proof that the area received no assistance.
+  Areas without a usable active boundary remain in the table.
+- Individual farm parcels are not colored because releases have no explicit
+  parcel link. The report does not calculate hectares or eligibility coverage.
+- The table works without the map or JavaScript. Scope and role restrictions apply
+  to both the report and the boundary endpoint; no records are changed.
 
 ### Rice Seed Distribution Sheet
 

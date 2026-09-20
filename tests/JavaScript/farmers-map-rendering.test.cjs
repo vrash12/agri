@@ -49,12 +49,23 @@ function harness(plots = []) {
     map3d: { range: 16000, tilt: 22, center: { lat: 15, lng: 120 },
       append: object => { assert.ok(!object.isConnected); object.isConnected = true; mounted.add(object); metrics.mounts++; },
       removeChild: object => { object.isConnected = false; mounted.delete(object); } },
-    Polygon3DInteractiveElement: class { constructor(options) { Object.assign(this, options); this.isConnected = false; metrics.constructed++; } },
+    Polygon3DInteractiveElement: class {
+      constructor(options) {
+        Object.assign(this, options);
+        this.ready = true;
+        this.isConnected = false;
+        metrics.constructed++;
+      }
+      // Reproduce the Maps beta lifecycle failure observed in the browser.
+      set path(value) { assert.ok(this.ready, 'Set interactive polygon paths after construction'); this.currentPath = value; }
+      get path() { return this.currentPath; }
+    },
     // Any accidental restoration of the invisible line doubles the map workload.
     Polyline3DInteractiveElement: class { constructor() { throw new Error('Unexpected duplicate outline'); } },
     AltitudeMode: { CLAMP_TO_GROUND: 'ground' },
     savedPlotOverlays: [], renderedPlotDataByFarmerId: new Map(), plotsCacheByFarmerId: new Map(),
     savedPlotsHiddenForEditing: false, focusedParcelFarmerId: null, selectedFarmerId: null, editingPlotId: null,
+    cropLayer: null, queueCropLayer: () => {},
     plotDisplayRevision: 0, plotDisplayTimer: null, mapGeocodedPillEl: { textContent: '' },
     normalizePolygonRing: points => points.slice(), getEffectivePlotColor: plot => plot.color || '#22c55e',
     hexAlpha: color => color, hexToRgba: color => color, bindClickablePlotOverlay: () => {},
@@ -66,13 +77,35 @@ function harness(plots = []) {
     fetch: async () => ({ ok: true, json: async () => ({ plots, total: plots.length, returned: plots.length, truncated: false }) }),
   });
   const functions = ['toLatLng', 'setOverlayVisible', 'nextPlotFrame', 'shouldShowSavedPlot', 'needsFullPlotDetail',
-    'refreshSavedPlotDisplay', 'clearPlotsForFarmer', 'renderPlotsForFarmer', 'loadAllMunicipalPlots'];
+    'refreshSavedPlotDisplay', 'clearPlotsForFarmer', 'renderPlotsForFarmer', 'loadAllMunicipalPlots', 'applyCropStyle'];
   vm.runInContext(functions.map(declaration).join('\n'), context);
   const clear = context.clearPlotsForFarmer;
   context.clearPlotsForFarmer = id => { metrics.clears++; clear(id); };
   context.window.__applyPlotVisibility = context.refreshSavedPlotDisplay;
   return { context, metrics, mounted, toggle };
 }
+
+test('crop styling reuses overlays and restores saved colors without changing geometry or edit visibility', async () => {
+  const plot = { id: 1, farmer_id: 1, color: '#123456', polygon_json: ring() };
+  const { context, metrics } = harness();
+  const original = JSON.stringify(plot);
+  context.renderPlotsForFarmer('1', [plot]);
+  const overlay = context.savedPlotOverlays[0];
+  context.cropLayer = { color: () => '#219653', visible: () => true };
+  await context.refreshSavedPlotDisplay();
+  assert.equal(overlay.poly.fillColor, '#219653');
+  assert.equal(overlay.style.fillSoft, '#219653');
+  assert.equal(metrics.constructed, 1);
+  context.cropLayer.visible = () => false;
+  await context.refreshSavedPlotDisplay();
+  assert.equal(overlay.poly.isConnected, false);
+  context.cropLayer = null;
+  context.savedPlotsHiddenForEditing = true;
+  await context.refreshSavedPlotDisplay();
+  assert.equal(overlay.poly.isConnected, false);
+  assert.equal(overlay.poly.fillColor, '#123456');
+  assert.equal(JSON.stringify(plot), original);
+});
 
 test('all 1044 parcels load in batches with one overlay each and untouched full geometry', async () => {
   const plots = Array.from({ length: 1044 }, (_, i) => ({ id: i + 1, farmer_id: Math.floor(i / 2) + 1,

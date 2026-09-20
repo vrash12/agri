@@ -116,6 +116,7 @@ class AuditModelObserver
             $model instanceof AgriculturalMachinery => 'Machinery inventory',
             $model instanceof Farmer => 'Farmers',
             $model instanceof FarmPlot => 'Farm plots',
+            $model instanceof \App\Models\ParcelCropSeason => 'Seasonal parcel crops',
             $model instanceof HarvestRecord => 'Harvest records',
             $model instanceof RiceSeedDistribution => 'Assistance distributions',
             $model instanceof RiceDistributionBatch => 'Assistance distributions',

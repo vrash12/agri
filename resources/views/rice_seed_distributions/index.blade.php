@@ -74,6 +74,7 @@
       <p class="module-scope-note">Viewing: <strong>{{ $scopeName }}</strong>@unless($canChooseMunicipality ?? false) · Assigned municipality @endunless</p>
     </div>
     <div class="module-actions">
+      <a class="module-button" href="{{ route('assistance-coverage.index') }}">Assistance coverage map</a>
       {{-- Guarded so the assistance register keeps working if the sheet routes are not registered. --}}
       @if(Route::has('rice-distribution-batches.index'))<a class="module-button" href="{{ route('rice-distribution-batches.index', collect($workspaceQuery)->only('municipality_id')->all()) }}"><svg viewBox="0 0 24 24"><path d="M7 3h10v18H7zM10 8h4M10 12h4M10 16h4"></path></svg>Rice seed sheets</a>@endif
       @if($canManageOperations)<a class="module-button" href="{{ route('rice-seed-distributions.import.form') }}"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"></path></svg>Import NRP workbook</a>@endif

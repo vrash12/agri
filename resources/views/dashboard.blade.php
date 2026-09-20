@@ -23,9 +23,11 @@
       'quantity_by_unit' => $providedMetrics['quantity_by_unit'] ?? $blankMetric('Quantity released by unit'),
       'mapping_coverage' => $providedMetrics['mapping_coverage'] ?? $blankMetric('Farm mapping coverage'),
       'animal_health_by_service' => $providedMetrics['animal_health_by_service'] ?? $blankMetric('Animal-health services by type'),
+      'animal_health_by_month' => $providedMetrics['animal_health_by_month'] ?? $blankMetric('Animal-health services by month'),
       'fisheries_assistance' => $providedMetrics['fisheries_assistance'] ?? $blankMetric('Fisheries assistance'),
-      'machinery_by_condition' => $providedMetrics['machinery_by_condition'] ?? $blankMetric('Machinery by operating condition'),
-      'machinery_by_availability' => $providedMetrics['machinery_by_availability'] ?? $blankMetric('Machinery by current availability'),
+      'fingerlings_by_municipality' => $providedMetrics['fingerlings_by_municipality'] ?? $blankMetric('Fingerlings distributed by municipality'),
+      'machinery_condition_by_type' => $providedMetrics['machinery_condition_by_type'] ?? $blankMetric('Machinery condition by equipment type'),
+      'machinery_availability_by_type' => $providedMetrics['machinery_availability_by_type'] ?? $blankMetric('Machinery availability by equipment type'),
       'production_by_commodity' => $providedMetrics['production_by_commodity'] ?? $blankMetric('Recorded production by commodity'),
       'municipality_comparison' => $providedMetrics['municipality_comparison'] ?? null,
   ];
@@ -36,6 +38,8 @@
   $comparison = $dashboardMetrics['municipality_comparison'];
   $localNow = \App\Support\LocalTime::now();
   $currentYear = $currentYear ?? $localNow->year;
+  $reportYear = $reportYear ?? $currentYear;
+  $reportYears = $reportYears ?? [$reportYear];
 
   $user = auth()->user();
   $isProvincialUser = $user->isProvincialUser();
@@ -76,6 +80,7 @@
       </div>
       <h1>Operations dashboard</h1>
       <p>Monitor field coverage, assistance delivery, and work that needs attention.</p>
+      <a class="ops-text-link" href="#dashboardReports" data-open-dashboard-section="dashboardReports">View graphs and reports <span aria-hidden="true">↓</span></a>
     </div>
 
     <div class="ops-date"><strong>{{ $localNow->format('l, F j, Y') }}</strong><span>As of {{ $localNow->format('h:i A') }} PHT</span></div>
@@ -211,7 +216,7 @@
       </section></aside>
   </div>
 
-  <details class="ops-reports" id="dashboardReports">
+  <details class="ops-reports" id="dashboardReports" @if(request()->has('report_year')) open @endif>
     <summary><span><strong>Reports and office details</strong><small>Monthly figures, program totals, recent services, and parcel work</small></span></summary>
     <div class="ops-reports-content">
   <p class="ops-report-status" data-report-status role="status">Charts load when you open this section. Every figure is also listed as a table.</p>
@@ -350,10 +355,22 @@
         <div class="ops-panel-header">
           <div>
             <span class="ops-panel-kicker">Program indicators</span>
-            <h2 id="dashboardIndicatorsHeading">Where the assistance went</h2>
+            <h2 id="dashboardIndicatorsHeading">Program activity and equipment</h2>
             <p>Each indicator is measured on its own terms. What was released is counted as a release, never as production or yield.</p>
           </div>
         </div>
+        <form class="ops-report-filter" method="GET" action="{{ route('dashboard') }}#dashboardReports" aria-label="Dashboard reporting year">
+          <label class="ops-metric-picker" for="dashboardReportYear">
+            <span>Reporting year</span>
+            <select id="dashboardReportYear" name="report_year" aria-describedby="dashboardReportYearHelp">
+              @foreach($reportYears as $availableReportYear)
+                <option value="{{ $availableReportYear }}" @selected((int) $availableReportYear === (int) $reportYear)>{{ $availableReportYear }}</option>
+              @endforeach
+            </select>
+          </label>
+          <button type="submit" class="ops-button ops-button-primary">Apply year</button>
+          <p id="dashboardReportYearHelp">Applies to monthly animal-health services, fingerling quantities, and production in the municipality comparison. Other program totals cover all recorded dates; machinery shows the current inventory.</p>
+        </form>
         <div class="ops-metric-grid">
           @include('partials.dashboard-metric', [
             'metric' => $dashboardMetrics['farmers_by_municipality'],
@@ -387,48 +404,61 @@
           @include('partials.dashboard-metric', [
             'metric' => $dashboardMetrics['fisheries_assistance'],
             'metricId' => 'chartFisheriesAssistance',
-            'metricNote' => 'Fisheries releases. Quantities of fingerlings are counted in pieces and appear under quantity by unit.',
+            'metricNote' => 'All recorded fisheries releases and beneficiaries. Fingerling quantities for the selected year appear separately below.',
+          ])
+          @include('partials.dashboard-metric', [
+            'metric' => $dashboardMetrics['fingerlings_by_municipality'],
+            'metricId' => 'chartFingerlingsByMunicipality',
+            'metricLabel' => 'Municipality',
+            'metricNote' => $reportYear . ' · Fingerlings issued, in pieces. These are quantities released, not the number of farmers served.',
           ])
           @include('partials.dashboard-metric', [
             'metric' => $dashboardMetrics['animal_health_by_service'],
             'metricId' => 'chartAnimalHealth',
             'metricLabel' => 'Service type',
-            'metricNote' => 'One service record can cover many animals, so services and animals are counted separately.',
+            'metricNote' => 'All recorded dates. One service record can cover many animals, so services and animals are counted separately.',
           ])
           @include('partials.dashboard-metric', [
-            'metric' => $dashboardMetrics['machinery_by_condition'],
+            'metric' => $dashboardMetrics['animal_health_by_month'],
+            'metricId' => 'chartAnimalHealthMonthly',
+            'metricLabel' => 'Month',
+            'metricNote' => $reportYear . ' · Number of service records by month and service type. Animals treated are not counted as separate service records.',
+          ])
+          @include('partials.dashboard-metric', [
+            'metric' => $dashboardMetrics['machinery_condition_by_type'],
             'metricId' => 'chartMachineryCondition',
-            'metricLabel' => 'Condition',
-            'metricNote' => 'What state each unit is in.',
+            'metricLabel' => 'Equipment type',
+            'metricNote' => 'Current inventory · Equipment units in each operating condition, grouped by equipment type.',
           ])
           @include('partials.dashboard-metric', [
             'metric' => $dashboardMetrics['production_by_commodity'],
             'metricId' => 'chartProductionByCommodity',
             'metricLabel' => 'Harvest year',
-            'metricNote' => 'What farmers harvested, recorded against the harvest itself rather than against an assistance release. Each commodity and unit is its own series, because nothing here converts sacks into kilograms.',
+            'metricNote' => 'All recorded harvest years. Choose one commodity and unit to follow its production over time; sacks and kilograms are never combined.',
+            'metricPickerId' => 'productionIndicatorPicker',
           ])
           @include('partials.dashboard-metric', [
-            'metric' => $dashboardMetrics['machinery_by_availability'],
+            'metric' => $dashboardMetrics['machinery_availability_by_type'],
             'metricId' => 'chartMachineryAvailability',
-            'metricLabel' => 'Availability',
-            'metricNote' => 'Whether each unit can be used right now. A unit in excellent condition can still be unavailable because it is already in use.',
+            'metricLabel' => 'Equipment type',
+            'metricNote' => 'Current inventory · Whether each unit can be used now, grouped by equipment type. An excellent unit can still be in use or unavailable.',
           ])
         </div>
       </section>
 
       @if($dashboardMetrics['municipality_comparison'])
         <section class="ops-panel" aria-labelledby="dashboardComparisonHeading">
-          <div class="ops-panel-header">
+          <div class="ops-panel-header ops-comparison-header">
             <div>
               <span class="ops-panel-kicker">Comparison</span>
               <h2 id="dashboardComparisonHeading">Municipalities, one indicator at a time</h2>
-              <p>Indicators are shown one at a time and are never combined into a score, an index or a ranking.</p>
+              <p>Compare one indicator at a time. Production uses {{ $reportYear }} harvest records, with each commodity and unit kept separate. Farmer and assistance counts cover all recorded dates. Missing production is shown as “Not recorded,” not zero.</p>
             </div>
             <label class="ops-metric-picker">
               <span>Indicator</span>
               <select id="municipalityIndicatorPicker">
                 @foreach($comparison['series'] as $comparisonIndex => $comparisonSeries)
-                  <option value="{{ $comparisonIndex }}">{{ $comparisonSeries['name'] }}</option>
+                  <option value="{{ $comparisonIndex }}">{{ $comparisonSeries['name'] }} ({{ $comparisonSeries['unit'] }})</option>
                 @endforeach
               </select>
             </label>
@@ -700,14 +730,9 @@
     */
     const METRICS = @json($dashboardMetrics);
 
-    /*
-      Series colours are assigned in a fixed order and never cycled: the first series
-      is green, the second blue. The pair, the condition ramp and the status set were
-      checked for colour-vision separation against the white panel surface rather
-      than picked by eye. Condition is an ordered severity scale, so it runs green to
-      red through a neutral middle; availability is a set of states, not a severity.
-    */
+    // Legends and figures identify every series independently of its colour.
     const SERIES_COLORS = ['#2e7d52', '#2f6fb5'];
+    const SERVICE_COLORS = ['#2e7d52', '#2f6fb5', '#b07016', '#87548e', '#4a5852'];
     const CONDITION_COLORS = ['#186b40', '#6fb586', '#c9ccc6', '#d18a5a', '#9e3f39'];
     const AVAILABILITY_COLORS = ['#2e7d52', '#2f6fb5', '#b07016', '#4a5852'];
     const COVERAGE_COLORS = ['#2e7d52', '#9aa8a0'];
@@ -716,7 +741,7 @@
     const GRID_INK = 'rgba(32,54,44,.08)';
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    const formatValue = (value, decimals) => Number(value || 0).toLocaleString(undefined, {
+    const formatValue = (value, decimals) => value == null ? 'Not recorded' : Number(value).toLocaleString(undefined, {
       minimumFractionDigits: decimals || 0,
       maximumFractionDigits: decimals || 0,
     });
@@ -744,25 +769,38 @@
       },
     });
 
-    const drawBars = (id, metric, colors) => {
+    const wrapCategory = (label, limit) => {
+      const lines = [''];
+      for (const word of String(label).split(/\s+/)) {
+        for (const part of word.match(new RegExp('.{1,' + limit + '}', 'g')) || ['']) {
+          const last = lines.length - 1;
+          if (lines[last] && lines[last].length + part.length + 1 > limit) lines.push(part);
+          else lines[last] += (lines[last] ? ' ' : '') + part;
+        }
+      }
+      return lines;
+    };
+
+    const drawBars = (id, metric, colors, settings = {}) => {
       const canvas = freshCanvas(id);
       if (!canvas || !metric || !metric.labels.length) return;
 
       // Named categories read far better stacked down the page than squeezed across
       // it; a province with fifty municipalities is unreadable as vertical bars.
-      const horizontal = metric.labels.length > 8;
+      const horizontal = settings.horizontal ?? (metric.labels.length > 8);
+      const axisUnit = new Set(metric.series.map(series => series.unit)).size === 1 ? metric.series[0]?.unit : 'Count';
       if (horizontal) {
-        canvas.parentElement.style.height = Math.max(240, metric.labels.length * 26) + 'px';
+        canvas.parentElement.style.height = Math.max(310, metric.labels.length * 44 + 90) + 'px';
       }
 
       new Chart(canvas, {
         type: 'bar',
         data: {
-          labels: metric.labels,
+          labels: horizontal ? metric.labels.map(label => wrapCategory(label, canvas.parentElement.clientWidth < 360 ? 18 : 26)) : metric.labels,
           datasets: metric.series.map((series, index) => ({
             label: series.name,
             data: series.values,
-            backgroundColor: colors ? colors[index] : SERIES_COLORS[index % SERIES_COLORS.length],
+            backgroundColor: colors?.[index] ?? '#6b7280',
             borderRadius: 4,
             borderWidth: 0,
             maxBarThickness: 34,
@@ -785,11 +823,15 @@
           },
           scales: {
             x: {
+              stacked: !!settings.stacked,
+              title: { display: horizontal, text: axisUnit || '', color: INK_MUTED },
               beginAtZero: horizontal,
               grid: { display: horizontal, color: GRID_INK },
               ticks: { color: INK_MUTED, font: { size: 12 }, precision: 0 },
             },
             y: {
+              stacked: !!settings.stacked,
+              title: { display: !horizontal, text: axisUnit || '', color: INK_MUTED },
               beginAtZero: !horizontal,
               grid: { display: !horizontal, color: GRID_INK },
               ticks: { color: INK_MUTED, font: { size: 12 }, precision: 0, autoSkip: !horizontal },
@@ -827,9 +869,7 @@
           animation: reduceMotion ? false : { duration: 400 },
           interaction: { mode: 'index', intersect: false },
           plugins: {
-            // Commodities measured in different units share this axis only in the
-            // sense that they are all quantities; the legend names each unit so no
-            // two lines are read as directly comparable.
+            // The production picker keeps incompatible units off the same axis.
             legend: {
               display: true,
               position: 'bottom',
@@ -912,19 +952,29 @@
       }, [SERIES_COLORS[0]]);
     };
 
+    const productionPicker = document.getElementById('productionIndicatorPicker');
+    const drawProduction = () => {
+      const metric = METRICS.production_by_commodity;
+      if (!metric?.series.length) return;
+      const chosen = metric.series[Number(productionPicker?.value) || 0] || metric.series[0];
+      drawLines('chartProductionByCommodity', { ...metric, series: [chosen] });
+    };
+
     const reports = document.getElementById('dashboardReports');
     if (reports) {
       reports.renderOperationalCharts = () => {
         drawMonthly();
         drawBars('chartFarmersByMunicipality', METRICS.farmers_by_municipality, [SERIES_COLORS[0]]);
-        drawBars('chartAssistanceByCategory', METRICS.assistance_by_category);
-        drawBars('chartAssistanceByMunicipality', METRICS.assistance_by_municipality);
-        drawBars('chartFisheriesAssistance', METRICS.fisheries_assistance);
-        drawBars('chartAnimalHealth', METRICS.animal_health_by_service);
-        drawLines('chartProductionByCommodity', METRICS.production_by_commodity);
+        drawBars('chartAssistanceByCategory', METRICS.assistance_by_category, SERIES_COLORS);
+        drawBars('chartAssistanceByMunicipality', METRICS.assistance_by_municipality, SERIES_COLORS);
+        drawBars('chartFisheriesAssistance', METRICS.fisheries_assistance, SERIES_COLORS);
+        drawBars('chartFingerlingsByMunicipality', METRICS.fingerlings_by_municipality, [SERIES_COLORS[0]]);
+        drawBars('chartAnimalHealth', METRICS.animal_health_by_service, SERIES_COLORS);
+        drawBars('chartAnimalHealthMonthly', METRICS.animal_health_by_month, SERVICE_COLORS, { horizontal: false, stacked: true });
+        drawProduction();
         drawDoughnut('chartMappingCoverage', METRICS.mapping_coverage, COVERAGE_COLORS);
-        drawDoughnut('chartMachineryCondition', METRICS.machinery_by_condition, CONDITION_COLORS);
-        drawDoughnut('chartMachineryAvailability', METRICS.machinery_by_availability, AVAILABILITY_COLORS);
+        drawBars('chartMachineryCondition', METRICS.machinery_condition_by_type, CONDITION_COLORS, { horizontal: true, stacked: true });
+        drawBars('chartMachineryAvailability', METRICS.machinery_availability_by_type, AVAILABILITY_COLORS, { horizontal: true, stacked: true });
         drawComparison();
       };
     }
@@ -932,6 +982,11 @@
     if (comparisonPicker) {
       comparisonPicker.addEventListener('change', () => {
         if (typeof Chart !== 'undefined') drawComparison();
+      });
+    }
+    if (productionPicker) {
+      productionPicker.addEventListener('change', () => {
+        if (typeof Chart !== 'undefined') drawProduction();
       });
     }
 

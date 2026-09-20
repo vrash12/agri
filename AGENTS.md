@@ -181,7 +181,11 @@ The application is multi-municipality. Operational records belong to one `munici
 
 ## 2. Technology and important dependencies
 
-- PHP `^8.0.2`
+- PHP `^8.1` (raised from `^8.0.2` on 2026-09-19: the patched PhpSpreadsheet requires
+  8.1. `composer.json` pins `config.platform.php` to `8.1.0` so the lock resolves for
+  the oldest supported server rather than whatever the developer machine runs.
+  `nette/schema` caps the set at 8.3, so the supported range is **PHP 8.1 – 8.3**;
+  confirm the server before deploying with `php -v`.)
 - Laravel `^9.19`
 - MySQL/MariaDB
 - Blade views with server-rendered forms
@@ -226,6 +230,7 @@ The standalone `/login` page keeps the credential form on the left and an eight-
 6. Unsuccessful sign-in entries are capped at 20 per client address per 15 minutes. Past that ceiling one `login_failures_suppressed` entry records that the rest of the window was suppressed, so an address working through many email addresses cannot bury genuine entries. Successful sign-ins, logouts, and session timeouts are never suppressed.
 7. `last_login_at` is updated. Agriculture roles are redirected to the municipality-aware dashboard, while `provincial_vet` goes directly to Animal Health.
 8. Logout is audited, the session is invalidated, and the CSRF token is regenerated.
+   `SecurityHeaders` marks authenticated and sign-in/session responses private and non-storable. The authenticated layout loads `public/js/session-history.js` to hide restored browser-history snapshots and reload them through server authentication. Deploy that asset to both Hostinger public directories before clearing compiled views.
 9. Authenticated sessions have a 15-minute idle limit. Browser activity is shared across tabs and sends a throttled heartbeat only while the user is active.
 10. The interface warns during the final minute, then automatically signs the account out. The server independently rejects stale requests, invalidates the session, and records a `session_timeout` audit event.
 
@@ -281,7 +286,29 @@ When adding a new municipality-owned module, reuse these components instead of c
 
 Route: `GET /` (`welcome`). Guests receive a public farmer-services guide in `resources/views/welcome.blade.php`; signed-in users retain the dashboard or Animal Health redirect. `/login` remains the staff sign-in entry. The page provides native service disclosures, an office-visit checklist, and links to official DA, RSBSA Finder, PhilRice, ATI, BFAR, and PAGASA resources. It does not query operational records or publish counts, accept farmer registrations/applications, or create bookings. Keep availability and eligibility inquiries with the responsible office.
 
-The page consumes `partials.design-tokens` and its scoped `public/css/welcome.css` / `public/js/welcome.js`. Navigation and service guidance remain usable without JavaScript. Six locally served Philippine agriculture photographs use CC BY-SA or CC0 licenses, with source, author, and license attribution in the footer disclosure; preserve their credits. Service thumbnails are lazy-loaded. See `docs/WELCOME_PAGE.md` and `docs/WELCOME_PHOTO_SOURCES.md` for the design rationale, asset provenance, and verification. No migration or new configuration is required.
+The page consumes `partials.design-tokens` and its scoped `public/css/welcome.css` / `public/js/welcome.js`. `partials.welcome-slideshow` and `public/js/welcome-slideshow.js` add 20 Philippine agriculture photographs in five distinct four-photo collages, with eight-second playback, collage selection, pause, reduced-motion handling, and hidden-tab suspension. Images hydrate only for the current, upcoming during playback, or manually selected collage. Keyboard interaction pauses playback until explicitly resumed. Navigation, the first collage, and service guidance remain usable without JavaScript. The About AgriGOV section explains six office capabilities without querying operational records. The unmodified existing DA seal identifies the linked DA resources separately from application branding. Preserve the footer photo credits and link to `public/photo-credits.html`; service thumbnails remain lazy-loaded. See `docs/WELCOME_PAGE.md`, `docs/WELCOME_PHOTO_SOURCES.md`, and `docs/WELCOME_COLLAGE_PHOTOS.md` for design, asset provenance, and verification. No migration or new configuration is required. Deploy the slideshow script before rebuilding views; mirror public assets to both Hostinger public directories.
+
+The local homepage redesign uses a neobrutalist photo collage with page-scoped
+square borders and offset shadows, retaining the shared green/yellow colors,
+Roboto, service disclosures, DA identity, farmer/office entries and photo credits.
+Only photo frames are rotated; controls stay level. The hero rotates five different arrangements of four photographs, with varied
+landscape and portrait frames. Services precede
+the system overview. This welcome-page style is an explicit owner-requested
+exception to the ordinary management-panel geometry; do not apply it globally.
+The redesign remains local until separately deployed; see `docs/WELCOME_PAGE.md`.
+
+Welcome-page microinteractions are progressive enhancements: short button presses,
+link and disclosure feedback, active-section navigation, and one-time heading
+settling on `[data-welcome-reveal]`. Fragment links move focus to their destination
+without replacing native scrolling/history. Content stays visible without the
+observer or animation APIs. Respect reduced motion in CSS and JavaScript, including
+preference changes during playback; do not add continuous decorative movement.
+
+Inside AgriGOV presents six office capabilities in a numbered, expandable toolkit
+beside its introduction and office sign-in action. Keep these as native
+`details`/`summary` elements with visible benefit text, optional explanatory
+content and decorative plus/minus indicators. The light toolkit uses green focus
+outlines inside the dark section; retain keyboard access and reduced-motion rules.
 
 ### 5.1 Dashboard
 
@@ -299,6 +326,8 @@ The dashboard builds role-scoped operational KPIs and recent activity:
 - backup totals/latest upload only for roles allowed to use Backup Folder.
 
 The default dashboard shows four key figures, up to three role-aware actions, an attention panel, and five recent assistance releases. Additional program totals, current-month details, charts, recent services, and parcel activity are in a closed Reports disclosure. Chart.js loads when Reports opens; monthly figures remain readable without it. Super Admin municipality comparison has its own disclosure with search, status filtering, sorting, and municipality-scoped directory links.
+
+Dashboard Reports includes equipment-type stacked bars for operating condition and availability, monthly animal-health service counts by service type, and fingerling quantities by active municipality. The validated `report_year` filter selects the year for monthly services, fingerling quantities, and production in the municipality comparison; choices come from scoped recorded years plus the current/selected year. Other totals remain all-time and machinery reflects the current inventory. Production comparison uses `HarvestRecord` quantities per commodity and recognized unit, never assistance amounts. The production trend and comparison display one commodity/unit indicator at a time. Missing production is `null` (shown as Not recorded); a recorded zero remains zero. Fingerlings count only `fish_fingerlings` releases measured in pieces; incomplete quantities and undated records are disclosed separately. All figures remain available without Chart.js, and the header links to the graphs. See `docs/DASHBOARD_ENHANCEMENTS_2026_09_19.md` for verification and deployment scope.
 
 For super admins it also produces a province comparison without per-municipality N+1 queries. Each active municipality includes farmer, mapping, distribution, vaccination, cooperative, machinery, and staffing metrics. Municipalities are classified as operational, missing a head, without farmer records, or behind on mapping. Only the System Owner receives the count of operational records with no municipality; a province admin cannot infer unassigned/global data.
 
@@ -340,6 +369,10 @@ Authenticated functions:
 The directory's Parcel Map disclosure preserves `#farmersMapModule` bookmarks and row actions. It defers Google Maps startup and the all-plots request until opened; KMZ tools load when a KMZ file is selected. The farmer finder searches the scoped server endpoint. The all-plots endpoint remains unpaginated but caps responses through `map.max_plots_per_request` and reports truncation; the 3D display optimization does not reduce that network payload.
 
 The 3D parcel renderer uses one interactive polygon per parcel, reuses cached overlays, and yields between drawing batches. `public/js/parcel-display-geometry.js` supplies display-only one-metre overview paths with a two-percent area-change guard and topology checks. Original rings remain in the plot cache for edits, collision checks, fitting, measurements, and exports; selected farmers and nearby parcels at close range use full detail. Never persist simplified display paths. Camera-driven refreshes are debounced and cancellable so stale batches cannot restore hidden or deleted plots. See `docs/PARCEL_MAP_PERFORMANCE.md` for verification and limits.
+
+The **Crops by season** disclosure adds a year/dry-or-wet-season crop layer to the same workspace. Staff record one classification per parcel/year/season through `GET/POST /farm-plots/{plot}/seasonal-crops`; System Owner and Super Admin accounts can inspect but cannot save. `ParcelCropSeason` / `parcel_crop_seasons` stores explicit crop records, optional source notes, and municipality ownership derived from the parcel's farmer. `StoreParcelCropSeasonRequest`, `ParcelCropSeasonPolicy`, and `ParcelCropSeasons` enforce authorization, parent ownership, a parent lock through `ConcurrentWrite`, optimistic versions, and audit logging. The unique plot/year/season constraint protects simultaneous first entries. Missing crop records appear as Not recorded, never as fallow or an inferred crop from assistance/harvest data.
+
+`GET /farm-plots/crop-layer` returns classifications only for authorized requested parcels, capped at 200 IDs per request. `public/js/parcel-crop-layer.js` batches requests, ignores stale responses, supports crop filtering and a labeled count legend, and exposes loading/error/retry states. `farmers-maps.js` reuses existing overlays; layer colors never change saved parcel colors, geometry, or exports. Counts describe loaded parcels, not planted hectares or all municipal land. Deploy the additive migration by its explicit path after a backup and install both JavaScript assets in both Hostinger public directories. See `docs/SEASONAL_PARCEL_CROPS.md` for usage, verification, and deployment order.
 
 - retrieve all visible parcels or one accessible farmer's parcels as JSON;
 - draw and save polygon boundaries for the selected farmer;
@@ -427,6 +460,38 @@ Season headings are always built from the stored season and year through `RiceDi
 `App\Support\RiceSeedDistributionSheet` owns the sheet's meaning — titles, column groups, row values, the filtered release query and the aggregated totals — and is shared by the screen and the export, so the two cannot disagree. `App\Support\RiceSeedDistributionSheetWorkbook` only draws the worksheet, and writes every title, heading, label and value through `App\Support\CsvExport::value()` as an explicit string so a stored value cannot execute as a spreadsheet formula. That stores figures as text, which suits a sheet that is printed and signed. Workbook exports are capped at `RiceSeedDistributionSheetWorkbook::MAX_ROWS` (5000) because PhpSpreadsheet holds the whole workbook in memory; a larger scope is directed to the streaming CSV export.
 
 Deleting a sheet is refused while it still groups releases, re-checked inside the row lock. Sheet exports are audited with `exported`, and create/update/delete flow through `AuditModelObserver` under the `Assistance distributions` module.
+
+### Assistance coverage map
+
+`GET /assistance-coverage` (`assistance-coverage.index`) is a read-only planning
+report linked from Agriculture & Fisheries. It authorizes `viewAny` on
+`RiceSeedDistribution` before validating filters through `AssistanceCoverageRequest`.
+`App\Support\AssistanceCoverage` applies `MunicipalityAccess` and active province/
+municipality scope before aggregation, program suggestions, and boundary access.
+System Owner can switch province or independent-city scope; other accounts retain
+their assigned scope and veterinary accounts remain excluded.
+
+Filters cover municipality, assistance type, exact program/sheet reference, and
+explicit planting year/dry-or-wet season. Program and period currently come only
+from same-municipality rice sheets attached to rice releases. Dates, harvest
+periods, and parcel crops are never substituted. All seasons with a blank year
+includes unclassified releases; Not recorded selects incomplete/invalid planting
+periods across all years. The interface discloses this limitation for non-rice and
+legacy releases. Counts separate release transactions and distinct valid linked
+farmer records; quantities stay separate by recognized unit. Unlinked farmers and
+incomplete quantities are disclosed, and zero releases do not imply an unserved
+or ineligible population. No coverage percentage is invented.
+
+The table is server-rendered. The optional Google 2D map loads active municipality
+polygons through `GET /assistance-coverage/boundaries`, accepting at most 10 IDs
+per request (60 requests/minute). Missing, duplicate, or oversized boundaries stay
+in the table; no individual parcel colors are changed because releases have no
+explicit parcel link. Reports show at most 250 municipalities, with truncation
+disclosed, and 200 reference suggestions while accepting an exact typed reference.
+Public assets are `public/css/assistance-coverage.css` and
+`public/js/assistance-coverage.js`; mirror them in both Hostinger public directories
+before rebuilding views. No migration, new configuration, export, or write
+workflow is introduced. See `docs/ASSISTANCE_COVERAGE_MAP.md`.
 
 ### 5.5.2 Harvest records
 
@@ -657,6 +722,18 @@ The lock mechanism requires an atomic shared cache store. The file cache is suit
 
 ### 5.15 Municipality geofences
 
+Ramos has nine read-only barangay planning references, loaded on selection through
+authenticated/throttled `GET /municipality-boundaries/barangays`.
+`BarangayBoundaryController` authorizes the existing view policy and scopes the
+municipality before `BarangayBoundaryReferences` reads its private, checksum-verified
+GeoJSON. Identity uses the supervising-province relationship, never the legacy
+province string. `public/js/barangay-boundaries.js` provides toggle, highlight/focus,
+labels, source notes, abort/stale-response guards, timeout/retry and one-payload
+caching. References hide during municipality editing. This layer does not alter
+ownership, official boundaries, parcel validation or snapshot exports. No migration
+is needed. Deploy both map scripts before views; preserve the GeoJSON's LF endings.
+Sources and verification: `docs/RAMOS_BARANGAY_BOUNDARIES.md`.
+
 Primary model/table: `MunicipalityBoundary` / `municipality_boundaries`
 
 Routes: `municipality-boundaries.*`
@@ -666,6 +743,7 @@ Functions:
 - provide a Google Maps boundary workspace with municipality search and selection for province-wide users; municipal accounts open only their assigned workspace, without the municipality finder or province-wide summary controls, and fit/reset stays within their own boundary and parcels;
 - allow all agriculture roles to view boundaries within their normal municipality scope while reserving draw, import, edit, activate, and archive actions for the System Owner or a Super Admin assigned to that municipality’s province;
 - keep saved boundary colors visible over satellite imagery using a pale outline casing and municipality label badges; the geofence workspace's Map tools includes a keyboard-accessible color-opacity slider (0–100%, initially 20%) that changes the current map fill immediately, keeps outlines visible, uses half-strength fill for drafts, and retains the selected opacity while switching workspaces on the page; this display control does not write boundary data or change snapshot exports;
+- apply that opacity to editable and newly drawn previews too; suppress the edited boundary's saved fill until editing ends so two fills do not blend, and restore it at the current slider value on cancel;
 - display active official boundaries beneath farm parcels in the Farmers 3D map, with a visibility toggle and municipality-aware camera fitting; municipal users receive only their assigned boundary, while province-wide users receive boundaries from the selected workspace scope;
 - draw Polygon boundaries in the browser or import Polygon/MultiPolygon KML, KMZ, GeoJSON, JSON, and XML files;
 - normalize coordinates, close rings, reject invalid ranges, reject self-intersections and invalid holes, safely simplify oversized geometry, and reject files above the configured hard vertex limit;
@@ -680,6 +758,8 @@ Functions:
 - cache the active municipality boundary used by parcel writes and clear it after boundary changes;
 - use HMAC record versions and municipality-level mutation locks so drawing and import cannot create competing active boundaries;
 - record explicit audit events for drawing, import, update, activation, archival, automatic replacement, and completed municipality snapshot downloads using metadata instead of storing full GeoJSON in the audit log.
+
+Overlap containment uses a verified interior point: a concave polygon centroid may lie in a neighbouring municipality or in a hole. The scanline fallback preserves identical/contained concave geometry checks without changing source coordinates or tolerances.
 
 `App\Support\GeoGeometry` is the authoritative geometry implementation and `App\Support\MunicipalityBoundaryGuard` is the farm-plot enforcement boundary. Do not copy point-in-polygon or overlap logic into controllers or JavaScript. A missing active boundary does not block existing parcel work; the review workspace reports those parcels as unconfigured until the Super Admin activates an official boundary.
 
@@ -761,6 +841,10 @@ Distribution records intentionally keep a farmer snapshot in addition to `farmer
 - `resources/views/partials/operations-ui-styles.blade.php`: shared operational-module design system
 - `resources/views/vendor/pagination`: application-wide pagination templates
 - `public/js/municipality-boundaries.js`: the geofence workspace script, loaded by `resources/views/municipality_boundaries/index.blade.php`. Extracted from that page for the same reasons as the plotting workspace: it is linted and diffable, and the template compiler cannot swallow part of it. It holds no Blade syntax; server values arrive on `window.__municipalityBoundarySettings`, written by the page, and a new value is added there rather than in the script. `tests/JavaScript/municipality-boundary-editor.test.cjs` reads this file, so moving it again means updating that test.
+
+The geofence renderer reuses unchanged overlays, culls overview boundaries outside a padded viewport, and draws new groups in cancellable animation-frame batches (at most 12 groups or an eight-millisecond budget per batch). Hidden groups are evicted when the cache exceeds 160; visible groups are never dropped to meet that target. Municipality labels appear at zoom 10 or closer, or for the selected municipality. Map fitting uses cached bounds from canonical geometry, independently of rendered overlays. Search waits 250 ms after typing, aborts superseded requests, and rejects stale responses; retries and successful writes force a fresh municipality payload. Switching boundaries cancels the editor before changing its target. Full source coordinates remain unchanged for editing, validation, and snapshots. The initial HTML still includes all scoped current geometry, and the detail endpoint still classifies all municipality parcels; this is a browser-rendering optimization, not a reduction of those server payloads. See `docs/GEOFENCE_BROWSING_PERFORMANCE.md` and `tests/JavaScript/municipality-boundary-rendering.test.cjs`.
+
+Boundary saves disable duplicate submissions and show a persistent, focusable error inside the editor. Name/color-only changes compare geometry type and coordinates rather than GeoJSON property order, and omit unchanged geometry; active shape edits still require explicit replacement confirmation. HTTP 401/419 and HTML login responses explain that the session needs renewal instead of treating the response as a successful save. Failed saves retain current form values. A response from an older editor cannot close or replace a subsequently opened editor. These behaviors are covered by the rendering and editor JavaScript suites and `MunicipalityGeofenceTest`; see `docs/BOUNDARY_SAVE_FEEDBACK.md`.
 - `public/js/farmers-maps.js`: the authenticated plotting workspace script, loaded by `resources/views/farmers/partials/maps-scripts.blade.php`. It is a plain file rather than a Blade template so editors and linters can read it and the template compiler cannot swallow part of it, and it stays a classic script because it shares `var` declarations across what used to be two `<script>` blocks and exports its API to the rest of the page as `window.__*`. Everything the server decides reaches it through the `window.__*` config block in `resources/views/farmers/maps.blade.php`; never reintroduce a Blade directive or `{{ }}` into the script itself. Adding a new server value means adding it to that block.
 - `resources/views/farmers/partials/maps-*`: authenticated plotting workspace CSS and the loader for the script above
 - `app/Support/RiceSeedDistributionSheet.php`: Rice Seed Distribution Sheet titles, column groups, row values, filtered release query, and aggregated totals shared by the screen and the export
@@ -829,11 +913,19 @@ The Bulacan import resolves the legacy `BUL` code, `BULACAN`, PSGC code, or unam
 
 `BenguetRemainingMunicipalityBoundarySeeder` explicitly imports Bakun, Bokod, Buguias, Itogon, Kabayan, Kapangan, Kibungan, Mankayan, Sablan, and Tuba from a separate pinned ADM3 revision `9469f09` snapshot. Together with La Trinidad, Atok, and Tublay, these cover all thirteen Benguet municipalities; Baguio City retains its separate city reference. Source identities, geographic extents, and areas were checked against PSA/GeoRiskPH references. It reuses unambiguous active workspaces or creates only the missing municipality workspaces, preserves existing boundaries and archived history, and creates no users or operational records. All ten references share one atomic import. See `database/seeders/data/README.md` for provenance, metrics, checksum, and the explicit command.
 
-`BulacanMunicipalityBoundarySeeder` explicitly imports all twenty-four Bulacan workspaces from a separate pinned ADM3 revision `9469f09` snapshot: the 21 municipalities plus the component cities of Malolos, Meycauayan, and San Jose del Monte. Source identities were confirmed by exact name and by geographic extent against the PSA/GeoRiskPH Bulacan layer, which distinguishes them from the San Miguel, San Rafael, San Ildefonso, and Santa Maria municipalities in other provinces. Two workspace names deliberately differ from the source `shapeName` through the importer's `workspace_name` identity field: **Bulakan**, because the source and PSA spell that municipality `Bulacan`, which is identical to the legacy Bulacan province workspace; and **Malolos City**, **Meycauayan City**, and **San Jose del Monte City**, which follow the existing `Tarlac City` and `Baguio City` wording rather than the source's `City of Malolos` form.
+`BulacanMunicipalityBoundarySeeder` explicitly imports all twenty-four Bulacan workspaces from a separate pinned ADM3 revision `9469f09` snapshot: the 20 municipalities plus the component cities of Baliwag, Malolos, Meycauayan, and San Jose del Monte (the legacy snapshot/workspace retains `Baliuag`). Source identities were confirmed by exact name and by geographic extent against the PSA/GeoRiskPH Bulacan layer, which distinguishes them from the San Miguel, San Rafael, San Ildefonso, and Santa Maria municipalities in other provinces. Two workspace names deliberately differ from the source `shapeName` through the importer's `workspace_name` identity field: **Bulakan**, because the source and PSA spell that municipality `Bulacan`, which is identical to the legacy Bulacan province workspace; and **Malolos City**, **Meycauayan City**, and **San Jose del Monte City**, which follow the existing `Tarlac City` and `Baguio City` wording rather than the source's `City of Malolos` form.
 
 Because a province polygon contains every municipality inside it, the province-level and municipality-level Bulacan references cannot both stay active under the overlap rule. This seeder therefore archives exactly one named reference — `Bulacan Province Planning Reference · geoBoundaries 2020`, and only while it is active and owned by a Bulacan municipality — with an `archived` audit event carrying `reason: superseded_by_municipality_references`. The province workspace keeps its ID, code, name, province assignment, and archived history, and re-running `BulacanProvinceBoundarySeeder` restores the province-level view. An identically named boundary in another province is never archived. Every other conflict still stops the whole import, and the supersession rolls back with it because archival, workspace creation, and boundary writes share one activation lock and one transaction. See `database/seeders/data/README.md` for provenance, metrics, checksum, and the explicit command.
 
 The Benguet, remaining-Benguet, remaining-Tarlac, and Bulacan municipality seeders delegate to `App\Support\ReferenceMunicipalityBoundaryImporter`. This service validates the complete pinned source before writing, resolves unambiguous active workspaces, and imports the entire set under the shared activation lock and one retried transaction. It refuses ambiguous identities, wrong provinces, inactive workspaces, overlaps, and different active or changed/deactivated reference boundaries. An identity may set `workspace_name` when the workspace must not carry the source `shapeName`, and a caller may name one coarser active reference in the same province to archive as superseded inside the same transaction; nothing else is ever archived automatically. Successful application clears each target's boundary cache; new boundaries receive attributed import audit events through the existing best-effort audit mechanism. Repeated imports do not duplicate boundaries or events. These seeders are intentionally excluded from `DatabaseSeeder` and automatic production deployment.
+
+`IlocosNorteMunicipalityBoundarySeeder`, `IlocosSurMunicipalityBoundarySeeder`, `LaUnionMunicipalityBoundarySeeder`, and `PangasinanMunicipalityBoundarySeeder` explicitly import Region I’s 125 planning references (23, 34, 20, and 48). They use the shared importer, preserve existing identities and boundaries, qualify nationally repeated names by province, and create no accounts or operational data. Each province is atomic and idempotent; an all-region deployment wraps the four imports in an outer transaction during maintenance. Paoay retains the source’s lake-inclusive outline and validates against the matching GeoRiskPH exterior-area convention; the 3% tolerance is unchanged. Dagupan is grouped geographically under Pangasinan without changing its independent-component-city status. Source identities, checksums, limitations and explicit commands are in `docs/REGION_I_BOUNDARY_SOURCES.md`. Keep these seeders out of `DatabaseSeeder` and automatic deployments.
+
+`AuroraMunicipalityBoundarySeeder`, `BataanMunicipalityBoundarySeeder`, `NuevaEcijaMunicipalityBoundarySeeder`, `PampangaMunicipalityBoundarySeeder`, `ZambalesMunicipalityBoundarySeeder`, `AngelesCityBoundarySeeder`, and `OlongapoCityBoundarySeeder` add 88 Region III references (8/12/32/21/13/1/1). With the existing 42 Tarlac/Bulacan references, coverage is 130. Angeles City and Olongapo City have separate supervising scopes, explicitly selected by the owner; provincial access must never include those cities through geographic grouping. Existing accounts and scope assignments remain unchanged. The existing Bulacan seeder may archive its exact coarse province reference when activating municipality references. Source details, checksum/area checks, current Baliwag classification, scope rules and explicit commands are in `docs/REGION_III_BOUNDARY_SOURCES.md`. These seeders remain excluded from automatic deployment and `DatabaseSeeder`.
+
+`BatanesMunicipalityBoundarySeeder`, `CagayanMunicipalityBoundarySeeder`, `IsabelaMunicipalityBoundarySeeder`, `NuevaVizcayaMunicipalityBoundarySeeder`, `QuirinoMunicipalityBoundarySeeder`, and `SantiagoCityBoundarySeeder` explicitly import Region II's 93 planning references (6/29/36/15/6/1). The owner selected a separate Santiago City supervising scope; Isabela administrators cannot access it. Source geography remains Isabela in attribution. The 2020 pinned shapes retain their coordinates and island components; new display names include the PSA-corrected Sanchez Mira and Alfonso Castañeda. Duplicate town names are province-qualified. Each province is atomic and idempotent; an all-region import uses an outer transaction after a verified backup. Existing identities, accounts and operational records are preserved. Keep these seeders out of `DatabaseSeeder` and automatic deployment. Sources, checksums, area checks and explicit commands: `docs/REGION_II_BOUNDARY_SOURCES.md`.
+
+`NegrosOccidentalMunicipalityBoundarySeeder`, `NegrosOrientalMunicipalityBoundarySeeder`, `SiquijorMunicipalityBoundarySeeder`, and `BacolodCityBoundarySeeder` cover the full Negros Island Region with 63 references (31/25/6/1). The owner explicitly selected separate Bacolod City supervision. Current source PSGC metadata uses region prefix `18`; legacy 9-digit and previous 10-digit identifiers remain lookup aliases. Existing names, codes, IDs and geometry are preserved. A Bacolod workspace still assigned to Negros Occidental must undergo an explicit reviewed scope transfer before its seeder runs; the importer must never silently transfer ownership. The local September 20 setup changed only Bacolod's supervising scope and added its owner-only audit, preserving all existing boundary, account and operational rows. These four seeders stay outside `DatabaseSeeder` and automatic deployment. Sources, checksums, limitations and deployment requirements: `docs/NEGROS_ISLAND_BOUNDARY_SOURCES.md`.
 
 Run the demo seeder only when demonstration data is intentionally required; run each reference importer explicitly for its intended workspace:
 

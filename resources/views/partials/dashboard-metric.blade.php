@@ -14,7 +14,7 @@
     $metricLabel row-header name for the figures table (default "Category")
     $metricChart false to render figures only, for measures that must not share an axis
 --}}
-@php($metricHasData = collect($metric['series'] ?? [])
+@php($metricHasData = $metric['has_data'] ?? collect($metric['series'] ?? [])
     ->contains(fn ($metricColumn) => collect($metricColumn['values'] ?? [])
         ->contains(fn ($metricValue) => (float) $metricValue !== 0.0)))
 <article class="ops-metric">
@@ -25,6 +25,17 @@
     @endisset
   </div>
 
+  @if(isset($metricPickerId) && count($metric['series'] ?? []) > 0)
+    <label class="ops-metric-picker" for="{{ $metricPickerId }}">
+      <span>Commodity and unit</span>
+      <select id="{{ $metricPickerId }}">
+        @foreach($metric['series'] as $seriesIndex => $pickerSeries)
+          <option value="{{ $seriesIndex }}">{{ $pickerSeries['name'] }} ({{ $pickerSeries['unit'] }})</option>
+        @endforeach
+      </select>
+    </label>
+  @endif
+
   @if(($metricChart ?? true) && $metricHasData)
     <div class="ops-metric-canvas module-chart-body" hidden>
       <canvas id="{{ $metricId }}" role="img" aria-label="{{ $metric['title'] }}"></canvas>
@@ -32,7 +43,7 @@
   @endif
 
   @unless($metricHasData)
-    <p class="ops-metric-empty">Not recorded — nothing has been entered for this view yet.</p>
+    <p class="ops-metric-empty">No complete records are available for this view. Check the figures for missing information.</p>
   @endunless
 
   <details class="ops-metric-figures">

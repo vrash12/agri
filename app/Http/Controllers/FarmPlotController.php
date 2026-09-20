@@ -325,7 +325,10 @@ class FarmPlotController extends Controller
         $this->authorize('import', FarmPlot::class);
 
         $validated = $request->validate([
-            'file' => ['required', 'file', 'mimes:kml,xml'],
+            // A parcel KML is far larger than a boundary file: the real Ramos
+            // survey is 6.6 MB for 1,241 placemarks, so this is sized to let a
+            // bigger municipality through while still bounding the XML parser.
+            'file' => ['bail', 'required', 'file', 'max:25600', 'mimes:kml,xml'],
             'municipality_id' => ['nullable', 'integer'],
         ]);
         $municipalityId = $this->municipalityAccess->resolveForWrite(

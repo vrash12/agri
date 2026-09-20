@@ -929,6 +929,7 @@
         <button type="button" class="btn btn-danger btn-sm operational-write-control" id="plotCancelBtn" style="display:none;" title="Cancel plotting (Esc)">Cancel</button>
       </div>
     </div>
+    @include('farmers.partials.crop-layer-controls')
   </div>
 
   {{-- MAIN MAP STAGE --}}

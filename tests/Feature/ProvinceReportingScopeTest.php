@@ -154,6 +154,24 @@ class ProvinceReportingScopeTest extends TestCase
             ->assertViewHas('provinceOverview', fn ($summary) => $summary['unassigned_records'] === 1);
     }
 
+    public function test_dashboard_reporting_year_is_validated_and_delivered_to_the_graphs(): void
+    {
+        DB::connection()->getPdo()->sqliteCreateFunction('MONTH', fn ($date) => (int) date('n', strtotime($date)), 1);
+        DB::table('anti_rabies_vaccinations')->insert([
+            'municipality_id' => $this->own->id, 'vaccination_date' => '2024-06-01',
+            'service_type' => 'vaccination', 'animal_count' => 30,
+        ]);
+        $this->actingAs($this->admin)->get(route('dashboard', ['report_year' => 2024]))
+            ->assertOk()->assertViewHas('reportYear', 2024)
+            ->assertViewHas('reportYears', fn ($years) => in_array(2024, $years, true))
+            ->assertViewHas('dashboardMetrics', fn ($metrics) => $metrics['animal_health_by_month']['series'][0]['values'][5] === 1)
+            ->assertSee('id="chartAnimalHealthMonthly"', false);
+        foreach (['invalid', 1800, 2101, ['2024']] as $year) {
+            $this->actingAs($this->admin)->getJson(route('dashboard', ['report_year' => $year]))
+                ->assertUnprocessable()->assertJsonValidationErrors('report_year');
+        }
+    }
+
     public function test_farmer_helpers_scope_reads_and_reject_cross_province_write_ownership(): void
     {
         Model::withoutEvents(function (): void {
@@ -260,7 +278,7 @@ class ProvinceReportingScopeTest extends TestCase
             'rice_seed_distributions' => ['ffrs', 'last_name', 'first_name', 'input_category', 'seed_variety_claimed', 'quantity_unit', 'date_received'],
             'anti_rabies_vaccinations' => ['owner_name', 'pet_name', 'pet_type', 'service_type', 'service_name', 'barangay', 'vaccination_date'],
             'farmers_cooperatives' => ['name'],
-            'agricultural_machineries' => ['name', 'availability_status', 'condition_status', 'next_maintenance_date'],
+            'agricultural_machineries' => ['name', 'category', 'availability_status', 'condition_status', 'next_maintenance_date'],
             'backup_files' => ['name'],
             // The dashboard reports production by commodity for every account,
             // so this fixture needs the table even when no harvest is recorded.

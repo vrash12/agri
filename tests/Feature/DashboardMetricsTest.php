@@ -209,8 +209,8 @@ class DashboardMetricsTest extends TestCase
 
         $this->assertSame(['2025', '2026'], $metric['labels']);
         $this->assertSame([100.0, 140.0], $this->seriesValues($metric, 'Rice / Palay'));
-        // Corn has no 2025 harvest, which is a true zero rather than a gap.
-        $this->assertSame([0.0, 60.0], $this->seriesValues($metric, 'Corn'));
+        // No harvest entry is not evidence of zero production.
+        $this->assertSame([null, 60.0], $this->seriesValues($metric, 'Corn'));
     }
 
     public function test_a_commodity_recorded_in_two_units_is_never_summed_into_one(): void
@@ -455,6 +455,135 @@ class DashboardMetricsTest extends TestCase
     /**
      * @return array<string, array<string, mixed>|null>
      */
+    public function test_equipment_types_keep_condition_availability_and_missing_legacy_values_separate(): void
+    {
+        foreach ([
+            ['tractor', 'excellent', 'in_use'],
+            ['tractor', 'good', 'available'],
+            ['dryer', 'needs_repair', 'maintenance'],
+            [null, null, null],
+            ['', '', ''],
+            ['legacy_type', 'legacy_condition', 'legacy_availability'],
+        ] as [$category, $condition, $availability]) {
+            DB::table('agricultural_machineries')->insert([
+                'municipality_id' => $this->ownMunicipality, 'category' => $category,
+                'condition_status' => $condition, 'availability_status' => $availability,
+            ]);
+        }
+        $condition = $this->metrics->machineryConditionByType($this->municipalUser());
+        $availability = $this->metrics->machineryAvailabilityByType($this->municipalUser());
+        $tractor = array_search('Four-wheel tractor', $condition['labels']);
+        $missing = array_search('Equipment type not recorded', $condition['labels']);
+        $this->assertSame(1, $this->seriesValues($condition, 'Excellent')[$tractor]);
+        $this->assertSame(1, $this->seriesValues($availability, 'In use')[$tractor]);
+        $this->assertSame(1, $this->seriesValues($availability, 'Available')[$tractor]);
+        $this->assertSame(2, $this->seriesValues($condition, 'Condition not recorded')[$missing]);
+        $this->assertSame(2, $this->seriesValues($availability, 'Availability not recorded')[$missing]);
+        $this->assertContains('legacy_type', $condition['labels']);
+        $this->assertSame(6, collect($condition['series'])->sum(fn ($series) => array_sum($series['values'])));
+    }
+
+    public function test_monthly_services_use_service_date_year_and_type_not_animal_count(): void
+    {
+        foreach ([['2026-01-01', 'vaccination', 500], ['2026-01-31', 'vaccination', 20],
+            ['2026-02-01', 'deworming', 30], ['2025-12-31', 'vaccination', 100],
+            ['2027-01-01', 'vaccination', 100], ['2026-03-01', 'legacy_service', 5],
+            ['2026-04-01', null, 2], [null, 'vaccination', 3]] as [$date, $type, $animals]) {
+            DB::table('anti_rabies_vaccinations')->insert(['municipality_id' => 1,
+                'vaccination_date' => $date, 'service_type' => $type, 'animal_count' => $animals]);
+        }
+        $metric = $this->metrics->animalHealthByMonth($this->municipalUser(), 2026);
+        $this->assertCount(12, $metric['labels']);
+        $this->assertSame(2, $this->seriesValues($metric, 'Vaccination')[0]);
+        $this->assertSame(1, $this->seriesValues($metric, 'Deworming')[1]);
+        $this->assertSame(1, $this->seriesValues($metric, 'legacy_service')[2]);
+        $this->assertSame(1, $metric['not_recorded']['count']);
+        $this->assertSame(1, $metric['undated']['count']);
+        $this->assertFalse($this->metrics->animalHealthByMonth($this->municipalUser(), 2020)['has_data']);
+    }
+
+    public function test_fingerling_quantities_exclude_other_units_years_and_categories(): void
+    {
+        foreach ([['piece', 1500, '2026-01-01', 'fish_fingerlings'],
+            ['piece', 200, '2026-12-31', 'fish_fingerlings'],
+            ['kg', 90, '2026-01-01', 'fish_fingerlings'],
+            [null, 80, '2026-01-01', 'fish_fingerlings'],
+            ['piece', null, '2026-01-01', 'fish_fingerlings'],
+            ['piece', 9999, '2025-12-31', 'fish_fingerlings'],
+            ['piece', 8888, '2026-01-01', 'fishing_gear'],
+            ['piece', 77, null, 'fish_fingerlings']] as [$unit, $quantity, $date, $category]) {
+            $this->release(1, ['input_category' => $category, 'quantity_unit' => $unit,
+                'kgs_received' => $quantity, 'date_received' => $date]);
+        }
+        $metric = $this->metrics->fingerlingsByMunicipality($this->provincialUser(), 2026);
+        $this->assertSame([1700.0, 0.0], $metric['series'][0]['values']);
+        $this->assertSame('pieces', $metric['series'][0]['unit']);
+        $this->assertSame(3, $metric['not_recorded']['count']);
+        $this->assertSame(1, $metric['undated']['count']);
+        $this->release(2, ['input_category' => 'fish_fingerlings', 'quantity_unit' => null, 'date_received' => '2026-05-01']);
+        $metric = $this->metrics->fingerlingsByMunicipality($this->provincialUser(), 2026);
+        $this->assertNull($metric['series'][0]['values'][1]);
+    }
+
+    public function test_production_comparison_preserves_units_zero_gaps_year_and_precision(): void
+    {
+        $this->harvest(['quantity' => 12.345, 'quantity_unit' => 'ton']);
+        $this->harvest(['quantity' => 0, 'quantity_unit' => 'ton', 'municipality_id' => 2]);
+        $this->harvest(['quantity' => 200, 'quantity_unit' => 'kg']);
+        $this->harvest(['quantity' => 999, 'quantity_unit' => 'ton', 'harvest_year' => 2025]);
+        $this->harvest(['quantity' => null]);
+        $this->harvest(['quantity_unit' => null]);
+        $this->harvest(['harvest_year' => null]);
+        $metric = $this->metrics->municipalityComparison($this->provincialUser(), 2026);
+        $production = collect($metric['series'])->filter(fn ($series) => str_starts_with($series['name'], 'Production'))->keyBy('unit');
+        $this->assertCount(2, $production);
+        $this->assertSame([12.345, 0.0], $production['Metric tons']['values']);
+        $this->assertSame([200.0, null], $production['Kilograms (kg)']['values']);
+        $this->assertSame(3, $production['Metric tons']['decimals']);
+        $this->assertSame(2, $metric['not_recorded']['count']);
+        $this->assertSame(1, $metric['undated']['count']);
+    }
+
+    public function test_new_breakdowns_and_year_choices_never_cross_the_account_scope(): void
+    {
+        foreach ([1 => 1, 2 => 10, 3 => 100] as $municipality => $amount) {
+            DB::table('agricultural_machineries')->insert(['municipality_id' => $municipality,
+                'category' => 'tractor', 'condition_status' => 'good', 'availability_status' => 'available']);
+            DB::table('anti_rabies_vaccinations')->insert(['municipality_id' => $municipality,
+                'service_type' => 'vaccination', 'vaccination_date' => '2026-01-01', 'animal_count' => $amount]);
+            $this->release($municipality, ['input_category' => 'fish_fingerlings', 'quantity_unit' => 'piece',
+                'kgs_received' => $amount, 'date_received' => '2026-01-01']);
+            $this->harvest(['municipality_id' => $municipality, 'quantity' => $amount]);
+        }
+        $this->harvest(['municipality_id' => 3, 'harvest_year' => 1998]);
+        foreach ([[$this->municipalUser(), 1, 1], [$this->provincialUser(), 2, 11], [$this->systemOwner(), 3, 111]] as [$user, $units, $amount]) {
+            $this->assertSame($units, array_sum($this->seriesValues($this->metrics->machineryConditionByType($user), 'Good')));
+            $this->assertSame($units, array_sum($this->seriesValues($this->metrics->machineryAvailabilityByType($user), 'Available')));
+            $this->assertSame($units, array_sum($this->seriesValues($this->metrics->animalHealthByMonth($user, 2026), 'Vaccination')));
+            $this->assertEquals($amount, array_sum($this->metrics->fingerlingsByMunicipality($user, 2026)['series'][0]['values']));
+            $comparison = $this->metrics->municipalityComparison($user, 2026);
+            if ($comparison) {
+                $this->assertEquals($amount, array_sum($this->seriesValues($comparison, 'Production 2026 · Rice / Palay')));
+            }
+        }
+        $this->assertNotContains(1998, $this->metrics->reportingYears($this->provincialUser()));
+        $this->assertNotContains(1998, $this->metrics->reportingYears($this->municipalUser()));
+        $this->assertContains(1998, $this->metrics->reportingYears($this->systemOwner()));
+        $this->assertContains((int) now()->year, $this->metrics->reportingYears($this->municipalUser()));
+    }
+
+    public function test_new_breakdowns_fail_closed_for_inactive_accounts(): void
+    {
+        $user = $this->provincialUser();
+        $user->forceFill(['is_active' => false])->save();
+        $this->harvest();
+        $this->machinery(1, 'good', 'available');
+        $this->assertFalse($this->metrics->machineryConditionByType($user)['has_data']);
+        $this->assertFalse($this->metrics->animalHealthByMonth($user, 2026)['has_data']);
+        $this->assertSame([], $this->metrics->fingerlingsByMunicipality($user, 2026)['labels']);
+        $this->assertNull($this->metrics->municipalityComparison($user, 2026));
+    }
+
     private function allMetrics(User $user): array
     {
         return [
@@ -464,6 +593,10 @@ class DashboardMetricsTest extends TestCase
             'quantityByUnit' => $this->metrics->quantityByUnit($user),
             'mappingCoverage' => $this->metrics->mappingCoverage($user),
             'animalHealthByServiceType' => $this->metrics->animalHealthByServiceType($user),
+            'animalHealthByMonth' => $this->metrics->animalHealthByMonth($user, 2026),
+            'fingerlingsByMunicipality' => $this->metrics->fingerlingsByMunicipality($user, 2026),
+            'machineryConditionByType' => $this->metrics->machineryConditionByType($user),
+            'machineryAvailabilityByType' => $this->metrics->machineryAvailabilityByType($user),
             'fisheriesAssistance' => $this->metrics->fisheriesAssistance($user),
             'machineryByCondition' => $this->metrics->machineryByCondition($user),
             'machineryByAvailability' => $this->metrics->machineryByAvailability($user),
@@ -649,6 +782,7 @@ class DashboardMetricsTest extends TestCase
             $table->string('input_category')->nullable();
             $table->string('quantity_unit')->nullable();
             $table->decimal('kgs_received', 15, 2)->nullable();
+            $table->date('date_received')->nullable();
             $table->timestamps();
         });
         Schema::create('anti_rabies_vaccinations', function (Blueprint $table) {
@@ -656,6 +790,7 @@ class DashboardMetricsTest extends TestCase
             $table->unsignedBigInteger('municipality_id')->nullable();
             $table->string('service_type')->nullable();
             $table->unsignedInteger('animal_count')->default(1);
+            $table->date('vaccination_date')->nullable();
             $table->timestamps();
         });
         Schema::create('harvest_records', function (Blueprint $table) {
@@ -673,6 +808,7 @@ class DashboardMetricsTest extends TestCase
             $table->id();
             $table->unsignedBigInteger('municipality_id')->nullable();
             $table->string('condition_status')->nullable();
+            $table->string('category')->nullable();
             $table->string('availability_status')->nullable();
             $table->timestamps();
         });
