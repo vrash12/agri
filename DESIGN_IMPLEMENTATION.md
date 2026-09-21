@@ -1,5 +1,15 @@
 # Design and UX implementation record
 
+## Map labels and Baguio barangays — September 21, 2026
+
+The Farmers parcel map and Municipality geofences now provide a Map labels
+On/Off control, while the Baguio City workspace exposes 129 planning-reference
+barangay outlines with selection and Focus. The approved GitHub release was
+installed on Hostinger at 04:11 UTC in commit `a751355`; no database migration
+or production data write was performed. Public scripts were mirrored to both
+Hostinger directories and caches were refreshed. See
+`docs/MAP_LABEL_VISIBILITY.md` and `docs/BAGUIO_BARANGAY_BOUNDARIES.md`.
+
 ## Compact reports and sign-in notice — September 21, 2026
 
 Municipality charts show eight offices per page with search and Previous/Next
@@ -329,9 +339,9 @@ Verification uses isolated automated fixtures and browser previews; migration is
 
 ## Map label controls - September 21, 2026
 
-Added native toolbar toggle buttons in Farmers map tools and Municipality geofences. Labels start on; disabling them selects Google's satellite imagery while keeping AgriGOV overlays. Buttons use existing styles, visible On/Off text, aria-pressed and a disabled loading state. Municipality desktop/mobile and keyboard previews passed; 34 focused JavaScript checks and Blade compilation passed. This change is local and not deployed. See docs/MAP_LABEL_VISIBILITY.md.
+Added native toolbar toggle buttons in Farmers map tools and Municipality geofences. Labels start on; disabling them selects Google's satellite imagery while keeping AgriGOV overlays. Buttons use existing styles, visible On/Off text, aria-pressed and a disabled loading state. Municipality desktop/mobile and keyboard previews passed; 34 focused JavaScript checks and Blade compilation passed. Deployed to Hostinger September 21 in `a751355`. See docs/MAP_LABEL_VISIBILITY.md.
 
 
 ## Baguio barangay references - September 21, 2026
 
-Reused the Municipality geofences Barangay boundaries panel for 129 Baguio City outlines. Selection, focus, visibility, source notes and editing guards retain the existing layout. Popups use the selected municipality's location label. Twelve PHP tests (1,712 assertions), 37 JavaScript tests and a synthetic browser selection/focus/hide/show check passed. Local only; see docs/BAGUIO_BARANGAY_BOUNDARIES.md.
+Reused the Municipality geofences Barangay boundaries panel for 129 Baguio City outlines. Selection, focus, visibility, source notes and editing guards retain the existing layout. Popups use the selected municipality's location label. Twelve PHP tests (1,712 assertions), 37 JavaScript tests and a synthetic browser selection/focus/hide/show check passed. Deployed to Hostinger September 21 in `a751355`; see docs/BAGUIO_BARANGAY_BOUNDARIES.md.

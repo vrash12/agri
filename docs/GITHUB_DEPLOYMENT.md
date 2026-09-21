@@ -34,3 +34,16 @@ Runtime commit `610013d3e9cb807376ea082226a43b28899a9742` was pushed to GitHub m
 - Production Composer install and configuration, route and view caches completed. Both public asset copies match. Public assets require mode 0644; verified the new helper and dashboard script return HTTP 200 after setting these permissions.
 - Live login returns HTTP 200 with the required acknowledgment. Production Blade checks confirm Save appearance and shared map styling controls. Visual Google Maps interaction was tested locally; no production interactive map edit was performed during this release.
 - Known manual server edits and incoming file collisions were preserved privately before reconciliation. Independent pending farmer-ID display/search changes were excluded.
+
+## Verified Hostinger release — September 21, 2026 — map labels and Baguio barangays
+
+Runtime commit `a751355` was pushed to GitHub main and installed with
+`git pull --ff-only origin main`. Verification completed at 04:11 UTC and the
+site was returned online.
+
+- The private application archive is SHA-256 `5cf782363ab3e803a990c9f439b3003388e36fc104b3ee24ebd6705516bdf33c`.
+- The verified private database backup is 439,311 bytes across 20 tables, SHA-256 `1ad6748468b623f46b23408e52ca85348843f2dfca777ab255c8a316ff19ba38`.
+- No migration or database write ran. The 129-feature Baguio GeoJSON was verified at 86,645 bytes with SHA-256 `351c9f3d339f88a068f6b9373e88f5dda849d86899074a08c0d3a76a6d990282`.
+- Configuration, route and view caches passed. The three changed public scripts match their `public_html` copies and return HTTP 200. Login returns HTTP 200.
+- A read-only check against the actual Baguio workspace returned all 129 features, confirmed System Owner availability, and confirmed Benguet Super Admin isolation.
+- Unexplained server edits and the unfinished farmer-ID work remain preserved outside this scoped release.

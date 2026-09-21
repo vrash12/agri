@@ -1,6 +1,6 @@
 # Baguio City barangay planning references
 
-Implemented locally on September 21, 2026; not deployed to Hostinger.
+Deployed to Hostinger on September 21, 2026 at 04:11 UTC in GitHub commit `a751355`.
 
 Open **Municipality geofences → Baguio City → Barangay boundaries**. All 129 barangays load on demand. Select a barangay to highlight it, then press **Focus** to zoom. Click a boundary to see its name and PSGC code. The existing visibility toggle, zoom-dependent labels, source details, loading/retry and editing protections also apply. The Google Map labels button affects only Google's labels; AgriGOV barangay labels remain available.
 
@@ -24,10 +24,10 @@ Geometry checks: 129 valid Polygons, 1,560 coordinate pairs including closures, 
 
 The existing authenticated, throttled endpoint and policies remain unchanged. Source files remain private, size-capped at 100 KB and checksum-verified. Initial HTML includes only authorized municipality IDs. The client loads one municipality at a time and removes old geometry/listeners on selection changes. Popups now use the server's location label instead of a hard-coded Ramos label.
 
-No migration or database import is required. An authorized GitHub deployment should include the support class, private GeoJSON/license, and `public/js/barangay-boundaries.js`; mirror that script to both Hostinger public directories. Keep LF for the pinned GeoJSON checksum. Deploy the pending map-label buttons with their respective scripts/views if included in the same approved release. Do not run a municipality seeder or replace the existing Baguio city boundary for this layer.
+No migration or database import was required. The release included the support class, private GeoJSON/license, `public/js/barangay-boundaries.js`, and the map-label buttons with their respective scripts/views; changed scripts were mirrored to both Hostinger public directories. The pinned GeoJSON checksum remains unchanged. No municipality seeder ran and the existing Baguio city boundary was not replaced.
 
 ## Verification
 
 Twelve focused PHP tests passed (1,712 assertions), covering the pinned geometry, bounded/private payload, municipality/province/region isolation, inactive scopes, unsupported lookalike names, no new operational records, Ramos regression and safe failure responses. Thirty-seven JavaScript tests passed across barangay loading/selection/cleanup, both map-label controls and municipality rendering/editing.
 
-Pint, PHP/JavaScript syntax, Blade compilation and whitespace checks passed. A rendered synthetic Baguio workspace with a Google API stub exposed 129 alphabetical choices plus All barangays, a working Irisan selection/Focus, correct Baguio source notes and hide/show controls. This is interface verification; live Google imagery and Baguio LGU acceptance remain unverified. No production files or database rows were changed.
+Pint, PHP/JavaScript syntax, Blade compilation and whitespace checks passed. A rendered synthetic Baguio workspace with a Google API stub exposed 129 alphabetical choices plus All barangays, a working Irisan selection/Focus, correct Baguio source notes and hide/show controls. Hostinger verified the 129-feature GeoJSON checksum, route cache and HTTP 200 responses for all three changed scripts. Live Google imagery and Baguio LGU acceptance remain unverified; this release changed no production database rows.

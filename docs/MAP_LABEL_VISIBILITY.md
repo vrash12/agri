@@ -11,7 +11,7 @@ Google references:
 - [3D label toggle example](https://developers.google.com/maps/documentation/javascript/examples/3d/toggle-labels)
 - [Map types](https://developers.google.com/maps/documentation/javascript/maptypes)
 
-Implemented locally; not yet deployed. A scoped GitHub release needs the two map JavaScript files and their Blade views, with the scripts mirrored to both Hostinger public directories and compiled views refreshed. No migration or new API configuration is required. Preserve unrelated pending farmer-ID changes in these shared files when preparing the release.
+Deployed to Hostinger on September 21, 2026 at 04:11 UTC in GitHub commit `a751355`. The release included both map JavaScript files and their Blade views, mirrored the scripts to both Hostinger public directories, and refreshed compiled views. No migration or new API configuration was required; unrelated pending farmer-ID changes remain outside this release.
 
 
 Verification: 34 focused JavaScript tests passed, covering both label controls, native map-type changes, unchanged overlays/camera and existing geofence editing/style behavior. Both scripts pass syntax checks; Blade compilation and git diff whitespace checks pass. A synthetic rendered municipality page with a Google API stub passed mouse/keyboard On/Off checks and desktop/390px layout inspection. Real Google imagery was not re-tested in this change; the implementation follows Google's documented map modes.
