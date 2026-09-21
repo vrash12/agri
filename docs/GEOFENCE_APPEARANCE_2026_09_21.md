@@ -42,7 +42,7 @@ No horizontal page overflow was found at 320, 390, 768 or 1440 CSS pixels. Deskt
 
 The local runtime is PHP 8.4.10; existing dependency deprecations remain. Production's supported runtime remains PHP 8.1–8.3. No new dependency or environment variable is required.
 
-## Deployment requirements — pending owner authorization
+## Deployment requirements - completed September 21, 2026
 
 This new appearance feature has **not** been installed on Hostinger. The earlier completed CAR/dashboard/sign-in release is separate.
 
