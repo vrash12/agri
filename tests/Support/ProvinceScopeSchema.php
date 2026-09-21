@@ -65,6 +65,7 @@ trait ProvinceScopeSchema
             $table->string('name');
             $table->json('geojson');
             $table->string('color', 7);
+            $table->decimal('fill_opacity', 3, 2)->default(.2);
             $table->string('status', 20);
             $table->decimal('area_ha', 15, 4);
             $table->decimal('centroid_lat', 10, 7);

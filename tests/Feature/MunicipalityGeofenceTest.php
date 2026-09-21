@@ -54,6 +54,74 @@ class MunicipalityGeofenceTest extends TestCase
         $this->municipal = $this->user(User::ROLE_MUNICIPAL_STAFF, $this->first->id, 'anao@example.test');
     }
 
+    public function test_style_save_preserves_multipart_geometry_and_returns_same_values_to_both_maps(): void
+    {
+        $boundary = $this->createBoundary($this->first, 120.50, 15.40);
+        $boundary->update(['geojson' => ['type' => 'MultiPolygon', 'coordinates' => [$boundary->geojson['coordinates']]]]);
+        $before = $boundary->fresh()->getAttributes();
+        $this->actingAs($this->superAdmin)->patchJson(route('municipality-boundaries.style', $boundary), [
+            'color' => '#ffffff', 'fill_opacity' => 0, '_record_version' => ConcurrentWrite::version($boundary->fresh()),
+        ])->assertOk()->assertJsonPath('boundary.color', '#FFFFFF')->assertJsonPath('boundary.fill_opacity', 0);
+        $after = $boundary->fresh();
+        foreach (['geojson', 'municipality_id', 'name', 'status', 'area_ha', 'centroid_lat', 'centroid_lng', 'vertex_count'] as $field) {
+            $this->assertSame($before[$field], $after->getAttributes()[$field]);
+        }
+        $this->actingAs($this->municipal)->getJson(route('municipality-boundaries.data', ['municipality_id' => $this->first->id]))
+            ->assertOk()->assertJsonFragment(['color' => '#FFFFFF', 'fill_opacity' => 0]);
+        Schema::create('rice_seed_distributions', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('municipality_id');
+            $table->unsignedBigInteger('farmer_id')->nullable();
+            $table->string('quantity_unit')->nullable();
+            $table->decimal('kgs_received')->nullable();
+            $table->date('date_received')->nullable();
+        });
+        Schema::table('farmers', fn (Blueprint $table) => $table->string('gender')->nullable());
+        $position = app(\App\Support\GeoGeometry::class)->labelPosition($after->geojson);
+        $this->get(route('farmers.index'))->assertOk()->assertViewHas('mapMunicipalityBoundaries', fn ($rows) => $rows->first()['color'] === '#FFFFFF' && $rows->first()['fill_opacity'] === 0.0 && $rows->first()['label_position'] === $position);
+        $this->getJson(route('municipality-boundaries.data', ['municipality_id' => $this->first->id]))->assertJsonFragment(['label_position' => $position]);
+        $this->assertTrue(DB::table('audit_logs')->where('event', 'updated')->where('metadata', 'like', '%map_style%')->exists());
+    }
+
+    public function test_style_save_enforces_role_province_and_record_version(): void
+    {
+        $boundary = $this->createBoundary($this->first, 120.50, 15.40);
+        $payload = ['color' => '#FFFFFF', 'fill_opacity' => .4, '_record_version' => ConcurrentWrite::version($boundary)];
+        $url = route('municipality-boundaries.style', $boundary);
+        $this->actingAs($this->municipal)->patchJson($url, $payload)->assertForbidden();
+        $this->actingAs($this->provincial)->patchJson($url, $payload)->assertForbidden();
+        $foreign = Province::create(['name' => 'Other province', 'is_active' => true]);
+        $this->superAdmin->update(['province_id' => $foreign->id]);
+        $this->actingAs($this->superAdmin->fresh())->patchJson($url, $payload)->assertForbidden();
+        $this->superAdmin->update(['province_id' => $this->first->province_id]);
+        $boundary->update(['color' => '#123456']);
+        $this->actingAs($this->superAdmin->fresh())->patchJson($url, $payload)->assertUnprocessable()->assertJsonValidationErrors('_record_version');
+        $this->assertSame('#123456', $boundary->fresh()->color);
+    }
+
+    public function test_style_save_rejects_invalid_values_geometry_and_archived_boundaries(): void
+    {
+        $boundary = $this->createBoundary($this->first, 120.50, 15.40);
+        $url = route('municipality-boundaries.style', $boundary);
+        $payload = ['color' => '#FFFFFF', 'fill_opacity' => .2, '_record_version' => ConcurrentWrite::version($boundary)];
+        foreach ([-.1, 1.1, 'bad', null, .123] as $opacity) {
+            $this->actingAs($this->superAdmin)->patchJson($url, array_replace($payload, ['fill_opacity' => $opacity]))->assertUnprocessable()->assertJsonValidationErrors('fill_opacity');
+        }
+        $this->patchJson($url, array_replace($payload, ['color' => 'white']))->assertUnprocessable()->assertJsonValidationErrors('color');
+        $this->patchJson($url, $payload + ['geojson' => $boundary->geojson])->assertUnprocessable()->assertJsonValidationErrors('geojson');
+        $boundary->update(['status' => 'archived']);
+        $this->patchJson($url, array_replace($payload, ['_record_version' => ConcurrentWrite::version($boundary->fresh())]))->assertUnprocessable()->assertJsonValidationErrors('boundary');
+    }
+
+    public function test_style_save_accepts_drafts_and_solid_fill_without_mutating_status(): void
+    {
+        $boundary = $this->createBoundary($this->first, 120.50, 15.40);
+        $boundary->update(['status' => 'draft']);
+        $this->actingAs($this->superAdmin)->patchJson(route('municipality-boundaries.style', $boundary), [
+            'color' => '#ABCDEF', 'fill_opacity' => 1, '_record_version' => ConcurrentWrite::version($boundary->fresh()),
+        ])->assertOk()->assertJsonPath('boundary.fill_opacity', 1)->assertJsonPath('boundary.status', 'draft');
+    }
+
     public function test_only_super_admin_can_create_boundaries(): void
     {
         $payload = $this->boundaryPayload($this->first->id, 120.50, 15.40);
@@ -108,7 +176,7 @@ class MunicipalityGeofenceTest extends TestCase
                 ->assertOk()
                 ->assertSee('Assigned municipality')
                 ->assertSee('Geofence color opacity')
-                ->assertSee('id="geofenceOpacity" type="range" min="0" max="100" step="5" value="20"', false)
+                ->assertSee('id="geofenceOpacity" type="range" min="0" max="100" step="1" value="20"', false)
                 ->assertSee($this->first->name)
                 ->assertSee('Reset municipality view')
                 ->assertSee('type="hidden" id="municipalityFilter" value="'.$this->first->id.'"', false)
@@ -443,7 +511,7 @@ class MunicipalityGeofenceTest extends TestCase
             ->get(route('municipality-boundaries.snapshot-base', $boundary))
             ->assertStatus(502)
             ->assertSee('Google denied the satellite image request.')
-            ->assertHeader('Cache-Control', 'no-store, private');
+            ->assertHeader('Cache-Control', 'max-age=0, must-revalidate, no-cache, no-store, private');
     }
 
     public function test_snapshot_connection_failure_does_not_expose_the_request_url_or_key(): void
@@ -548,6 +616,7 @@ class MunicipalityGeofenceTest extends TestCase
             $table->string('name');
             $table->json('geojson');
             $table->string('color', 7);
+            $table->decimal('fill_opacity', 3, 2)->default(.2);
             $table->string('status', 20);
             $table->decimal('area_ha', 15, 4);
             $table->decimal('centroid_lat', 10, 7);

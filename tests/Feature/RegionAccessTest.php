@@ -177,11 +177,11 @@ class RegionAccessTest extends TestCase
 
     public function test_login_accepts_regional_role_and_rejects_deactivated_region(): void
     {
-        $this->post(route('login'), ['email' => $this->regional->email, 'password' => 'Fixture-Access-Only-2026'])->assertRedirect(route('dashboard'));
+        $this->post(route('login'), ['email' => $this->regional->email, 'password' => 'Fixture-Access-Only-2026', 'confidentiality_acknowledged' => '1'])->assertRedirect(route('dashboard'));
         $this->assertAuthenticatedAs($this->regional);
         $this->post(route('logout'));
         $this->region->update(['is_active' => false]);
-        $this->post(route('login'), ['email' => $this->regional->email, 'password' => 'Fixture-Access-Only-2026'])->assertSessionHasErrors();
+        $this->post(route('login'), ['email' => $this->regional->email, 'password' => 'Fixture-Access-Only-2026', 'confidentiality_acknowledged' => '1'])->assertSessionHasErrors();
         $this->assertGuest();
     }
 

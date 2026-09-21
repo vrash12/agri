@@ -60,6 +60,7 @@ class ProvincialVeterinaryAccessTest extends TestCase
     public function test_veterinary_user_logs_in_directly_to_animal_health(): void
     {
         $this->post(route('login.attempt'), [
+            'confidentiality_acknowledged' => '1',
             'email' => $this->veterinaryUser->email,
             'password' => 'password123',
         ])

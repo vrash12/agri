@@ -27,6 +27,34 @@ class GeoGeometryTest extends TestCase
         $this->assertLessThan(130.0, $this->geometry->areaHectares($boundary));
     }
 
+    public function test_label_positions_avoid_holes_and_water_between_islands(): void
+    {
+        $outer = [[0, 0], [10, 0], [10, 10], [0, 10], [0, 0]];
+        $hole = [[4, 4], [6, 4], [6, 6], [4, 6], [4, 4]];
+        $point = $this->geometry->labelPosition(['type' => 'Polygon', 'coordinates' => [$outer, $hole]]);
+        $this->assertNotNull($point);
+        $this->assertTrue($point['lat'] < 4 || $point['lat'] > 6 || $point['lng'] < 4 || $point['lng'] > 6);
+        $other = array_map(fn ($point) => [$point[0] + 30, $point[1]], $outer);
+        $point = $this->geometry->labelPosition(['type' => 'MultiPolygon', 'coordinates' => [[$outer], [$other]]]);
+        $this->assertNotNull($point);
+        $this->assertTrue($point['lng'] < 10 || $point['lng'] > 30);
+    }
+
+    public function test_every_region_two_reference_has_a_finite_label_position(): void
+    {
+        $count = 0;
+        foreach (['batanes_municipality_reference_boundaries', 'cagayan_municipality_reference_boundaries', 'isabela_municipality_reference_boundaries', 'nueva_vizcaya_municipality_reference_boundaries', 'quirino_municipality_reference_boundaries', 'santiago_city_reference_boundary'] as $source) {
+            $data = json_decode(file_get_contents(database_path('seeders/data/'.$source.'.geojson')), true, 512, JSON_THROW_ON_ERROR);
+            foreach ($data['features'] as $feature) {
+                $position = $this->geometry->labelPosition($feature['geometry']);
+                $this->assertNotNull($position);
+                $this->assertTrue(is_finite($position['lat']) && is_finite($position['lng']));
+                $count++;
+            }
+        }
+        $this->assertSame(93, $count);
+    }
+
     public function test_it_rejects_a_self_intersecting_boundary(): void
     {
         $this->expectException(InvalidArgumentException::class);

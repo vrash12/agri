@@ -339,7 +339,7 @@ class FarmerPortalTest extends TestCase
         $this->account();
         $this->login();
         DB::table('users')->where('id', 1)->update(['password' => Hash::make($this->passphrase)]);
-        $this->post(route('login.attempt'), ['email' => User::findOrFail(1)->email, 'password' => $this->passphrase])->assertRedirect();
+        $this->post(route('login.attempt'), ['email' => User::findOrFail(1)->email, 'password' => $this->passphrase, 'confidentiality_acknowledged' => '1'])->assertRedirect();
         $this->assertAuthenticated('web');
         $this->assertGuest('farmer');
     }

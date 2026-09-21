@@ -102,7 +102,7 @@ class ProvinceAccessIsolationTest extends TestCase
         $this->actingAs($this->admin)->getJson(route('municipality-boundaries.index'))->assertForbidden();
         $this->assertSame([], app(MunicipalityAccess::class)->choices($this->admin)->all());
         auth()->logout();
-        $this->post(route('login.attempt'), ['email' => $this->admin->email, 'password' => 'test-only-password'])->assertSessionHasErrors('email');
+        $this->post(route('login.attempt'), ['email' => $this->admin->email, 'password' => 'test-only-password', 'confidentiality_acknowledged' => '1'])->assertSessionHasErrors('email');
         $this->assertGuest();
         $this->admin->forceFill(['province_id' => $this->tarlac->id])->saveQuietly();
         $this->tarlac->update(['is_active' => false]);

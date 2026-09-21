@@ -68,6 +68,9 @@ class AuthController extends Controller
                 'nullable',
                 'boolean',
             ],
+            'confidentiality_acknowledged' => ['accepted'],
+        ], [
+            'confidentiality_acknowledged.accepted' => 'Please confirm that you have read and understood the confidentiality and testing notice.',
         ]);
 
         $email = $validated['email'];
@@ -392,7 +395,7 @@ class AuthController extends Controller
         }
 
         return back()
-            ->withInput($request->only('email'))
+            ->withInput($request->only('email', 'remember', 'confidentiality_acknowledged'))
             ->withErrors(['email' => $message]);
     }
 

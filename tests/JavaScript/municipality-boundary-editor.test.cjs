@@ -26,6 +26,8 @@ function editor(geometry) {
   const calls = [];
   const context = vm.createContext({
     state: { draftPoints: [], originalEditorCoordinates: new Map(), editorRevision: 0, boundaryFills: new Map(), fillOpacity: .2 },
+    appearance: require('../../public/js/geofence-style.js'),
+    discardStyle() {}, syncStyleControls() {},
     settings: { canManage: true, updateTemplate: '/boundaries/__ID__', storeUrl: '/boundaries', csrf: 'test' },
     el: id => { if (!controls.has(id)) controls.set(id, { value: '', checked: false }); return controls.get(id); },
     endpoint: (url, id) => url.replace('__ID__', id),

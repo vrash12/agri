@@ -136,6 +136,29 @@ class DashboardPresentationTest extends TestCase
         $this->assertStringContainsString('Apply year', $html);
     }
 
+    public function test_large_municipality_reports_keep_all_figures_inside_closed_accessible_disclosures(): void
+    {
+        $this->signInForView(User::ROLE_SUPER_ADMIN);
+        $metric = ['title' => 'Municipality comparison',
+            'labels' => array_map(fn ($index) => sprintf('Municipality %03d', $index), range(1, 305)),
+            'series' => [['name' => 'Farmers', 'unit' => 'farmers', 'values' => array_fill(0, 305, 1)]],
+            'has_data' => true];
+        $html = (string) $this->view('dashboard', ['dashboardMetrics' => [
+            'municipality_comparison' => $metric, 'farmers_by_municipality' => $metric,
+            'assistance_by_municipality' => $metric, 'fingerlings_by_municipality' => $metric,
+        ]]);
+        $document = new \DOMDocument();
+        @$document->loadHTML($html);
+        $xpath = new \DOMXPath($document);
+
+        $this->assertSame(4, $xpath->query('//div[@data-chart-pages and @hidden]')->length);
+        $this->assertSame(4, $xpath->query('//input[@data-chart-search and @type="search" and @aria-controls]')->length);
+        $this->assertSame(4, $xpath->query('//p[@data-chart-range and @role="status"]')->length);
+        $this->assertSame(0, $xpath->query('//details[@class="ops-metric-figures" and @open]')->length);
+        $this->assertSame(4, $xpath->query('//details[@class="ops-metric-figures" and not(@open)]//div[@class="ops-figure-scroll" and @tabindex="0" and @role="region" and @aria-label]//th[text()="Municipality 305"]')->length);
+        $this->assertSame(1, $xpath->query('//script[contains(@src,"dashboard-chart-pages.js")]')->length);
+    }
+
     public function test_reporting_year_submission_leaves_reports_open_without_javascript(): void
     {
         $this->signInForView(User::ROLE_MUNICIPAL_STAFF);

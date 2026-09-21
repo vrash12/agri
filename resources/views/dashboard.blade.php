@@ -464,13 +464,13 @@
               </select>
             </label>
           </div>
-          <div class="ops-metric-canvas ops-metric-canvas-tall module-chart-body" hidden>
-            <canvas id="chartMunicipalityComparison" role="img" aria-label="{{ $comparison['title'] }}"></canvas>
+          <div class="ops-comparison-body">
+            @include('partials.dashboard-municipality-chart', ['metric' => $comparison, 'metricId' => 'chartMunicipalityComparison'])
+            @include('partials.dashboard-metric-figures', [
+              'metric' => $comparison,
+              'metricLabel' => 'Municipality',
+            ])
           </div>
-          @include('partials.metric-figures', [
-            'metric' => $comparison,
-            'metricLabel' => 'Municipality',
-          ])
         </section>
       @endif
     </div>
@@ -659,6 +659,7 @@
 @endpush
 
 @push('scripts')
+<script src="{{ asset('js/dashboard-chart-pages.js') }}"></script>
 <script>
   (() => {
     const body = document.getElementById('municipalityTableBody');
@@ -791,7 +792,9 @@
       const horizontal = settings.horizontal ?? (metric.labels.length > 8);
       const axisUnit = new Set(metric.series.map(series => series.unit)).size === 1 ? metric.series[0]?.unit : 'Count';
       if (horizontal) {
-        canvas.parentElement.style.height = Math.max(310, metric.labels.length * 44 + 90) + 'px';
+        canvas.parentElement.style.height = (settings.paginated
+          ? Math.min(400, Math.max(270, metric.labels.length * 38 + 90))
+          : Math.max(310, metric.labels.length * 44 + 90)) + 'px';
       }
 
       new Chart(canvas, {
@@ -939,13 +942,25 @@
       one another or combined into a score, because the office has never defined how
       they would be weighed — any single number would be invented here, not measured.
     */
+    const municipalityPages = new Map();
+    const drawMunicipalities = (id, metric, colors) => {
+      const root = document.querySelector(`[data-chart-pages="${id}"]`);
+      if (!root || !metric) return;
+      if (municipalityPages.has(id)) {
+        municipalityPages.get(id)(metric);
+        return;
+      }
+      municipalityPages.set(id, DashboardChartPages.mount(root, metric, visible => {
+        drawBars(id, visible, colors, { horizontal: true, paginated: true });
+      }));
+    };
     const comparisonPicker = document.getElementById('municipalityIndicatorPicker');
     const drawComparison = () => {
       const metric = METRICS.municipality_comparison;
       if (!metric) return;
       const index = Number(comparisonPicker ? comparisonPicker.value : 0) || 0;
       const chosen = metric.series[index] || metric.series[0];
-      drawBars('chartMunicipalityComparison', {
+      drawMunicipalities('chartMunicipalityComparison', {
         title: metric.title,
         labels: metric.labels,
         series: [chosen],
@@ -965,11 +980,11 @@
     if (reports) {
       reports.renderOperationalCharts = () => {
         drawMonthly();
-        drawBars('chartFarmersByMunicipality', METRICS.farmers_by_municipality, [SERIES_COLORS[0]]);
+        drawMunicipalities('chartFarmersByMunicipality', METRICS.farmers_by_municipality, [SERIES_COLORS[0]]);
         drawBars('chartAssistanceByCategory', METRICS.assistance_by_category, SERIES_COLORS);
-        drawBars('chartAssistanceByMunicipality', METRICS.assistance_by_municipality, SERIES_COLORS);
+        drawMunicipalities('chartAssistanceByMunicipality', METRICS.assistance_by_municipality, SERIES_COLORS);
         drawBars('chartFisheriesAssistance', METRICS.fisheries_assistance, SERIES_COLORS);
-        drawBars('chartFingerlingsByMunicipality', METRICS.fingerlings_by_municipality, [SERIES_COLORS[0]]);
+        drawMunicipalities('chartFingerlingsByMunicipality', METRICS.fingerlings_by_municipality, [SERIES_COLORS[0]]);
         drawBars('chartAnimalHealth', METRICS.animal_health_by_service, SERIES_COLORS);
         drawBars('chartAnimalHealthMonthly', METRICS.animal_health_by_month, SERVICE_COLORS, { horizontal: false, stacked: true });
         drawProduction();

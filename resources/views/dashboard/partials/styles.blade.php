@@ -262,15 +262,29 @@
 
   /* Program indicators ----------------------------------------------------- */
   .ops-report-status { margin: 0; color: var(--ops-muted); font-size: 12px; line-height: 1.5; }
-  .ops-metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 16px; padding: 20px; }
+  .ops-metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); align-items: start; gap: 16px; padding: 20px; }
   .ops-metric { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 16px; border: 1px solid #edf1ee; border-radius: 10px; background: #fff; }
   .ops-metric-head h3 { margin: 0; font-size: 14px; line-height: 1.35; letter-spacing: -.01em; color: var(--ops-ink); }
   .ops-metric-head p { margin: 6px 0 0; color: var(--ops-muted); font-size: 12px; line-height: 1.5; }
   .ops-metric-canvas { position: relative; min-width: 0; height: 270px; }
   .ops-metric-canvas canvas { max-width: 100%; }
-  /* The comparison sizes itself in JS from the number of municipalities; this is the
-     floor it starts from so the box never collapses before Chart.js arrives. */
-  .ops-metric-canvas-tall { height: 360px; margin: 0 20px; }
+  .ops-comparison-body { min-width: 0; padding: 0 20px 16px; }
+  .ops-chart-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 8px 12px; margin-bottom: 12px; }
+  .ops-chart-search { display: flex; flex: 1 1 180px; flex-direction: column; gap: 4px; min-width: 0; color: var(--ops-muted); font-size: 12px; }
+  .ops-chart-search input { width: 100%; min-width: 0; min-height: 44px; padding: 7px 10px; border: 1px solid var(--ui-control-border); border-radius: var(--ui-radius-control); background: var(--ui-surface); color: var(--ops-ink); font: inherit; font-size: 16px; }
+  .ops-chart-pagination { display: flex; flex-wrap: wrap; gap: 8px; }
+  .ops-chart-pagination button { min-height: 44px; }
+  .ops-chart-pagination button:disabled { opacity: .55; cursor: default; }
+  .ops-chart-range { flex-basis: 100%; margin: 0; color: var(--ops-muted); font-size: 12px; }
+  .ops-figure-scroll { --module-muted: var(--ops-muted); max-height: 360px; overflow: auto; border: 1px solid var(--ops-border); border-radius: 6px; }
+  .ops-figure-scroll .module-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; text-align: left; }
+  .ops-figure-scroll th, .ops-figure-scroll td { padding: 10px 12px; border-bottom: 1px solid var(--ops-border); vertical-align: top; }
+  .ops-figure-scroll thead th { position: sticky; top: 0; z-index: 1; background: var(--ui-surface-subtle); min-width: 130px; font-weight: 500; }
+  .ops-figure-scroll tbody th { min-width: 150px; font-weight: 500; }
+  .ops-figure-scroll .module-numeric { text-align: right; font-variant-numeric: tabular-nums; }
+  .ops-figure-scroll tbody tr:last-child > * { border-bottom: 0; }
+  .ops-figure-scroll .module-hint { margin: 12px; color: var(--ops-muted); font-size: 12px; }
+  .ops-chart-search input:focus-visible, .ops-chart-pagination button:focus-visible, .ops-figure-scroll:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
   .ops-metric-empty { margin: 0; padding: 18px; border: 1px dashed #cbd8ce; border-radius: 8px; background: #fbfdfb; color: var(--ops-muted); font-size: 12px; line-height: 1.5; text-align: center; }
   .ops-metric-figures > summary { cursor: pointer; padding: 6px 0; color: var(--ops-muted); font-size: 12px; font-weight: 500; }
   .ops-metric-figures > summary:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; border-radius: 4px; }
@@ -290,6 +304,6 @@
   @media (max-width:620px) {
     .ops-metric-grid { grid-template-columns: 1fr; padding: 12px; gap: 12px; }
     .ops-metric-canvas { height: 240px; }
-    .ops-metric-canvas-tall { margin: 0 12px; }
+    .ops-comparison-body { padding: 0 12px 12px; }
   }
 </style>

@@ -11,6 +11,7 @@ function boundary(id, lng = 120 + id / 100, lat = 15) {
     id, municipality_id: id, municipality_name: 'Town ' + id,
     name: 'Boundary ' + id, status: 'active', color: '#15803d', area_ha: 100,
     centroid_lat: lat + .005, centroid_lng: lng + .005, vertex_count: 5,
+    label_position: {lat: lat + .005, lng: lng + .005},
     updated_at: '2026-09-19T00:00:00Z', _record_version: 'version-' + id,
     geojson: { type: 'Polygon', coordinates: [[[lng, lat], [lng + .01, lat], [lng + .01, lat + .01], [lng, lat + .01], [lng, lat]]] },
   };
@@ -128,7 +129,7 @@ function workspace(initialBoundaries, options = {}) {
     initialSummary: { configured: initialBoundaries.length, farmers: 0, parcels: 0, mapped_area_ha: 0 },
     dataUrl: '/municipality-boundaries/data', ...options,
   };
-  const window = { __municipalityBoundarySettings: settings, requestAnimationFrame: raf, cancelAnimationFrame: id => frames.delete(id) };
+  const window = { GeofenceStyle: require('../../public/js/geofence-style.js'), __municipalityBoundarySettings: settings, requestAnimationFrame: raf, cancelAnimationFrame: id => frames.delete(id) };
   const context = vm.createContext({
     window, console, AbortController, Map, Set, Number, Math, JSON, Date, URL,
     setTimeout: schedule, clearTimeout: id => timers.delete(id),
@@ -304,15 +305,15 @@ test('saving an edit refreshes the same municipality and replaces stale cached c
   await view.settle(); view.flushFrames();
   const visibleFills = view.polygons.filter(overlay => overlay.map && overlay.config.fillColor);
   assert.equal(visibleFills.length, 1);
-  assert.equal(visibleFills[0].config.fillColor, changed.color);
+  assert.equal(visibleFills[0].config.fillColor, changed.color.toUpperCase());
   assert.equal(JSON.stringify(item.geojson), original);
 });
 
-test('opacity changes apply to retained hidden boundaries when they return to view', () => {
-  const view = workspace([boundary(1)]);
+test('saved opacity survives culling and read-only users cannot change the appearance', () => {
+  const view = workspace([{...boundary(1), fill_opacity: .65}]);
   view.flushFrames();
   view.pan(bounds(20, 125, 21, 126));
-  view.element('geofenceOpacity').value = '65';
+  view.element('geofenceOpacity').value = '0';
   view.element('geofenceOpacity').dispatch('input');
   view.pan(bounds(14.9, 120, 15.1, 120.2));
   const visibleFills = view.polygons.filter(overlay => overlay.map && overlay.config.fillColor);
@@ -355,7 +356,62 @@ async function editableWorkspace() {
   return { view, item };
 }
 
-test('editing uses the slider without stacking the saved fill underneath, then restores it on cancel', async () => {
+async function styleWorkspace() {
+  const item = {...boundary(1), fill_opacity: .35};
+  // Style-only saves must work even when the geometry editor cannot handle islands or holes.
+  item.geojson = {type: 'MultiPolygon', coordinates: [item.geojson.coordinates]};
+  const view = workspace([item, {...boundary(2), fill_opacity: .8}], {canManage: true, styleTemplate: '/boundaries/__ID__/style', csrf: 'test'});
+  view.flushFrames(); view.select(1); view.requests[0].respond(payload(item));
+  await view.settle(); view.flushFrames();
+  return {view, item};
+}
+
+test('multipart style preview saves only color opacity and version; zero persists on fresh load', async () => {
+  const {view, item} = await styleWorkspace();
+  view.element('geofenceColor').value = '#ffffff'; view.element('geofenceColor').dispatch('input');
+  view.element('geofenceOpacity').value = '0'; view.element('geofenceOpacity').dispatch('input');
+  assert.match(view.element('geofenceStyleStatus').textContent, /Preview only/);
+  assert.equal(view.polygons.filter(p => p.map && p.config.fillColor).at(-1).config.fillOpacity, 0);
+  view.element('saveGeofenceStyle').dispatch('click'); view.element('saveGeofenceStyle').dispatch('click');
+  assert.equal(view.requests.length, 2);
+  assert.equal(view.requests[1].config.method, 'PATCH');
+  assert.deepEqual(JSON.parse(view.requests[1].config.body), {color: '#FFFFFF', fill_opacity: 0, _record_version: item._record_version});
+  const saved = {...item, color: '#FFFFFF', fill_opacity: 0, _record_version: 'new-version'};
+  view.requests[1].respond({boundary: saved, message: 'Saved'}); await view.settle(); view.flushFrames();
+  assert.equal(view.element('saveGeofenceStyle').disabled, true);
+  assert.equal(view.element('geofenceOpacity').value, '0');
+  assert.match(view.element('geofenceStyleStatus').textContent, /Saved appearance/);
+  const reload = workspace([saved]); reload.flushFrames();
+  assert.equal(reload.polygons.filter(p => p.config.fillColor)[0].config.fillOpacity, 0);
+});
+
+test('discarding preview restores stored appearance and does not change another boundary', async () => {
+  const {view} = await styleWorkspace();
+  view.element('geofenceOpacity').value = '90'; view.element('geofenceOpacity').dispatch('input');
+  view.element('resetGeofenceStyle').dispatch('click');
+  assert.equal(view.element('geofenceOpacity').value, '35');
+  view.select(''); view.flushFrames();
+  assert.equal(view.polygons.find(p => p.map && p.config.fillOpacity === .8).config.fillOpacity, .8);
+  assert.equal(view.requests.length, 1);
+});
+
+test('style conflicts retain the preview and error, and save completion cannot switch municipalities', async () => {
+  const {view, item} = await styleWorkspace();
+  view.element('geofenceOpacity').value = '60'; view.element('geofenceOpacity').dispatch('input');
+  view.element('saveGeofenceStyle').dispatch('click');
+  view.requests[1].respond({errors: {_record_version: ['Another user changed this boundary. Reload first.']}}, 422);
+  await view.settle();
+  assert.equal(view.element('geofenceOpacity').value, '60');
+  assert.equal(view.element('geofenceStyleError').hidden, false);
+  assert.match(view.element('geofenceStyleError').textContent, /Another user/);
+  view.element('saveGeofenceStyle').dispatch('click'); view.select(2);
+  view.requests[3].respond(payload({...boundary(2), fill_opacity: .8})); await view.settle();
+  view.requests[2].respond({boundary: {...item, fill_opacity: .6, _record_version: 'saved'}, message: 'Saved'}); await view.settle();
+  assert.equal(view.element('geofenceOpacity').value, '80');
+  assert.equal(view.element('geofenceStyleBoundary').value, '2');
+});
+
+test('geometry editing retains saved opacity, disables style controls and restores saved fill on cancel', async () => {
   const { view } = await editableWorkspace();
   const saved = view.polygons.find(overlay => overlay.map && overlay.config.fillColor && !overlay.config.editable);
   const editable = view.polygons.find(overlay => overlay.map && overlay.config.editable);
@@ -363,29 +419,29 @@ test('editing uses the slider without stacking the saved fill underneath, then r
   for (const percentage of [0, 65, 100]) {
     view.element('geofenceOpacity').value = String(percentage);
     view.element('geofenceOpacity').dispatch('input');
-    assert.equal(editable.config.fillOpacity, percentage / 100);
+    assert.equal(editable.config.fillOpacity, .2);
     assert.equal(saved.config.fillOpacity, 0);
   }
   view.pan(bounds(14, 119, 16, 122));
   assert.equal(saved.config.fillOpacity, 0, 'A camera refresh must not restore the underlying fill');
   view.element('cancelEditor').dispatch('click');
   assert.equal(editable.map, null);
-  assert.equal(saved.config.fillOpacity, 1);
+  assert.equal(saved.config.fillOpacity, .2);
   assert.equal(view.requests.length, 1, 'Display changes must not write records');
 });
 
-test('new drawings follow opacity even when another point recreates their preview', () => {
+test('new drawings use the persisted default without borrowing another boundary preview', () => {
   const view = workspace([], { canManage: true });
   view.element('startBoundary').dispatch('click');
   view.element('geofenceOpacity').value = '0';
   view.element('geofenceOpacity').dispatch('input');
   view.maps[0].trigger('click', { latLng: latLng({lat: 15, lng: 120}) });
-  assert.equal(view.polygons.at(-1).config.fillOpacity, 0);
+  assert.equal(view.polygons.at(-1).config.fillOpacity, .2);
   view.element('geofenceOpacity').value = '100';
   view.element('geofenceOpacity').dispatch('change');
-  assert.equal(view.polygons.at(-1).config.fillOpacity, .5);
+  assert.equal(view.polygons.at(-1).config.fillOpacity, .2);
   view.maps[0].trigger('click', { latLng: latLng({lat: 15.01, lng: 120.01}) });
-  assert.equal(view.polygons.at(-1).config.fillOpacity, .5);
+  assert.equal(view.polygons.at(-1).config.fillOpacity, .2);
   assert.equal(view.requests.length, 0);
 });
 

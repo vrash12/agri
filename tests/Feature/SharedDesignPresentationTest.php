@@ -85,6 +85,10 @@ class SharedDesignPresentationTest extends TestCase
             ->assertSee('aria-controls="password"', false)
             ->assertSee('action="'.route('login.attempt').'"', false)
             ->assertSee('Go to the first field to check')
+            ->assertSee('Confidentiality &amp; testing notice', false)
+            ->assertSee('solely for testing and validation')
+            ->assertSee('name="confidentiality_acknowledged"', false)
+            ->assertSee('I have read and understood the confidentiality and testing notice.')
             ->assertDontSee('name="password" value=', false);
     }
 }

@@ -37,20 +37,18 @@
   @endif
 
   @if(($metricChart ?? true) && $metricHasData)
-    <div class="ops-metric-canvas module-chart-body" hidden>
-      <canvas id="{{ $metricId }}" role="img" aria-label="{{ $metric['title'] }}"></canvas>
-    </div>
+    @if(($metricLabel ?? '') === 'Municipality')
+      @include('partials.dashboard-municipality-chart', ['metric' => $metric, 'metricId' => $metricId])
+    @else
+      <div class="ops-metric-canvas module-chart-body" hidden>
+        <canvas id="{{ $metricId }}" role="img" aria-label="{{ $metric['title'] }}"></canvas>
+      </div>
+    @endif
   @endif
 
   @unless($metricHasData)
     <p class="ops-metric-empty">No complete records are available for this view. Check the figures for missing information.</p>
   @endunless
 
-  <details class="ops-metric-figures">
-    <summary>Figures</summary>
-    @include('partials.metric-figures', [
-      'metric' => $metric,
-      'metricLabel' => $metricLabel ?? 'Category',
-    ])
-  </details>
+  @include('partials.dashboard-metric-figures', ['metric' => $metric, 'metricLabel' => $metricLabel ?? 'Category'])
 </article>

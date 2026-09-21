@@ -1303,6 +1303,7 @@ var PopoverElement = maps3d.PopoverElement;
     var plotDisplayTimer = null;
     var savedPlotsHiddenForEditing = false;
     var municipalityGeofenceOverlays = [];
+    var municipalityGeofenceLabels = [];
     var cropLayerTimer = null;
     var cropLayer = window.ParcelCropLayer ? window.ParcelCropLayer.create({
       url: window.__parcelCropLayerUrl,
@@ -1410,6 +1411,8 @@ var PopoverElement = maps3d.PopoverElement;
         } catch (ignore) {}
       });
       municipalityGeofenceOverlays = [];
+      municipalityGeofenceLabels.forEach(function (marker) { setOverlayVisible(marker, false); });
+      municipalityGeofenceLabels = [];
 
       boundaries.forEach(function (boundary) {
         geoJsonPolygons(boundary.geojson).forEach(function (polygon) {
@@ -1420,12 +1423,12 @@ var PopoverElement = maps3d.PopoverElement;
           var innerPaths = polygon.slice(1)
             .map(geoJsonRing)
             .filter(function (ring) { return ring.length >= 3; });
-          var color = boundary.color || '#15803D';
+          var style = window.GeofenceStyle.normalize(boundary);
           var options = {
             path: path,
-            strokeColor: hexAlpha(color, 'F0'),
+            strokeColor: style.color,
             strokeWidth: 4,
-            fillColor: hexToRgba(color, 0.07),
+            fillColor: window.GeofenceStyle.rgba(boundary),
             altitudeMode: AltitudeMode.CLAMP_TO_GROUND,
             drawsOccludedSegments: true,
             zIndex: 1
@@ -1441,8 +1444,23 @@ var PopoverElement = maps3d.PopoverElement;
             municipalityName: boundary.municipality_name || 'Municipality'
           });
         });
+        var position = window.GeofenceStyle.labelPosition(boundary);
+        if (position && Marker3DElement) {
+          var marker = new Marker3DElement({position: position, altitudeMode: AltitudeMode.CLAMP_TO_GROUND,
+            sizePreserved: true, drawsWhenOccluded: false, collisionBehavior: google.maps.CollisionBehavior.OPTIONAL_AND_HIDES_LOWER_PRIORITY, zIndex: 2});
+          marker.replaceChildren(window.GeofenceStyle.labelTemplate(document, boundary.municipality_name || 'Municipality'));
+          municipalityGeofenceLabels.push(marker);
+        }
       });
+      updateMunicipalityLabels();
     }
+
+    function updateMunicipalityLabels() {
+      var toggle = document.getElementById('toggleMunicipalityGeofence');
+      var visible = (!toggle || toggle.checked) && Number(map3d.range) <= 80000;
+      municipalityGeofenceLabels.forEach(function (marker) { setOverlayVisible(marker, visible); });
+    }
+    map3d.addEventListener('gmp-rangechange', updateMunicipalityLabels);
 
     window.__applyMunicipalityGeofenceVisibility = function () {
       var toggle = document.getElementById('toggleMunicipalityGeofence');
@@ -1451,6 +1469,7 @@ var PopoverElement = maps3d.PopoverElement;
       municipalityGeofenceOverlays.forEach(function (overlay) {
         setOverlayVisible(overlay.element, visible);
       });
+      updateMunicipalityLabels();
     };
 
     var plotsLoadingEnabled = true;

@@ -74,12 +74,62 @@ class RegionTwoBoundarySeederTest extends TestCase
             $table->timestamps();
         });
         (require database_path('migrations/2026_09_03_000100_create_municipality_boundaries_table.php'))->up();
+        (require database_path('migrations/2026_09_21_000100_add_fill_opacity_to_municipality_boundaries.php'))->up();
         (require database_path('migrations/2026_08_19_000300_create_audit_logs_table.php'))->up();
         $this->createProvinceSchema();
         $this->actor = User::withoutEvents(fn () => User::query()->create([
             'name' => 'Region Two Boundary Administrator', 'email' => 'region-two-admin@example.test',
             'password' => 'unused-test-placeholder', 'role' => User::ROLE_SYSTEM_OWNER, 'is_active' => true,
         ]));
+    }
+
+    public function test_region_two_white_setup_is_scoped_explicit_and_idempotent(): void
+    {
+        $this->seedRegion();
+        $outsideMunicipality = Municipality::create(['name' => 'Style preservation fixture', 'province' => 'Tarlac', 'province_id' => Province::where('name', 'Tarlac')->sole()->id, 'code' => 'STYLE-OUTSIDE', 'is_active' => true]);
+        $outside = MunicipalityBoundary::first()->replicate();
+        $outside->fill(['municipality_id' => $outsideMunicipality->id, 'color' => '#123456', 'fill_opacity' => .47])->save();
+        $outsideBefore = $outside->fresh()->getAttributes();
+        $provinceBefore = Province::orderBy('id')->get()->toJson();
+        $municipalityBefore = Municipality::orderBy('id')->get()->toJson();
+        $originalGeometry = MunicipalityBoundary::orderBy('id')->pluck('geojson', 'id')->all();
+        $service = app(\App\Support\RegionTwoGeofenceAppearance::class);
+        $before = MunicipalityBoundary::orderBy('id')->get()->toJson();
+        $preview = $service->run(false, null);
+        $this->assertSame(93, array_sum(array_column($preview, 'changed')));
+        $this->assertSame($before, MunicipalityBoundary::orderBy('id')->get()->toJson());
+        $result = $service->run(true, $this->actor->id);
+        $this->assertSame(93, array_sum(array_column($result, 'changed')));
+        $this->assertSame(93, MunicipalityBoundary::where('color', '#FFFFFF')->where('fill_opacity', .2)->count());
+        $this->assertSame($originalGeometry, MunicipalityBoundary::orderBy('id')->pluck('geojson', 'id')->all());
+        $audits = AuditLog::count();
+        $this->assertSame(0, array_sum(array_column($service->run(true, $this->actor->id), 'changed')));
+        $this->assertSame($audits, AuditLog::count());
+        $this->assertSame($outsideBefore, $outside->fresh()->getAttributes());
+        $this->assertSame($provinceBefore, Province::orderBy('id')->get()->toJson());
+        $this->assertSame($municipalityBefore, Municipality::orderBy('id')->get()->toJson());
+    }
+
+    public function test_region_two_style_setup_rolls_back_when_a_late_scope_is_inactive(): void
+    {
+        $this->seedRegion();
+        Province::where('name', 'Santiago City')->update(['is_active' => false]);
+        $before = MunicipalityBoundary::orderBy('id')->get()->toJson();
+        $audits = AuditLog::count();
+        try {
+            app(\App\Support\RegionTwoGeofenceAppearance::class)->run(true, $this->actor->id);
+            $this->fail('Inactive scope must stop setup.');
+        } catch (RuntimeException $exception) {
+            $this->assertStringContainsString('Inactive province', $exception->getMessage());
+        }
+        $this->assertSame($before, MunicipalityBoundary::orderBy('id')->get()->toJson());
+        $this->assertSame($audits, AuditLog::count());
+    }
+
+    public function test_region_two_style_setup_requires_an_explicit_active_owner(): void
+    {
+        $this->expectException(RuntimeException::class);
+        app(\App\Support\RegionTwoGeofenceAppearance::class)->run(true, null);
     }
 
     public function test_all_93_boundaries_have_the_correct_supervision_and_attribution(): void

@@ -86,6 +86,50 @@
 .login-footer a { color: var(--ui-primary); text-underline-offset: 3px; }
 .login-footer a:focus-visible { outline: 3px solid var(--ui-focus); outline-offset: 3px; }
 
+.login-confidentiality {
+    margin: 0 26px 24px;
+    padding: 14px 16px;
+    border: 1px solid var(--ui-border);
+    border-left: 3px solid var(--ui-primary);
+    border-radius: var(--ui-radius-control);
+    background: var(--ui-surface-subtle);
+    color: var(--ui-text-muted);
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.login-confidentiality h2 {
+    margin: 0 0 8px;
+    color: var(--ui-text);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.login-confidentiality p { margin: 0; }
+.login-confidentiality p + p { margin-top: 8px; }
+.login-form .login-confidentiality { margin: 20px 0 0; }
+.login-confidentiality-confirmation { margin: 12px 0 0; }
+.login-confidentiality-ack {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-height: 44px;
+    color: var(--ui-text);
+    font-size: 14px;
+    line-height: 1.5;
+    cursor: pointer;
+}
+.login-confidentiality-ack input {
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
+    margin: 2px 0 0;
+    accent-color: var(--ui-primary);
+    cursor: pointer;
+}
+.login-confidentiality-ack input:focus-visible { outline: 3px solid var(--ui-focus); outline-offset: 3px; }
+
 @media (prefers-reduced-motion: no-preference) {
     .login-scene:not([hidden]) .login-scene-media img {
         animation: login-photo-appear .45s ease-out;

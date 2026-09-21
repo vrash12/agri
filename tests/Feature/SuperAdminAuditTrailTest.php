@@ -143,6 +143,7 @@ class SuperAdminAuditTrailTest extends TestCase
         $this->post(route('login.attempt'), [
             'email' => $email,
             'password' => 'password',
+            'confidentiality_acknowledged' => '1',
         ])->assertRedirect(route('dashboard'));
 
         $this->assertDatabaseHas('audit_logs', [
@@ -162,6 +163,7 @@ class SuperAdminAuditTrailTest extends TestCase
         $this->post(route('login.attempt'), [
             'email' => $email,
             'password' => 'incorrect-password',
+            'confidentiality_acknowledged' => '1',
         ])->assertSessionHasErrors('email');
 
         $failed = AuditLog::query()

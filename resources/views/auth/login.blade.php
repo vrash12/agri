@@ -706,6 +706,29 @@
 
             <span>Sign In</span>
           </button>
+        <aside class="login-confidentiality" aria-labelledby="login-confidentiality-title">
+          <h2 id="login-confidentiality-title">Confidentiality &amp; testing notice</h2>
+          <p>Access is provided to authorized participants solely for testing and validation. Keep nonpublic system information, records, credentials and materials confidential.</p>
+          <p>Do not share screenshots or confidential materials, or use confidential code, designs or documentation to copy or reproduce AgriGOV, without the system owner's prior written permission. Access grants no permission to reuse these materials.</p>
+          <div class="field login-confidentiality-confirmation">
+            <label class="login-confidentiality-ack" for="confidentiality_acknowledged">
+              <input
+                type="checkbox"
+                id="confidentiality_acknowledged"
+                name="confidentiality_acknowledged"
+                value="1"
+                required
+                @checked((string) old('confidentiality_acknowledged') === '1')
+                aria-describedby="login-confidentiality-title @error('confidentiality_acknowledged') confidentiality-ack-error @enderror"
+                @error('confidentiality_acknowledged') aria-invalid="true" @enderror
+              >
+              <span>I have read and understood the confidentiality and testing notice.</span>
+            </label>
+            @error('confidentiality_acknowledged')
+              <p class="form-field-error" id="confidentiality-ack-error" role="alert">{{ $message }}</p>
+            @enderror
+          </div>
+        </aside>
         </form>
 
         <footer class="login-footer">

@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Support\ConcurrentWrite;
 use App\Support\FarmerDataQuality;
 use App\Support\FarmerPicker;
+use App\Support\GeoGeometry;
 use App\Support\MunicipalityAccess;
 use Endroid\QrCode\ErrorCorrectionLevel\ErrorCorrectionLevelMedium;
 use Endroid\QrCode\QrCode;
@@ -30,7 +31,8 @@ class FarmerController extends Controller
 {
     public function __construct(
         private ConcurrentWrite $concurrentWrite,
-        private MunicipalityAccess $municipalityAccess
+        private MunicipalityAccess $municipalityAccess,
+        private GeoGeometry $geometry
     ) {
         $this->middleware('auth')->except(['publicLand']);
     }
@@ -302,7 +304,7 @@ class FarmerController extends Controller
 
             $mapMunicipalityBoundaries = $boundaryQuery
                 ->get([
-                    'id', 'municipality_id', 'name', 'geojson', 'color',
+                    'id', 'municipality_id', 'name', 'geojson', 'color', 'fill_opacity',
                     'area_ha', 'centroid_lat', 'centroid_lng',
                 ])
                 ->map(fn (MunicipalityBoundary $boundary) => [
@@ -312,6 +314,8 @@ class FarmerController extends Controller
                     'name' => $boundary->name,
                     'geojson' => $boundary->geojson,
                     'color' => $boundary->color ?: '#15803D',
+                    'fill_opacity' => (float) ($boundary->fill_opacity ?? 0.20),
+                    'label_position' => $this->geometry->labelPosition($boundary->geojson),
                     'area_ha' => round((float) $boundary->area_ha, 2),
                     'centroid_lat' => (float) $boundary->centroid_lat,
                     'centroid_lng' => (float) $boundary->centroid_lng,

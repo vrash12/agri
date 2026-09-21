@@ -146,6 +146,8 @@ Route::middleware([
         ->name('municipality-boundaries.import');
     Route::put('/municipality-boundaries/{boundary}', [MunicipalityBoundaryController::class, 'update'])
         ->name('municipality-boundaries.update');
+    Route::patch('/municipality-boundaries/{boundary}/style', [MunicipalityBoundaryController::class, 'style'])
+        ->name('municipality-boundaries.style');
     Route::post('/municipality-boundaries/{boundary}/activate', [MunicipalityBoundaryController::class, 'activate'])
         ->name('municipality-boundaries.activate');
     Route::post('/municipality-boundaries/{boundary}/archive', [MunicipalityBoundaryController::class, 'archive'])

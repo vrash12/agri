@@ -41,7 +41,8 @@
   .geo-opacity input{display:block;width:100%;height:32px;margin:4px 0;accent-color:var(--ui-primary);cursor:pointer}
   .geo-opacity-scale{display:flex;justify-content:space-between;font-size:12px;color:var(--ui-text-muted)}
   .geo-opacity p{margin:8px 0 0;font-size:12px;color:var(--ui-text-muted)}
-  .geo-boundary-label{padding:4px 8px;border:1px solid var(--ui-text);border-radius:6px;background:var(--ui-accent-soft);box-shadow:0 1px 4px rgba(0,0,0,.35)}
+  .geo-boundary-label{padding:2px 4px;opacity:.72;text-shadow:-1px -1px 1px #20362c,1px 1px 1px #20362c;pointer-events:none}
+  .geo-style-panel{margin:12px}.geo-style-panel .geo-field{margin-bottom:10px}.geo-style-panel input[type=color]{height:44px;padding:4px}.geo-style-panel .geo-btn{min-height:44px}.geo-style-panel [role=alert]{color:var(--ui-danger)}
   .geo-barangays{padding:16px;border-bottom:1px solid var(--ui-border);background:var(--ui-surface)}
   .geo-barangays h3{margin:0 0 8px;font-size:15px}
   .geo-barangays p{margin:8px 0;font-size:12px;color:var(--ui-text-muted);line-height:1.5}
@@ -129,12 +130,6 @@
       <button class="geo-btn" type="button" id="resetMap">{{ $canChooseMunicipality ? 'Reset province view' : 'Reset municipality view' }}</button>
       <button class="geo-btn primary" type="button" id="downloadSnapshot" disabled>Download municipality snapshot</button>
       </div>
-      <div class="geo-opacity">
-        <div class="geo-opacity-heading"><label for="geofenceOpacity">Geofence color opacity</label><output id="geofenceOpacityValue" for="geofenceOpacity">20%</output></div>
-        <input id="geofenceOpacity" type="range" min="0" max="100" step="5" value="20" aria-describedby="geofenceOpacityHelp" aria-valuetext="20% color opacity">
-        <div class="geo-opacity-scale"><span>0% Clear</span><span>100% Solid</span></div>
-        <p id="geofenceOpacityHelp">Adjust the map's color fill. Outlines stay visible; drafts use a lighter fill.</p>
-      </div>
       </details>
     </div>
 
@@ -185,6 +180,20 @@
           <h2 id="panelTitle">{{ $canChooseMunicipality ? 'Boundary overview' : $assignedMunicipality?->name }}</h2>
           <p id="panelDescription">{{ $canChooseMunicipality ? 'Select one municipality to inspect its active boundary and parcel placement.' : 'Review your boundary and parcels needing attention.' }}</p>
         </div>
+        <section class="geo-opacity geo-style-panel" aria-labelledby="geofenceStyleTitle" id="geofenceStylePanel" aria-busy="false">
+          <h3 id="geofenceStyleTitle">Geofence appearance</h3>
+          <div class="geo-field"><label for="geofenceStyleBoundary">Boundary</label><select id="geofenceStyleBoundary" disabled><option value="">Select a municipality first</option></select></div>
+          <div class="geo-field"><label for="geofenceColor">Geofence color</label><input id="geofenceColor" type="color" value="#15803d" disabled aria-describedby="geofenceOpacityHelp"></div>
+          <div class="geo-opacity-heading"><label for="geofenceOpacity">Geofence color opacity</label><output id="geofenceOpacityValue" for="geofenceOpacity">20%</output></div>
+          <input id="geofenceOpacity" type="range" min="0" max="100" step="1" value="20" disabled aria-describedby="geofenceOpacityHelp" aria-valuetext="20% color opacity">
+          <div class="geo-opacity-scale"><span>0% Clear</span><span>100% Solid</span></div>
+          <p id="geofenceOpacityHelp">{{ $canManageBoundaries ? 'Preview this boundary, then save for both maps. Reload an open Farmers page to see the saved style.' : 'Both maps use this saved appearance. Your Super Administrator or System Owner can change it.' }}</p>
+          @if($canManageBoundaries)
+          <div class="geo-card-actions"><button class="geo-btn primary" type="button" id="saveGeofenceStyle" disabled>Save color &amp; opacity</button><button class="geo-btn" type="button" id="resetGeofenceStyle" disabled>Discard changes</button></div>
+          @endif
+          <p id="geofenceStyleStatus" role="status">Select a municipality to see its saved appearance.</p>
+          <p id="geofenceStyleError" role="alert" hidden></p>
+        </section>
         <section class="geo-barangays" id="barangayControls" aria-labelledby="barangayHeading" aria-busy="false">
           <h3 id="barangayHeading">Barangay boundaries</h3>
           <label class="geo-check"><input type="checkbox" id="showBarangays" checked disabled aria-describedby="barangayStatus"> Show planning references</label>
@@ -245,6 +254,7 @@
     storeUrl: @json(route('municipality-boundaries.store')),
     importUrl: @json(route('municipality-boundaries.import')),
     updateTemplate: @json(route('municipality-boundaries.update', ['boundary' => '__ID__'])),
+    styleTemplate: @json(route('municipality-boundaries.style', ['boundary' => '__ID__'])),
     activateTemplate: @json(route('municipality-boundaries.activate', ['boundary' => '__ID__'])),
     archiveTemplate: @json(route('municipality-boundaries.archive', ['boundary' => '__ID__'])),
     municipalities: @json($municipalities->map(fn($item) => ['id' => $item->id, 'name' => $item->name])->values()),
@@ -254,5 +264,6 @@
 </script>
 @php($municipalityBoundaryScriptVersion = @filemtime(public_path('js/municipality-boundaries.js')) ?: 1)
 <script src="{{ asset('js/barangay-boundaries.js') }}?v={{ @filemtime(public_path('js/barangay-boundaries.js')) ?: 1 }}"></script>
+<script src="{{ asset('js/geofence-style.js') }}?v={{ @filemtime(public_path('js/geofence-style.js')) ?: 1 }}"></script>
 <script src="{{ asset('js/municipality-boundaries.js') }}?v={{ $municipalityBoundaryScriptVersion }}"></script>
 @endpush

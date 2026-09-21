@@ -25,6 +25,7 @@ class MunicipalityBoundary extends Model
         'name',
         'geojson',
         'color',
+        'fill_opacity',
         'status',
         'area_ha',
         'centroid_lat',
@@ -42,6 +43,7 @@ class MunicipalityBoundary extends Model
     protected $casts = [
         'municipality_id' => 'integer',
         'geojson' => 'array',
+        'fill_opacity' => 'float',
         'area_ha' => 'float',
         'centroid_lat' => 'float',
         'centroid_lng' => 'float',

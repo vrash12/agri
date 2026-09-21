@@ -18,6 +18,7 @@ class SessionIdleTimeoutTest extends TestCase
         $user = $this->makeUser();
 
         $this->post(route('login.attempt'), [
+            'confidentiality_acknowledged' => '1',
             'email' => $user->email,
             'password' => 'password',
         ])

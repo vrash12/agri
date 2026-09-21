@@ -439,6 +439,39 @@ class MunicipalityBoundaryController extends Controller
         ]);
     }
 
+    public function style(Request $request, MunicipalityBoundary $boundary): JsonResponse
+    {
+        $this->authorize('update', $boundary);
+        $validated = $request->validate([
+            'color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'fill_opacity' => ['required', 'numeric', 'between:0,1', 'regex:/^(?:0(?:\.\d{1,2})?|1(?:\.0{1,2})?)$/'],
+            '_record_version' => ['required', 'string'],
+            'geojson' => ['prohibited'],
+            'municipality_id' => ['prohibited'],
+        ]);
+        $updated = $this->concurrentWrite->execute($boundary, $validated['_record_version'], function (MunicipalityBoundary $current) use ($request, $validated): MunicipalityBoundary {
+            $this->authorize('update', $current);
+            if ($current->status === MunicipalityBoundary::STATUS_ARCHIVED) {
+                throw ValidationException::withMessages(['boundary' => 'Archived boundaries cannot be restyled. Select an active boundary or draft.']);
+            }
+            $before = $this->auditSnapshot($current);
+            $current->fill([
+                'color' => strtoupper($validated['color']),
+                'fill_opacity' => (float) $validated['fill_opacity'],
+            ]);
+            if ($current->isDirty()) {
+                $current->updated_by = $request->user()->id;
+                $current->save();
+                $this->recordAudit('updated', $current, $before, $this->auditSnapshot($current), ['change' => 'map_style']);
+            }
+
+            return $current->fresh(['municipality:id,name,province']);
+        });
+        $this->forgetCache($updated->municipality_id);
+
+        return response()->json(['message' => 'Geofence color and opacity saved for both maps.', 'boundary' => $this->boundaryData($updated)]);
+    }
+
     public function activate(Request $request, MunicipalityBoundary $boundary): JsonResponse
     {
         $this->authorize('activate', $boundary);
@@ -683,6 +716,8 @@ class MunicipalityBoundaryController extends Controller
             'name' => $boundary->name,
             'geojson' => $boundary->geojson,
             'color' => $boundary->color,
+            'fill_opacity' => (float) ($boundary->fill_opacity ?? 0.20),
+            'label_position' => $this->geometry->labelPosition($boundary->geojson),
             'status' => $boundary->status,
             'area_ha' => round((float) $boundary->area_ha, 2),
             'centroid_lat' => (float) $boundary->centroid_lat,
@@ -836,6 +871,7 @@ class MunicipalityBoundaryController extends Controller
             'municipality_id' => $boundary->municipality_id,
             'name' => $boundary->name,
             'color' => $boundary->color,
+            'fill_opacity' => (float) ($boundary->fill_opacity ?? 0.20),
             'status' => $boundary->status,
             'archived_at' => optional($boundary->archived_at)->toIso8601String(),
             'geometry' => [

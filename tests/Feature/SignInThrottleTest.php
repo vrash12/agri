@@ -92,6 +92,36 @@ class SignInThrottleTest extends TestCase
         $this->assertSame(1, AuditLog::query()->where('event', 'login_throttled')->count());
     }
 
+    public function test_sign_in_requires_notice_acknowledgment_before_checking_credentials(): void
+    {
+        $user = $this->account();
+        foreach ([null, '0', 'false', 'no'] as $acknowledgment) {
+            $payload = ['email' => $user->email, 'password' => self::PASSWORD];
+            if ($acknowledgment !== null) {
+                $payload['confidentiality_acknowledged'] = $acknowledgment;
+            }
+            $this->from(route('login'))->post(route('login.attempt'), $payload)
+                ->assertRedirect(route('login'))
+                ->assertSessionHasErrors(['confidentiality_acknowledged' => 'Please confirm that you have read and understood the confidentiality and testing notice.']);
+            $this->assertGuest();
+        }
+        $this->assertSame(0, AuditLog::count());
+        $this->assertNull($user->fresh()->last_login_at);
+        $this->attempt($user->email, self::PASSWORD)->assertRedirect(route('dashboard'));
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_failed_credentials_preserve_acknowledgment_but_never_flash_the_password(): void
+    {
+        $user = $this->account();
+        $this->attempt($user->email, 'incorrect-fixture-password')
+            ->assertSessionHasErrors('email')
+            ->assertSessionHas('_old_input.confidentiality_acknowledged', '1')
+            ->assertSessionMissing('_old_input.password');
+        $this->get(route('login'))->assertOk()->assertSee('I have read and understood the confidentiality and testing notice.');
+        $this->assertGuest();
+    }
+
     public function test_the_stored_password_is_never_written_to_the_audit_trail(): void
     {
         $user = $this->account();
@@ -237,6 +267,7 @@ class SignInThrottleTest extends TestCase
         return $this->from(route('login'))->post(route('login.attempt'), [
             'email' => $email,
             'password' => $password,
+            'confidentiality_acknowledged' => '1',
         ]);
     }
 

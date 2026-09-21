@@ -14,6 +14,7 @@
   'use strict';
 
   const settings = window.__municipalityBoundarySettings || {};
+  const appearance = window.GeofenceStyle;
 
   const state = {
     map: null,
@@ -21,7 +22,9 @@
     barangays: null,
     boundaryOverlays: new Map(),
     boundaryFills: new Map(),
-    fillOpacity: .2,
+    styleDraft: null,
+    styleRevision: 0,
+    savingStyle: false,
     labels: new Map(),
     parcelOverlays: new Map(),
     boundaries: settings.initialBoundaries.slice(),
@@ -99,26 +102,32 @@
     return polygon.map(ring => ring.map(point => ({lat: Number(point[1]), lng: Number(point[0])})));
   }
 
-  function boundaryFillOpacity(id, scale) {
+  function boundaryStyle(boundary) {
+    return state.styleDraft && String(state.styleDraft.id) === String(boundary.id) ? state.styleDraft : appearance.normalize(boundary);
+  }
+
+  function boundaryFillOpacity(id) {
     // The editor replaces the saved fill; stacking both obscures preview colors
     // and makes the actual opacity higher than the slider value.
     const editing = state.editorMode === 'edit' && String(state.selectedBoundary?.id) === String(id);
-    return editing ? 0 : state.fillOpacity * scale;
+    const boundary = state.boundaries.find(item => String(item.id) === String(id));
+    return editing ? 0 : boundaryStyle(boundary || {}).fill_opacity;
   }
 
   function applyFillOpacity() {
     state.boundaryFills.forEach((group, id) => group.overlays.forEach(overlay => {
-      overlay.setOptions({fillOpacity: boundaryFillOpacity(id, group.scale)});
+      const style = boundaryStyle(group.boundary);
+      overlay.setOptions({fillColor: style.color, strokeColor: style.color, fillOpacity: boundaryFillOpacity(id)});
     }));
     if (state.editableOverlay) {
-      state.editableOverlay.setOptions({fillOpacity: state.fillOpacity * (state.selectedBoundary?.status === 'draft' ? .5 : 1)});
+      state.editableOverlay.setOptions({fillOpacity: appearance.normalize(state.selectedBoundary).fill_opacity});
     }
-    if (state.draftOverlay) state.draftOverlay.setOptions({fillOpacity: state.fillOpacity * .5});
+    if (state.draftOverlay) state.draftOverlay.setOptions({fillOpacity: .2});
   }
 
   function drawBoundary(boundary) {
     const fills = [];
-    const fillScale = boundary.status === 'draft' ? .5 : 1;
+    const style = boundaryStyle(boundary);
     const overlays = geometryPolygons(boundary.geojson).flatMap(polygon => {
       const paths = googlePaths(polygon);
       // A pale casing keeps dark saved colors visible over satellite terrain.
@@ -134,11 +143,11 @@
       outline.setMap(state.map);
       const overlay = new google.maps.Polygon({
         paths,
-        strokeColor: boundary.color,
+        strokeColor: style.color,
         strokeOpacity: 1,
         strokeWeight: boundary.status === 'draft' ? 3 : 4,
-        fillColor: boundary.color,
-        fillOpacity: boundaryFillOpacity(boundary.id, fillScale),
+        fillColor: style.color,
+        fillOpacity: boundaryFillOpacity(boundary.id),
         clickable: true,
         zIndex: boundary.status === 'active' ? 2 : 1,
       });
@@ -154,13 +163,14 @@
       return [outline, overlay];
     });
     state.boundaryOverlays.set(String(boundary.id), overlays);
-    state.boundaryFills.set(String(boundary.id), {overlays: fills, scale: fillScale});
+    state.boundaryFills.set(String(boundary.id), {overlays: fills, boundary});
 
-    if (boundary.status === 'active') {
+    const labelPosition = appearance.labelPosition(boundary);
+    if (boundary.status === 'active' && labelPosition) {
       const marker = new google.maps.Marker({
         map: state.selectedMunicipality || state.map.getZoom() >= 10 ? state.map : null,
-        position: {lat: Number(boundary.centroid_lat), lng: Number(boundary.centroid_lng)},
-        label: {text: String(boundary.municipality_name || ''), color: '#20362c', fontSize: '12px', fontWeight: '700', className: 'geo-boundary-label'},
+        position: labelPosition,
+        label: {text: String(boundary.municipality_name || ''), color: '#FFFFFF', fontSize: '12px', fontWeight: '500', className: 'geo-boundary-label'},
         icon: {path: google.maps.SymbolPath.CIRCLE, scale: 0},
         clickable: false,
         zIndex: 4,
@@ -320,6 +330,80 @@
 
   function resetDefaultView() { state.map.setCenter(defaultViewport.center); state.map.setZoom(defaultViewport.zoom); }
 
+  function syncStyleControls(message) {
+    const choices = (state.currentPayload?.boundaries || []).filter(item => item.status !== 'archived');
+    const selected = choices.find(item => String(item.id) === String(state.selectedBoundary?.id)) || null;
+    const style = boundaryStyle(selected || {});
+    el('geofenceStyleBoundary').innerHTML = choices.length
+      ? choices.map(item => '<option value="' + item.id + '">' + escapeHtml(item.name + ' · ' + item.status) + '</option>').join('')
+      : '<option value="">' + (state.selectedMunicipality ? 'No current boundary' : 'Select a municipality first') + '</option>';
+    el('geofenceStyleBoundary').value = selected ? String(selected.id) : '';
+    el('geofenceStyleBoundary').disabled = !choices.length || !!state.editorMode || state.savingStyle;
+    el('geofenceColor').value = style.color.toLowerCase();
+    const percentage = Math.round(style.fill_opacity * 100);
+    el('geofenceOpacity').value = String(percentage);
+    el('geofenceOpacityValue').value = percentage + '%';
+    el('geofenceOpacity').setAttribute('aria-valuetext', percentage + '% color opacity');
+    const disabled = !settings.canManage || !selected || !!state.editorMode || state.savingStyle;
+    el('geofenceColor').disabled = disabled; el('geofenceOpacity').disabled = disabled;
+    if (el('saveGeofenceStyle')) {
+      el('saveGeofenceStyle').disabled = disabled || !state.styleDraft;
+      el('saveGeofenceStyle').textContent = state.savingStyle ? 'Saving…' : 'Save color & opacity';
+    }
+    if (el('resetGeofenceStyle')) el('resetGeofenceStyle').disabled = disabled || !state.styleDraft;
+    el('geofenceStylePanel').setAttribute('aria-busy', String(state.savingStyle));
+    el('geofenceStyleStatus').textContent = message || (state.editorMode ? 'Finish editing the boundary before changing its appearance.'
+      : !selected ? 'Select a municipality with an active boundary or draft.'
+      : state.styleDraft ? 'Preview only. Save to apply this appearance to both maps.'
+      : 'Saved appearance · ' + municipalityName(selected.municipality_id) + ' · ' + percentage + '% opacity');
+  }
+
+  function discardStyle() {
+    state.styleRevision++;
+    state.styleDraft = null;
+    el('geofenceStyleError').hidden = true;
+    applyFillOpacity();
+    syncStyleControls();
+  }
+
+  function previewStyle() {
+    if (!settings.canManage || !state.selectedBoundary || state.editorMode || state.savingStyle || !state.currentPayload) return;
+    const style = appearance.normalize({color: el('geofenceColor').value, fill_opacity: Number(el('geofenceOpacity').value) / 100});
+    const saved = appearance.normalize(state.selectedBoundary);
+    state.styleDraft = style.color === saved.color && style.fill_opacity === saved.fill_opacity ? null : {id: state.selectedBoundary.id, ...style};
+    el('geofenceStyleError').hidden = true;
+    applyFillOpacity(); syncStyleControls();
+  }
+
+  async function saveStyle() {
+    if (!settings.canManage || state.savingStyle || !state.styleDraft || state.editorMode) return;
+    const boundary = state.selectedBoundary;
+    const revision = state.styleRevision;
+    const body = {color: state.styleDraft.color, fill_opacity: state.styleDraft.fill_opacity, _record_version: boundary._record_version};
+    state.savingStyle = true; syncStyleControls();
+    try {
+      const payload = await request(endpoint(settings.styleTemplate, boundary.id), {method: 'PATCH', headers: {'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': settings.csrf}, body: JSON.stringify(body)});
+      if (String(payload.boundary?.id) !== String(boundary.id) || !payload.boundary?._record_version) throw new Error('The server did not confirm the saved appearance. Reload before trying again.');
+      // Update this boundary's cached style even if the user switched workspaces in flight.
+      const index = state.boundaries.findIndex(item => String(item.id) === String(boundary.id));
+      if (index >= 0) { removeBoundary(boundary.id); state.boundaries[index] = payload.boundary; }
+      if (revision === state.styleRevision) {
+        state.styleDraft = null; state.selectedBoundary = payload.boundary;
+        state.currentPayload.boundaries = state.currentPayload.boundaries.map(item => String(item.id) === String(boundary.id) ? payload.boundary : item);
+        el('geofenceStyleError').hidden = true;
+        toast(payload.message);
+      }
+      renderBoundaries();
+    } catch (error) {
+      if (revision === state.styleRevision) {
+        el('geofenceStyleError').textContent = error instanceof TypeError ? 'Could not confirm the save. Check your connection and reload before trying again.' : error.message;
+        el('geofenceStyleError').hidden = false;
+      }
+    } finally {
+      state.savingStyle = false; syncStyleControls();
+    }
+  }
+
   async function loadMunicipality(id, selectedBoundaryId, force) {
     if (!settings.canChooseMunicipality) id = settings.assignedMunicipalityId;
     id = id ? String(id) : '';
@@ -329,6 +413,7 @@
       if (selectedBoundaryId && state.currentPayload) {
         state.selectedBoundary = state.currentPayload.boundaries.find(boundary => String(boundary.id) === String(selectedBoundaryId)) || null;
       }
+      discardStyle();
       return;
     }
     const revision = ++state.loadRevision;
@@ -341,6 +426,7 @@
     state.barangays?.selectMunicipality(id);
     clearParcels();
     state.currentPayload = null;
+    discardStyle();
     el('downloadSnapshot').disabled = true;
     renderBoundaries();
 
@@ -374,6 +460,7 @@
       el('downloadSnapshot').disabled = !payload.snapshot;
       mergeBoundaries(id, payload.boundaries);
       state.selectedBoundary = selectedBoundaryId ? payload.boundaries.find(item => String(item.id) === String(selectedBoundaryId)) : payload.boundaries[0] || null;
+      syncStyleControls();
       renderBoundaries();
       drawParcels(payload.parcels || []);
       renderPanel(payload);
@@ -640,7 +727,9 @@
 
   function startDrawing() {
     cancelEditor();
+    discardStyle();
     state.editorMode = 'create';
+    syncStyleControls();
     state.barangays?.setEditing(true);
     state.draftPoints = [];
     el('boundaryEditor').hidden = false;
@@ -662,6 +751,7 @@
 
   function editBoundary(boundary) {
     cancelEditor();
+    discardStyle();
     if (!boundary || boundary.status === 'archived') return;
     const polygons = geometryPolygons(boundary.geojson);
     if (polygons.length !== 1 || polygons[0].length !== 1) {
@@ -671,6 +761,7 @@
     state.editorMode = 'edit';
     state.barangays?.setEditing(true);
     state.selectedBoundary = boundary;
+    syncStyleControls();
     el('boundaryEditor').hidden = false;
     el('editorTitle').textContent = 'Edit municipality boundary';
     el('editorHelp').textContent = 'Drag the boundary points on the map, then save the revised official geometry.';
@@ -680,7 +771,7 @@
     el('editorColor').value = String(boundary.color).toLowerCase();
     el('editorStatusField').hidden = true;
     el('replaceConfirmed').checked = false;
-    state.editableOverlay = new google.maps.Polygon({paths: googlePaths(polygons[0]), strokeColor: boundary.color, strokeWeight: 4, fillColor: boundary.color, fillOpacity: state.fillOpacity * (boundary.status === 'draft' ? .5 : 1), editable: true, zIndex: 20});
+    state.editableOverlay = new google.maps.Polygon({paths: googlePaths(polygons[0]), strokeColor: boundary.color, strokeWeight: 4, fillColor: boundary.color, fillOpacity: appearance.normalize(boundary).fill_opacity, editable: true, zIndex: 20});
     // Keep source coordinates for untouched vertices: map normalization must not move shared borders.
     state.editableOverlay.getPath().getArray().forEach((point, index) => {
       state.originalEditorCoordinates.set(point.lng() + ':' + point.lat(), polygons[0][0][index].slice(0, 2));
@@ -693,7 +784,7 @@
 
   function refreshDraftOverlay() {
     if (state.draftOverlay) state.draftOverlay.setMap(null);
-    state.draftOverlay = new google.maps.Polygon({paths: state.draftPoints, strokeColor: el('editorColor').value, strokeWeight: 3, fillColor: el('editorColor').value, fillOpacity: state.fillOpacity * .5, zIndex: 20});
+    state.draftOverlay = new google.maps.Polygon({paths: state.draftPoints, strokeColor: el('editorColor').value, strokeWeight: 3, fillColor: el('editorColor').value, fillOpacity: .2, zIndex: 20});
     state.draftOverlay.setMap(state.map);
     updateDrawState();
   }
@@ -720,6 +811,7 @@
     applyFillOpacity();
     showEditorFeedback('');
     if (el('boundaryEditor')) el('boundaryEditor').hidden = true;
+    syncStyleControls();
   }
 
   function showEditorFeedback(message) {
@@ -885,16 +977,14 @@
     if (filter.value) loadMunicipality(filter.value);
   };
 
-  function updateFillOpacity(event) {
-    const value = Number(event.target.value);
-    const percentage = Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 20;
-    state.fillOpacity = percentage / 100;
-    el('geofenceOpacityValue').value = percentage + '%';
-    event.target.setAttribute('aria-valuetext', percentage + '% color opacity');
-    applyFillOpacity();
-  }
-  el('geofenceOpacity').addEventListener('input', updateFillOpacity);
-  el('geofenceOpacity').addEventListener('change', updateFillOpacity);
+  el('geofenceOpacity').addEventListener('input', previewStyle);
+  el('geofenceColor').addEventListener('input', previewStyle);
+  el('geofenceStyleBoundary').addEventListener('change', event => {
+    state.selectedBoundary = state.currentPayload?.boundaries.find(item => String(item.id) === event.target.value) || null;
+    discardStyle();
+  });
+  el('saveGeofenceStyle')?.addEventListener('click', saveStyle);
+  el('resetGeofenceStyle')?.addEventListener('click', discardStyle);
 
   if (!settings.key) {
     el('mapMessage').textContent = 'Google Maps is not configured. Add GOOGLE_MAPS_API_KEY and clear Laravel configuration cache.';

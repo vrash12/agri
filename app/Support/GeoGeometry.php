@@ -302,6 +302,26 @@ final class GeoGeometry
         return null;
     }
 
+    /**
+     * Place display labels on land, using the existing interior-point rules.
+     *
+     * @param  array<string, mixed>  $geometry
+     * @return array{lat: float, lng: float}|null
+     */
+    public function labelPosition(array $geometry): ?array
+    {
+        $polygons = array_filter($this->polygons($geometry), fn ($polygon) => count($polygon[0] ?? []) >= 4);
+        usort($polygons, fn ($a, $b) => abs($this->ringAreaSquareMeters($b[0])) <=> abs($this->ringAreaSquareMeters($a[0])));
+        foreach ($polygons as $polygon) {
+            $point = $this->polygonInteriorPoint($polygon);
+            if ($point !== null) {
+                return ['lat' => (float) $point[1], 'lng' => (float) $point[0]];
+            }
+        }
+
+        return null;
+    }
+
     /** @param  array<string, mixed>  $geometry */
     public function metadata(array $geometry): array
     {

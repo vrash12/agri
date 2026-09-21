@@ -1430,6 +1430,7 @@
 </script>
 @include('farmers.partials.maps-styles')
 <script src="{{ asset('js/municipality-snapshot-export.js') }}?v=1"></script>
+<script src="{{ asset('js/geofence-style.js') }}?v={{ @filemtime(public_path('js/geofence-style.js')) ?: 1 }}"></script>
 @include('farmers.partials.maps-scripts')
 
 @push('styles')

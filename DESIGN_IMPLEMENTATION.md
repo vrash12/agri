@@ -1,5 +1,27 @@
 # Design and UX implementation record
 
+## Compact reports and sign-in notice — September 21, 2026
+
+Municipality charts show eight offices per page with search and Previous/Next
+controls; switching comparison indicators preserves the current search and page.
+Complete figures use closed disclosures with 360px scrollable tables. Local browser
+checks verified interaction and 320–1440px layouts; production dashboard renders
+passed owner, provincial and municipal checks. The office sign-in form now shows
+a confidentiality/testing notice below its button using shared theme tokens. The
+original release did not record a signed NDA or change sign-in requirements. Desktop and mobile
+placement, native credential/error recovery and the live notice were checked.
+
+Both changes were deployed to Hostinger September 21 at 00:38 UTC, together with
+the remaining CAR reference imports. See `docs/CAR_DASHBOARD_DEPLOYMENT_2026_09_21.md`,
+`docs/DASHBOARD_COMPACT_REPORTS_2026_09_21.md` and
+`docs/SIGN_IN_CONFIDENTIALITY_NOTICE.md`.
+
+The subsequent local checkbox update moves the notice inside the sign-in form, retains its placement below the button, and adds a required acknowledgment with a full clickable label, visible keyboard focus and inline server errors. Native browser validation and server-side accepted validation both enforce the requirement. Invalid credentials preserve the check without storing the password. No signature, separate acceptance record or new permission is introduced. This update is not yet deployed; see the notice document for current verification and release requirements.
+
+## Primary AgriGOV farmer ID - September 21, 2026
+
+Registry, cards, map details, farmer history, portal and farmer-selection controls now use AGRI-F-###### as the primary visible identity, while FFRS/RSBSA remain separate references. Search hints name the supported AgriGOV ID. The staff portal screen shows the ID before access is issued and states that activation is required. Existing shared styles, numeric control values and QR tokens are preserved. Synthetic browser checks verified the registry, card and pre-activation staff screen; live Google Maps and production acceptance were not performed. See `docs/AGRIGOV_FARMER_IDS.md`; this update has not been deployed.
+
 ## Regional account assignment — September 21, 2026
 
 The existing user-management form now provides a Region selector for System Owners assigning Regional Heads. Regional Heads see only permitted provinces/cities when assigning provincial accounts, retain a fixed own assignment, and see their region in navigation and dashboards. Shared form styles, error messages and record-version controls are retained. Verification and deployment status are recorded in `docs/REGIONAL_SUPERVISION.md`.
@@ -83,6 +105,10 @@ the official resource link. All photos retain public source/license credits.
 This refresh is local, not deployed. See `docs/WELCOME_PAGE.md` for release scope
 and verification.
 
+## Compact dashboard reports — September 21, 2026
+
+Municipality charts now show eight rows per page with search, page controls and range announcements. Every figures table uses a closed native disclosure and a keyboard-scrollable area with sticky headings. The comparison table receives the same treatment. A synthetic 305-municipality browser preview verified paging, indicator changes, search/no results/keyboard clearing, and the no-script figures fallback. Viewport checks at 320, 390, 768, 1024 and 1440px found no page overflow; municipality chart areas remained 394px high and figures were capped at 360px. Fifteen JavaScript tests and 42 existing/updated dashboard PHP tests passed, along with Pint, Blade compilation and whitespace checks. This is local only; see [deployment notes](docs/DASHBOARD_COMPACT_REPORTS_2026_09_21.md).
+
 ## Dashboard graph follow-up — September 19, 2026
 
 The dashboard now links directly to its graphs and reports. Equipment-type status
@@ -130,9 +156,19 @@ The new isolated boundary suites passed 13 tests / 160 assertions; the existing 
 
 ### Geofence visibility and opacity — 2026-09-08
 
+This describes the original page-only control. The September 21 saved-appearance implementation below replaces that behavior.
+
 The municipality geofence workspace now uses thicker saved-color outlines with pale casings and readable municipality label badges. Map tools contains a labeled 0–100% color-opacity slider, initially 20%. It adjusts active fills immediately and draft fills at half strength, while keeping outlines opaque. The value remains in effect across municipality changes on the same page. It is a display preference for that page session; boundary data and snapshot exports are unchanged.
 
 Verification passed: 18 geofence/policy tests / 163 assertions, PHP formatting, Blade compilation, and whitespace checks. Browser previews checked the slider with keyboard input and 0%, 50%, and 100% values; unchanged outline and saved-color properties; no network requests on slider changes; retained opacity after workspace reload; municipal reset/retry and scope; and four roles at four widths from 320 to 1440 pixels. Desktop and mobile control layouts were visually reviewed. Google Maps was simulated for browser checks; live satellite rendering was not revalidated. No database changes, migration, or production deployment were made.
+
+### Saved geofence appearance — 2026-09-21
+
+The municipality side panel now has a visible Geofence appearance section with boundary selection, color picker, opacity percentage, Save color & opacity, and Discard changes. The selected boundary previews its own appearance; saving persists it for both map views without changing its shape, including multipart boundaries. Read-only roles see disabled settings. Pending saves disable repeated submissions, and failed saves retain the preview and an inline error. Geometry editing temporarily disables this separate panel.
+
+Both maps consume the same saved style and server-calculated label position. Municipality names use small, subdued white text with a dark halo; the parcel map hides them when zoomed far out and allows lower-priority labels to hide on collision. The appearance update does not recolor parcels or change snapshot export design. Reload an already open Farmers page to fetch a newly saved style.
+
+Region II's 93 local active references were set to white at 20% opacity after a verified private backup. Other stored colors, geometry and assignments were preserved. Automated and browser verification, local evidence, additive migration and deployment requirements are recorded in `docs/GEOFENCE_APPEARANCE_2026_09_21.md`. Hostinger deployment of this new feature is pending.
 
 ### Remaining Tarlac geofences — 2026-09-08
 
