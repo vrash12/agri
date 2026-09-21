@@ -159,6 +159,9 @@ Implementation status and remaining staff/staging checks are documented in [DESI
 - Automatic cooperative-membership cleanup when deletion is allowed.
 - Five-column directory with explicit details/history, ID, profile-edit, and map actions according to role.
 - Optional contact, photo, and classification sections in farmer forms.
+- Authorized farmer record pages show every retained field from the original municipality Excel source rows, including classifications, addresses, parcel references, commodities, crop areas, farm type, livestock head count, agency, ownership and original owner details. Repeated workbook rows remain separate, and original conflicting RSBSA values do not replace the canonical farmer identity.
+- Registry source rows inherit municipality ownership from the linked farmer. The source workbook hash, sheet and row number make the backfill idempotent and traceable without exposing the workbook publicly.
+- Delisted workbook rows are retained separately without an active farmer link; duplicate, deceased and inactive source statuses do not reactivate a profile.
 - Parcel Map workspace opened separately from directory work while preserving existing map bookmarks; map startup and parcel retrieval begin on opening.
 
 ## 6. Farmer ID and digital identification

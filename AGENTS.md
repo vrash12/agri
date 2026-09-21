@@ -172,6 +172,7 @@ A feature is complete only when:
 This is a Laravel-based Agriculture Information System for the Provincial Agriculture Office and municipal agriculture offices in Tarlac. It centralizes:
 
 - farmer registry and farmer identification cards;
+- municipality-owned farmer registry source rows that retain every field from approved Excel imports and remain linked to the resolved farmer without replacing canonical identity fields;
 - GIS farm-parcel mapping;
 - agriculture and fisheries assistance releases, including seed, fertilizer, fingerlings, feed, and fishing gear;
 - animal-health services covering vaccination, deworming, vitamins, and treatment;

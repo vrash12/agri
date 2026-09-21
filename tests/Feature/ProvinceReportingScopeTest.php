@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Http\Controllers\FarmerController;
 use App\Models\AuditLog;
 use App\Models\Farmer;
+use App\Models\FarmerRegistrySourceRow;
 use App\Models\Municipality;
 use App\Models\Province;
 use App\Models\User;
@@ -200,12 +201,33 @@ class ProvinceReportingScopeTest extends TestCase
             'seed_variety_claimed' => 'Profile seed', 'input_category' => 'rice_seed',
             'quantity_unit' => 'kg', 'kgs_received' => 20, 'date_received' => '2026-09-01',
         ]);
+        FarmerRegistrySourceRow::create([
+            'farmer_id' => $farmer->id,
+            'municipality_id' => $this->own->id,
+            'source_file_sha256' => str_repeat('a', 64),
+            'source_sheet' => 'PARCEL LISTING',
+            'source_row' => 27,
+            'record_status' => FarmerRegistrySourceRow::STATUS_ACTIVE,
+            'source_ffrs' => 'FFRS-PROFILE-1',
+            'source_rsbsa_no' => 'RSBSA-PROFILE-1',
+            'parcel_no' => 'PARCEL-PROFILE-1',
+            'payload' => [
+                'FARMER' => 'YES',
+                'FARMWORKER' => 'NO',
+                'COMMODITY NAME' => 'Rice/Palay',
+                'NUMBER OF HEADS' => 0,
+            ],
+        ]);
         $staff = Model::withoutEvents(fn () => $this->user(User::ROLE_PROVINCIAL_STAFF, $this->benguet->id, 'Profile staff'));
 
         foreach ([$this->admin, $this->owner, $staff] as $user) {
             $expected = $user->isSystemOwner() ? [$this->foreign->id, $this->own->id] : [$this->own->id];
             $response = $this->actingAs($user)->get(route('farmers.records', $farmer))
                 ->assertOk()->assertSee('Profile Farmer')->assertSee('Profile seed')
+                ->assertSee('Registry source information')
+                ->assertSee('PARCEL LISTING')
+                ->assertSee('FFRS-PROFILE-1')
+                ->assertSee('Rice/Palay')
                 ->assertViewHas('municipalities', fn ($items) => $items->pluck('id')->all() === $expected);
 
             if ($user->canManageOperationalData()) {
@@ -314,6 +336,20 @@ class ProvinceReportingScopeTest extends TestCase
             $table->unsignedBigInteger('farmer_id');
             $table->string('name');
             $table->double('area_ha')->default(0);
+            $table->timestamps();
+        });
+        Schema::create('farmer_registry_source_rows', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('municipality_id');
+            $table->unsignedBigInteger('farmer_id')->nullable();
+            $table->string('source_file_sha256', 64);
+            $table->string('source_sheet', 64);
+            $table->unsignedInteger('source_row');
+            $table->string('record_status', 32);
+            $table->string('source_ffrs')->nullable();
+            $table->string('source_rsbsa_no')->nullable();
+            $table->string('parcel_no')->nullable();
+            $table->json('payload');
             $table->timestamps();
         });
     }

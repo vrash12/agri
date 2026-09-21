@@ -51,6 +51,65 @@
     </div>
   </header>
 
+  <section class="module-panel farmer-registry-source" id="registrySourceInformation">
+    <div class="module-panel-head">
+      <div>
+        <h2>Registry source information</h2>
+        <p>Every field retained from this farmer's imported Excel rows. Repeated rows represent separate parcel, commodity, livestock, ownership, or agency records.</p>
+      </div>
+      <span class="module-panel-tag">{{ number_format($registryRowCount) }} source {{ Str::plural('row', $registryRowCount) }}</span>
+    </div>
+
+    @if($registryRows && $registryRows->count())
+      <div class="farmer-registry-summary">
+        <span><strong>{{ number_format($registryRowCount) }}</strong> imported source rows</span>
+        <span><strong>{{ number_format($registryParcelCount) }}</strong> distinct parcel references</span>
+        <span>Original workbook values are shown without replacing the active farmer identity.</span>
+      </div>
+
+      <div class="farmer-registry-rows">
+        @foreach($registryRows as $sourceRow)
+          <details class="farmer-registry-row" @if($loop->first) open @endif>
+            <summary>
+              <span>
+                <strong>{{ $sourceRow->source_sheet }} · row {{ number_format($sourceRow->source_row) }}</strong>
+                <small>FFRS {{ $sourceRow->source_ffrs ?: 'not recorded' }} · Parcel {{ $sourceRow->parcel_no ?: 'not recorded' }}</small>
+              </span>
+              <span class="module-badge {{ $sourceRow->record_status === 'outside_lgu' ? 'module-badge-amber' : 'module-badge-green' }}">
+                {{ $sourceRow->record_status === 'outside_lgu' ? 'Outside LGU address' : 'Parcel listing' }}
+              </span>
+            </summary>
+            <dl class="farmer-registry-grid">
+              @foreach(($sourceRow->payload ?? []) as $label => $value)
+                @php
+                  $displayValue = $value;
+                  if ($displayValue === null || $displayValue === '') {
+                      $displayValue = 'Not recorded';
+                  } elseif (is_bool($displayValue)) {
+                      $displayValue = $displayValue ? 'Yes' : 'No';
+                  } elseif (is_array($displayValue)) {
+                      $displayValue = implode(', ', $displayValue);
+                  }
+                @endphp
+                <div>
+                  <dt>{{ $label }}</dt>
+                  <dd>{{ $displayValue }}</dd>
+                </div>
+              @endforeach
+            </dl>
+          </details>
+        @endforeach
+      </div>
+
+      @include('partials.pagination', ['paginator' => $registryRows, 'label' => 'registry source row', 'fragment' => 'registrySourceInformation'])
+    @else
+      <div class="module-empty">
+        <strong>No Excel source rows are linked to this farmer.</strong>
+        <span>Manually created profiles and records from older imports may not have a retained workbook row.</span>
+      </div>
+    @endif
+  </section>
+
   <section class="module-kpis">
     <article class="module-kpi"><div class="module-kpi-top"><span class="module-kpi-label">Distribution records</span><span class="module-kpi-icon"><svg viewBox="0 0 24 24"><path d="M7 3h10v18H7zM10 7h4M10 11h4M10 15h4"/></svg></span></div><strong>{{ number_format($totalRecords) }}</strong><small>Matching this history view</small></article>
     <article class="module-kpi"><div class="module-kpi-top"><span class="module-kpi-label">Weight-based inputs</span><span class="module-kpi-icon module-kpi-icon-amber"><svg viewBox="0 0 24 24"><path d="M12 22V8M7 13c-3-1-4-4-4-7 3 0 6 1 7 4M17 13c3-1 4-4 4-7-3 0-6 1-7 4"/></svg></span></div><strong>{{ number_format($totalKgs, 2) }}<small> kg</small></strong><small>Only releases measured in kilograms</small></article>
@@ -109,7 +168,10 @@
 @push('styles')
 <style>
   .farmer-history-heading{display:flex;align-items:center;gap:13px}.farmer-history-avatar{width:46px;height:46px;display:grid;place-items:center;overflow:hidden;flex:0 0 auto;border-radius:10px;color:#fff;background:#285a3b;font-size:12px;font-weight:900}.farmer-history-avatar img{width:100%;height:100%;display:block;object-fit:cover}.farmer-kpi-text{overflow:hidden;font-size:18px!important;line-height:1.15!important;text-overflow:ellipsis;white-space:nowrap}.farmer-history-table{min-width:980px}
+  .farmer-registry-summary{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--module-border);color:var(--module-muted);font-size:13px}.farmer-registry-summary span{padding:6px 9px;border-radius:7px;background:var(--module-surface-subtle,#f5f8f5)}.farmer-registry-summary strong{color:var(--module-ink)}.farmer-registry-rows{display:grid;gap:10px;padding:14px 16px}.farmer-registry-row{overflow:hidden;border:1px solid var(--module-border);border-radius:9px;background:#fff}.farmer-registry-row>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;padding:10px 12px;cursor:pointer;list-style:none;background:#f8faf8}.farmer-registry-row>summary::-webkit-details-marker{display:none}.farmer-registry-row>summary span:first-child{display:grid;gap:2px}.farmer-registry-row>summary strong{color:var(--module-ink);font-size:14px}.farmer-registry-row>summary small{color:var(--module-muted);font-size:12px}.farmer-registry-row>summary:focus-visible{outline:3px solid var(--ui-focus,#236344);outline-offset:-3px}.farmer-registry-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:0;padding:12px;border-top:1px solid var(--module-border);gap:1px;background:var(--module-border)}.farmer-registry-grid>div{min-width:0;padding:9px 10px;background:#fff}.farmer-registry-grid dt{margin-bottom:3px;color:var(--module-muted);font-size:12px;font-weight:500}.farmer-registry-grid dd{margin:0;overflow-wrap:anywhere;color:var(--module-ink);font-size:13px;line-height:1.45}
+  @media(max-width:960px){.farmer-registry-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
   @media(max-width:620px){.farmer-history-heading{align-items:flex-start}.farmer-history-avatar{display:none}}
+  @media(max-width:620px){.farmer-registry-row>summary{align-items:flex-start;flex-direction:column}.farmer-registry-grid{grid-template-columns:1fr}.farmer-registry-summary{align-items:stretch;flex-direction:column}}
 </style>
 @endpush
 

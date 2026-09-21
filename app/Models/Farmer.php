@@ -115,6 +115,11 @@ class Farmer extends Model
         );
     }
 
+    public function registrySourceRows(): HasMany
+    {
+        return $this->hasMany(FarmerRegistrySourceRow::class);
+    }
+
     public function machineries(): HasMany
     {
         return $this->hasMany(AgriculturalMachinery::class);

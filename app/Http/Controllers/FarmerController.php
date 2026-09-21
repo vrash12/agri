@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreFarmerRequest;
 use App\Models\Farmer;
+use App\Models\FarmerRegistrySourceRow;
 use App\Models\Municipality;
 use App\Models\MunicipalityBoundary;
 use App\Models\RiceSeedDistribution;
@@ -118,6 +119,29 @@ class FarmerController extends Controller
         $firstReceived = (clone $query)->min('date_received');
         $lastReceived = (clone $query)->max('date_received');
         $machineryCount = $farmer->machineries()->count();
+        $registryRows = null;
+        $registryRowCount = 0;
+        $registryParcelCount = 0;
+
+        // The table is additive, so the profile keeps working during a rolling
+        // deployment until the migration reaches every application process.
+        if (Schema::hasTable('farmer_registry_source_rows')) {
+            $registryQuery = FarmerRegistrySourceRow::query()
+                ->where('farmer_id', $farmer->id)
+                ->where('municipality_id', $farmer->municipality_id);
+
+            $registryRowCount = (clone $registryQuery)->count();
+            $registryParcelCount = (clone $registryQuery)
+                ->whereNotNull('parcel_no')
+                ->where('parcel_no', '!=', '')
+                ->distinct()
+                ->count('parcel_no');
+            $registryRows = $registryQuery
+                ->orderBy('source_sheet')
+                ->orderBy('source_row')
+                ->paginate(10, ['*'], 'registry_page')
+                ->withQueryString();
+        }
 
         $kgsOverTime = (clone $kilogramQuery)
             ->selectRaw(
@@ -160,7 +184,10 @@ class FarmerController extends Controller
             'lastReceived',
             'machineryCount',
             'kgsOverTime',
-            'varietyChartData'
+            'varietyChartData',
+            'registryRows',
+            'registryRowCount',
+            'registryParcelCount'
         ) + [
             'inputCategoryOptions' => RiceSeedDistribution::INPUT_CATEGORY_LABELS,
             'municipalities' => $this->municipalityOptionsFor($user),
