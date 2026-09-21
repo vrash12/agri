@@ -54,3 +54,6 @@ This new appearance feature has **not** been installed on Hostinger. The earlier
 6. Verify all 93 styles and existing-data preservation, both map payloads, real signed-in color/opacity saving and satellite/3D display. Confirm another municipality and unauthorized roles are unaffected. Repeat the preview and confirm zero proposed changes.
 
 For an application rollback, restore the prior PHP/views/assets together. The additive column can remain safely while investigating; dropping it loses saved opacity choices. Restore style values from the verified backup only with a reviewed, attributed operation that preserves subsequent user edits. Never blindly restore the entire database over newer operational records.
+
+
+Production installation completed in commit 610013d. See docs/GITHUB_DEPLOYMENT.md for the verified backup and preservation receipt.

@@ -21,3 +21,16 @@ The old server checkout was at `6822f9e`, while individually deployed runtime fi
 The scoped September 21 release keeps the already installed CAR/dashboard changes, adds saved geofence appearance and the notice acknowledgment, and excludes the independent unfinished farmer-ID display/search work. Its only schema change is `2026_09_21_000100_add_fill_opacity_to_municipality_boundaries.php`. Its only intentional data change is the explicitly requested white/20% appearance for 93 Region II active boundaries, with attributed audit events.
 
 `scripts/releases/2026_09_21_geofence_appearance.php` provides CLI-only `snapshot` and `verify` phases for this one-time release. It requires maintenance mode, a private recovery directory outside the app, and an explicit authorized owner ID. It verifies backup readability, existing-table fingerprints, boundary geometry, environment integrity, exactly the expected migration and 93 audits, matching map payloads, rendered controls and a zero-change repeat preview. It does not perform Git changes, migrations or style writes itself.
+
+## Verified Hostinger release — September 21, 2026
+
+Runtime commit `610013d3e9cb807376ea082226a43b28899a9742` was pushed to GitHub main and installed using `git pull --ff-only origin main`. Verification completed at 02:38:45 UTC (10:38 Philippine time). The site was returned online afterward.
+
+- Isolated release checks: 147 PHP tests / 4,544 assertions; 43 JavaScript tests. Formatting, syntax, whitespace and Blade compilation passed.
+- Private application archive SHA-256: `30800f7fcecbf19c925319eb6ee87c9f2156e75f759900873db345ddc3545bc9`.
+- Verified private database backup: 439,304 bytes, SHA-256 `3affe7157a52c402f9076e16efd23f3df1194fad99dd1652a07b2e1e2b51eee5`.
+- All existing rows in 19 other tables, all 489 boundary shapes and the environment file were preserved. Exactly one additive opacity migration and 93 attributed style audit events were added.
+- All 93 Region II references now use white at 20% opacity. Both actual map controller payloads agree on color, opacity and label position. A repeat setup preview proposes zero changes.
+- Production Composer install and configuration, route and view caches completed. Both public asset copies match. Public assets require mode 0644; verified the new helper and dashboard script return HTTP 200 after setting these permissions.
+- Live login returns HTTP 200 with the required acknowledgment. Production Blade checks confirm Save appearance and shared map styling controls. Visual Google Maps interaction was tested locally; no production interactive map edit was performed during this release.
+- Known manual server edits and incoming file collisions were preserved privately before reconciliation. Independent pending farmer-ID display/search changes were excluded.
