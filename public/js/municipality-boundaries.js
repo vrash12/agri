@@ -437,20 +437,26 @@
         if (!id) {
           el('panelEyebrow').textContent = 'Province-wide view';
           el('panelTitle').textContent = 'Boundary overview';
-          el('panelDescription').textContent = 'Select one municipality to inspect its active boundary and parcel placement.';
-          panel.innerHTML = '<div class="geo-empty">The map is showing all available municipality geofences. Use the municipality selector to load detailed parcel checks.</div>';
-          el('mapMessage').textContent = 'Province view: active official boundaries and drafts are visible. Select a municipality for parcel compliance.';
+          el('panelDescription').textContent = settings.boundaryOnly ? 'Select one municipality to inspect its active administrative boundary reference.' : 'Select one municipality to inspect its active boundary and parcel placement.';
+          panel.innerHTML = settings.boundaryOnly
+            ? '<div class="geo-empty">The map is showing active municipality geofences. Select one for boundary details.</div>'
+            : '<div class="geo-empty">The map is showing all available municipality geofences. Use the municipality selector to load detailed parcel checks.</div>';
+          el('mapMessage').textContent = settings.boundaryOnly
+            ? 'National view: active administrative boundary references are visible. Operational records are not loaded.'
+            : 'Province view: active official boundaries and drafts are visible. Select a municipality for parcel compliance.';
           el('summaryConfigured').textContent = formatNumber(settings.initialSummary.configured, 0);
-          el('summaryFarmers').textContent = formatNumber(settings.initialSummary.farmers, 0);
-          el('summaryParcels').textContent = formatNumber(settings.initialSummary.parcels, 0);
-          el('summaryMappedArea').textContent = formatNumber(settings.initialSummary.mapped_area_ha, 2) + ' ha';
+          if (!settings.boundaryOnly) {
+            el('summaryFarmers').textContent = formatNumber(settings.initialSummary.farmers, 0);
+            el('summaryParcels').textContent = formatNumber(settings.initialSummary.parcels, 0);
+            el('summaryMappedArea').textContent = formatNumber(settings.initialSummary.mapped_area_ha, 2) + ' ha';
+          }
           fitVisible();
           return;
         }
     }
 
-    el('mapMessage').textContent = 'Loading ' + municipalityName(id) + ' boundary and parcels…';
-    panel.innerHTML = '<div class="geo-empty" role="status">Loading boundary and parcel checks…</div>';
+    el('mapMessage').textContent = 'Loading ' + municipalityName(id) + (settings.boundaryOnly ? ' boundary…' : ' boundary and parcels…');
+    panel.innerHTML = '<div class="geo-empty" role="status">Loading ' + (settings.boundaryOnly ? 'boundary details' : 'boundary and parcel checks') + '…</div>';
     fitVisible();
     const controller = new AbortController();
     state.loadController = controller;
@@ -466,9 +472,11 @@
       drawParcels(payload.parcels || []);
       renderPanel(payload);
       updateSelectedSummary(payload.stats);
-      el('mapMessage').textContent = payload.boundaries.some(item => item.status === 'active')
-        ? payload.municipality.name + ': official boundary and ' + payload.stats.parcels + ' parcel(s) loaded.'
-        : payload.municipality.name + ' has no active official boundary. Parcels cannot be classified yet.';
+      el('mapMessage').textContent = settings.boundaryOnly
+        ? (payload.boundaries.some(item => item.status === 'active') ? payload.municipality.name + ': active administrative boundary reference loaded.' : payload.municipality.name + ' has no active boundary reference.')
+        : (payload.boundaries.some(item => item.status === 'active')
+          ? payload.municipality.name + ': official boundary and ' + payload.stats.parcels + ' parcel(s) loaded.'
+          : payload.municipality.name + ' has no active official boundary. Parcels cannot be classified yet.');
       fitVisible();
     } catch (error) {
       if (revision !== state.loadRevision || error.name === 'AbortError') return;
@@ -484,6 +492,7 @@
   }
 
   function updateSelectedSummary(stats) {
+    if (settings.boundaryOnly) return;
     el('summaryFarmers').textContent = formatNumber(stats.farmers, 0);
     el('summaryParcels').textContent = formatNumber(stats.parcels, 0);
     el('summaryMappedArea').textContent = formatNumber(stats.mapped_area_ha, 2) + ' ha';
@@ -492,9 +501,9 @@
   function renderPanel(payload) {
     el('panelEyebrow').textContent = 'Municipality workspace';
     el('panelTitle').textContent = payload.municipality.name;
-    el('panelDescription').textContent = 'Review the official boundary and parcels needing attention. Older boundaries are available in history.';
+    el('panelDescription').textContent = settings.boundaryOnly ? 'Read-only administrative boundary reference. Operational records are unavailable.' : 'Review the official boundary and parcels needing attention. Older boundaries are available in history.';
     const stats = payload.stats;
-    let html = '<div class="geo-mini-stats">' +
+    let html = settings.boundaryOnly ? '<div class="geo-empty">This evaluator session does not load farmer, parcel, assistance, account, export, or editing data.</div>' : '<div class="geo-mini-stats">' +
       mini('Farmers', stats.farmers) + mini('Mapped farmers', stats.mapped_farmers) + mini('Parcels', stats.parcels) + mini('Mapped hectares', formatNumber(stats.mapped_area_ha, 2)) +
       mini('Outside boundary', stats.outside) + mini('Crossing / near', Number(stats.partial) + Number(stats.near_boundary)) + '</div>';
     function boundaryCard(boundary) {
@@ -513,14 +522,16 @@
     const history = payload.boundaries.filter(boundary => boundary.status !== 'active');
     html += '<div class="geo-section-title">Official boundary</div>';
     html += active.length ? active.map(boundaryCard).join('') : '<div class="geo-empty">No official boundary is active. ' + (settings.canManage ? 'Review a draft or add a boundary.' : 'Contact the Super Administrator to configure the boundary.') + '</div>';
-    html += '<details class="module-more"><summary>Drafts and boundary history <span>' + history.length + ' records</span></summary><div class="module-more-content">';
-    html += history.length ? history.map(boundaryCard).join('') : '<div class="geo-empty">No drafts or older boundaries.</div>';
-    html += '</div></details>';
-    html += '<div class="geo-section-title"><span>Needs field review</span><span>' + payload.review.length + '</span></div>';
-    if (!payload.review.length) html += '<div class="geo-empty">No outside, crossing, near-boundary, or invalid parcels were found.</div>';
-    payload.review.forEach(item => {
-      html += '<article class="geo-review-card" tabindex="0" role="button" data-focus-plot="' + item.plot_id + '"><div class="geo-review-top"><strong>' + escapeHtml(item.plot_name) + '</strong><span class="geo-review-status ' + item.status + '">' + escapeHtml(item.status.replace('_', ' ')) + '</span></div><p>' + escapeHtml(item.farmer_name || 'Unknown farmer') + (item.ffrs ? ' · ' + escapeHtml(item.ffrs) : '') + '<br>' + escapeHtml(item.location || 'Location not recorded') + ' · ' + formatNumber(item.area_ha, 4) + ' ha</p></article>';
-    });
+    if (!settings.boundaryOnly) {
+      html += '<details class="module-more"><summary>Drafts and boundary history <span>' + history.length + ' records</span></summary><div class="module-more-content">';
+      html += history.length ? history.map(boundaryCard).join('') : '<div class="geo-empty">No drafts or older boundaries.</div>';
+      html += '</div></details>';
+      html += '<div class="geo-section-title"><span>Needs field review</span><span>' + payload.review.length + '</span></div>';
+      if (!payload.review.length) html += '<div class="geo-empty">No outside, crossing, near-boundary, or invalid parcels were found.</div>';
+      payload.review.forEach(item => {
+        html += '<article class="geo-review-card" tabindex="0" role="button" data-focus-plot="' + item.plot_id + '"><div class="geo-review-top"><strong>' + escapeHtml(item.plot_name) + '</strong><span class="geo-review-status ' + item.status + '">' + escapeHtml(item.status.replace('_', ' ')) + '</span></div><p>' + escapeHtml(item.farmer_name || 'Unknown farmer') + (item.ffrs ? ' · ' + escapeHtml(item.ffrs) : '') + '<br>' + escapeHtml(item.location || 'Location not recorded') + ' · ' + formatNumber(item.area_ha, 4) + ' ha</p></article>';
+      });
+    }
     panel.innerHTML = html;
     panel.querySelectorAll('[data-focus-plot]').forEach(card => card.addEventListener('keydown', event => {
       if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); card.click(); }

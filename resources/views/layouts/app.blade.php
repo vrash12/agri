@@ -1040,6 +1040,7 @@
       $roleLabels = [
         'system_owner' => 'System Owner',
         'regional_head' => 'Regional Head',
+        'gis_evaluator' => 'GIS Evaluator',
         'super_admin' => 'Super Admin',
         'provincial_staff' => 'Provincial Staff',
         'provincial_vet' => 'Provincial Veterinary Office',
@@ -1206,6 +1207,20 @@
           'patterns' => ['municipality-boundaries.*'],
           'badge' => $user->canOverseeSystem() ? 'Manage' : 'View',
         ];
+      }
+
+      if ($user->isGisEvaluator()) {
+        $navigationGroups = ['evaluation' => [
+          'label' => 'Evaluation',
+          'items' => [[
+            'label' => 'Administrative Geofences',
+            'description' => 'Read-only boundary references',
+            'icon' => 'boundary',
+            'route' => 'municipality-boundaries.index',
+            'patterns' => ['municipality-boundaries.*'],
+            'badge' => 'View',
+          ]],
+        ]];
       }
 
     @endphp

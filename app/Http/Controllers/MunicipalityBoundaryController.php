@@ -41,29 +41,39 @@ class MunicipalityBoundaryController extends Controller
         $this->authorize('viewAny', MunicipalityBoundary::class);
 
         $municipalities = $this->municipalityAccess->choices($request->user());
+        $isGisEvaluator = $request->user()->isGisEvaluator();
         $boundaryQuery = MunicipalityBoundary::query()
             ->with('municipality:id,name,province')
             ->current();
         $this->municipalityAccess->scope($boundaryQuery, $request->user());
+        if ($isGisEvaluator) {
+            $boundaryQuery->where('status', MunicipalityBoundary::STATUS_ACTIVE);
+        }
         $boundaries = $boundaryQuery
             ->orderByRaw("CASE status WHEN 'active' THEN 0 ELSE 1 END")
             ->orderByDesc('updated_at')
             ->get()
-            ->map(fn (MunicipalityBoundary $boundary) => $this->boundaryData($boundary));
+            ->map(fn (MunicipalityBoundary $boundary) => $this->boundaryData($boundary, ! $isGisEvaluator));
 
-        $municipalityIds = $municipalities->pluck('id');
-        $farmerCount = Farmer::query()
-            ->whereIn('municipality_id', $municipalityIds)
-            ->count();
-        $plotQuery = FarmPlot::query()->whereHas(
-            'farmer',
-            fn (Builder $query) => $query->whereIn('municipality_id', $municipalityIds)
-        );
+        $farmerCount = 0;
+        $parcelCount = 0;
+        $mappedArea = 0.0;
+        if (! $isGisEvaluator) {
+            $municipalityIds = $municipalities->pluck('id');
+            $farmerCount = Farmer::query()->whereIn('municipality_id', $municipalityIds)->count();
+            $plotQuery = FarmPlot::query()->whereHas(
+                'farmer',
+                fn (Builder $query) => $query->whereIn('municipality_id', $municipalityIds)
+            );
+            $parcelCount = (clone $plotQuery)->count();
+            $mappedArea = (float) (clone $plotQuery)->sum('area_ha');
+        }
 
         return view('municipality_boundaries.index', [
             'municipalities' => $municipalities,
             'barangayMunicipalityIds' => $barangayReferences->availableMunicipalityIds($request->user()),
             'boundaries' => $boundaries,
+            'isGisEvaluator' => $isGisEvaluator,
             'canManageBoundaries' => $request->user()->can('create', MunicipalityBoundary::class),
             'googleMapsApiKey' => (string) config('services.google_maps.key', ''),
             'googleMapsMapId' => (string) config('services.google_maps.map_id', ''),
@@ -74,8 +84,8 @@ class MunicipalityBoundaryController extends Controller
                     ->where('status', MunicipalityBoundary::STATUS_ACTIVE)
                     ->sum('area_ha'), 2),
                 'farmers' => $farmerCount,
-                'parcels' => (clone $plotQuery)->count(),
-                'mapped_area_ha' => round((float) (clone $plotQuery)->sum('area_ha'), 2),
+                'parcels' => $parcelCount,
+                'mapped_area_ha' => round($mappedArea, 2),
             ],
         ]);
     }
@@ -104,6 +114,34 @@ class MunicipalityBoundaryController extends Controller
             ->whereIn('id', $this->municipalityAccess->choices($request->user())->pluck('id'))
             ->firstOrFail();
         $activeBoundary = $boundaries->firstWhere('status', MunicipalityBoundary::STATUS_ACTIVE);
+
+        if ($request->user()->isGisEvaluator()) {
+            return response()->json([
+                'municipality' => [
+                    'id' => $municipality->id,
+                    'name' => $municipality->name,
+                    'province' => $municipality->province,
+                ],
+                'boundaries' => $boundaries
+                    ->where('status', MunicipalityBoundary::STATUS_ACTIVE)
+                    ->map(fn (MunicipalityBoundary $boundary) => $this->boundaryData($boundary, false))
+                    ->values(),
+                'parcels' => [],
+                'stats' => [
+                    'farmers' => 0,
+                    'mapped_farmers' => 0,
+                    'parcels' => 0,
+                    'mapped_area_ha' => 0,
+                    'outside' => 0,
+                    'partial' => 0,
+                    'near_boundary' => 0,
+                    'invalid' => 0,
+                    'unconfigured' => 0,
+                ],
+                'review' => [],
+                'snapshot' => null,
+            ]);
+        }
 
         $farmers = Farmer::query()
             ->where('municipality_id', $municipalityId)
@@ -707,9 +745,9 @@ class MunicipalityBoundaryController extends Controller
     }
 
     /** @return array<string, mixed> */
-    private function boundaryData(MunicipalityBoundary $boundary): array
+    private function boundaryData(MunicipalityBoundary $boundary, bool $includeRecordVersion = true): array
     {
-        return [
+        $data = [
             'id' => $boundary->id,
             'municipality_id' => $boundary->municipality_id,
             'municipality_name' => $boundary->municipality?->name,
@@ -724,8 +762,13 @@ class MunicipalityBoundaryController extends Controller
             'centroid_lng' => (float) $boundary->centroid_lng,
             'vertex_count' => $boundary->vertex_count,
             'updated_at' => optional($boundary->updated_at)->toIso8601String(),
-            '_record_version' => ConcurrentWrite::version($boundary),
         ];
+
+        if ($includeRecordVersion) {
+            $data['_record_version'] = ConcurrentWrite::version($boundary);
+        }
+
+        return $data;
     }
 
     /** @return array<string, mixed> */

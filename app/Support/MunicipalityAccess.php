@@ -16,7 +16,7 @@ class MunicipalityAccess
         if (! $user->hasUsableScope()) {
             return $query->whereRaw('1 = 0');
         }
-        if ($user->isSystemOwner()) {
+        if ($user->isSystemOwner() || $user->isGisEvaluator()) {
             return $query;
         }
         $column = $qualifiedColumn ?: $query->getModel()->qualifyColumn('municipality_id');
@@ -29,7 +29,7 @@ class MunicipalityAccess
         if (! $user->hasUsableScope()) {
             return $query->whereRaw('1 = 0');
         }
-        if ($user->isSystemOwner()) {
+        if ($user->isSystemOwner() || $user->isGisEvaluator()) {
             return $query;
         }
         if ($user->requiresProvince()) {
@@ -47,7 +47,7 @@ class MunicipalityAccess
         if (! $user->hasUsableScope()) {
             return $query->whereRaw('1 = 0');
         }
-        if ($user->isSystemOwner()) {
+        if ($user->isSystemOwner() || $user->isGisEvaluator()) {
             return $query;
         }
         if ($user->isRegionalHead()) {

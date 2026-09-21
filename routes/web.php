@@ -30,8 +30,12 @@ Route::get('/', function () {
         return view('welcome');
     }
 
-    return auth()->user()->isProvincialVeterinaryOffice()
-        ? redirect()->route('anti-rabies-vaccinations.index')
+    if (auth()->user()->isProvincialVeterinaryOffice()) {
+        return redirect()->route('anti-rabies-vaccinations.index');
+    }
+
+    return auth()->user()->isGisEvaluator()
+        ? redirect()->route('municipality-boundaries.index')
         : redirect()->route('dashboard');
 })->name('welcome');
 
@@ -107,6 +111,7 @@ Route::middleware([
     'idle',
     'account-scope',
     'provincial-vet-scope',
+    'gis-evaluator-scope',
     'synchronized',
 ])->group(function () {
     Route::get('/farmers/{farmer}/portal-account', [\App\Http\Controllers\FarmerPortalAccountController::class, 'show'])->name('farmers.portal-account.show');

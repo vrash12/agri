@@ -32,6 +32,10 @@ class MunicipalityBoundaryPolicy
 
     public function create(User $user): bool
     {
+        if ($user->isGisEvaluator()) {
+            return false;
+        }
+
         return ($user->isSystemOwner() || $user->isSuperAdmin()) && $user->hasUsableScope();
     }
 

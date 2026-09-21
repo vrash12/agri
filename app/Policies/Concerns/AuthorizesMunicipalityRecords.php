@@ -13,6 +13,10 @@ trait AuthorizesMunicipalityRecords
             return false;
         }
 
+        if ($user->isGisEvaluator()) {
+            return false;
+        }
+
         if (
             $user->isProvincialVeterinaryOffice()
             && ! $this->allowsProvincialVeterinaryOffice()

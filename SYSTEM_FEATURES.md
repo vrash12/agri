@@ -49,6 +49,7 @@ The application is designed for multiple offices using the system at the same ti
 - A Benguet Super Admin sees only Benguet workspaces; a Tarlac Super Admin sees only Tarlac workspaces. The same separation applies to staff, maps, dashboards, reports, searches, and exports. Data in other provinces is retained.
 - Provincial agriculture and veterinary staff require their own province assignment. Unassigned or inactive province access is blocked at login and on protected requests.
 - System Owners can manage geofences across provinces; Super Administrators can manage only their province’s geofences.
+- Dedicated GIS Evaluator accounts can review active municipality geofences and available read-only barangay reference layers across configured provinces. They cannot access farmers, parcels, assistance, dashboards, snapshots, exports, drafts, accounts, audit trails, or editing actions; those operational queries are not run for evaluator sessions.
 - System Owners and Super Administrators cannot access the Backup Folder.
 - Municipal Heads can only manage Municipal Staff accounts from their own municipality.
 - Every protected record is checked again on the server before it can be viewed, changed, deleted, downloaded, previewed, or exported.

@@ -215,6 +215,7 @@ The supported office roles are constants in `App\Models\User`. Farmer portal ide
 | Role | Operational visibility | Operational writes | User management | Backup Folder | Audit Trail |
 | --- | --- | --- | --- | --- | --- |
 | `system_owner` | All configured provinces | No routine operational writes; may manage geofences | Create/manage Regional Heads, province Super Admins and lower roles; own privileges and all owner accounts protected | No access | Global access and CSV export |
+| `gis_evaluator` | Active administrative geofences only, across configured provinces | None | No access | No access | No access |
 | `regional_head` | Assigned region's active provinces and separate city scopes | Read-only, including geofences | Provincial Super Admins and lower roles within the region; own profile only | No access | Assigned provinces' snapshots and CSV export; global/unknown events excluded |
 | `super_admin` | Assigned province only | No routine operational writes; may manage geofences in own province | Provincial and municipal staff in own province; own profile only; no peer/owner management | No access | Own province snapshots and CSV export |
 | `provincial_staff` | Assigned province only | Yes; must choose an authorized municipality for new records | No | Own province, subject to policy | No |
@@ -223,6 +224,8 @@ The supported office roles are constants in `App\Models\User`. Farmer portal ide
 | `municipal_staff` | Assigned municipality only | Yes | No | Assigned municipality only | No |
 
 All accounts must be active. Regional Heads require an active region with no province/municipality assignment; provincial roles require an existing active province; municipal roles require an existing active municipality and supervising province. Only the System Owner assigns Regional Heads. `EnsureAccountScope` checks authenticated application requests, and the Sanctum user endpoint uses the same check. Login independently validates scope. UI visibility is not security: controllers must still call policies for every protected action.
+
+External GIS Evaluators require no operational office assignment. `RestrictGisEvaluatorAccess` confines them to the read-only municipality-geofence page and its boundary and barangay JSON endpoints. The geofence controller returns active boundaries only and deliberately skips every farmer, parcel, snapshot, export, draft, account, audit and write query for this role. Evaluator accounts are provisioned directly by the System Owner outside the general account-management form and should be disabled when an evaluation ends.
 
 ### Authentication workflow
 

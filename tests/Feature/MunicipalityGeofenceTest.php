@@ -158,6 +158,46 @@ class MunicipalityGeofenceTest extends TestCase
             ->assertSee('Municipality geofences');
     }
 
+    public function test_gis_evaluator_can_only_read_active_boundaries_without_operational_data(): void
+    {
+        $active = $this->createBoundary($this->first, 120.50, 15.40);
+        $draft = $this->createBoundary($this->second, 120.60, 15.50);
+        $draft->update(['status' => MunicipalityBoundary::STATUS_DRAFT, 'name' => 'Internal draft boundary']);
+        $farmer = Farmer::create([
+            'municipality_id' => $this->first->id,
+            'first_name' => 'Protected',
+            'last_name' => 'Farmer',
+            'ffrs' => 'PROTECTED-FFRS',
+        ]);
+        $this->plot($farmer, 'Protected parcel', 120.505, 15.405);
+        $evaluator = $this->user(User::ROLE_GIS_EVALUATOR, null, 'namria@example.test');
+
+        $this->actingAs($evaluator)
+            ->get(route('municipality-boundaries.index'))
+            ->assertOk()
+            ->assertSee('Restricted external evaluation')
+            ->assertSee($active->name)
+            ->assertDontSee('Internal draft boundary')
+            ->assertDontSee('Registered farmers')
+            ->assertDontSee('Download municipality snapshot');
+
+        $this->getJson(route('municipality-boundaries.data', ['municipality_id' => $this->first->id]))
+            ->assertOk()
+            ->assertJsonCount(0, 'parcels')
+            ->assertJsonCount(0, 'review')
+            ->assertJsonPath('stats.farmers', 0)
+            ->assertJsonMissingPath('boundaries.0._record_version')
+            ->assertJsonMissing(['name' => 'Protected Farmer'])
+            ->assertJsonMissing(['ffrs' => 'PROTECTED-FFRS']);
+
+        $this->getJson(route('dashboard'))->assertForbidden()->assertJsonPath('code', 'GIS_EVALUATOR_SCOPE_ONLY');
+        $this->getJson(route('farmers.index'))->assertForbidden()->assertJsonPath('code', 'GIS_EVALUATOR_SCOPE_ONLY');
+        $this->getJson(route('municipality-boundaries.snapshot-base', $active))->assertForbidden();
+        $this->postJson(route('municipality-boundaries.store'), $this->boundaryPayload($this->first->id, 120.70, 15.60))
+            ->assertForbidden();
+        $this->assertFalse($evaluator->can('create', MunicipalityBoundary::class));
+    }
+
     public function test_municipal_roles_receive_only_their_assigned_workspace_without_municipality_search(): void
     {
         $ownBoundary = $this->createBoundary($this->first, 120.50, 15.40);

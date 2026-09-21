@@ -3,6 +3,7 @@
 @section('title', 'Municipality Geofences')
 
 @php
+  $isGisEvaluator = $isGisEvaluator ?? auth()->user()->isGisEvaluator();
   $canChooseMunicipality = auth()->user()->canAccessAllMunicipalities();
   $assignedMunicipality = $canChooseMunicipality ? null : $municipalities->first();
 @endphp
@@ -73,9 +74,9 @@
   <section class="geo-hero">
     <div class="geo-title-row">
       <div>
-        <div class="geo-eyebrow"><i></i> {{ $canChooseMunicipality ? 'Province boundary administration' : $assignedMunicipality?->name.' workspace' }}</div>
+        <div class="geo-eyebrow"><i></i> {{ $isGisEvaluator ? 'Restricted external evaluation' : ($canChooseMunicipality ? 'Province boundary administration' : $assignedMunicipality?->name.' workspace') }}</div>
         <h1 class="geo-title">Municipality geofences</h1>
-        <p class="geo-subtitle">{{ $canManageBoundaries ? 'Maintain official municipal coverage, inspect mapped parcels, and catch land records that cross or fall outside their assigned municipality.' : 'Review your '.($canChooseMunicipality ? 'municipality workspaces' : 'assigned municipality boundary').' and mapped parcels that need field verification.' }}</p>
+        <p class="geo-subtitle">{{ $isGisEvaluator ? 'Review active administrative boundary references and their recorded source geometry. Farmer, parcel, assistance, account, export, and editing functions are unavailable to this account.' : ($canManageBoundaries ? 'Maintain official municipal coverage, inspect mapped parcels, and catch land records that cross or fall outside their assigned municipality.' : 'Review your '.($canChooseMunicipality ? 'municipality workspaces' : 'assigned municipality boundary').' and mapped parcels that need field verification.') }}</p>
       </div>
       @if($canManageBoundaries)
         <div class="geo-actions">
@@ -86,7 +87,7 @@
     </div>
   </section>
 
-  <details class="module-more"><summary>Coverage summary <span>{{ $canChooseMunicipality ? 'Municipality, farmer, and parcel totals' : 'Boundary, farmer, and parcel totals for '.$assignedMunicipality?->name }}</span></summary>
+  <details class="module-more"><summary>Coverage summary <span>{{ $isGisEvaluator ? 'Administrative boundary references only' : ($canChooseMunicipality ? 'Municipality, farmer, and parcel totals' : 'Boundary, farmer, and parcel totals for '.$assignedMunicipality?->name) }}</span></summary>
   <section class="geo-stats" aria-label="Geofence summary">
     @if($canChooseMunicipality)
       <article class="geo-stat"><small>Municipalities in scope</small><strong>{{ number_format($summary['municipalities']) }}</strong><span>Active municipal offices</span></article>
@@ -95,9 +96,11 @@
     @endif
     <article class="geo-stat"><small>Official boundaries</small><strong id="summaryConfigured">{{ number_format($summary['configured']) }}</strong><span>Active geofences</span></article>
     <article class="geo-stat"><small>Boundary coverage</small><strong>{{ number_format($summary['boundary_area_ha'], 0) }} ha</strong><span>{{ $canChooseMunicipality ? 'Combined official area' : 'Active boundary area' }}</span></article>
-    <article class="geo-stat"><small>Registered farmers</small><strong id="summaryFarmers">{{ number_format($summary['farmers']) }}</strong><span>Current access scope</span></article>
-    <article class="geo-stat"><small>Mapped parcels</small><strong id="summaryParcels">{{ number_format($summary['parcels']) }}</strong><span>Saved farm polygons</span></article>
-    <article class="geo-stat"><small>Mapped land</small><strong id="summaryMappedArea">{{ number_format($summary['mapped_area_ha'], 2) }} ha</strong><span>Across visible parcels</span></article>
+    @unless($isGisEvaluator)
+      <article class="geo-stat"><small>Registered farmers</small><strong id="summaryFarmers">{{ number_format($summary['farmers']) }}</strong><span>Current access scope</span></article>
+      <article class="geo-stat"><small>Mapped parcels</small><strong id="summaryParcels">{{ number_format($summary['parcels']) }}</strong><span>Saved farm polygons</span></article>
+      <article class="geo-stat"><small>Mapped land</small><strong id="summaryMappedArea">{{ number_format($summary['mapped_area_ha'], 2) }} ha</strong><span>Across visible parcels</span></article>
+    @endunless
   </section>
   </details>
 
@@ -129,7 +132,7 @@
       <details class="geo-map-tools"><summary>Map tools</summary><div class="geo-actions">
       <button class="geo-btn" type="button" id="fitVisible">Fit visible boundaries</button>
       <button class="geo-btn" type="button" id="resetMap">{{ $canChooseMunicipality ? 'Reset province view' : 'Reset municipality view' }}</button>
-      <button class="geo-btn primary" type="button" id="downloadSnapshot" disabled>Download municipality snapshot</button>
+      <button class="geo-btn primary" type="button" id="downloadSnapshot" @if($isGisEvaluator) hidden aria-hidden="true" @endif disabled>{{ $isGisEvaluator ? '' : 'Download municipality snapshot' }}</button>
       </div>
       </details>
     </div>
@@ -137,8 +140,8 @@
     <div class="geo-grid">
       <div class="geo-map-wrap">
         <div id="geofenceMap" class="geo-map" aria-label="Municipality boundary map"></div>
-        <div class="geo-map-message" id="mapMessage">{{ $canChooseMunicipality ? 'Choose a municipality to load its farmers, parcels, and compliance review. All active municipality boundaries remain visible in the province view.' : 'The map opens your assigned municipality boundary and parcel checks automatically.' }}</div>
-        <div class="geo-map-legend"><span><i class="active"></i>Official boundary</span><span><i class="draft"></i>Draft</span><span><i class="parcel"></i>Farm parcel</span></div>
+        <div class="geo-map-message" id="mapMessage">{{ $isGisEvaluator ? 'Choose a municipality to inspect its active administrative boundary reference. Operational records are not loaded.' : ($canChooseMunicipality ? 'Choose a municipality to load its farmers, parcels, and compliance review. All active municipality boundaries remain visible in the province view.' : 'The map opens your assigned municipality boundary and parcel checks automatically.') }}</div>
+        <div class="geo-map-legend"><span><i class="active"></i>Official boundary</span>@unless($isGisEvaluator)<span><i class="draft"></i>Draft</span><span><i class="parcel"></i>Farm parcel</span>@endunless</div>
 
         @if($canManageBoundaries)
           <section class="geo-editor" id="boundaryEditor" hidden>
@@ -179,7 +182,7 @@
         <div class="geo-panel-head">
           <small id="panelEyebrow">{{ $canChooseMunicipality ? 'Province-wide view' : 'Assigned municipality' }}</small>
           <h2 id="panelTitle">{{ $canChooseMunicipality ? 'Boundary overview' : $assignedMunicipality?->name }}</h2>
-          <p id="panelDescription">{{ $canChooseMunicipality ? 'Select one municipality to inspect its active boundary and parcel placement.' : 'Review your boundary and parcels needing attention.' }}</p>
+          <p id="panelDescription">{{ $isGisEvaluator ? 'Select one municipality to inspect its active administrative boundary reference.' : ($canChooseMunicipality ? 'Select one municipality to inspect its active boundary and parcel placement.' : 'Review your boundary and parcels needing attention.') }}</p>
         </div>
         <section class="geo-opacity geo-style-panel" aria-labelledby="geofenceStyleTitle" id="geofenceStylePanel" aria-busy="false">
           <h3 id="geofenceStyleTitle">Geofence appearance</h3>
@@ -209,7 +212,7 @@
           <noscript><p>Enable JavaScript to display barangay boundaries.</p></noscript>
         </section>
         <div class="geo-panel-scroll" id="panelContent">
-          <div class="geo-empty">{{ $canChooseMunicipality ? 'The map is showing all available municipality geofences. Use the municipality selector to load detailed parcel checks.' : 'Your boundary and parcel checks appear here when the map is available.' }}</div>
+          <div class="geo-empty">{{ $isGisEvaluator ? 'The map is showing active municipality geofences. Select a municipality for its boundary details and available barangay reference layer.' : ($canChooseMunicipality ? 'The map is showing all available municipality geofences. Use the municipality selector to load detailed parcel checks.' : 'Your boundary and parcel checks appear here when the map is available.') }}</div>
         </div>
       </aside>
     </div>
@@ -246,6 +249,7 @@
     key: @json($googleMapsApiKey),
     mapId: @json($googleMapsMapId),
     canManage: @json($canManageBoundaries),
+    boundaryOnly: @json($isGisEvaluator),
     canChooseMunicipality: @json($canChooseMunicipality),
     assignedMunicipalityId: @json($assignedMunicipality?->id),
     csrf: @json(csrf_token()),

@@ -23,6 +23,8 @@ class User extends Authenticatable
 
     public const ROLE_REGIONAL_HEAD = 'regional_head';
 
+    public const ROLE_GIS_EVALUATOR = 'gis_evaluator';
+
     public const ROLE_SUPER_ADMIN = 'super_admin';
 
     public const ROLE_PROVINCIAL_STAFF = 'provincial_staff';
@@ -39,6 +41,7 @@ class User extends Authenticatable
     public const ROLES = [
         self::ROLE_SYSTEM_OWNER,
         self::ROLE_REGIONAL_HEAD,
+        self::ROLE_GIS_EVALUATOR,
         self::ROLE_SUPER_ADMIN,
         self::ROLE_PROVINCIAL_STAFF,
         self::ROLE_PROVINCIAL_VET,
@@ -202,6 +205,11 @@ class User extends Authenticatable
         return $this->hasRole(self::ROLE_REGIONAL_HEAD);
     }
 
+    public function isGisEvaluator(): bool
+    {
+        return $this->hasRole(self::ROLE_GIS_EVALUATOR);
+    }
+
     public function canChooseProvince(): bool
     {
         return $this->isSystemOwner() || $this->isRegionalHead();
@@ -222,7 +230,7 @@ class User extends Authenticatable
         if (! $this->isActive() || ! $this->hasAnyRole(self::ROLES)) {
             return false;
         }
-        if ($this->isSystemOwner()) {
+        if ($this->isSystemOwner() || $this->isGisEvaluator()) {
             return true;
         }
         if ($this->isRegionalHead()) {
@@ -239,7 +247,7 @@ class User extends Authenticatable
 
     public function canAccessProvince(?int $provinceId): bool
     {
-        return $this->hasUsableScope() && ($this->isSystemOwner()
+        return $this->hasUsableScope() && ($this->isSystemOwner() || $this->isGisEvaluator()
             || ($this->isRegionalHead() && $provinceId !== null && Province::query()->active()
                 ->whereKey($provinceId)->where('region_id', $this->region_id)->exists())
             || ($this->requiresProvince() && $provinceId !== null && $this->province_id === $provinceId));
@@ -249,6 +257,9 @@ class User extends Authenticatable
     {
         if ($this->isSystemOwner()) {
             return 'All supervised provinces';
+        }
+        if ($this->isGisEvaluator()) {
+            return 'National boundary evaluation';
         }
         if ($this->isRegionalHead()) {
             return $this->region?->name ?? 'Region not assigned';
@@ -278,7 +289,7 @@ class User extends Authenticatable
      */
     public function isProvincialUser(): bool
     {
-        return $this->isSystemOwner() || $this->isRegionalHead() || $this->requiresProvince();
+        return $this->isSystemOwner() || $this->isRegionalHead() || $this->isGisEvaluator() || $this->requiresProvince();
     }
 
     /**
@@ -330,7 +341,7 @@ class User extends Authenticatable
         if (! $this->hasUsableScope()) {
             return false;
         }
-        if ($this->isSystemOwner()) {
+        if ($this->isSystemOwner() || $this->isGisEvaluator()) {
             return true;
         }
         if ($municipalityId === null) {
@@ -405,6 +416,7 @@ class User extends Authenticatable
         return match ($this->role) {
             self::ROLE_SYSTEM_OWNER => 'System Owner',
             self::ROLE_REGIONAL_HEAD => 'Regional Head',
+            self::ROLE_GIS_EVALUATOR => 'GIS Evaluator',
             self::ROLE_SUPER_ADMIN => 'Super Admin',
             self::ROLE_PROVINCIAL_STAFF => 'Provincial Staff',
             self::ROLE_PROVINCIAL_VET => 'Provincial Veterinary Office',
@@ -421,6 +433,9 @@ class User extends Authenticatable
     {
         if ($this->isSystemOwner()) {
             return 'System Administration';
+        }
+        if ($this->isGisEvaluator()) {
+            return 'External GIS Evaluation';
         }
         if ($this->isRegionalHead()) {
             return 'Regional Agriculture Office';
