@@ -203,7 +203,8 @@ Implementation status and remaining staff/staging checks are documented in [DESI
 - Switching back to **Saved parcel colors** restores the original display. Crop styling does not alter parcel boundaries, saved colors, or exports. Loading/error states are distinct from missing crop records.
 - Authorized selected-farmer KML and KMZ import.
 - Server-side KML and XML bulk parcel import for one municipality.
-- Import matching by parcel code, full name, surname and barangay, unique surname, and controlled fallback matching.
+- Import matching by parcel code, full name, surname and barangay, or a unique surname. Shared-surname matches fail closed for staff review instead of attaching a parcel to the first database row.
+- Each completed bulk parcel import records one aggregate audit event with counts; farmer names and parcel coordinates are excluded from the audit metadata.
 - Imported KML colors are preserved when available.
 - Printable parcel information sheet.
 - High-resolution parcel PNG export.

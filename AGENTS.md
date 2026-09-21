@@ -393,7 +393,7 @@ The **Crops by season** disclosure adds a year/dry-or-wet-season crop layer to t
 - for provincial and super-admin users, pass the selected municipality to the all-plots endpoint so the map never mixes parcel boundaries from other municipalities;
 - import KML/KMZ in the browser for a selected farmer and save each parsed polygon through the authorized plot endpoint;
 - bulk-import server-side KML/XML placemarks for one selected municipality;
-- match server-side imports only against farmers in that municipality using parcel codes and progressively looser name/location strategies;
+- match server-side imports only against farmers in that municipality using parcel codes and unambiguous name/location strategies; shared-surname matches fail closed for review instead of selecting the first database row;
 - preserve/import KML style colors when possible;
 - export/print a parcel information sheet and downloadable PNG from the browser.
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreFarmPlotRequest;
 use App\Models\Farmer;
 use App\Models\FarmPlot;
+use App\Support\AuditTrail;
 use App\Support\ConcurrentWrite;
 use App\Support\MunicipalityAccess;
 use App\Support\MunicipalityBoundaryGuard;
@@ -380,7 +381,7 @@ class FarmPlotController extends Controller
         $matchedByFullName = 0;
         $matchedBySurnameBarangay = 0;
         $matchedByUniqueSurname = 0;
-        $matchedByLooseSurname = 0;
+        $skippedAmbiguousFarmer = 0;
         $skippedOutsideBoundary = 0;
         $boundaryWarnings = 0;
 
@@ -397,7 +398,7 @@ class FarmPlotController extends Controller
             &$matchedByFullName,
             &$matchedBySurnameBarangay,
             &$matchedByUniqueSurname,
-            &$matchedByLooseSurname,
+            &$skippedAmbiguousFarmer,
             &$skippedOutsideBoundary,
             &$boundaryWarnings
         ) {
@@ -418,7 +419,11 @@ class FarmPlotController extends Controller
                 }
 
                 if (! $farmer) {
-                    $skippedNoFarmer++;
+                    if ($strategy === 'ambiguous') {
+                        $skippedAmbiguousFarmer++;
+                    } else {
+                        $skippedNoFarmer++;
+                    }
 
                     continue;
                 }
@@ -431,8 +436,6 @@ class FarmPlotController extends Controller
                     $matchedBySurnameBarangay++;
                 } elseif ($strategy === 'surname_unique') {
                     $matchedByUniqueSurname++;
-                } elseif ($strategy === 'surname_loose') {
-                    $matchedByLooseSurname++;
                 }
 
                 $colorSeed = trim((string) (
@@ -511,6 +514,24 @@ class FarmPlotController extends Controller
             }
         });
 
+        AuditTrail::record(
+            'imported',
+            'Farm parcels',
+            $request->user()->name.' imported municipality-scoped farm parcels from KML.',
+            [
+                'metadata' => [
+                    'municipality_id' => $municipalityId,
+                    'created' => $created,
+                    'updated' => $updated,
+                    'skipped_without_polygon' => $skippedNoPolygon,
+                    'skipped_without_farmer' => $skippedNoFarmer,
+                    'skipped_ambiguous_farmer' => $skippedAmbiguousFarmer,
+                    'skipped_outside_boundary' => $skippedOutsideBoundary,
+                    'boundary_warnings' => $boundaryWarnings,
+                ],
+            ]
+        );
+
         return back()->with(
             'success',
             "KML import finished. Created: {$created}, Updated: {$updated}, "
@@ -520,7 +541,7 @@ class FarmPlotController extends Controller
             ."Matched by full name: {$matchedByFullName}, "
             ."Matched by surname+barangay: {$matchedBySurnameBarangay}, "
             ."Matched by unique surname: {$matchedByUniqueSurname}, "
-            ."Matched by loose surname: {$matchedByLooseSurname}, "
+            ."Skipped (ambiguous farmer match): {$skippedAmbiguousFarmer}, "
             ."Skipped (outside/invalid boundary): {$skippedOutsideBoundary}, "
             ."Boundary review warnings: {$boundaryWarnings}"
         );
@@ -947,7 +968,9 @@ private function seededPlotColor(string $seed, string $baseKmlColor = 'ccffffff'
         }
 
         if ($surnameCandidates->isNotEmpty()) {
-            return ['farmer' => $surnameCandidates->first(), 'strategy' => 'surname_loose'];
+            // A surname shared by more than one farmer is not an identity. Never
+            // attach a parcel to whichever matching row happens to sort first.
+            return ['farmer' => null, 'strategy' => 'ambiguous'];
         }
 
         return ['farmer' => null, 'strategy' => null];
