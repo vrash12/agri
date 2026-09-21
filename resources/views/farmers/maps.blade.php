@@ -893,6 +893,7 @@
       <div class="parcel-tool-actions">
         <button type="button" class="btn btn-soft btn-sm" id="recenterMapBtn" title="Fit the camera to this municipality's mapped farmers">Fit municipality</button>
         <button type="button" class="btn btn-soft btn-sm" id="resetMapBtn" title="Reset the map camera">Reset camera</button>
+        <button type="button" class="btn btn-soft btn-sm" id="toggleFarmerMapLabels" aria-pressed="true" title="Show or hide Google place and road labels. AgriGOV parcels and municipality labels remain visible." disabled>Map labels: On</button>
         <button type="button" class="btn btn-sm map-weather-trigger" id="mapWeatherBtn" aria-controls="mapWeatherDrawer" aria-expanded="false" title="Show municipality weather and agricultural advisories">
           <svg viewBox="0 0 24 24"><path d="M7 18h10a5 5 0 0 0 0-10 7 7 0 0 0-13 3 4 4 0 0 0 3 7Z"></path><path d="m8 21-1 2m5-2-1 2m5-2-1 2"></path></svg>
           <span id="mapWeatherButtonLabel">Weather</span>

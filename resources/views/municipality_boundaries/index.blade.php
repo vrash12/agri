@@ -125,6 +125,7 @@
         </div>
         <input type="hidden" id="municipalityFilter" value="{{ $assignedMunicipality?->id }}">
       @endif
+      <button class="geo-btn" type="button" id="toggleMunicipalityMapLabels" aria-pressed="true" title="Show or hide Google place and road labels. AgriGOV boundaries, parcels and municipality labels stay visible." disabled>Map labels: On</button>
       <details class="geo-map-tools"><summary>Map tools</summary><div class="geo-actions">
       <button class="geo-btn" type="button" id="fitVisible">Fit visible boundaries</button>
       <button class="geo-btn" type="button" id="resetMap">{{ $canChooseMunicipality ? 'Reset province view' : 'Reset municipality view' }}</button>

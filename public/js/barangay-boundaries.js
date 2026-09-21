@@ -61,7 +61,7 @@
       const title = document.createElement('strong');
       title.textContent = item.name;
       const detail = document.createElement('p');
-      detail.textContent = 'Ramos, Tarlac · PSGC ' + item.code + ' · Planning reference';
+      detail.textContent = item.location + ' · PSGC ' + item.code + ' · Planning reference';
       content.append(title, detail);
       info.setContent(content);
       info.setPosition(item.position);
@@ -84,7 +84,7 @@
         const marker = new google.maps.Marker({map, position: props.label_position, title: props.name + ' barangay',
           icon: {path: google.maps.SymbolPath.CIRCLE, scale: 0},
           label: {text: props.name, className: 'geo-barangay-label', fontSize: '12px', fontWeight: '700'}, zIndex: 5});
-        const item = {name: props.name, code: props.psgc, position: props.label_position, bounds, overlays: [casing, outline], marker};
+        const item = {name: props.name, code: props.psgc, location: payload.location_label || 'Municipality', position: props.label_position, bounds, overlays: [casing, outline], marker};
         outline.addListener('click', () => showInfo(item));
         marker.addListener('click', () => showInfo(item));
         items.push(item);

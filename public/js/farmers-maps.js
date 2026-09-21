@@ -221,6 +221,8 @@ if (btnDownloadAll) {
           if (statusSmall) statusSmall.textContent = 'Check your connection and reload to try again. You can still use the registry.';
           var retry = document.getElementById('mapReloadBtn');
           if (retry) retry.hidden = false;
+          var mapLabelsButton = document.getElementById('toggleFarmerMapLabels');
+          if (mapLabelsButton) mapLabelsButton.disabled = true;
           showToast('The map could not load. Your registry remains available.', 'bad');
           return false;
         });
@@ -1285,6 +1287,18 @@ var PopoverElement = maps3d.PopoverElement;
       gestureHandling: "GREEDY"
     });
     host.appendChild(map3d);
+
+    var mapLabelsButton = document.getElementById('toggleFarmerMapLabels');
+    if (mapLabelsButton) {
+      mapLabelsButton.disabled = false;
+      mapLabelsButton.addEventListener('click', function () {
+        if (mapLabelsButton.disabled) return;
+        var showLabels = map3d.mode !== MapMode.HYBRID;
+        map3d.mode = showLabels ? MapMode.HYBRID : MapMode.SATELLITE;
+        mapLabelsButton.setAttribute('aria-pressed', String(showLabels));
+        mapLabelsButton.textContent = 'Map labels: ' + (showLabels ? 'On' : 'Off');
+      });
+    }
 
     var dataById = new Map();
 

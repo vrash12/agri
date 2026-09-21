@@ -18,6 +18,7 @@
 
   const state = {
     map: null,
+    labeledMapType: 'hybrid',
     info: null,
     barangays: null,
     boundaryOverlays: new Map(),
@@ -911,8 +912,25 @@
     } catch (error) { toast(error.message, true); }
   }
 
+  function syncMapLabelsControl() {
+    const mapType = state.map.getMapTypeId();
+    const labelsVisible = mapType !== 'satellite';
+    if (['hybrid', 'roadmap', 'terrain'].includes(mapType)) state.labeledMapType = mapType;
+    const button = el('toggleMunicipalityMapLabels');
+    button.textContent = 'Map labels: ' + (labelsVisible ? 'On' : 'Off');
+    button.setAttribute('aria-pressed', String(labelsVisible));
+    button.disabled = false;
+  }
+
+  function toggleMapLabels() {
+    // Satellite imagery has no Google place or road labels and works with map IDs.
+    // Keep AgriGOV overlays and the current camera independent of this choice.
+    state.map.setMapTypeId(state.map.getMapTypeId() === 'satellite' ? state.labeledMapType : 'satellite');
+  }
+
   function bindUi() {
     if (settings.canChooseMunicipality) filter.addEventListener('change', () => loadMunicipality(filter.value));
+    el('toggleMunicipalityMapLabels').addEventListener('click', toggleMapLabels);
     el('fitVisible').addEventListener('click', fitVisible);
     el('resetMap').addEventListener('click', () => settings.canChooseMunicipality ? resetDefaultView() : fitVisible());
     el('downloadSnapshot').addEventListener('click', downloadMunicipalitySnapshot);
@@ -966,6 +984,8 @@
     const options = {center:defaultViewport.center,zoom:defaultViewport.zoom,mapTypeId:'hybrid',streetViewControl:false,fullscreenControl:true,mapTypeControl:true,gestureHandling:'greedy'};
     if (settings.mapId) options.mapId = settings.mapId;
     state.map = new google.maps.Map(el('geofenceMap'), options);
+    state.map.addListener('maptypeid_changed', syncMapLabelsControl);
+    syncMapLabelsControl();
     state.info = new google.maps.InfoWindow();
     if (window.createBarangayBoundaryLayer) {
       state.barangays = window.createBarangayBoundaryLayer({map: state.map, request, url: settings.barangayUrl, municipalityIds: settings.barangayMunicipalityIds || []});

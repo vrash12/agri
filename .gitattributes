@@ -6,6 +6,7 @@
 *.md diff=markdown
 *.php diff=php
 /database/seeders/data/ramos_barangay_reference_boundaries.geojson text eol=lf
+/database/seeders/data/baguio_barangay_reference_boundaries.geojson text eol=lf
 
 /.github export-ignore
 CHANGELOG.md export-ignore

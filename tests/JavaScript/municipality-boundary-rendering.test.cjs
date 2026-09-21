@@ -63,9 +63,10 @@ function workspace(initialBoundaries, options = {}) {
     if (!elements.has(id)) {
       const listeners = new Map();
       elements.set(id, {
-        value: '', disabled: false, hidden: false, textContent: '', innerHTML: '', dataset: {},
+        value: '', disabled: id === 'toggleMunicipalityMapLabels', hidden: false, textContent: '', innerHTML: '', dataset: {},
+        attributes: {},
         classList: { toggle() {}, add() {}, remove() {} },
-        setAttribute() {}, querySelectorAll: () => [],
+        setAttribute(name, value) { this.attributes[name] = String(value); }, querySelectorAll: () => [],
         addEventListener(type, callback) {
           if (!listeners.has(type)) listeners.set(type, []);
           listeners.get(type).push(callback);
@@ -81,7 +82,7 @@ function workspace(initialBoundaries, options = {}) {
 
   class MapMock {
     constructor(node, config) {
-      this.node = node; this.config = config; this.zoom = config.zoom;
+      this.node = node; this.config = config; this.zoom = config.zoom; this.center = config.center; this.mapTypeId = config.mapTypeId;
       this.bounds = bounds(-80, -179, 80, 179);
       this.listeners = new Map(); this.fits = [];
       maps.push(this);
@@ -94,6 +95,8 @@ function workspace(initialBoundaries, options = {}) {
     trigger(type, event) { for (const callback of this.listeners.get(type) || []) callback(event); }
     getBounds() { return this.bounds; }
     getZoom() { return this.zoom; }
+    getMapTypeId() { return this.mapTypeId; }
+    setMapTypeId(value) { this.mapTypeId = value; this.trigger('maptypeid_changed'); }
     setZoom(value) { this.zoom = value; }
     setCenter(value) { this.center = value; }
     fitBounds(value, padding) { this.fits.push({ bounds: value.toJSON(), padding }); this.bounds = value; }
@@ -183,8 +186,8 @@ function workspace(initialBoundaries, options = {}) {
   function search(text) { element('boundarySearch').value = text; element('boundarySearch').dispatch('input'); }
   function pan(viewport, zoom = 11) { maps[0].bounds = viewport; maps[0].zoom = zoom; maps[0].trigger('idle'); advance(100); flushFrames(); }
   async function settle() { for (let i = 0; i < 10; i++) await Promise.resolve(); }
-  window.initMunicipalityGeofenceMap();
-  return { maps, polygons, labels, requests, element, advance, frame, flushFrames, select, search, pan, settle, frames };
+  if (options.initializeMap !== false) window.initMunicipalityGeofenceMap();
+  return { maps, polygons, labels, requests, element, advance, frame, flushFrames, select, search, pan, settle, frames, initialize: window.initMunicipalityGeofenceMap };
 }
 
 function payload(item, parcels = []) {
@@ -194,6 +197,75 @@ function payload(item, parcels = []) {
     stats: { farmers: 0, mapped_farmers: 0, parcels: parcels.length, mapped_area_ha: 0, outside: 0, partial: 0, near_boundary: 0 },
   };
 }
+
+test('map labels become available after map initialization and switch hybrid imagery without labels', () => {
+  const template = fs.readFileSync(path.join(__dirname, '../../resources/views/municipality_boundaries/index.blade.php'), 'utf8');
+  assert.match(template, /<button\b[^>]*type="button"[^>]*id="toggleMunicipalityMapLabels"[^>]*aria-pressed="true"[^>]*disabled>Map labels: On<\/button>/);
+  const view = workspace([boundary(1)], { initializeMap: false, mapId: 'configured-map-id' });
+  const button = view.element('toggleMunicipalityMapLabels');
+  assert.equal(button.disabled, true);
+  view.initialize();
+  const map = view.maps[0];
+  assert.equal(map.config.mapId, 'configured-map-id');
+  assert.equal(map.config.styles, undefined, 'A map ID must not be combined with local map styles');
+  assert.equal(button.disabled, false);
+  assert.equal(button.textContent, 'Map labels: On');
+  assert.equal(button.attributes['aria-pressed'], 'true');
+  button.dispatch('click');
+  assert.equal(map.getMapTypeId(), 'satellite');
+  assert.equal(button.textContent, 'Map labels: Off');
+  assert.equal(button.attributes['aria-pressed'], 'false');
+  button.dispatch('click');
+  assert.equal(map.getMapTypeId(), 'hybrid');
+  assert.equal(button.attributes['aria-pressed'], 'true');
+});
+
+test('native map type changes synchronize labels and restore the last labeled map type', () => {
+  const view = workspace([boundary(1)]);
+  const map = view.maps[0];
+  const button = view.element('toggleMunicipalityMapLabels');
+  for (const mapType of ['roadmap', 'terrain', 'hybrid']) {
+    map.setMapTypeId(mapType);
+    assert.equal(button.textContent, 'Map labels: On');
+    button.dispatch('click');
+    assert.equal(map.getMapTypeId(), 'satellite');
+    button.dispatch('click');
+    assert.equal(map.getMapTypeId(), mapType);
+    map.setMapTypeId('satellite');
+    assert.equal(button.attributes['aria-pressed'], 'false');
+    button.dispatch('click');
+    assert.equal(map.getMapTypeId(), mapType);
+  }
+  map.setMapTypeId('satellite');
+  map.setMapTypeId('roadmap');
+  assert.equal(button.attributes['aria-pressed'], 'true', 'A native selection updates the control immediately');
+  assert.equal(map.getMapTypeId(), 'roadmap', 'Changing the base map must not override a native selection');
+});
+
+test('hiding base-map labels preserves camera, municipal labels, geometry and parcel overlays without requests', async () => {
+  const item = boundary(1);
+  const parcel = { id: 9, name: 'Parcel', area_ha: 1, color: '#123456', polygon: [{ lat: 15, lng: 120 }, { lat: 15.01, lng: 120 }, { lat: 15.01, lng: 120.01 }], farmer: { name: 'Farmer' } };
+  const view = workspace([item]);
+  view.flushFrames(); view.select(1);
+  view.requests[0].respond(payload(item, [parcel]));
+  await view.settle(); view.flushFrames();
+  view.pan(bounds(14, 119, 16, 122), 11);
+  const map = view.maps[0];
+  const camera = { center: map.center, bounds: map.bounds, zoom: map.zoom, fits: map.fits.length };
+  const polygons = view.polygons.slice();
+  const labels = view.labels.slice();
+  const visibility = view.polygons.map(polygon => polygon.map);
+  const labelVisibility = view.labels.map(label => ({ map: label.map, visible: label.visible }));
+  const geometry = JSON.stringify({ boundary: item.geojson, parcel: parcel.polygon });
+  view.element('toggleMunicipalityMapLabels').dispatch('click');
+  assert.deepEqual({ center: map.center, bounds: map.bounds, zoom: map.zoom, fits: map.fits.length }, camera);
+  assert.deepEqual(view.polygons, polygons);
+  assert.deepEqual(view.labels, labels);
+  assert.deepEqual(view.polygons.map(polygon => polygon.map), visibility);
+  assert.deepEqual(view.labels.map(label => ({ map: label.map, visible: label.visible })), labelVisibility);
+  assert.equal(JSON.stringify({ boundary: item.geojson, parcel: parcel.polygon }), geometry);
+  assert.equal(view.requests.length, 1, 'The display choice does not request or save operational records');
+});
 
 test('panning off screen detaches boundaries and returning reuses their polygons', () => {
   const view = workspace([boundary(1), boundary(2)]);

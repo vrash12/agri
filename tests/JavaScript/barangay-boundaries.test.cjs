@@ -5,10 +5,11 @@ const vm = require('node:vm');
 const path = require('node:path');
 const source = fs.readFileSync(path.join(__dirname, '../../public/js/barangay-boundaries.js'), 'utf8');
 const data = JSON.parse(fs.readFileSync(path.join(__dirname, '../../database/seeders/data/ramos_barangay_reference_boundaries.geojson'), 'utf8'));
-const payload = {municipality_id: 4, available: true, ...data, source: {label: 'Test source', url: 'https://example.test', note: 'Planning reference'}};
+const payload = {municipality_id: 4, location_label: 'Ramos, Tarlac', available: true, ...data, source: {label: 'Test source', url: 'https://example.test', note: 'Planning reference'}};
+const baguioData = JSON.parse(fs.readFileSync(path.join(__dirname, '../../database/seeders/data/baguio_barangay_reference_boundaries.geojson'), 'utf8'));
 
-function setup() {
-  const nodes = new Map(), requests = [], overlays = [], timers = new Map();
+function setup(municipalityIds = [4]) {
+  const nodes = new Map(), requests = [], overlays = [], timers = new Map(), infoWindows = [];
   let timerId = 0;
   function element(id) {
     if (!nodes.has(id)) nodes.set(id, {
@@ -36,7 +37,8 @@ function setup() {
     isEmpty() { return !this.points.length; }
   }
   class Info {
-    close() {} setContent() {} setPosition() {} open() {}
+    constructor() { infoWindows.push(this); }
+    close() {} setContent(content) { this.content = content; } setPosition() {} open() {}
   }
   const map = {zoom: 13, listeners: {}, fits: [], addListener(type, fn) { this.listeners[type] = fn; }, getZoom() { return this.zoom; }, fitBounds(bounds) { this.fits.push(bounds); }};
   const context = {window: {}, document: {getElementById: element, createElement: () => element(Symbol())},
@@ -45,11 +47,36 @@ function setup() {
     google: {maps: {InfoWindow: Info, Polygon: Overlay, Marker: Overlay, LatLngBounds: Bounds, SymbolPath: {CIRCLE: 0}, event: {clearInstanceListeners(overlay) { overlay.listeners = {}; }}}},
   };
   vm.runInNewContext(source, context);
-  const layer = context.window.createBarangayBoundaryLayer({map, url: '/barangays', municipalityIds: [4],
+  const layer = context.window.createBarangayBoundaryLayer({map, url: '/barangays', municipalityIds,
     request(url, options) { return new Promise((resolve, reject) => requests.push({url, options, resolve, reject})); },
   });
-  return {layer, element, requests, overlays, map, timers};
+  return {layer, element, requests, overlays, map, timers, infoWindows};
 }
+
+test('Baguio renders 129 selectable boundaries and correct location, then removes them when switching to Ramos', async () => {
+  const w = setup([4, 6]);
+  const loading = w.layer.selectMunicipality(6);
+  w.requests[0].resolve({...payload, ...baguioData, municipality_id: 6, location_label: 'Baguio City'});
+  await loading;
+  assert.equal(w.overlays.filter(o => o.map).length, 129 * 3);
+  assert.equal(w.element('barangaySelect').children.length, 130);
+  assert.match(w.element('barangayStatus').textContent, /^129 barangay/);
+  w.overlays[1].listeners.click();
+  assert.match(w.infoWindows[0].content.children[1].textContent, /^Baguio City · PSGC 1430300/);
+  w.element('focusBarangay').fire('click');
+  assert.ok(w.map.fits[0].points.length > 3);
+  w.layer.setEditing(true);
+  assert.equal(w.overlays.filter(o => o.map).length, 0);
+  w.layer.setEditing(false);
+  assert.equal(w.overlays.filter(o => o.map).length, 129 * 3);
+  const next = w.layer.selectMunicipality(4);
+  assert.equal(w.overlays.filter(o => o.map).length, 0);
+  w.requests[1].resolve(payload);
+  await next;
+  assert.equal(w.overlays.filter(o => o.map).length, 27);
+  w.overlays.filter(o => o.map)[1].listeners.click();
+  assert.match(w.infoWindows[0].content.children[1].textContent, /^Ramos, Tarlac · PSGC 0306912/);
+});
 
 test('only supported municipality loads geometry, nine overlays can be focused and cached', async () => {
   const w = setup();

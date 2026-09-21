@@ -325,3 +325,13 @@ Added a separate mobile-friendly farmer shell using shared design tokens, operat
 Includes accessible labels, password reveal controls, generic validation feedback, submission guards, empty/loading/retry states, native year filtering, pagination, session-history protection and active-session heartbeat. Scope is one verified farmer record. No placeholder farmer data is installed.
 
 Verification uses isolated automated fixtures and browser previews; migration is additive and applied locally. Hostinger deployment completed on September 20, 2026; 55 read-only production checks and public HTTP/asset checks passed. Office acceptance and a verified farmer pilot remain pending. See `docs/FARMER_PORTAL_DEPLOYMENT_2026_09_20.md`. Implementation and deployment details: `docs/FARMER_PORTAL.md`.
+
+
+## Map label controls - September 21, 2026
+
+Added native toolbar toggle buttons in Farmers map tools and Municipality geofences. Labels start on; disabling them selects Google's satellite imagery while keeping AgriGOV overlays. Buttons use existing styles, visible On/Off text, aria-pressed and a disabled loading state. Municipality desktop/mobile and keyboard previews passed; 34 focused JavaScript checks and Blade compilation passed. This change is local and not deployed. See docs/MAP_LABEL_VISIBILITY.md.
+
+
+## Baguio barangay references - September 21, 2026
+
+Reused the Municipality geofences Barangay boundaries panel for 129 Baguio City outlines. Selection, focus, visibility, source notes and editing guards retain the existing layout. Popups use the selected municipality's location label. Twelve PHP tests (1,712 assertions), 37 JavaScript tests and a synthetic browser selection/focus/hide/show check passed. Local only; see docs/BAGUIO_BARANGAY_BOUNDARIES.md.

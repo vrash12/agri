@@ -733,7 +733,8 @@ The lock mechanism requires an atomic shared cache store. The file cache is suit
 
 ### 5.15 Municipality geofences
 
-Ramos has nine read-only barangay planning references, loaded on selection through
+Ramos has nine read-only barangay planning references; the local Baguio update adds
+129 under its separate Baguio City supervision scope, loaded on selection through
 authenticated/throttled `GET /municipality-boundaries/barangays`.
 `BarangayBoundaryController` authorizes the existing view policy and scopes the
 municipality before `BarangayBoundaryReferences` reads its private, checksum-verified
@@ -743,7 +744,11 @@ labels, source notes, abort/stale-response guards, timeout/retry and one-payload
 caching. References hide during municipality editing. This layer does not alter
 ownership, official boundaries, parcel validation or snapshot exports. No migration
 is needed. Deploy both map scripts before views; preserve the GeoJSON's LF endings.
-Sources and verification: `docs/RAMOS_BARANGAY_BOUNDARIES.md`.
+Sources and verification: `docs/RAMOS_BARANGAY_BOUNDARIES.md` and
+`docs/BAGUIO_BARANGAY_BOUNDARIES.md`. The Baguio update remains local, pending
+authorized GitHub deployment. Its 129 PSGC codes match PSA; its pinned file remains
+under the existing 100 KB cap. Group combined source queries before applying scope,
+and use server-provided location labels in popups rather than hard-coded Ramos text.
 
 Primary model/table: `MunicipalityBoundary` / `municipality_boundaries`
 
@@ -1170,3 +1175,7 @@ The local workspace was explicitly aligned with Hostinger on 2026-09-18: Baguio 
 ### GitHub deployment preference — September 21, 2026
 
 The owner requires GitHub-based releases: review and commit the approved scope, push to `https://github.com/vrash12/agri`, then use `git pull --ff-only origin main` on Hostinger. Preserve unexplained server edits and unrelated local work; never force-push or use a hard reset as a shortcut. Take private backups, apply only explicitly reviewed migrations, mirror changed assets to both public directories, refresh caches and verify before returning online. Each production release still requires owner authorization. See `docs/GITHUB_DEPLOYMENT.md`. The September 21 geofence/checkbox release is authorized; farmer-ID changes remain outside its scope.
+
+### Google base-map label controls
+
+Farmers and Municipality geofences include a local-only Map labels On/Off button. Use native 3D HYBRID/SATELLITE modes and 2D map types; retain AgriGOV overlay labels and all drawing state. The 2D native map-type selector must keep the button synchronized. No database write or inline style override is involved. See docs/MAP_LABEL_VISIBILITY.md for API references and scoped deployment requirements.
