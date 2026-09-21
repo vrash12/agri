@@ -121,6 +121,8 @@ class User extends Authenticatable
      * @var array<string, string>
      */
     protected $casts = [
+        'evaluation_expires_at' => 'datetime',
+        'evaluation_password_pending' => 'boolean',
         'email_verified_at' => 'datetime',
         'last_login_at' => 'datetime',
         'municipality_id' => 'integer',
@@ -230,7 +232,11 @@ class User extends Authenticatable
         if (! $this->isActive() || ! $this->hasAnyRole(self::ROLES)) {
             return false;
         }
-        if ($this->isSystemOwner() || $this->isGisEvaluator()) {
+        if ($this->isGisEvaluator()) {
+            return $this->evaluation_expires_at !== null && $this->evaluation_expires_at->isFuture()
+                && $this->region_id === null && $this->province_id === null && $this->municipality_id === null;
+        }
+        if ($this->isSystemOwner()) {
             return true;
         }
         if ($this->isRegionalHead()) {

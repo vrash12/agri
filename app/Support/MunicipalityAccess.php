@@ -13,6 +13,9 @@ class MunicipalityAccess
 {
     public function scope(Builder $query, User $user, ?string $qualifiedColumn = null): Builder
     {
+        if ($user->isGisEvaluator() && ! ($query->getModel() instanceof \App\Models\MunicipalityBoundary)) {
+            return $query->whereRaw('1 = 0');
+        }
         if (! $user->hasUsableScope()) {
             return $query->whereRaw('1 = 0');
         }
@@ -70,6 +73,9 @@ class MunicipalityAccess
 
     public function resolveForWrite(User $user, mixed $requestedMunicipalityId = null): int
     {
+        if ($user->isGisEvaluator()) {
+            throw ValidationException::withMessages(['municipality_id' => 'Evaluator accounts cannot modify operational records.']);
+        }
         if (! $user->hasUsableScope()) {
             throw ValidationException::withMessages(['municipality_id' => 'Your account needs an active province or municipality assignment.']);
         }

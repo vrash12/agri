@@ -114,6 +114,8 @@ Route::middleware([
     'gis-evaluator-scope',
     'synchronized',
 ])->group(function () {
+    Route::get('/evaluation/password', [\App\Http\Controllers\EvaluatorPasswordController::class, 'edit'])->name('evaluation.password');
+    Route::post('/evaluation/password', [\App\Http\Controllers\EvaluatorPasswordController::class, 'update'])->middleware('throttle:5,1')->name('evaluation.password.update');
     Route::get('/farmers/{farmer}/portal-account', [\App\Http\Controllers\FarmerPortalAccountController::class, 'show'])->name('farmers.portal-account.show');
     Route::post('/farmers/{farmer}/portal-account/activation', [\App\Http\Controllers\FarmerPortalAccountController::class, 'issue'])->middleware('throttle:10,1')->name('farmers.portal-account.issue');
     Route::post('/farmers/{farmer}/portal-account/disable', [\App\Http\Controllers\FarmerPortalAccountController::class, 'disable'])->middleware('throttle:10,1')->name('farmers.portal-account.disable');

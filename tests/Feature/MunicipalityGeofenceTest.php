@@ -171,6 +171,7 @@ class MunicipalityGeofenceTest extends TestCase
         ]);
         $this->plot($farmer, 'Protected parcel', 120.505, 15.405);
         $evaluator = $this->user(User::ROLE_GIS_EVALUATOR, null, 'namria@example.test');
+        $evaluator->forceFill(['evaluation_expires_at' => now()->addDays(30)])->save();
 
         $this->actingAs($evaluator)
             ->get(route('municipality-boundaries.index'))
@@ -196,6 +197,23 @@ class MunicipalityGeofenceTest extends TestCase
         $this->postJson(route('municipality-boundaries.store'), $this->boundaryPayload($this->first->id, 120.70, 15.60))
             ->assertForbidden();
         $this->assertFalse($evaluator->can('create', MunicipalityBoundary::class));
+        $this->assertFalse($evaluator->can('view', $farmer));
+        $this->assertSame(0, app(\App\Support\MunicipalityAccess::class)->scope(Farmer::query(), $evaluator)->count());
+        $evaluator->forceFill(['evaluation_password_pending' => true])->save();
+        $this->actingAs($evaluator)->get(route('municipality-boundaries.index'))->assertRedirect(route('evaluation.password'));
+        $this->get(route('evaluation.password'))->assertOk();
+        $this->post(route('evaluation.password.update'), [
+            'current_password' => 'wrong', 'password' => 'synthetic-new-password-2026', 'password_confirmation' => 'synthetic-new-password-2026',
+        ])->assertSessionHasErrors('current_password');
+        $this->post(route('evaluation.password.update'), [
+            'current_password' => 'password', 'password' => 'synthetic-new-password-2026', 'password_confirmation' => 'synthetic-new-password-2026',
+        ])->assertRedirect(route('municipality-boundaries.index'));
+        $this->assertFalse($evaluator->fresh()->evaluation_password_pending);
+        $evaluator->forceFill(['evaluation_expires_at' => now()->subMinute()])->save();
+        $this->actingAs($evaluator)->getJson(route('municipality-boundaries.index'))->assertForbidden();
+        auth()->logout();
+        $this->post(route('login.attempt'), ['email' => $evaluator->email, 'password' => 'synthetic-new-password-2026', 'confidentiality_acknowledged' => '1'])->assertSessionHasErrors('email');
+        $this->assertGuest();
     }
 
     public function test_municipal_roles_receive_only_their_assigned_workspace_without_municipality_search(): void
@@ -616,6 +634,8 @@ class MunicipalityGeofenceTest extends TestCase
             $table->timestamps();
         });
         Schema::create('users', function (Blueprint $table) {
+            $table->timestamp('evaluation_expires_at')->nullable();
+            $table->boolean('evaluation_password_pending')->default(false);
             $table->id();
             $table->string('name');
             $table->string('email')->unique();

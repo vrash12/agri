@@ -21,6 +21,14 @@ class RestrictGisEvaluatorAccess
         }
 
         $routeName = $request->route()?->getName();
+        if (in_array($routeName, ['evaluation.password', 'evaluation.password.update'], true)) {
+            return $next($request);
+        }
+        if ($user->evaluation_password_pending) {
+            return $request->expectsJson()
+                ? response()->json(['message' => 'Change your temporary password before opening the map.'], 403)
+                : redirect()->route('evaluation.password');
+        }
         $allowed = [
             'municipality-boundaries.index',
             'municipality-boundaries.data',
@@ -28,6 +36,8 @@ class RestrictGisEvaluatorAccess
         ];
 
         if (is_string($routeName) && in_array($routeName, $allowed, true)) {
+            \App\Support\AuditTrail::record('viewed', 'GIS evaluation', 'Viewed administrative boundary references.');
+
             return $next($request);
         }
 
