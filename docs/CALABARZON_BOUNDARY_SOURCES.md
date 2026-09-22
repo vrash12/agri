@@ -1,6 +1,6 @@
 # CALABARZON planning/reference geofences
 
-Status: prepared and tested locally; not yet imported into production.
+Status: deployed to Hostinger on September 22, 2026 through GitHub commit `496b706` and `git pull --ff-only origin main`. All 142 references are active.
 
 ## Coverage
 
@@ -39,7 +39,7 @@ Deploy seven seeders and six GeoJSON files, plus `RegionSupervision` and `Config
 
 ## Validation
 
-Focused SQLite tests cover all 142 boundaries and attribution, idempotence, Lucena isolation, conflicting/inactive workspaces, changed boundaries, checksum rejection, actor permissions, and whole-region rollback. Tests use temporary in-memory databases. Production imports have not been performed by this change.
+Focused SQLite tests cover all 142 boundaries and attribution, idempotence, Lucena isolation, conflicting/inactive workspaces, changed boundaries, checksum rejection, actor permissions, and whole-region rollback. Tests use temporary in-memory databases. All 12 boundary tests and 14 regional-access tests passed across the final runs. Pint, PHP syntax and whitespace checks passed.
 
 ## Snapshot checksums
 
@@ -202,3 +202,9 @@ SHA-256 after normalizing line endings to LF.
 ## Requested accounts
 
 The owner requested one regional administrator (the existing Regional Head role) and four provincial administrators. CALABARZON has five provinces, so the provincial selection is pending clarification. Regional access can be configured independently. Account provisioning must refuse an existing login rather than reset it, generate unique random credentials privately, validate usable scope, and audit creation without credentials. Do not issue a Lucena administrator unless separately requested.
+
+## Verified production release
+
+Installed runtime commit `496b706`, then entered a brief maintenance window. Private, permission-restricted JSON backups of all affected tables were verified before the transaction. The import activated Batangas 34, Cavite 23, Laguna 30, Quezon 40, Rizal 14 and Lucena City 1. Region IV-A was configured with six province/city scopes. All pre-existing rows in the affected tables were compared and preserved; farmer, parcel, assistance and farmer-portal account snapshots were unchanged. No migration or public asset change was required. Configuration, routes and Blade caches were refreshed, and the site returned online.
+
+The requested Regional Head was created with a unique random credential delivered only in a protected local file. Production verification confirmed usable scope and exactly 142 visible boundaries. HTTP sign-in reached `/dashboard` with 200; the authenticated geofence page returned 200 and exposed the expected CALABARZON choices. The verification session was signed out. Google Maps rendering itself was not visually tested. The four-versus-five provincial account selection is still pending; no provincial accounts were created or existing credentials changed.
