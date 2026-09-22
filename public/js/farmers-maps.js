@@ -877,8 +877,8 @@ async function importKmzOrKmlToSelectedFarmer(file) {
     var PLOT_CONCURRENCY = 2;
 
     function setStatus(main, small) {
-      if (statusEl) statusEl.textContent = main || '';
-      if (statusSmallEl) statusSmallEl.textContent = small || '';
+      if (statusEl && statusEl.textContent !== (main || '')) statusEl.textContent = main || '';
+      if (statusSmallEl && statusSmallEl.textContent !== (small || '')) statusSmallEl.textContent = small || '';
     }
 
     function setProgress(pct) {
@@ -1677,6 +1677,7 @@ function reloadSelectedFarmerPlots(autoZoom) {
     var parcelHoverHideTimer = null;
     var parcelHoverPositionFrame = null;
     var lastParcelPointer = null;
+    var parcelHoverSize = null;
 
     function rememberParcelPointer(event) {
       var pointerEvent = event && event.domEvent ? event.domEvent : event;
@@ -1706,8 +1707,9 @@ function reloadSelectedFarmerPlots(autoZoom) {
         clientX: rect.left + Math.min(310, rect.width * 0.35),
         clientY: rect.top + Math.min(250, rect.height * 0.40)
       };
-      var cardWidth = parcelHoverCardEl.offsetWidth || 250;
-      var cardHeight = parcelHoverCardEl.offsetHeight || 110;
+      if (!parcelHoverSize) parcelHoverSize = {width: parcelHoverCardEl.offsetWidth || 250, height: parcelHoverCardEl.offsetHeight || 110};
+      var cardWidth = parcelHoverSize.width;
+      var cardHeight = parcelHoverSize.height;
       var left = pointer.clientX - rect.left + 16;
       var top = pointer.clientY - rect.top + 16;
 
@@ -1718,8 +1720,9 @@ function reloadSelectedFarmerPlots(autoZoom) {
         top = pointer.clientY - rect.top - cardHeight - 16;
       }
 
-      parcelHoverCardEl.style.left = Math.max(12, left) + 'px';
-      parcelHoverCardEl.style.top = Math.max(12, top) + 'px';
+      parcelHoverCardEl.style.left = '0';
+      parcelHoverCardEl.style.top = '0';
+      parcelHoverCardEl.style.translate = Math.max(12, left) + 'px ' + Math.max(12, top) + 'px';
       });
     }
 
@@ -1728,9 +1731,11 @@ function reloadSelectedFarmerPlots(autoZoom) {
       if (parcelHoverHideTimer) clearTimeout(parcelHoverHideTimer);
 
       var farmer = farmersById.get(String(farmerId)) || dataById.get(String(farmerId));
-      var ring = normalizePolygonRing(plot && (plot.polygon_json || plot.polygon || plot.polygonJson));
       var area = plot && (plot.area_ha != null ? plot.area_ha : plot.areaHa);
-      if (area == null && ring.length) area = estimateAreaHa(ring);
+      if (area == null) {
+        var ring = normalizePolygonRing(plot && (plot.polygon_json || plot.polygon || plot.polygonJson));
+        if (ring.length) area = estimateAreaHa(ring);
+      }
 
       var location = farmer
         ? String(farmer.farm_location || farmer.location || farmer.farm_municipality || '').trim()
@@ -1750,6 +1755,7 @@ function reloadSelectedFarmerPlots(autoZoom) {
         '</span>' +
         '<span class="parcel-hover-card-action">Click to view only this farmer\'s land</span>';
       parcelHoverCardEl.setAttribute('aria-hidden', 'false');
+      parcelHoverSize = null;
       parcelHoverCardEl.classList.add('is-visible');
       positionParcelHoverCard(event);
     }
@@ -4269,6 +4275,7 @@ function nudgeSelectedVertex(latStep, lngStep) {
     }
 
     if (stageEl) {
+      if (typeof ResizeObserver !== 'undefined') new ResizeObserver(function () { parcelHoverSize = null; }).observe(stageEl);
       stageEl.addEventListener('pointermove', rememberParcelPointer, true);
       stageEl.addEventListener('pointermove', updateFakeCursor, true);
       stageEl.addEventListener('mousemove', updateFakeCursor, true);

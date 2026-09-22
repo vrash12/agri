@@ -602,6 +602,9 @@ The Backup Folder is a protected document repository. It is not an automatic dat
 
 ## 20. Concurrent-user and performance features
 
+- Parcel hover cards reuse their measured size and move once per animation frame, without background blur or unnecessary geometry scans for stored areas.
+- Geofence overview uses one polygon per component; extra contrast outlines return when zoomed in or a municipality is selected. Original boundaries remain exact.
+
 - Per-account request synchronization for state-changing operations.
 - Shared record locks when two staff members try to change the same record.
 - Municipality-level locks for boundary and parcel mutations.

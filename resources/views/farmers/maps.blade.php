@@ -1841,7 +1841,6 @@
     color: #14251b;
     background: rgba(255, 255, 255, .97);
     box-shadow: 0 12px 30px rgba(12, 36, 21, .22);
-    backdrop-filter: blur(10px);
     pointer-events: none;
     opacity: 0;
     transform: translateY(5px);

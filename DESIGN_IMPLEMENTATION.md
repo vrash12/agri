@@ -1,5 +1,9 @@
 # Design and UX implementation record
 
+## Map hover and overview — September 22, 2026
+
+The parcel hover card retains its nearly opaque white background and shadow but removes backdrop blur, caches dimensions and moves with CSS translation. Municipality overview removes the duplicate pale casing below zoom 13; selection and close inspection retain it. Source coordinates, stored colors and opacity are preserved. Regression checks pass; actual Google Maps frame timing and production visual review remain unverified. See `docs/MAP_HOVER_PERFORMANCE.md` for release status.
+
 ## Map labels and Baguio barangays — September 21, 2026
 
 The Farmers parcel map and Municipality geofences now provide a Map labels

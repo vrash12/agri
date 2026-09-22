@@ -35,6 +35,33 @@ function ring(offset = 0) {
   });
 }
 
+test('hover motion batches pointer events and measures the card only when its content changes', () => {
+  const frames = [];
+  let reads = 0;
+  const card = {style: {}, classList: {contains: () => true, add() {}}, setAttribute() {},
+    get offsetWidth() {reads++; return 250;}, get offsetHeight() {reads++; return 110;}};
+  const context = vm.createContext({
+    window: {requestAnimationFrame: callback => {frames.push(callback); return frames.length;}},
+    parcelHoverCardEl: card, parcelHoverSize: null, parcelHoverPositionFrame: null, lastParcelPointer: null,
+    stageEl: {getBoundingClientRect: () => ({left: 0, top: 0, width: 800, height: 600})},
+    plotMode: false, parcelHoverHideTimer: null, farmersById: new Map(), dataById: new Map(),
+    normalizePolygonRing: () => {throw new Error('Stored areas must not scan geometry on hover');},
+    escapeHtml: String, formatName: () => 'Synthetic farmer', cropCaption: () => '',
+  });
+  vm.runInContext(['rememberParcelPointer', 'positionParcelHoverCard', 'showParcelHoverCard'].map(declaration).join('\n'), context);
+  for (let i = 0; i < 100; i++) context.positionParcelHoverCard({clientX: i, clientY: i});
+  assert.equal(frames.length, 1);
+  frames.shift()();
+  assert.equal(card.style.translate, '115px 115px');
+  assert.equal(reads, 2);
+  context.positionParcelHoverCard({clientX: 790, clientY: 590}); frames.shift()();
+  assert.equal(card.style.translate, '524px 464px', 'Card flips inside the map near its edges');
+  assert.equal(reads, 2);
+  context.showParcelHoverCard(1, {id: 1, area_ha: 4.5}, {clientX: 10, clientY: 10}); frames.shift()();
+  assert.match(card.innerHTML, /4.50 ha/);
+  assert.equal(reads, 4, 'New content is measured again');
+});
+
 function harness(plots = []) {
   const metrics = { constructed: 0, frames: 0, mounts: 0, clears: 0 };
   const mounted = new Set();

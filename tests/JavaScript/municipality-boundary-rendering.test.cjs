@@ -198,6 +198,20 @@ function payload(item, parcels = []) {
   };
 }
 
+test('overview omits duplicate outlines and close zoom restores casing without changing coordinates', () => {
+  const item = boundary(1);
+  const snapshot = JSON.stringify(item.geojson);
+  const view = workspace([item]);
+  view.flushFrames();
+  assert.equal(view.polygons.filter(p => p.map).length, 1);
+  view.pan(bounds(14, 119, 16, 122), 13);
+  assert.equal(view.polygons.filter(p => p.map).length, 2);
+  assert.ok(view.polygons.filter(p => p.map).every(p => p.paths[0].length === 5));
+  view.pan(bounds(14, 119, 16, 122), 10);
+  assert.equal(view.polygons.filter(p => p.map).length, 1);
+  assert.equal(JSON.stringify(item.geojson), snapshot);
+});
+
 test('map labels become available after map initialization and switch hybrid imagery without labels', () => {
   const template = fs.readFileSync(path.join(__dirname, '../../resources/views/municipality_boundaries/index.blade.php'), 'utf8');
   assert.match(template, /<button\b[^>]*type="button"[^>]*id="toggleMunicipalityMapLabels"[^>]*aria-pressed="true"[^>]*disabled>Map labels: On<\/button>/);
@@ -271,7 +285,7 @@ test('panning off screen detaches boundaries and returning reuses their polygons
   const view = workspace([boundary(1), boundary(2)]);
   view.flushFrames();
   const count = view.polygons.length;
-  assert.equal(count, 4, 'Each visible boundary has one outline and one colored polygon');
+  assert.equal(count, 2, 'Overview uses one interactive polygon per boundary');
   view.pan(bounds(20, 125, 21, 126));
   assert.equal(view.polygons.filter(item => item.map).length, 0);
   view.pan(bounds(14.9, 120, 15.1, 120.2));
@@ -322,7 +336,7 @@ test('fit covers source boundaries even when they have been culled from the view
   const view = workspace([first, last]);
   view.flushFrames();
   view.pan(bounds(14.9, 119.9, 15.1, 120.1));
-  assert.equal(view.polygons.filter(item => item.map).length, 2);
+  assert.equal(view.polygons.filter(item => item.map).length, 1);
   view.element('fitVisible').dispatch('click');
   const fit = view.maps[0].fits.at(-1).bounds;
   assert.equal(fit.south, 15); assert.equal(fit.west, 120);

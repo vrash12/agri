@@ -129,10 +129,11 @@
   function drawBoundary(boundary) {
     const fills = [];
     const style = boundaryStyle(boundary);
+    const detailed = !!state.selectedMunicipality || state.map.getZoom() >= 13;
     const overlays = geometryPolygons(boundary.geojson).flatMap(polygon => {
       const paths = googlePaths(polygon);
       // A pale casing keeps dark saved colors visible over satellite terrain.
-      const outline = new google.maps.Polygon({
+      const outline = detailed ? new google.maps.Polygon({
         paths,
         strokeColor: '#FFF8D6',
         strokeOpacity: 1,
@@ -140,8 +141,8 @@
         fillOpacity: 0,
         clickable: false,
         zIndex: boundary.status === 'active' ? 1.9 : .9,
-      });
-      outline.setMap(state.map);
+      }) : null;
+      if (outline) outline.setMap(state.map);
       const overlay = new google.maps.Polygon({
         paths,
         strokeColor: style.color,
@@ -161,9 +162,10 @@
         loadMunicipality(boundary.municipality_id, boundary.id);
       });
       fills.push(overlay);
-      return [outline, overlay];
+      return detailed ? [outline, overlay] : [overlay];
     });
     state.boundaryOverlays.set(String(boundary.id), overlays);
+    overlays.detailed = detailed;
     state.boundaryFills.set(String(boundary.id), {overlays: fills, boundary});
 
     const labelPosition = appearance.labelPosition(boundary);
@@ -249,6 +251,10 @@
         || (bounds.east >= southWest.lng() - lngMargin && bounds.west <= northEast.lng() + lngMargin));
     });
     const wanted = new Set(visible.map(boundary => String(boundary.id)));
+    visible.forEach(boundary => {
+      const overlays = state.boundaryOverlays.get(String(boundary.id));
+      if (overlays && overlays.detailed !== (!!state.selectedMunicipality || state.map.getZoom() >= 13)) removeBoundary(boundary.id);
+    });
     state.boundaryOverlays.forEach((overlays, id) => setBoundaryVisible(id, wanted.has(id)));
     const pending = visible.filter(boundary => !state.boundaryOverlays.has(String(boundary.id)));
     let index = 0;
