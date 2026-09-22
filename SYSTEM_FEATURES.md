@@ -693,3 +693,5 @@ The read-only satellite map loads one owned parcel at a time. The portal has mob
 ### Map label visibility
 
 Farmers and Municipality geofences offer a Map labels: On/Off button to hide Google's place and road labels and show satellite imagery. Parcels, geofences and AgriGOV municipality names remain visible. Labels start on when reopening the page. Deployed to Hostinger September 21, 2026 in `a751355`; see docs/MAP_LABEL_VISIBILITY.md.
+
+CALABARZON reference coverage is prepared locally: 142 municipality/city geofences across Batangas, Cavite, Laguna, Quezon, Rizal and the separate Lucena City scope. Run the explicit transaction-backed `CalabarzonBoundarySeeder` only after a verified backup; it preserves existing workspaces, styles and operational data and stops on conflicts. The explicit `region-access:configure --owner=<id> --region=region4a` command links the five provinces and separate Lucena City scope without changing other regions or issuing accounts. Source attribution, water-inclusive Cavinti and Noveleta area conventions, validation and pending deployment are documented in [docs/CALABARZON_BOUNDARY_SOURCES.md](docs/CALABARZON_BOUNDARY_SOURCES.md).

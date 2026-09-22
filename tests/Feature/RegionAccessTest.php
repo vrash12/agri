@@ -232,6 +232,44 @@ class RegionAccessTest extends TestCase
         $this->assertSame(2, Region::count());
     }
 
+    public function test_calabarzon_can_be_configured_independently_without_changing_other_regions(): void
+    {
+        foreach ([...RegionSupervision::CALABARZON['provinces'], ...RegionSupervision::CALABARZON['cities']] as $name) {
+            Province::create(['name' => $name, 'is_active' => true]);
+        }
+        $existing = $this->province->fresh()->getAttributes();
+        $users = User::all()->toJson();
+        $service = app(RegionSupervision::class);
+        $regions = $service->configure($this->owner, 'region4a');
+        $this->assertCount(1, $regions);
+        $this->assertSame('region4a', $regions->sole()->code);
+        $this->assertCount(6, $regions->sole()->provinces);
+        $this->assertSame($existing, $this->province->fresh()->getAttributes());
+        $this->assertSame($users, User::all()->toJson());
+        $audits = AuditLog::count();
+        $service->configure($this->owner, 'region4a');
+        $this->assertSame($audits, AuditLog::count());
+    }
+
+    public function test_calabarzon_conflict_rolls_back_and_unknown_region_is_rejected(): void
+    {
+        foreach ([...RegionSupervision::CALABARZON['provinces'], ...RegionSupervision::CALABARZON['cities']] as $name) {
+            Province::create(['name' => $name, 'is_active' => true,
+                'region_id' => $name === 'Lucena City' ? $this->otherRegion->id : null]);
+        }
+        $before = Province::all()->toJson();
+        foreach (['region4a', 'unknown-region'] as $code) {
+            try {
+                app(RegionSupervision::class)->configure($this->owner, $code);
+                $this->fail('Invalid configuration must fail.');
+            } catch (\RuntimeException $exception) {
+                $this->assertNotEmpty($exception->getMessage());
+            }
+            $this->assertSame($before, Province::all()->toJson());
+            $this->assertSame(2, Region::count());
+        }
+    }
+
     public function test_migration_rollback_disables_regional_identities(): void
     {
         (require database_path('migrations/2026_09_21_000100_add_region_supervision.php'))->down();

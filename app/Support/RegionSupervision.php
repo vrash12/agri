@@ -18,18 +18,27 @@ final class RegionSupervision
         'negros-island' => ['name' => 'Negros Island Region', 'provinces' => ['Negros Occidental', 'Negros Oriental', 'Siquijor'], 'cities' => ['Bacolod City']],
     ];
 
+    public const CALABARZON = ['name' => 'Region IV-A — CALABARZON', 'provinces' => ['Cavite', 'Laguna', 'Batangas', 'Rizal', 'Quezon'], 'cities' => ['Lucena City']];
+
     public function __construct(private ConcurrentWrite $writes)
     {
     }
 
     /** @return Collection<int, Region> */
-    public function configure(User $owner): Collection
+    public function configure(User $owner, ?string $regionCode = null): Collection
     {
-        return $this->writes->transaction(function () use ($owner): Collection {
+        // Preserve the original command's scope; new regions require an explicit selection.
+        $available = self::GROUPS + ['region4a' => self::CALABARZON];
+        if ($regionCode !== null && ! isset($available[$regionCode])) {
+            throw new RuntimeException('Unknown region supervision code: '.$regionCode);
+        }
+        $groups = $regionCode === null ? self::GROUPS : [$regionCode => $available[$regionCode]];
+
+        return $this->writes->transaction(function () use ($owner, $groups): Collection {
             $actor = User::query()->lockForUpdate()->findOrFail($owner->id);
             abort_unless($actor->isSystemOwner() && $actor->hasUsableScope(), 403);
             $regions = collect();
-            foreach (self::GROUPS as $code => $group) {
+            foreach ($groups as $code => $group) {
                 $region = Region::query()->where('code', $code)->lockForUpdate()->first();
                 if ($region && (! $region->is_active || $region->name !== $group['name'])) {
                     throw new RuntimeException('The region conflicts with the requested active scope: '.$code);
