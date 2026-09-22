@@ -10,6 +10,7 @@ use App\Models\Municipality;
 use App\Models\Province;
 use App\Models\User;
 use App\Support\AuditTrail;
+use App\Support\FarmerCardLocations;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
@@ -270,6 +271,50 @@ class ProvinceReportingScopeTest extends TestCase
     private function log(?int $provinceId, ?int $municipalityId, string $description, string $module = 'Farmers'): AuditLog
     {
         return AuditLog::create(['province_id' => $provinceId, 'municipality_id' => $municipalityId, 'event' => 'created', 'module' => $module, 'description' => $description, 'user_id' => $provinceId === $this->benguet->id ? $this->admin->id : 999, 'actor_name' => $module.' actor']);
+    }
+
+    public function test_card_uses_distinct_parcel_addresses_and_never_residence(): void
+    {
+        $farmer = Farmer::withoutEvents(fn () => Farmer::create(['municipality_id' => $this->own->id, 'first_name' => 'Example', 'farm_location' => 'Residence only']));
+        $locations = app(FarmerCardLocations::class);
+        $this->assertSame('Parcel address not recorded', $locations->forFarmer($farmer));
+        foreach ([['Field A', 'active', $this->own->id], [' field   a ', 'active', $this->own->id], ['Field B', 'outside_lgu', $this->own->id], ['Hidden', 'delisted', $this->own->id], ['Foreign', 'active', $this->foreign->id]] as $index => [$address, $status, $municipality]) {
+            FarmerRegistrySourceRow::create([
+                'farmer_id' => $farmer->id, 'municipality_id' => $municipality,
+                'source_file_sha256' => str_repeat('a', 64), 'source_sheet' => 'PARCEL LISTING',
+                'source_row' => $index + 2, 'record_status' => $status,
+                'payload' => ['FARMER ADDRESS 1' => 'Residence only', 'PARCEL ADDRESS 1' => $address, 'PARCEL ADDRESS 2' => 'Example Town', 'PARCEL ADDRESS 3' => 'Example Province'],
+            ]);
+        }
+        $this->assertSame('Field A, Example Town, Example Province / Field B, Example Town, Example Province', $locations->forFarmer($farmer));
+        $this->actingAs($this->admin);
+        $farmer->public_map_token = str_repeat('a', 40);
+        $farmer->saveQuietly();
+        $this->get(route('farmers.id-card', $farmer))->assertOk()
+            ->assertSee('Field A, Example Town, Example Province / Field B, Example Town, Example Province')
+            ->assertSee('Registry municipality')->assertDontSee('Residence only');
+        $this->assertSame('', FarmerCardLocations::fromPayload(['FARMER ADDRESS 1' => 'Residence', 'PARCEL ADDRESS 1' => 'null']));
+    }
+
+    public function test_card_rejects_foreign_and_veterinary_access(): void
+    {
+        $farmer = Farmer::withoutEvents(fn () => Farmer::create(['municipality_id' => $this->own->id, 'first_name' => 'Private farmer', 'public_map_token' => str_repeat('b', 40)]));
+        $foreignAdmin = $this->user(User::ROLE_SUPER_ADMIN, $this->tarlac->id, 'Foreign admin');
+        $this->actingAs($foreignAdmin)->get(route('farmers.id-card', $farmer))->assertForbidden()->assertDontSee('Private farmer');
+        $vet = $this->user(User::ROLE_PROVINCIAL_VET, $this->benguet->id, 'Veterinarian');
+        $this->actingAs($vet)->getJson(route('farmers.id-card', $farmer))->assertForbidden()->assertDontSee('Private farmer');
+    }
+
+    public function test_card_locations_handle_missing_source_table_and_incomplete_addresses(): void
+    {
+        $this->assertSame('Sitio Uno, Example Province', FarmerCardLocations::fromPayload([
+            'PARCEL ADDRESS 1' => " Sitio\n Uno ", 'PARCEL ADDRESS 2' => 'N/A', 'PARCEL ADDRESS 3' => 'Example Province',
+        ]));
+        $this->assertSame('', FarmerCardLocations::fromPayload([
+            'PARCEL ADDRESS 1' => ['invalid'], 'PARCEL ADDRESS 2' => 'unknown', 'PARCEL ADDRESS 3' => '-',
+        ]));
+        Schema::drop('farmer_registry_source_rows');
+        $this->assertSame('Parcel address not recorded', app(FarmerCardLocations::class)->forFarmer(new Farmer));
     }
 
     private function schema(): void

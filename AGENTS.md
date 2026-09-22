@@ -16,6 +16,8 @@ The current interface implementation and outstanding verification are recorded i
 
 ## Application branding
 
+Farmer registry cards use `FarmerCardLocations` to join distinct non-delisted, same-municipality imported `PARCEL ADDRESS 1–3` values with ` / `. Residence fields and mapped-plot names are never substituted for parcel addresses. Missing addresses are explicitly labeled. The front shows the registry municipality separately; the back and PNG/digital rendering wrap parcel addresses. The full address list is also printed on the sheet; oversized card text explicitly refers to that list, and oversized digital/PNG backs fail with guidance instead of dropping addresses. No new parcel-address geocoding or database mutation is performed. See `docs/FARMER_CARD_PARCEL_ADDRESSES.md` for checks and deployment status.
+
 AgriGOV is the application identity. Use `<x-brand />` for the integrated wordmark and `<x-brand compact />` for the square emblem. Standalone pages include `partials.branding-head`; the shared layout handles authenticated modules. Keep agency seals and registry identifiers distinct from application branding. Assets and deployment requirements are recorded in `docs/AGRIGOV_BRANDING.md`.
 
 ## Senior developer mandate

@@ -10,6 +10,7 @@ use App\Models\MunicipalityBoundary;
 use App\Models\RiceSeedDistribution;
 use App\Models\User;
 use App\Support\ConcurrentWrite;
+use App\Support\FarmerCardLocations;
 use App\Support\FarmerDataQuality;
 use App\Support\FarmerPicker;
 use App\Support\GeoGeometry;
@@ -378,7 +379,7 @@ class FarmerController extends Controller
     /**
      * Display one farmer's printable local registry card.
      */
-    public function idCard(Request $request, Farmer $farmer)
+    public function idCard(Request $request, Farmer $farmer, FarmerCardLocations $cardLocations)
     {
         $this->authorize('view', $farmer);
         $user = $this->authenticatedUser($request);
@@ -399,9 +400,12 @@ class FarmerController extends Controller
             ->setMargin(12);
         $qrDataUri = (new SvgWriter())->write($qrCode)->getDataUri();
 
+        $cardFarmLocation = $cardLocations->forFarmer($farmer);
+
         return view('farmers.id-card', compact(
             'farmer',
             'scanUrl',
+            'cardFarmLocation',
             'qrDataUri'
         ));
     }
