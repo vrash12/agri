@@ -146,8 +146,8 @@ Implementation status and remaining staff/staging checks are documented in [DESI
 ## 5. Farmer registry
 
 - Create, view, edit, search, filter, paginate, and delete farmer profiles.
-- Guided Region → Province or independent city → Municipality workspace selection. Assigned regional/provincial steps are fixed; municipal users open their municipality directly.
-- Region and province selection pages load only workspace choices. Farmer records, totals and parcel-map boundaries load after choosing a municipality. Existing municipality bookmarks still work.
+- Guided Region → Municipality workspace selection. Municipalities are grouped by province for recognition, while the chooser skips a separate province step. Assigned regional/provincial scopes remain fixed; municipal users open their municipality directly.
+- Region and municipality selection pages load only workspace choices. Farmer records, totals and parcel-map boundaries load after choosing a municipality. Existing municipality bookmarks still work.
 - Municipality-specific registry totals and map data.
 - Filtering by municipality, gender, mapping status, missing FFRS, and missing farm location.
 - Registry-only filters that do not unexpectedly remove other municipality parcels from the shared map.

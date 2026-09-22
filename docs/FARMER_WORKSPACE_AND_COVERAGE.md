@@ -1,10 +1,10 @@
 # Farmer workspace hierarchy and coverage statistics
 
-Status: implemented and locally verified September 22, 2026. Production installation is pending; the previous Hostinger SSH attempt rejected authentication. No accounts, geographic assignments, boundary coordinates or operational data were changed.
+Status: implemented and locally verified September 23, 2026. Production installation is pending; the previous Hostinger SSH attempt rejected authentication. No accounts, geographic assignments, boundary coordinates or operational data were changed.
 
 ## Farmer workspace
 
-The System Owner first selects a region, then a province or independent city, then a municipality. Regional Heads keep their assigned region; provincial accounts keep their province; municipal accounts open directly. Only available authorized steps appear. Native GET forms and Next/Open buttons work without JavaScript; the small `farmer-workspace.js` script adds automatic progression and preserves the current registry/map destination. Changing a parent submits no stale children. Registry filters are carried through selection.
+The System Owner first selects a region, then a municipality. Municipality options are grouped by province or independent city for recognition without adding another required step. Regional Heads keep their assigned region; provincial accounts keep their province; municipal accounts open directly. Only available authorized steps appear. Native GET forms and Next/Open buttons work without JavaScript; the small `farmer-workspace.js` script adds automatic progression and preserves the current registry/map destination. Changing a parent submits no stale children. Registry filters are carried through selection.
 
 `FarmerWorkspace` validates all supplied choices against active `MunicipalityAccess` results and checks parent/child consistency. A bookmarked `municipality_id` derives its province and region. Provinces without configured regional membership remain in the explicit “Region not assigned” group; the chooser does not guess or alter geography. Separate city scopes remain separate from surrounding provinces.
 
@@ -24,9 +24,9 @@ No differently measured quantities are added together. Empty denominators render
 ## Verification
 
 - 65 focused PHP tests / 591 assertions: `FarmerWorkspaceHierarchyTest`, `DashboardCoverageTest`, `FarmerWorkspacePresentationTest`, `DashboardPresentationTest`, `ProvinceReportingScopeTest`, and `MunicipalityGeofenceTest`.
-- Coverage includes valid selections, region/province/municipality isolation, malformed and mismatched IDs, inactive scopes, independent cities, unassigned regions, preserved bookmarks and filters, unavailable modules, empty denominators, repeat beneficiaries, cross-municipality links, reporting years, and constant query counts.
+- Coverage includes valid selections, region/municipality isolation, malformed and mismatched IDs, inactive scopes, independent cities, unassigned regions, preserved bookmarks and filters, unavailable modules, empty denominators, repeat beneficiaries, cross-municipality links, reporting years, and constant query counts.
 - Early chooser tests intentionally provide no operational tables; any premature records query fails.
-- Local browser preview uses synthetic in-memory fixtures. Verified initial region-only state, province reveal, municipality reveal, dashboard figures, and 390px layout with no horizontal overflow. It does not verify live production data.
+- Local browser preview uses synthetic in-memory fixtures. Verified initial region-only state, municipality reveal, dashboard figures, and 390px layout with no horizontal overflow. It does not verify live production data.
 - Pint, PHP/JavaScript syntax, route registration, Blade compilation and whitespace checks pass.
 
 ## Deployment

@@ -1,10 +1,10 @@
 # Design and UX implementation record
 
-## Farmer workspace hierarchy and coverage figures — September 22, 2026
+## Farmer workspace chooser and coverage figures — September 23, 2026
 
-Farmers now opens a progressive workspace chooser for oversight and provincial accounts, showing only available steps with native labels, 44px controls, explicit Next/Open actions and automatic selection navigation. Fixed assignments remain visible and direct municipality links retain their destination. Parent changes clear child choices. No farmer records or geometry are loaded during region/province selection. The dashboard adds a compact six-figure assistance/geofence panel beneath the reporting-year control, with definitions and review links. Existing design tokens are reused.
+Farmers now opens a progressive workspace chooser for oversight and provincial accounts, showing a simple Region → Municipality path with municipality options grouped by province, native 44px controls, explicit Next/Open actions and automatic selection navigation. Fixed assignments remain visible and direct municipality links retain their destination. Parent changes clear child choices. No farmer records or geometry are loaded during region/municipality selection. The dashboard adds a compact six-figure assistance/geofence panel beneath the reporting-year control, with definitions and review links. Existing design tokens are reused.
 
-Local synthetic browser checks verified region/province progression at desktop size and responsive wrapping at 390px with no horizontal overflow; 65 focused PHP tests pass. Hostinger installation is pending the existing SSH connection blocker. See `docs/FARMER_WORKSPACE_AND_COVERAGE.md`.
+Local synthetic browser checks verified region/municipality progression at desktop size and responsive wrapping at 390px with no horizontal overflow; 65 focused PHP tests pass. Hostinger installation is pending the existing SSH connection blocker. See `docs/FARMER_WORKSPACE_AND_COVERAGE.md`.
 
 ## Map hover and overview — September 22, 2026
 

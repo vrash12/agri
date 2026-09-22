@@ -62,23 +62,25 @@ class FarmerWorkspaceHierarchyTest extends TestCase
             $html = $view->render();
             $xpath = $this->xpath($html);
             $this->assertSame(1, $xpath->query('//select[@id="workspaceRegion"]')->length);
-            $this->assertSame($step >= 1 ? 1 : 0, $xpath->query('//select[@id="workspaceProvince"]')->length);
-            $this->assertSame($step >= 2 ? 1 : 0, $xpath->query('//select[@id="workspaceMunicipality"]')->length);
+            $this->assertSame(0, $xpath->query('//select[@id="workspaceProvince"]')->length);
+            $this->assertSame($step >= 1 ? 1 : 0, $xpath->query('//select[@id="workspaceMunicipality"]')->length);
             $this->assertStringNotContainsString('window.__municipalityGeofences', $html);
             $this->assertStringNotContainsString('id="farmersTable"', $html);
         }
     }
 
-    public function test_region_choices_include_separate_city_scopes_and_province_choices_limit_municipalities(): void
+    public function test_region_choices_include_separate_city_scopes_and_all_municipalities_in_the_region(): void
     {
         $user = $this->user(User::ROLE_SYSTEM_OWNER);
         $data = $this->resolve($user, ['region_id' => '1']);
         $this->assertSame([2, 1], $data['workspaceProvinces']->pluck('id')->all());
-        $this->assertCount(0, $data['municipalities']);
+        $this->assertSame([1, 2], $data['municipalities']->pluck('id')->all());
         $data = $this->resolve($user, ['province_id' => '2']);
         $this->assertSame('1', $data['workspaceRegionId']);
-        $this->assertSame([2], $data['municipalities']->pluck('id')->all());
+        $this->assertSame([1, 2], $data['municipalities']->pluck('id')->all());
         $this->assertNull($data['selectedMunicipality']);
+        $data = $this->resolve($user, ['region_id' => '1', 'municipality_id' => '2']);
+        $this->assertSame(2, $data['selectedMunicipality']->id);
     }
 
     public function test_municipality_bookmarks_restore_the_hierarchy_and_unassigned_regions_remain_reachable(): void
@@ -96,6 +98,7 @@ class FarmerWorkspaceHierarchyTest extends TestCase
         $data = $this->resolve($regional);
         $this->assertSame('1', $data['workspaceRegionId']);
         $this->assertSame(['1'], $data['workspaceRegions']->pluck('id')->all());
+        $this->assertSame([1, 2], $data['municipalities']->pluck('id')->all());
         $provincial = $this->user(User::ROLE_SUPER_ADMIN, ['province_id' => 1]);
         $data = $this->resolve($provincial);
         $this->assertSame(1, $data['workspaceProvince']->id);
@@ -111,7 +114,7 @@ class FarmerWorkspaceHierarchyTest extends TestCase
     public function test_invalid_mismatched_and_inactive_choices_are_rejected(): void
     {
         $owner = $this->user(User::ROLE_SYSTEM_OWNER);
-        foreach ([['region_id' => ['1']], ['province_id' => 'bad'], ['municipality_id' => '999'], ['region_id' => '2', 'province_id' => '1'], ['province_id' => '2', 'municipality_id' => '1']] as $input) {
+        foreach ([['region_id' => ['1']], ['province_id' => 'bad'], ['municipality_id' => '999'], ['region_id' => '2', 'province_id' => '1'], ['province_id' => '2', 'municipality_id' => '1'], ['region_id' => '1', 'municipality_id' => '3']] as $input) {
             $this->assertRejected($owner, $input);
         }
         DB::table('municipalities')->where('id', 3)->update(['is_active' => false]);
@@ -123,12 +126,13 @@ class FarmerWorkspaceHierarchyTest extends TestCase
     public function test_stage_forms_preserve_registry_filters_and_do_not_submit_stale_children(): void
     {
         $user = $this->user(User::ROLE_SYSTEM_OWNER);
-        $request = $this->request($user, ['region_id' => '1', 'province_id' => '1', 'q' => 'Rice Grower', 'quality' => 'missing_ffrs']);
+        $request = $this->request($user, ['region_id' => '1', 'q' => 'Rice Grower', 'quality' => 'missing_ffrs']);
         $view = app(FarmerController::class)->index($request, app(FarmerWorkspace::class));
         $xpath = $this->xpath($view->render());
-        $this->assertSame(3, $xpath->query('//form/input[@name="q" and @value="Rice Grower"]')->length);
-        $this->assertSame(0, $xpath->query('//form[.//select[@id="workspaceRegion"]]//*[@name="province_id" or @name="municipality_id"]')->length);
-        $this->assertSame(0, $xpath->query('//form[.//select[@id="workspaceProvince"]]//*[@name="municipality_id"]')->length);
+        $this->assertGreaterThanOrEqual(1, $xpath->query('//form/input[@name="q" and @value="Rice Grower"]')->length);
+        $this->assertSame(0, $xpath->query('//form[.//select[@id="workspaceRegion"]]//*[@name="province_id"]')->length);
+        $this->assertSame(0, $xpath->query('//select[@id="workspaceProvince"]')->length);
+        $this->assertSame(0, $xpath->query('//form[.//select[@id="workspaceRegion"]]//*[@name="municipality_id"]')->length);
         $this->assertSame(0, $xpath->query('//select[@disabled]')->length, 'Every visible step also works without JavaScript');
     }
 
