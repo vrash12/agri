@@ -11,6 +11,7 @@ use App\Models\FarmPlot;
 use App\Models\Municipality;
 use App\Models\RiceSeedDistribution;
 use App\Models\User;
+use App\Support\DashboardCoverage;
 use App\Support\DashboardMetrics;
 use App\Support\FarmerDataQuality;
 use App\Support\MunicipalityAccess;
@@ -21,7 +22,8 @@ class DashboardController extends Controller
 {
     public function __construct(
         private MunicipalityAccess $municipalityAccess,
-        private DashboardMetrics $metrics
+        private DashboardMetrics $metrics,
+        private DashboardCoverage $coverage
     ) {
         $this->middleware('auth');
     }
@@ -452,10 +454,16 @@ class DashboardController extends Controller
             'municipality_comparison' => $this->metrics->municipalityComparison($user, $reportYear),
         ];
 
+        $coverageStats = [
+            'assistance' => $this->coverage->assistance($user, $reportYear),
+            'geofences' => $this->coverage->geofences($user),
+        ];
+
         return view('dashboard', compact(
             'stats',
             'charts',
             'dashboardMetrics',
+            'coverageStats',
             'recentRecipients',
             'recentVaccinations',
             'recentPlots',

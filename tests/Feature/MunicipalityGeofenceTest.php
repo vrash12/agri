@@ -79,6 +79,11 @@ class MunicipalityGeofenceTest extends TestCase
         Schema::table('farmers', fn (Blueprint $table) => $table->string('gender')->nullable());
         $position = app(\App\Support\GeoGeometry::class)->labelPosition($after->geojson);
         $this->get(route('farmers.index'))->assertOk()->assertViewHas('mapMunicipalityBoundaries', fn ($rows) => $rows->first()['color'] === '#FFFFFF' && $rows->first()['fill_opacity'] === 0.0 && $rows->first()['label_position'] === $position);
+        $this->actingAs($this->superAdmin)->get(route('farmers.index', ['municipality_id' => $this->first->id]))
+            ->assertOk()->assertViewIs('farmers.index')
+            ->assertViewHas('mapMunicipalityBoundaries', fn ($rows) => $rows->count() === 1 && $rows->first()['municipality_id'] === $this->first->id)
+            ->assertSee('Showing '.$this->first->name)->assertSee('farmer-workspace.js');
+        $this->get(route('farmers.index'))->assertOk()->assertViewIs('farmers.workspace')->assertDontSee('id="farmersTable"', false);
         $this->getJson(route('municipality-boundaries.data', ['municipality_id' => $this->first->id]))->assertJsonFragment(['label_position' => $position]);
         $this->assertTrue(DB::table('audit_logs')->where('event', 'updated')->where('metadata', 'like', '%map_style%')->exists());
     }

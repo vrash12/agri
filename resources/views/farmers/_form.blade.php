@@ -228,7 +228,7 @@
 
     <section class="farmer-submit-card">
       <button class="module-button module-button-primary" type="submit">{{ $buttonText ?? 'Save farmer' }}</button>
-      <a class="module-button" href="{{ route('farmers.index') }}">Cancel</a>
+      <a class="module-button" href="{{ route('farmers.index', ['municipality_id' => data_get($r, 'municipality_id')]) }}">Cancel</a>
     </section>
 
 </div>

@@ -1,5 +1,11 @@
 # Design and UX implementation record
 
+## Farmer workspace hierarchy and coverage figures — September 22, 2026
+
+Farmers now opens a progressive workspace chooser for oversight and provincial accounts, showing only available steps with native labels, 44px controls, explicit Next/Open actions and automatic selection navigation. Fixed assignments remain visible and direct municipality links retain their destination. Parent changes clear child choices. No farmer records or geometry are loaded during region/province selection. The dashboard adds a compact six-figure assistance/geofence panel beneath the reporting-year control, with definitions and review links. Existing design tokens are reused.
+
+Local synthetic browser checks verified region/province progression at desktop size and responsive wrapping at 390px with no horizontal overflow; 65 focused PHP tests pass. Hostinger installation is pending the existing SSH connection blocker. See `docs/FARMER_WORKSPACE_AND_COVERAGE.md`.
+
 ## Map hover and overview — September 22, 2026
 
 The parcel hover card retains its nearly opaque white background and shadow but removes backdrop blur, caches dimensions and moves with CSS translation. Municipality overview removes the duplicate pale casing below zoom 13; selection and close inspection retain it. Source coordinates, stored colors and opacity are preserved. Regression checks pass; actual Google Maps frame timing and production visual review remain unverified. See `docs/MAP_HOVER_PERFORMANCE.md` for release status.

@@ -61,6 +61,18 @@
   .ops-section-heading h2 { margin: 4px 0 0; font-size: 18px; letter-spacing: -.02em; }
   .ops-section-heading > span { color: var(--ops-muted); font-size: 12px; }
   .ops-kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-top: -7px; }
+  .ops-coverage { margin: 0 20px 20px; border: 1px solid var(--ops-border); border-radius: 10px; overflow: hidden; }
+  .ops-coverage-heading, .ops-coverage-notes { padding: 16px; background: var(--ops-subtle); }
+  .ops-coverage h3 { margin: 0; font-size: 16px; }
+  .ops-coverage p { margin: 7px 0 0; color: var(--ops-muted); font-size: 12px; line-height: 1.6; }
+  .ops-coverage-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 225px), 1fr)); margin: 0; }
+  .ops-coverage-grid > div { padding: 16px; border-top: 1px solid var(--ops-border); }
+  .ops-coverage dt { color: var(--ops-muted); font-size: 12px; line-height: 1.5; }
+  .ops-coverage dd { margin: 8px 0 0; font-size: 25px; font-weight: 600; overflow-wrap: anywhere; }
+  .ops-coverage dd small { font-size: 14px; color: var(--ops-muted); }
+  .ops-coverage-notes { border-top: 1px solid var(--ops-border); }
+  .ops-coverage-notes p { margin-top: 0; }
+  .ops-coverage-links { display: flex; flex-wrap: wrap; gap: 12px 24px; margin-top: 12px; }
   .ops-kpi { display: flex; flex-direction: column; min-width: 0; padding: 21px; border: 1px solid var(--ops-border); border-radius: 12px; background: #fff; }
   .ops-kpi-top, .ops-kpi-value-row, .ops-kpi-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .ops-kpi-label { font-size: 12px; font-weight: 500; color: var(--ops-muted); }

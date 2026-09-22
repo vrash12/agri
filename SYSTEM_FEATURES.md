@@ -92,6 +92,11 @@ Implementation status and remaining staff/staging checks are documented in [DESI
 
 ### Municipal and provincial operations dashboard
 
+- Annual assistance reach: distinct registered farmers with a valid same-municipality release, farmers without such a recorded release, and the share of the current registry reached.
+- Releases requiring a valid farmer link and undated releases excluded from annual figures.
+- Current geofence coverage across active municipalities, with missing and conflicting active versions shown separately.
+- These figures appear under **Reports and office details → Program activity and equipment** and follow the account's authorized scope.
+
 - Registered farmer totals.
 - Farmer mapping coverage.
 - Mapped and unmapped farmer counts.
@@ -141,7 +146,8 @@ Implementation status and remaining staff/staging checks are documented in [DESI
 ## 5. Farmer registry
 
 - Create, view, edit, search, filter, paginate, and delete farmer profiles.
-- Municipality workspace selector for provincial users.
+- Guided Region → Province or independent city → Municipality workspace selection. Assigned regional/provincial steps are fixed; municipal users open their municipality directly.
+- Region and province selection pages load only workspace choices. Farmer records, totals and parcel-map boundaries load after choosing a municipality. Existing municipality bookmarks still work.
 - Municipality-specific registry totals and map data.
 - Filtering by municipality, gender, mapping status, missing FFRS, and missing farm location.
 - Registry-only filters that do not unexpectedly remove other municipality parcels from the shared map.

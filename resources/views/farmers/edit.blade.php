@@ -18,7 +18,7 @@
     <div class="module-actions">
       <a class="module-button" href="{{ route('farmers.id-card', $record) }}">View digital ID</a>
       <a class="module-button" href="{{ route('farmers.records', $record) }}">View history</a>
-      <a class="module-button" href="{{ route('farmers.index') }}">
+      <a class="module-button" href="{{ route('farmers.index', ['municipality_id' => $record->municipality_id]) }}">
         <svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
         Back to registry
       </a>

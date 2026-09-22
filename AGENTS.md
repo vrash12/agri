@@ -267,6 +267,10 @@ Deploy the additive `2026_09_20_000100_create_farmer_portal_accounts_table.php` 
 
 ## 4. Municipality isolation — non-negotiable rules
 
+The Farmers directory now uses `FarmerWorkspace` for a staged Region → Province/independent city → Municipality chooser. The System Owner begins at region; Regional Heads retain their assigned region; provincial accounts retain their province; municipal accounts open directly. Each stage narrows `MunicipalityAccess` choices and validates parent/child consistency. Until a municipality is chosen, `/farmers` returns the chooser without operational aggregates, farmer rows, or geometry. Existing municipality bookmarks still resolve their parents. Unassigned regions remain an explicit group without geographic reassignment. See `docs/FARMER_WORKSPACE_AND_COVERAGE.md` for deployment and tests.
+
+Dashboard `DashboardCoverage` aggregates annual assistance reach against the current registry using valid same-municipality farmer links, reports unlinked and undated releases separately, and counts active municipalities with exactly one, no, or multiple active geofences. Empty denominators and an uninstalled boundary module remain explicit unavailable states. Scope is applied before aggregation; query counts do not grow per municipality. Figures and definitions appear under the existing reporting-year control. These statistics do not establish program eligibility or unmet need.
+
 Operational ownership remains the numeric foreign key `municipality_id`, not the human-readable `farm_municipality` field. Province supervision uses `municipalities.province_id -> provinces.id` and `users.province_id` for provincial roles. The legacy municipality `province` string remains a display/compatibility field and must never decide access.
 
 - Only `system_owner` has global visibility. Null, inactive, missing, or unsupported scope fails closed.

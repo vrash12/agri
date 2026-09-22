@@ -13,6 +13,7 @@ use App\Support\ConcurrentWrite;
 use App\Support\FarmerCardLocations;
 use App\Support\FarmerDataQuality;
 use App\Support\FarmerPicker;
+use App\Support\FarmerWorkspace;
 use App\Support\GeoGeometry;
 use App\Support\MunicipalityAccess;
 use Endroid\QrCode\ErrorCorrectionLevel\ErrorCorrectionLevelMedium;
@@ -198,17 +199,17 @@ class FarmerController extends Controller
     /**
      * Display the farmer directory.
      */
-    public function index(Request $request)
+    public function index(Request $request, FarmerWorkspace $workspace)
     {
         $this->authorize('viewAny', Farmer::class);
         $q = $request->query('q');
         $user = $this->authenticatedUser($request);
-        $municipalities = $this->municipalityOptionsFor($user);
-        $selectedMunicipality = $this->resolveWorkspaceMunicipality(
-            $request,
-            $user,
-            $municipalities
-        );
+        $workspaceData = $workspace->resolve($request, $user);
+        $municipalities = $workspaceData['municipalities'];
+        $selectedMunicipality = $workspaceData['selectedMunicipality'];
+        if (! $selectedMunicipality) {
+            return view('farmers.workspace', $workspaceData);
+        }
         $workspaceMunicipalityId = $selectedMunicipality?->id;
 
         $perPage = (int) $request->query('per_page', 25);
@@ -373,7 +374,7 @@ class FarmerController extends Controller
             'mapAreaHa',
             'mapMunicipalityBoundaries',
             'canChooseMunicipality'
-        ));
+        ) + $workspaceData);
     }
 
     /**

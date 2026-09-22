@@ -370,8 +370,9 @@
             </select>
           </label>
           <button type="submit" class="ops-button ops-button-primary">Apply year</button>
-          <p id="dashboardReportYearHelp">Applies to monthly animal-health services, fingerling quantities, and production in the municipality comparison. Other program totals cover all recorded dates; machinery shows the current inventory.</p>
+          <p id="dashboardReportYearHelp">Applies to assistance reach, monthly animal-health services, fingerling quantities, and production in the municipality comparison. Other program totals cover all recorded dates; machinery and geofence coverage show current records.</p>
         </form>
+        @include('dashboard.partials.coverage')
         <div class="ops-metric-grid">
           @include('partials.dashboard-metric', [
             'metric' => $dashboardMetrics['farmers_by_municipality'],

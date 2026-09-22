@@ -40,7 +40,7 @@
       <a class="module-button" href="{{ route('farmers.id-card', $farmer) }}">View digital ID</a>
       <a class="module-button" href="{{ route('machinery-inventory.index', ['holder_type' => 'farmer', 'q' => $farmer->ffrs ?: $farmer->last_name]) }}">{{ number_format((int) ($machineryCount ?? 0)) }} machinery {{ Str::plural('asset', (int) ($machineryCount ?? 0)) }}</a>
       @if($canManageOperations)<a class="module-button" href="{{ route('farmers.edit', $farmer) }}">Edit profile</a>@endif
-      <a class="module-button" href="{{ route('farmers.index') }}">Back to registry</a>
+      <a class="module-button" href="{{ route('farmers.index', ['municipality_id' => $farmer->municipality_id]) }}">Back to registry</a>
       @if($canManageOperations)
       <a class="module-button module-button-primary" href="{{ route('rice-seed-distributions.create', ['farmer_id' => $farmer->id]) }}">
         <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
