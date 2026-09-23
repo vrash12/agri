@@ -34,4 +34,6 @@ Focused tests use an isolated SQLite in-memory database. Coverage includes owner
 
 No migration, dependency update or public asset change is required. Deploy through GitHub push followed by Hostinger `git pull --ff-only origin main`. Verify supported PHP, preserve server changes, take a private verified database backup, refresh application caches and run the preview before the explicit import. Compare every pre-existing row and all accounts/geofences afterward; verify all three workspaces and a zero-change rerun. Keep backup contents, environment values and connection credentials outside source control and responses.
 
-Status: implementation and verification in progress; live insertion has not yet been performed.
+## Verified live status — September 24, 2026
+
+The implementation was pushed through GitHub and installed on Hostinger with commit `55342117924467676865292570c4646f4b36515c`. A private verified backup was taken before the write (21 tables, 5,375,076 bytes; checksum retained privately). The live preview and apply completed for Bacarra, Narvacan and Bacnotan. Postflight preserved all 91 users and 818 geofences; the only operational additions were 12 farmers, 36 plots, 12 releases and three batches, plus the expected audit events and one owner-only receipt. A repeat `--apply` returned `unchanged`, and all 36 plots classified `inside` their active boundaries.
