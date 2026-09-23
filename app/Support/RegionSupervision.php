@@ -22,6 +22,8 @@ final class RegionSupervision
 
     public const MIMAROPA = ['name' => 'MIMAROPA Region', 'provinces' => ['Marinduque', 'Occidental Mindoro', 'Oriental Mindoro', 'Palawan', 'Romblon'], 'cities' => ['Puerto Princesa City']];
 
+    public const BICOL = ['name' => 'Region V — Bicol Region', 'provinces' => ['Albay', 'Camarines Norte', 'Camarines Sur', 'Catanduanes', 'Masbate', 'Sorsogon'], 'cities' => ['Naga City']];
+
     public function __construct(private ConcurrentWrite $writes)
     {
     }
@@ -30,7 +32,7 @@ final class RegionSupervision
     public function configure(User $owner, ?string $regionCode = null): Collection
     {
         // Preserve the original command's scope; new regions require an explicit selection.
-        $available = self::GROUPS + ['region4a' => self::CALABARZON, 'mimaropa' => self::MIMAROPA];
+        $available = self::GROUPS + ['region4a' => self::CALABARZON, 'mimaropa' => self::MIMAROPA, 'region5' => self::BICOL];
         if ($regionCode !== null && ! isset($available[$regionCode])) {
             throw new RuntimeException('Unknown region supervision code: '.$regionCode);
         }

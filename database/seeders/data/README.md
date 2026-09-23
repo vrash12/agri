@@ -315,3 +315,6 @@ Six pinned snapshots provide 73 planning references (6/11/15/23/1/17). The expli
 ## Baguio City barangay references
 
 `baguio_barangay_reference_boundaries.geojson` contains 129 read-only barangay polygons from James Faeldon's 2023 high-resolution extract at commit `8eeead560246863c8c820c31ca6fbca81a279477`, retaining source coordinates and adding interior labels. All 129 PSGC codes match PSA's Baguio list. Size: 86,645 bytes; SHA-256: `351c9f3d339f88a068f6b9373e88f5dda849d86899074a08c0d3a76a6d990282`. Preserve LF endings and `BAGUIO_BARANGAY_LICENSE.txt`. No seeder or database import is used. Baguio's independent city scope controls access. See [source, geometry checks and deployment notes](../../../docs/BAGUIO_BARANGAY_BOUNDARIES.md). Local implementation only; outlines require LGU validation.
+## Bicol Region references
+
+The seven `*_municipality_reference_boundaries.geojson` snapshots for Bicol are pinned to geoBoundaries ADM3 revision `9469f09` and contain 114 planning/reference features. Their identities and independent OCHA COD-AB checks are documented in [docs/BICOL_BOUNDARY_SOURCES.md](../../../docs/BICOL_BOUNDARY_SOURCES.md). Run `BicolBoundarySeeder` explicitly after a private backup; these files never run through `DatabaseSeeder` and do not create accounts.

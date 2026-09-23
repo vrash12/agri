@@ -1,5 +1,8 @@
 # Agriculture Information System — Developer Guide
 
+The September 23, 2026 Bicol planning-reference release adds 114 geofences through `BicolBoundarySeeder`: Albay 18, Camarines Norte 12, Camarines Sur 36 including Iriga City, Catanduanes 11, Masbate 21, separate Naga City 1, and Sorsogon 15. `region-access:configure --owner=<id> --region=region5` explicitly links the seven scopes and never creates accounts. All references use the pinned geoBoundaries ADM3 revision 9469f09 with independent OCHA COD-AB v03 identity and polygon-area checks. Naga City remains outside Camarines Sur provincial choices. See `docs/BICOL_BOUNDARY_SOURCES.md`; credentials remain outside the repository.
+
+
 This file applies to the entire repository. It is both a functional map of the system and a set of implementation rules for developers and coding agents. Update it whenever a role, route, model, workflow, integration, or deployment requirement changes.
 
 `SYSTEM_FEATURES.md` is the companion user-facing feature catalog. Keep it synchronized with this guide whenever a feature, permission, integration, or operational limitation changes.
