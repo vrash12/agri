@@ -60,3 +60,5 @@ CALABARZON was configured on Hostinger with release `496b706`; the Regional Head
 ## MIMAROPA addition — September 23, 2026
 
 After the explicit `MimaropaBoundarySeeder`, `region-access:configure --owner=<id> --region=mimaropa` links Marinduque, Occidental Mindoro, Oriental Mindoro, Palawan, Romblon and the separate Puerto Princesa City scope. Calapan remains a component-city workspace under Oriental Mindoro. The configuration is atomic, audited and idempotent, rejects conflicting memberships, preserves other regions and accounts, and does not expand the original no-option command. See [MIMAROPA_BOUNDARY_SOURCES.md](MIMAROPA_BOUNDARY_SOURCES.md) for source checks and deployment status. This addition issues no accounts.
+
+MIMAROPA was configured and its 73 choices verified on Hostinger with runtime release `33a150c`. All prior region assignments and account records were preserved.

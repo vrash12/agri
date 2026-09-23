@@ -1,6 +1,6 @@
 # MIMAROPA planning/reference geofences
 
-Status: implementation and local verification complete on September 23, 2026. Production activation is recorded separately after verification.
+Status: deployed to Hostinger through GitHub runtime commit `33a150cfe013ba6fc25f330a7a35b1d29dded8b2` and `git pull --ff-only origin main` on September 23, 2026. All 73 references are active; MIMAROPA is available in the Farmers region chooser.
 
 ## Coverage and ownership
 
@@ -58,6 +58,10 @@ php artisan region-access:configure --owner=<active-owner-id> --region=mimaropa
 For an all-or-nothing release, wrap the seeder and `RegionSupervision::configure($owner, 'mimaropa')` in one database transaction. The original no-option configuration command still selects only its original four regions. The MIMAROPA option links five provinces and the separate Puerto Princesa city scope; it does not create a Regional Head.
 
 Verify the six counts above, region membership, 23 Palawan choices excluding Puerto Princesa, 15 Oriental Mindoro choices including Calapan, 73 regional choices, and all pre-existing database rows. Refresh route/config/view caches and leave maintenance after checks. Never run legacy migrations or `DatabaseSeeder` for this addition.
+
+## Verified Hostinger deployment
+
+Production activation completed at `2026-09-23T05:11:30Z` (13:11 Asia/Shanghai), using PHP 8.3.33 and one transaction for the regional import plus membership configuration. A verified private backup contains all 21 tables / 10,932 pre-release rows, 4,954,280 compressed bytes, SHA-256 `63e9ea73607b44ce4c923a3ec339f7b91286c6e0724c0438cb31e68a6b1a43bc`. All pre-existing rows, accounts and the environment file were verified unchanged. The six active-boundary counts, 73 regional municipality choices, 23 Palawan choices excluding Puerto Princesa, 15 Oriental Mindoro choices including Calapan, and Farmers region chooser passed live service checks. Configuration, route and view caches were rebuilt, maintenance ended, and the tracked checkout was clean. No migration, account issuance, operational sample import or public-asset change ran. Homepage and office login both returned HTTP 200; office login retained private, non-storable headers.
 
 ## Pinned input receipts
 

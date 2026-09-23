@@ -58,3 +58,12 @@ site was returned online.
 - Configuration, route and view caches passed. The three changed public scripts match their `public_html` copies and return HTTP 200. Login returns HTTP 200.
 - A read-only check against the actual Baguio workspace returned all 129 features, confirmed System Owner availability, and confirmed Benguet Super Admin isolation.
 - Unexplained server edits and the unfinished farmer-ID work remain preserved outside this scoped release.
+
+
+## Verified Hostinger release - September 23, 2026 - MIMAROPA
+
+Runtime `33a150cfe013ba6fc25f330a7a35b1d29dded8b2` was pushed to GitHub main and installed by `git pull --ff-only origin main` from the clean tracked baseline `edde7a6`, on PHP 8.3.33. All 73 planning geofences and MIMAROPA region membership were activated in one transaction at 05:11:30 UTC. Calapan remains under Oriental Mindoro; Puerto Princesa retains its separate supervising scope.
+
+The verified private database backup contains 21 tables and 10,932 rows, SHA-256 `63e9ea73607b44ce4c923a3ec339f7b91286c6e0724c0438cb31e68a6b1a43bc`; affected runtime files were also archived privately. Every pre-existing row, all accounts, and the environment file remained unchanged. No migrations, dependency changes, public assets, account issuance or operational samples were involved.
+
+All 76 focused tests / 2,204 assertions, Pint, syntax, Blade, route and whitespace checks passed locally. Live service verification confirmed six scope counts, 73 regional choices, city isolation and the Farmers region chooser. Caches were rebuilt and maintenance ended; homepage and login returned HTTP 200, with login still private/non-storable. Interactive Google Maps performance was not benchmarked. See [MIMAROPA_BOUNDARY_SOURCES.md](MIMAROPA_BOUNDARY_SOURCES.md) for full attribution, small-island processing and limitations.
