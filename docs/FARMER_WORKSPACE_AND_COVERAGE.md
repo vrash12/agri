@@ -1,5 +1,21 @@
 # Farmer workspace hierarchy and coverage statistics
 
+## September 24 overview update — local, not yet deployed
+
+Farmers now opens the paginated directory and an expanded parcel map directly, across active municipalities the account can access. System Owners see an **All regions** filter; Regional Heads see **All provinces in your region**, including separate city scopes. Provincial users see their province and can optionally narrow to a municipality; municipal users stay assigned to their municipality. The optional Municipality / City dropdown preserves direct bookmarks and municipality-only map exports/weather.
+
+The top panel follows the owner's second screenshot: location controls sit side by side on desktop, with **Show municipalities** and **View farmers** buttons, a **Showing …** scope summary and registry/map links below. Both controls and the full directory are present from the initial visit. Municipality labels include their province or separate city scope. Phone layouts stack the controls without horizontal overflow. Returning from a farmer profile preserves that farmer's municipality in both registry and map links.
+
+`FarmerWorkspace` supplies a validated set of municipality IDs to the registry, aggregates, map totals, farmer finder and parcel endpoint. Region/province filters propagate to map request URLs and registry forms/pagination. Parent filters submit no stale child IDs. Empty selections restore the authorized overview; empty scope renders an empty directory rather than a mandatory chooser. No ownership, role, account or data changes occur.
+
+The administrative-outline layer is capped at `MAP_MAX_BOUNDARIES_PER_REQUEST=200` (hard maximum 1000), with a visible count and instruction to narrow by location. This bounds broad initial pages; stored geometry is unchanged. Parcel responses retain the existing `MAP_MAX_PLOTS_PER_REQUEST=2000` cap and truncation metadata. Table rows paginate, map farmer searches remain bounded, and same-municipality assistance links are enforced in totals.
+
+Deployment requires the support/controller/view/config changes together and mirroring changed `farmer-finder.js`, `farmer-workspace.js` and `farmers-maps.js` to both Hostinger public directories. Refresh compiled views and configuration. No migration, dependency update or data import is required. The prior deployment notes below describe the older chooser release, not this local change.
+
+Local verification: 87 PHP tests / 1,011 assertions cover the workspace, primary farmer ID, geofences, portal and office sign-in. The unchanged JavaScript checks from this update pass 140 tests. Pint was run explicitly on the nine changed PHP classes/tests. Synthetic browser checks cover desktop and 390px phone layout, region/municipality selection, clearing both filters, and the expanded map's provider-unavailable state. No Google Maps key was used in the preview, so actual satellite loading and production performance were not verified. This release remains uncommitted and has not been pushed or installed on Hostinger.
+
+## Earlier deployed chooser — September 23, 2026
+
 Status: the dashboard coverage and initial chooser are installed in production at `d69eb4a`; the simplified Region → Municipality flow was installed on Hostinger through GitHub at runtime commit `88d3bdc` on September 23, 2026. This feature requires no data import or migration. Separately authorized CALABARZON account provisioning is recorded in `CALABARZON_BOUNDARY_SOURCES.md`.
 
 ## Farmer workspace

@@ -47,7 +47,7 @@
                 <h1 id="welcome-title" lang="fil"><span class="welcome-title-line">Mas malapit </span><span class="welcome-title-line">ang serbisyo </span><span class="welcome-title-highlight">sa magsasaka.</span></h1>
                 <p class="welcome-hero-intro">Find local agriculture services, view your farm records, and get ready for your next office visit.</p>
                 <div class="welcome-hero-actions"><a class="welcome-button" href="#services">Find farmer services <span aria-hidden="true">↓</span></a><a class="welcome-button welcome-button-secondary" href="{{ route('farmer-portal.login') }}">Farmer sign in <span aria-hidden="true">→</span></a></div>
-                <div class="welcome-hero-help"><span class="welcome-help-symbol" aria-hidden="true">i</span><p class="welcome-hero-note"><strong>First time here?</strong> Your agriculture office can help you verify your record and activate your farmer account.</p></div>
+                <div class="welcome-hero-help"><span class="welcome-help-symbol" aria-hidden="true">i</span><p class="welcome-hero-note"><strong>Need help signing in?</strong> Contact your agriculture office for help with your farmer ID or password.</p></div>
             </div>
             @include('partials.welcome-slideshow')
         </section>

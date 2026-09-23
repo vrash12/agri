@@ -34,9 +34,15 @@ class FarmerPortalTest extends TestCase
         $this->fixtures();
     }
 
-    public function test_guests_can_open_login_and_activation_but_cannot_read_farmer_pages(): void
+    public function test_guests_can_open_login_without_activation_prompt_and_cannot_read_farmer_pages(): void
     {
-        $this->get(route('farmer-portal.login'))->assertOk()->assertSee('password');
+        $this->get(route('farmer-portal.login'))
+            ->assertOk()
+            ->assertSee('Farmer sign in')
+            ->assertSee('Office sign in')
+            ->assertSee('AgriGOV ID or RSBSA number')
+            ->assertDontSee('activation code')
+            ->assertDontSee('Activate my account');
         $this->get(route('farmer-portal.activate'))->assertOk()->assertSee('activation_code');
         foreach (['home', 'profile', 'parcels', 'assistance'] as $page) {
             $this->get(route('farmer-portal.'.$page))->assertRedirect(route('farmer-portal.login'));

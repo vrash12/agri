@@ -209,7 +209,7 @@ if (btnDownloadAll) {
       var workspace = document.getElementById('farmerMapWorkspace');
       var startup = null;
 
-      // Directory visits do not request the provider or parcel geometry.
+      // Start when the map is visible; reopening a disclosure reuses the same load.
       window.__startFarmerMap = function () {
         if (startup) return startup;
         if (workspace) workspace.open = true;

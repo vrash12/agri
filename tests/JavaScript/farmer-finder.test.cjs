@@ -123,3 +123,34 @@ test('the finder holds no Blade syntax, so it can be cached and linted as a plai
   assert.doesNotMatch(source, /@json|\{\{|@php|@endphp/, 'Template syntax leaked into the script file');
   assert.match(source, /window\.__farmerLookupUrl/, 'Configuration must arrive through window');
 });
+
+test('typing in the finder preserves the page geography in its server request', () => {
+  for (const filter of ['region_id=2', 'province_id=3', 'municipality_id=4', '']) {
+    const listeners = {};
+    const input = { value: '', addEventListener: (event, handler) => { listeners[event] = handler; } };
+    const button = { addEventListener() {} };
+    let requested;
+    const context = vm.createContext({
+      console,
+      document: {
+        readyState: 'complete',
+        getElementById: id => id === 'mapFarmerSearch' ? input : id === 'mapFarmerLocateBtn' ? button : null,
+        querySelectorAll: () => [],
+      },
+      window: {
+        __farmerLookupUrl: 'https://example.test/farmers/lookup' + (filter ? '?' + filter : ''),
+        setTimeout: callback => callback(), clearTimeout() {},
+      },
+      fetch: url => { requested = new URL(url); return Promise.resolve({ ok: true, json: async () => ({ farmers: [], total: 0 }) }); },
+    });
+    vm.runInContext(source, context);
+    input.value = 'Rice & Corn';
+    listeners.input();
+    assert.equal(requested.searchParams.get('q'), 'Rice & Corn');
+    assert.equal(requested.searchParams.get('limit'), '50');
+    if (filter) {
+      const [key, value] = filter.split('=');
+      assert.equal(requested.searchParams.get(key), value);
+    }
+  }
+});

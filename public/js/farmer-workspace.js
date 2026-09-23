@@ -17,7 +17,7 @@
   window.addEventListener('hashchange', syncHash);
   control.querySelectorAll('[data-workspace-scope-form]').forEach(form => {
     form.querySelector('[data-workspace-select]')?.addEventListener('change', event => {
-      if (event.target.value) form.requestSubmit();
+      form.requestSubmit();
     });
     form.addEventListener('submit', () => {
       if (form.hasAttribute('data-workspace-open')) {

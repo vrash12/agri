@@ -16,8 +16,7 @@ class FarmerWorkspace
     }
 
     /**
-     * The hierarchy narrows already authorized choices; it never grants access.
-     * Only municipality_id opens records, including existing bookmarked URLs.
+     * Optional geography filters narrow already authorized choices; they never grant access.
      *
      * @return array<string, mixed>
      */
@@ -27,7 +26,13 @@ class FarmerWorkspace
         if (! $user->canAccessAllMunicipalities()) {
             abort_unless($municipalities->first() instanceof Municipality, 403);
 
-            return ['municipalities' => $municipalities, 'selectedMunicipality' => $municipalities->first()];
+            return [
+                'municipalities' => $municipalities,
+                'selectedMunicipality' => $municipalities->first(),
+                'workspaceMunicipalityIds' => $municipalities->modelKeys(),
+                'workspaceParameters' => [],
+                'workspaceName' => $municipalities->first()->name,
+            ];
         }
 
         $input = $request->validate([
@@ -60,29 +65,39 @@ class FarmerWorkspace
                 throw ValidationException::withMessages(['municipality_id' => 'The selected municipality is unavailable.']);
             }
         }
-        // Old province bookmarks still establish and validate their region, but
-        // municipality choices span every already authorized province in it.
-        $provinceId = $input['province_id'] ?? $selectedMunicipality?->province_id ?? ($user->requiresProvince() ? $user->province_id : null);
+        // Existing municipality/province bookmarks still narrow the same authorized scope.
+        $provinceId = ($input['province_id'] ?? null) ?: ($selectedMunicipality?->province_id ?? ($user->requiresProvince() ? $user->province_id : null));
         $selectedProvince = $provinceId ? $provinces->firstWhere('id', (int) $provinceId) : null;
         if ((filled($input['province_id'] ?? null) && ! $selectedProvince) || ($selectedMunicipality && $selectedMunicipality->province_id !== $selectedProvince?->id)) {
             throw ValidationException::withMessages(['province_id' => 'The selected province is unavailable for this workspace.']);
         }
-        $selectedRegionId = (string) ($input['region_id'] ?? ($selectedProvince ? $regionKey($selectedProvince) : ($user->isRegionalHead() ? $user->region_id : '')));
+        $selectedRegionId = (string) (($input['region_id'] ?? null) ?: ($selectedProvince ? $regionKey($selectedProvince) : ($user->isRegionalHead() ? $user->region_id : '')));
         // An assigned office can have no active municipalities. Implicit scope
         // still renders the empty chooser; an explicit unavailable choice fails.
         if (($selectedRegionId !== '' && ! $regions->contains('id', $selectedRegionId) && (! $regions->isEmpty() || filled($input['region_id'] ?? null))) || ($selectedProvince && $regionKey($selectedProvince) !== $selectedRegionId)) {
             throw ValidationException::withMessages(['region_id' => 'The selected region is unavailable for this workspace.']);
         }
-        $regionProvinces = $provinces->filter(fn (Province $province): bool => $regionKey($province) === $selectedRegionId)->values();
+        $regionProvinces = $provinces->filter(fn (Province $province): bool => $selectedRegionId === '' || $regionKey($province) === $selectedRegionId)->values();
+        $choices = $municipalities->whereIn('province_id', $selectedProvince ? [$selectedProvince->id] : $regionProvinces->pluck('id'))->values();
+        $scope = $selectedMunicipality ? $choices->where('id', $selectedMunicipality->id) : $choices;
+        $regionName = $regions->firstWhere('id', $selectedRegionId)['name'] ?? null;
+        $parameters = array_filter([
+            'region_id' => $user->isSystemOwner() ? $selectedRegionId : null,
+            'province_id' => filled($input['province_id'] ?? null) ? $selectedProvince?->id : null,
+            'municipality_id' => $selectedMunicipality?->id,
+        ], fn ($value) => $value !== null && $value !== '');
 
         return [
             'workspaceRegions' => $regions,
             'workspaceProvinces' => $regionProvinces,
             'workspaceRegionId' => $selectedRegionId,
-            'workspaceRegionName' => $regions->firstWhere('id', $selectedRegionId)['name'] ?? null,
+            'workspaceRegionName' => $regionName,
             'workspaceProvince' => $selectedProvince,
-            'municipalities' => $municipalities->whereIn('province_id', $regionProvinces->pluck('id'))->values(),
+            'municipalities' => $choices,
             'selectedMunicipality' => $selectedMunicipality,
+            'workspaceMunicipalityIds' => $scope->modelKeys(),
+            'workspaceParameters' => $parameters,
+            'workspaceName' => $selectedMunicipality?->name ?? $selectedProvince?->name ?? $regionName ?? $user->scopeLabel(),
         ];
     }
 }

@@ -7,6 +7,7 @@ use App\Models\Farmer;
 use App\Models\FarmPlot;
 use App\Support\AuditTrail;
 use App\Support\ConcurrentWrite;
+use App\Support\FarmerWorkspace;
 use App\Support\MunicipalityAccess;
 use App\Support\MunicipalityBoundaryGuard;
 use Illuminate\Contracts\Cache\LockTimeoutException;
@@ -39,18 +40,15 @@ class FarmPlotController extends Controller
         return response()->json(['plots' => $plots]);
     }
 
-    public function all(Request $request)
+    public function all(Request $request, FarmerWorkspace $workspace)
     {
         $this->authorize('viewAny', FarmPlot::class);
+        $scope = $workspace->resolve($request, $request->user());
         $query = FarmPlot::query()->whereHas(
             'farmer',
-            function (Builder $farmerQuery) use ($request) {
-                $this->municipalityAccess->applyOptionalFilter(
-                    $farmerQuery,
-                    $request->user(),
-                    $request->query('municipality_id'),
-                    'farmers.municipality_id'
-                );
+            function (Builder $farmerQuery) use ($request, $scope) {
+                $this->municipalityAccess->scope($farmerQuery, $request->user(), 'farmers.municipality_id');
+                $farmerQuery->whereIn('farmers.municipality_id', $scope['workspaceMunicipalityIds']);
             }
         );
 

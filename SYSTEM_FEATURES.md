@@ -154,9 +154,9 @@ Implementation status and remaining staff/staging checks are documented in [DESI
 ## 5. Farmer registry
 
 - Create, view, edit, search, filter, paginate, and delete farmer profiles.
-- Guided Region → Municipality workspace selection. Municipalities are grouped by province for recognition, while the chooser skips a separate province step. Assigned regional/provincial scopes remain fixed; municipal users open their municipality directly.
-- Region and municipality selection pages load only workspace choices. Farmer records, totals and parcel-map boundaries load after choosing a municipality. Existing municipality bookmarks still work.
-- Municipality-specific registry totals and map data.
+- Farmers opens directly with farmer records and the parcel map across the account's authorized area. A System Owner can filter by region; a Regional Head can filter by province or separate city scope within the assigned region. Municipality filtering is optional, and existing municipality bookmarks still work.
+- Location filters apply to records, totals, farmer search and parcel data together. Provincial and municipal permissions remain fixed. Broad map views explicitly label capped outline/parcel layers and can be narrowed by location.
+- Registry totals and map data reflect the selected authorized area. This overview update is locally implemented; deployment is pending.
 - Filtering by municipality, gender, mapping status, missing FFRS, and missing farm location.
 - Registry-only filters that do not unexpectedly remove other municipality parcels from the shared map.
 - Farmer name, identity, contact, classification, location, and declared farm-area fields.
@@ -701,7 +701,7 @@ The local setup now matches the four Hostinger Baguio/Benguet accounts and their
 
 Farmers can sign in separately from office users to see their own profile, farm parcels, recorded crops by year and wet/dry season, and assistance history. Each account belongs to one verified farmer record. Other farmers and office modules remain inaccessible.
 
-Authorized agriculture staff issue access through **Farmer profile/history → Farmer portal access**, after verifying identity. A single-use code expires in 24 hours; the farmer chooses their own password. A stable AgriGOV login ID always works; a recorded RSBSA number is accepted for sign-in only when unique. Birthdays cannot be used to activate or recover accounts. This does not connect to a central RSBSA login service.
+Authorized agriculture staff issue access through **Farmer profile/history → Farmer portal access**, after verifying identity. A single-use code expires in 24 hours; the farmer chooses their own password. A stable AgriGOV login ID always works; a recorded RSBSA number is accepted for sign-in only when unique. Birthdays cannot be used to activate or recover accounts. This does not connect to a central RSBSA login service. The September 24 local update shares the office and farmer login layout, with a clear switch between both. Activation prompts are removed from the login screen; this interface update awaits deployment.
 
 Staff can reissue access for recovery or disable it. Both revoke old access. There is no automatic portal account creation, SMS delivery, public registration, farmer editing, assistance application, correction-request queue or digital-ID download in this first version. Contact the agriculture office for corrections. Every saved farmer has an AgriGOV ID; issuing portal access enables activation with that same ID. The primary-ID display/search update is committed and awaits deployment; see [AgriGOV farmer IDs](docs/AGRIGOV_FARMER_IDS.md).
 

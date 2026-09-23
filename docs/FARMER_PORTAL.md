@@ -10,6 +10,8 @@
 
 Installation creates no real farmer accounts. Birthdays, RSBSA numbers, or possession of a registry card cannot activate an account alone. Welcome and office login pages link to farmer sign-in.
 
+The September 24 local sign-in update is intentionally limited to login: it accepts the AgriGOV ID or unique RSBSA alias and password, and shares the office sign-in layout with a switch between both audiences. It does not display activation-code prompts. Staff still use the separate activation route when issuing access, so existing account setup and recovery controls remain intact. This interface update is not yet committed, pushed or deployed. Deploy both login views, the welcome view and `public/css/login-layout.css` together, mirror CSS to both Hostinger public directories and refresh compiled views; no migration or account provisioning is required. The 23 portal tests and 11 office sign-in tests pass; a synthetic desktop preview verifies switching between both forms.
+
 The primary-ID update uses the same AgriGOV ID on registry pages, cards, maps, portal pages and farmer selection controls before activation. The numeric farmer key and portal-account relationship remain unchanged. Old `PAIS-FRM-######` IDs remain searchable in staff tools, but are not portal login aliases. This display/search update is committed and awaits deployment; see [AgriGOV farmer IDs](AGRIGOV_FARMER_IDS.md).
 
 ## Included

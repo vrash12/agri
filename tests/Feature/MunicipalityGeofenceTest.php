@@ -83,7 +83,7 @@ class MunicipalityGeofenceTest extends TestCase
             ->assertOk()->assertViewIs('farmers.index')
             ->assertViewHas('mapMunicipalityBoundaries', fn ($rows) => $rows->count() === 1 && $rows->first()['municipality_id'] === $this->first->id)
             ->assertSee('Showing '.$this->first->name)->assertSee('farmer-workspace.js');
-        $this->get(route('farmers.index'))->assertOk()->assertViewIs('farmers.workspace')->assertDontSee('id="farmersTable"', false);
+        $this->get(route('farmers.index'))->assertOk()->assertViewIs('farmers.index')->assertSee('id="farmersTable"', false);
         $this->getJson(route('municipality-boundaries.data', ['municipality_id' => $this->first->id]))->assertJsonFragment(['label_position' => $position]);
         $this->assertTrue(DB::table('audit_logs')->where('event', 'updated')->where('metadata', 'like', '%map_style%')->exists());
     }

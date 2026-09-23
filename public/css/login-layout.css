@@ -86,6 +86,35 @@
 .login-footer a { color: var(--ui-primary); text-underline-offset: 3px; }
 .login-footer a:focus-visible { outline: 3px solid var(--ui-focus); outline-offset: 3px; }
 
+.login-audience {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    margin: 0 26px 24px;
+    padding: 5px;
+    border: 1px solid var(--ui-border);
+    border-radius: var(--ui-radius-control);
+    background: var(--ui-surface-subtle);
+}
+.login-audience a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 8px;
+    border-radius: var(--ui-radius-control);
+    color: var(--ui-text);
+    font-size: 14px;
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
+}
+.login-audience a[aria-current="page"] { background: var(--ui-primary); color: var(--ui-on-primary, #fff); }
+.login-audience a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.login-audience a:focus-visible { outline: 3px solid var(--ui-focus); outline-offset: 3px; }
+.login-help { margin: 20px 0 0; color: var(--ui-text-muted); font-size: 14px; line-height: 1.6; }
+.login-status { margin-bottom: 20px; padding: 12px; border: 1px solid var(--ui-border); border-radius: var(--ui-radius-control); color: var(--ui-text); background: var(--ui-surface-subtle); }
+
 .login-confidentiality {
     margin: 0 26px 24px;
     padding: 14px 16px;

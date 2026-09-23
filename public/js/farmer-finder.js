@@ -124,7 +124,7 @@
       var token = {};
       inFlight = token;
 
-      return fetch(lookupUrl + '?q=' + encodeURIComponent(term) + '&limit=' + RESULT_LIMIT, {
+      return fetch(lookupUrl + (lookupUrl.indexOf('?') === -1 ? '?' : '&') + 'q=' + encodeURIComponent(term) + '&limit=' + RESULT_LIMIT, {
         headers: { Accept: 'application/json' }
       }).then(function (res) {
         if (!res.ok) throw new Error('lookup failed');

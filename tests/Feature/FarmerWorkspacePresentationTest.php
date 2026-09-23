@@ -29,7 +29,7 @@ class FarmerWorkspacePresentationTest extends TestCase
         $xpath = $this->xpath((string) $view);
 
         $this->assertSame(5, $xpath->query('//table[@id="farmersTable"]/thead/tr/th')->length);
-        $this->assertSame(1, $xpath->query('//details[@id="farmerMapWorkspace" and not(@open)]')->length);
+        $this->assertSame(1, $xpath->query('//details[@id="farmerMapWorkspace" and @open]')->length);
         $this->assertSame(1, $xpath->query('//details[@id="farmerInsights" and not(@open)]')->length);
         $view->assertSee('Details &amp; history', false)->assertSee('Digital ID')->assertSee('Edit profile')->assertSee('Open parcel map');
         $view->assertSee('Registry figures for the current filters')->assertSee('farmersMapModule');
@@ -40,6 +40,18 @@ class FarmerWorkspacePresentationTest extends TestCase
         $view = $this->view('farmers.index', $this->fixture(User::ROLE_SUPER_ADMIN));
         $view->assertSee('Read-only oversight')->assertSee('Digital ID')->assertSee('Details &amp; history', false);
         $view->assertDontSee('Edit profile')->assertDontSee('Delete profile')->assertDontSee('Add farmer')->assertDontSee('Import workbook');
+    }
+
+    public function test_profile_navigation_keeps_the_farmer_municipality_when_returning_to_registry_or_map(): void
+    {
+        $data = $this->fixture(User::ROLE_SYSTEM_OWNER);
+        $view = $this->view('farmers.partials.workspace-nav', ['workspaceMunicipality' => $data['selectedMunicipality']]);
+        $xpath = $this->xpath((string) $view);
+        $directory = route('farmers.index', ['municipality_id' => 1]);
+
+        $this->assertSame($directory.'#farmerDirectory', $xpath->query('//a[@data-workspace-target="registry"]')->item(0)->getAttribute('href'));
+        $this->assertSame($directory.'#farmersMapModule', $xpath->query('//a[@data-workspace-target="map"]')->item(0)->getAttribute('href'));
+        $view->assertSee('Change municipality');
     }
 
     public function test_required_farmer_fields_are_visible_and_errors_reveal_optional_details(): void

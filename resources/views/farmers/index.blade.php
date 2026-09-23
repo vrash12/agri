@@ -37,9 +37,9 @@
   if (filled(request('quality'))) {
       $activeFilters->push(['key' => 'quality', 'label' => 'Follow-up', 'value' => request('quality') === 'missing_ffrs' ? 'Missing FFRS' : 'Missing location']);
   }
-  $workspaceParameters = ($canChooseMunicipality ?? false) && $selectedMunicipality
+  $workspaceParameters = $workspaceParameters ?? (($canChooseMunicipality ?? false) && $selectedMunicipality
       ? ['municipality_id' => $selectedMunicipality->id]
-      : [];
+      : []);
   $directoryUrl = fn (array $parameters = []) => route(
       'farmers.index',
       array_merge($workspaceParameters, $parameters)
@@ -52,11 +52,11 @@
    * reason and the label appears to explain it.
    */
   $workspaceAccount = auth()->user();
-  $workspaceName = $selectedMunicipality?->name
+  $workspaceName = $workspaceName ?? $selectedMunicipality?->name
       ?? ($workspaceAccount->isSystemOwner()
           ? 'All supervised provinces'
           : 'All '.($workspaceAccount->province?->name ?? 'supervised').' municipalities');
-  $workspaceShortName = $selectedMunicipality?->name ?? 'Province overview';
+  $workspaceShortName = $workspaceName;
   $canManageOperations = auth()->user()->canManageOperationalData();
 @endphp
 
@@ -137,11 +137,12 @@
 
   <section class="module-panel" id="farmerDirectory">
     <div class="module-panel-head farmer-directory-head">
-      <div><h2>{{ $workspaceShortName }} farmer registry</h2><p>Search and refine farmer records here. Municipality scope is controlled by the workspace selector above.</p></div>
+      <div><h2>Farmer registry</h2><p>Search farmer records in {{ $workspaceName }}. Location filters above also apply to the parcel map.</p></div>
       <span class="module-panel-tag">{{ number_format($farmers->total()) }} {{ Str::plural('farmer', $farmers->total()) }}</span>
     </div>
 
     <form class="farmer-directory-filter" method="GET" action="{{ route('farmers.index') }}#farmerDirectory">
+      @foreach($workspaceParameters as $key => $value)<input type="hidden" name="{{ $key }}" value="{{ $value }}">@endforeach
       <div class="farmer-search-toolbar">
         <div class="farmer-primary-search">
           <label for="farmer_q">Search farmers</label>
@@ -168,9 +169,6 @@
         </summary>
         <div class="farmer-filter-drawer-body">
           <div class="module-filter-grid">
-            @if($selectedMunicipality && $canChooseMunicipality)
-              <input type="hidden" name="municipality_id" value="{{ $selectedMunicipality->id }}">
-            @endif
             <div class="module-field">
               <label for="farmer_gender">Gender</label>
               <select class="module-input" id="farmer_gender" name="gender">
@@ -304,7 +302,7 @@
     @include('partials.pagination', ['paginator' => $farmers, 'label' => 'farmer', 'fragment' => 'farmerDirectory'])
   </section>
 
-  <details id="farmerMapWorkspace" class="module-more farmer-map-section">
+  <details id="farmerMapWorkspace" class="module-more farmer-map-section" open>
     <summary>Parcel map <span>View boundaries, select a farmer, and open mapping tools</span></summary>
     @include('farmers.maps', [
       'mapWorkspaceMunicipality' => $selectedMunicipality,

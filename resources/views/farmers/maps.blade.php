@@ -834,6 +834,9 @@
 @endpush
 
 <div class="farmers-map-wrap {{ ($canManageOperations ?? auth()->user()->canManageOperationalData()) ? '' : 'is-readonly' }}" id="farmersMapModule">
+  @if(($mapBoundaryTotal ?? 0) > $mapMunicipalityBoundaries->count())
+    <p class="module-alert" role="status">Showing {{ number_format($mapMunicipalityBoundaries->count()) }} of {{ number_format($mapBoundaryTotal) }} municipality outlines to keep the map responsive. Use the location filters above to see an area's complete outlines. Farmer totals and parcel loading cover the selected area.</p>
+  @endif
   <header class="parcel-workspace-header">
     <div>
       <div class="parcel-title-row">
@@ -843,9 +846,9 @@
       <h2>{{ $mapWorkspaceShortName }} parcel map</h2>
       <p>
         @if($canManageOperations ?? auth()->user()->canManageOperationalData())
-          Showing all {{ number_format($mapFarmerCount) }} farmers and {{ number_format($mapPlotCount) }} saved parcel boundaries in this municipality workspace. Select a farmer to review, draw, or import land.
+          {{ number_format($mapFarmerCount) }} farmers and {{ number_format($mapPlotCount) }} saved parcels in {{ $mapWorkspaceName }}. Select a farmer to review, draw, or import land.
         @else
-          Showing all {{ number_format($mapFarmerCount) }} farmers and {{ number_format($mapPlotCount) }} saved parcel boundaries in this municipality workspace. Select a farmer to review and export parcel information.
+          {{ number_format($mapFarmerCount) }} farmers and {{ number_format($mapPlotCount) }} saved parcels in {{ $mapWorkspaceName }}. Select a farmer to review and export parcel information.
         @endif
       </p>
     </div>
@@ -885,7 +888,7 @@
         <datalist id="mapFarmerOptions"></datalist>
         <button type="button" class="btn btn-soft btn-sm" id="mapFarmerLocateBtn" disabled>Locate</button>
       </div>
-      <small id="mapPickerHelp">Type at least two characters to search {{ number_format($mapFarmerCount) }} farmers across the complete municipality workspace.</small>
+      <small id="mapPickerHelp">Type at least two characters to search {{ number_format($mapFarmerCount) }} farmers in {{ $mapWorkspaceName }}.</small>
     </div>
 
     <details class="parcel-tool-group parcel-map-tools">
@@ -1415,7 +1418,7 @@
   window.__gmapsApiKey = window.__gmapsApiKey || @json($googleMapsApiKey);
   window.__gmapsMapId = window.__gmapsMapId || @json($googleMapsMapId);
   window.__farmersRecordsBaseUrl = window.__farmersRecordsBaseUrl || "/farmers";
-  window.__allFarmPlotsUrl = @json(route('farm-plots.all', array_filter([
+  window.__allFarmPlotsUrl = @json(route('farm-plots.all', $workspaceParameters ?? array_filter([
     'municipality_id' => $mapWorkspaceMunicipality?->id,
   ])));
   window.__farmPlotStaticMapUrlTemplate = @json(route(
@@ -2020,7 +2023,7 @@
 {{-- The farmer finder runs from public/js/farmer-finder.js. Server values reach it
      through these globals so that file holds no template syntax. --}}
 <script>
-  window.__farmerLookupUrl = @json(route('farmers.lookup'));
+  window.__farmerLookupUrl = @json(route('farmers.lookup', $workspaceParameters ?? []));
   window.__mapFarmerCount = @json((int) $mapFarmerCount);
   window.__mapWorkspaceLabel = @json($mapWorkspaceShortName);
 </script>

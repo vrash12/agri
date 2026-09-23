@@ -1,5 +1,13 @@
 # Design and UX implementation record
 
+## Farmers overview — September 24, 2026 (local)
+
+Farmers now opens the registry and parcel map immediately. The top panel follows the owner's second screenshot with optional Region (System Owner), Province / City (Regional Head), and Municipality / City filters. Native Show municipalities/View farmers actions work without JavaScript; changing or clearing a selection submits automatically with JavaScript. A Showing summary and registry/map links remain below the controls. Municipality choices include their province or separate city label. The registry and map share location scope, while search/quality filters remain registry-only. The map disclosure opens by default and retains loading/retry states. Broad views label any capped administrative-outline layer. No account permissions, ownership or stored geometry change. Desktop and 390px phone layouts and clearing filters were checked with synthetic data; satellite loading was not verified. Deployment remains pending; see `docs/FARMER_WORKSPACE_AND_COVERAGE.md`.
+
+## Shared sign-in choices — September 24, 2026 (local)
+
+Office and Farmer sign-in use the same page layout and slideshow, with two clearly labeled links above the form. The farmer form shows only its ID/password fields and office-help text; activation prompts are removed from this screen and the homepage. The office acknowledgment remains required. Existing authentication routes, guards, staff-assisted activation and password rules are unchanged. The portal and office sign-in suites and desktop browser switching pass. Deploy the login views, welcome view and `login-layout.css` together; mirror CSS to both Hostinger public directories. No migration or account provisioning is required.
+
 ## Homepage collage arrows — September 23, 2026
 
 The homepage collage now uses level Previous and Next arrow buttons beside the

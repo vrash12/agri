@@ -1,4 +1,5 @@
 {{-- resources/views/auth/login.blade.php --}}
+@php($farmerSignIn = $farmerSignIn ?? false)
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,7 +13,8 @@
     content="{{ csrf_token() }}"
   >
 
-  <title>Office sign in | AgriGOV</title>
+  <title>{{ $farmerSignIn ? 'Farmer sign in' : 'Office sign in' }} | AgriGOV</title>
+  <meta name="robots" content="noindex, nofollow">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -549,27 +551,40 @@
 
           <div class="office-badge">
             <span class="office-badge-dot"></span>
-            Provincial Agriculture Office
+            {{ $farmerSignIn ? 'Your agriculture records' : 'Agriculture office' }}
           </div>
 
           <h1
             class="login-title"
             id="login-title"
           >
-            Agriculture Information System
+            {{ $farmerSignIn ? 'Farmer sign in' : 'Office sign in' }}
           </h1>
 
           <p class="login-subtitle">
-            Sign in to manage your office's agricultural records.
+            {{ $farmerSignIn ? 'View your profile, farm parcels, and assistance history.' : 'For Regional Heads and authorized agriculture office staff.' }}
           </p>
         </header>
 
+        <nav class="login-audience" aria-label="Choose sign-in account">
+          <a href="{{ route('login') }}" @if(!$farmerSignIn) aria-current="page" @endif>Office sign in</a>
+          <a href="{{ route('farmer-portal.login') }}" @if($farmerSignIn) aria-current="page" @endif>Farmer sign in</a>
+        </nav>
+
         <form
           method="POST"
-          action="{{ route('login.attempt') }}"
+          action="{{ route($farmerSignIn ? 'farmer-portal.login.attempt' : 'login.attempt') }}"
           class="login-form"
         >
           @csrf
+
+          @if(session('success') || session('status'))
+            <div class="login-status" role="status">{{ session('success') ?: session('status') }}</div>
+          @endif
+
+          @if(session('error') && !request()->boolean('timeout'))
+            <div class="error-box" role="alert">{{ session('error') }}</div>
+          @endif
 
           @if(request()->boolean('timeout'))
             <div
@@ -601,9 +616,9 @@
           <div class="field">
             <label
               class="field-label"
-              for="email"
+              for="{{ $farmerSignIn ? 'login_id' : 'email' }}"
             >
-              Email address
+              {{ $farmerSignIn ? 'AgriGOV ID or RSBSA number' : 'Email address' }}
             </label>
 
             <div class="input-wrap">
@@ -619,12 +634,15 @@
 
               <input
                 class="input"
-                id="email"
-                name="email"
-                type="email"
-                value="{{ old('email') }}"
-                autocomplete="email"
-                placeholder="name@agriculture.gov.ph"
+                id="{{ $farmerSignIn ? 'login_id' : 'email' }}"
+                name="{{ $farmerSignIn ? 'login_id' : 'email' }}"
+                type="{{ $farmerSignIn ? 'text' : 'email' }}"
+                value="{{ old($farmerSignIn ? 'login_id' : 'email') }}"
+                autocomplete="{{ $farmerSignIn ? 'username' : 'email' }}"
+                placeholder="{{ $farmerSignIn ? 'AGRI-F-000123' : 'name@agriculture.gov.ph' }}"
+                maxlength="{{ $farmerSignIn ? 100 : 255 }}"
+                autocapitalize="none"
+                spellcheck="false"
                 required
                 autofocus
               >
@@ -679,6 +697,7 @@
             </div>
           </div>
 
+          @if(!$farmerSignIn)
           <div class="form-options">
             <label class="remember">
               <input
@@ -690,6 +709,7 @@
               <span>Remember me</span>
             </label>
           </div>
+          @endif
 
           <button
             class="login-button"
@@ -706,6 +726,7 @@
 
             <span>Sign In</span>
           </button>
+        @if(!$farmerSignIn)
         <aside class="login-confidentiality" aria-labelledby="login-confidentiality-title">
           <h2 id="login-confidentiality-title">Confidentiality &amp; testing notice</h2>
           <p>Access is provided to authorized participants solely for testing and validation. Keep nonpublic system information, records, credentials and materials confidential.</p>
@@ -729,10 +750,12 @@
             @enderror
           </div>
         </aside>
+        @else
+          <p class="login-help">Need help with your ID or password? Contact your city or municipal agriculture office.</p>
+        @endif
         </form>
 
         <footer class="login-footer">
-          <p>Looking for your own records? <a href="{{ route('farmer-portal.login') }}">Farmer sign in</a></p>
           © {{ date('Y') }}
           <strong>AgriGOV</strong><br>
           Agriculture Information System<br>

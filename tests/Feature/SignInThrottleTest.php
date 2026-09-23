@@ -118,7 +118,10 @@ class SignInThrottleTest extends TestCase
             ->assertSessionHasErrors('email')
             ->assertSessionHas('_old_input.confidentiality_acknowledged', '1')
             ->assertSessionMissing('_old_input.password');
-        $this->get(route('login'))->assertOk()->assertSee('I have read and understood the confidentiality and testing notice.');
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertSee('I have read and understood the confidentiality and testing notice.')
+            ->assertSee('Farmer sign in');
         $this->assertGuest();
     }
 

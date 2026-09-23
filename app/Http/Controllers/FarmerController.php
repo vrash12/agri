@@ -22,12 +22,10 @@ use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\SvgWriter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
@@ -208,10 +206,7 @@ class FarmerController extends Controller
         $workspaceData = $workspace->resolve($request, $user);
         $municipalities = $workspaceData['municipalities'];
         $selectedMunicipality = $workspaceData['selectedMunicipality'];
-        if (! $selectedMunicipality) {
-            return view('farmers.workspace', $workspaceData);
-        }
-        $workspaceMunicipalityId = $selectedMunicipality?->id;
+        $workspaceMunicipalityIds = $workspaceData['workspaceMunicipalityIds'];
 
         $perPage = (int) $request->query('per_page', 25);
         $perPage = max(10, min($perPage, 100));
@@ -219,7 +214,7 @@ class FarmerController extends Controller
         $totals = $this->baseQuery(
             $request,
             false,
-            $workspaceMunicipalityId
+            $workspaceMunicipalityIds
         )
             ->selectRaw(
                 'COUNT(farmers.id) as total_farmers,
@@ -251,7 +246,7 @@ class FarmerController extends Controller
         $genderStats = $this->baseQuery(
             $request,
             false,
-            $workspaceMunicipalityId
+            $workspaceMunicipalityIds
         )
             ->selectRaw(
                 'COALESCE(farmers.gender, "Unspecified") as gender_group,
@@ -263,7 +258,7 @@ class FarmerController extends Controller
         $locationStats = $this->baseQuery(
             $request,
             false,
-            $workspaceMunicipalityId
+            $workspaceMunicipalityIds
         )
             ->selectRaw(
                 'farmers.farm_location,
@@ -279,7 +274,7 @@ class FarmerController extends Controller
         $farmers = $this->baseQuery(
             $request,
             true,
-            $workspaceMunicipalityId
+            $workspaceMunicipalityIds
         )
             ->orderBy('farmers.last_name')
             ->orderBy('farmers.first_name')
@@ -299,7 +294,7 @@ class FarmerController extends Controller
         $mapTotals = $this->baseQuery(
             $request,
             false,
-            $workspaceMunicipalityId,
+            $workspaceMunicipalityIds,
             false
         )
             ->selectRaw(
@@ -316,6 +311,7 @@ class FarmerController extends Controller
         $mapAreaHa = (float) ($mapTotals->mapped_area_ha ?? 0);
         $canChooseMunicipality = $user->isProvincialUser();
         $mapMunicipalityBoundaries = collect();
+        $mapBoundaryTotal = 0;
 
         // Keep the registry usable during a rolling deployment where the
         // geofence migration may not have run yet. Once available, only active
@@ -327,12 +323,11 @@ class FarmerController extends Controller
                 ->orderBy('municipality_id');
 
             $this->municipalityAccess->scope($boundaryQuery, $user);
-
-            if ($workspaceMunicipalityId) {
-                $boundaryQuery->where('municipality_id', $workspaceMunicipalityId);
-            }
+            $boundaryQuery->whereIn('municipality_id', $workspaceMunicipalityIds);
+            $mapBoundaryTotal = (clone $boundaryQuery)->count();
 
             $mapMunicipalityBoundaries = $boundaryQuery
+                ->limit(max(1, min(1000, (int) config('map.max_boundaries_per_request', 200))))
                 ->get([
                     'id', 'municipality_id', 'name', 'geojson', 'color', 'fill_opacity',
                     'area_ha', 'centroid_lat', 'centroid_lng',
@@ -374,6 +369,7 @@ class FarmerController extends Controller
             'mapPlotCount',
             'mapAreaHa',
             'mapMunicipalityBoundaries',
+            'mapBoundaryTotal',
             'canChooseMunicipality'
         ) + $workspaceData);
     }
@@ -1058,7 +1054,7 @@ class FarmerController extends Controller
         ));
     }
 
-    public function lookup(Request $request)
+    public function lookup(Request $request, FarmerWorkspace $workspace)
     {
         $this->authorize('viewAny', Farmer::class);
 
@@ -1079,16 +1075,12 @@ class FarmerController extends Controller
         }
 
         $user = $this->authenticatedUser($request);
-        $workspaceMunicipality = $this->resolveWorkspaceMunicipality(
-            $request,
-            $user,
-            $this->municipalityOptionsFor($user)
-        );
+        $scope = $workspace->resolve($request, $user);
 
         $query = $this->baseQuery(
             $request,
             false,
-            $workspaceMunicipality?->id,
+            $scope['workspaceMunicipalityIds'],
             false
         );
 
@@ -1182,29 +1174,24 @@ class FarmerController extends Controller
     private function baseQuery(
         Request $request,
         bool $withSelect,
-        ?int $workspaceMunicipalityId,
+        array $workspaceMunicipalityIds,
         bool $applyRegistryFilters = true
     ): Builder {
         $user = $this->authenticatedUser($request);
 
         $aggSub = DB::table('rice_seed_distributions')
             ->selectRaw(
-                'farmer_id,
+                'farmer_id, municipality_id,
                  COUNT(*) as records_count,
                  SUM(CASE WHEN quantity_unit IS NULL OR quantity_unit = \'\' OR quantity_unit = \'kg\' THEN kgs_received ELSE 0 END) as total_kgs,
                  MAX(date_received) as last_received'
             );
 
-        if ($workspaceMunicipalityId !== null) {
-            $aggSub->where(
-                'rice_seed_distributions.municipality_id',
-                $workspaceMunicipalityId
-            );
-        }
-
-        $aggSub->groupBy('farmer_id');
+        $aggSub->whereIn('rice_seed_distributions.municipality_id', $workspaceMunicipalityIds)
+            ->groupBy('farmer_id', 'municipality_id');
 
         $plotAggSub = DB::table('farm_plots')
+            ->whereIn('farmer_id', DB::table('farmers')->whereIn('municipality_id', $workspaceMunicipalityIds)->select('id'))
             ->selectRaw(
                 'farmer_id,
                  COUNT(*) as plot_count,
@@ -1214,24 +1201,14 @@ class FarmerController extends Controller
 
         $query = Farmer::query()
             ->leftJoinSub($aggSub, 'a', function ($join) {
-                $join->on('a.farmer_id', '=', 'farmers.id');
+                $join->on('a.farmer_id', '=', 'farmers.id')->on('a.municipality_id', '=', 'farmers.municipality_id');
             })
             ->leftJoinSub($plotAggSub, 'p', function ($join) {
                 $join->on('p.farmer_id', '=', 'farmers.id');
             });
 
-        if ($workspaceMunicipalityId !== null) {
-            $query->where(
-                'farmers.municipality_id',
-                $workspaceMunicipalityId
-            );
-        } else {
-            $this->applyMunicipalityScope(
-                $query,
-                $user,
-                'farmers.municipality_id'
-            );
-        }
+        $this->applyMunicipalityScope($query, $user, 'farmers.municipality_id');
+        $query->whereIn('farmers.municipality_id', $workspaceMunicipalityIds);
 
         if ($withSelect) {
             $query->selectRaw(
@@ -1408,46 +1385,6 @@ class FarmerController extends Controller
     private function municipalityOptionsFor(User $user)
     {
         return $this->municipalityAccess->choices($user);
-    }
-
-    /**
-     * Resolve the one municipality shared by the registry and parcel map.
-     */
-    private function resolveWorkspaceMunicipality(
-        Request $request,
-        User $user,
-        Collection $municipalities
-    ): ?Municipality {
-        if (! $user->canAccessAllMunicipalities()) {
-            $municipality = $municipalities->first();
-
-            if (! $municipality instanceof Municipality) {
-                abort(403, 'Your account is not assigned to an active municipality.');
-            }
-
-            return $municipality;
-        }
-
-        if (! $request->filled('municipality_id')) {
-            return null;
-        }
-
-        $municipalityId = filter_var(
-            $request->query('municipality_id'),
-            FILTER_VALIDATE_INT,
-            ['options' => ['min_range' => 1]]
-        );
-        $municipality = $municipalityId
-            ? $municipalities->firstWhere('id', (int) $municipalityId)
-            : null;
-
-        if (! $municipality instanceof Municipality) {
-            throw ValidationException::withMessages([
-                'municipality_id' => 'Please select an active municipality.',
-            ]);
-        }
-
-        return $municipality;
     }
 
     /**

@@ -26,4 +26,8 @@ return [
 
     'max_plots_per_request' => (int) env('MAP_MAX_PLOTS_PER_REQUEST', 2000),
 
+    // Broad Farmers views must not inline every administrative outline. The UI
+    // explicitly reports a partial outline layer and offers location filters.
+    'max_boundaries_per_request' => (int) env('MAP_MAX_BOUNDARIES_PER_REQUEST', 200),
+
 ];
