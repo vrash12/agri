@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex,nofollow,noarchive">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <title>{{ $farmer->registry_id }} · Interactive land map | AgriGOV</title>
+  <title>{{ $farmer->agri_gov_id }} · Interactive land map | AgriGOV</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
@@ -83,7 +83,7 @@
       </article>
 
       <aside class="registry-card">
-        <div class="registry-card-top"><div class="registry-mark">{{ $initials }}</div><div><h2>Registry verification</h2><div class="registry-id">{{ $farmer->registry_id }}</div></div></div>
+        <div class="registry-card-top"><div class="registry-mark">{{ $initials }}</div><div><h2>AgriGOV ID</h2><div class="registry-id">{{ $farmer->agri_gov_id }}</div></div></div>
         <div class="registry-lines">
           <div class="registry-line"><span>Farm location</span><strong>{{ $farmer->farm_location ?: 'Not recorded' }}</strong></div>
           <div class="registry-line"><span>Municipality / province</span><strong>{{ $municipality }}, {{ $province }}</strong></div>

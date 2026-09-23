@@ -94,12 +94,17 @@ class FarmerPicker
         // than acting as a wildcard.
         $like = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $term).'%';
 
-        $query->where(function (Builder $search) use ($like) {
+        $farmerId = FarmerIdentifier::parse($term);
+        $query->where(function (Builder $search) use ($like, $farmerId) {
             $search->where('last_name', 'like', $like)
                 ->orWhere('first_name', 'like', $like)
                 ->orWhere('middle_name', 'like', $like)
                 ->orWhere('ffrs', 'like', $like)
                 ->orWhere('rsbsa_no', 'like', $like);
+
+            if ($farmerId !== null) {
+                $search->orWhere('farmers.id', $farmerId);
+            }
         });
 
         $total = (clone $query)->count();
@@ -174,6 +179,7 @@ class FarmerPicker
 
         $dataset = [
             'name' => $name,
+            'agriGovId' => $farmer->agri_gov_id,
             'ffrs' => $identifier ?: 'Not assigned',
             'municipalityId' => (string) $farmer->municipality_id,
         ];
@@ -193,7 +199,7 @@ class FarmerPicker
 
         return [
             'value' => (string) $farmer->id,
-            'label' => $identifier ? $name.' — '.$identifier : $name,
+            'label' => $name.' — '.$farmer->agri_gov_id.($identifier ? ' — '.$identifier : ''),
             'municipality_id' => (int) $farmer->municipality_id,
             'dataset' => $dataset,
         ];

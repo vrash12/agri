@@ -53,7 +53,7 @@ The subsequent local checkbox update moves the notice inside the sign-in form, r
 
 ## Primary AgriGOV farmer ID - September 21, 2026
 
-Registry, cards, map details, farmer history, portal and farmer-selection controls now use AGRI-F-###### as the primary visible identity, while FFRS/RSBSA remain separate references. Search hints name the supported AgriGOV ID. The staff portal screen shows the ID before access is issued and states that activation is required. Existing shared styles, numeric control values and QR tokens are preserved. Synthetic browser checks verified the registry, card and pre-activation staff screen; live Google Maps and production acceptance were not performed. See `docs/AGRIGOV_FARMER_IDS.md`; this update has not been deployed.
+Registry, cards, map details, farmer history, portal and farmer-selection controls now use AGRI-F-###### as the primary visible identity, while FFRS/RSBSA remain separate references. Search hints name the supported AgriGOV ID. The staff portal screen shows the ID before access is issued and states that activation is required. Existing shared styles, numeric control values and QR tokens are preserved. Synthetic browser checks verified the registry, card and pre-activation staff screen; live Google Maps and production acceptance were not performed. See `docs/AGRIGOV_FARMER_IDS.md`; this update is committed and has not been deployed.
 
 ## Regional account assignment — September 21, 2026
 

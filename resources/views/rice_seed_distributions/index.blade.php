@@ -122,7 +122,7 @@
       <div class="assistance-search-fields {{ ($canChooseMunicipality ?? false) ? '' : 'is-municipal' }}">
         <div class="module-field module-field-search">
           <label for="riceSearch">Search recipient or item</label>
-          <div class="module-search-wrap"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg><input class="module-input" id="riceSearch" type="search" name="q" value="{{ request('q') }}" placeholder="Name, FFRS, seed, fingerlings, feed, or gear"></div>
+          <div class="module-search-wrap"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg><input class="module-input" id="riceSearch" type="search" name="q" value="{{ request('q') }}" placeholder="AgriGOV ID, name, FFRS, seed, fingerlings, feed, or gear"></div>
         </div>
         @if($canChooseMunicipality ?? false)
           <div class="module-field"><label for="riceMunicipality">Municipality</label><select class="module-input" id="riceMunicipality" name="municipality_id"><option value="">All municipalities</option>@foreach(($municipalities ?? []) as $municipality)<option value="{{ $municipality->id }}" @selected((string) ($selectedMunicipalityId ?? '') === (string) $municipality->id)>{{ $municipality->name }}</option>@endforeach</select></div>

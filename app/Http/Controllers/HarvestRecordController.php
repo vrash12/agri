@@ -9,6 +9,7 @@ use App\Models\HarvestRecord;
 use App\Support\AuditTrail;
 use App\Support\ConcurrentWrite;
 use App\Support\CsvExport;
+use App\Support\FarmerIdentifier;
 use App\Support\FarmerPicker;
 use App\Support\LocalTime;
 use App\Support\MunicipalityAccess;
@@ -250,7 +251,8 @@ class HarvestRecordController extends Controller
 
         $search = trim((string) $request->query('q', ''));
         if ($search !== '') {
-            $query->where(function (Builder $inner) use ($search) {
+            $farmerId = FarmerIdentifier::parse($search);
+            $query->where(function (Builder $inner) use ($search, $farmerId) {
                 $inner->where('variety', 'like', '%'.$search.'%')
                     ->orWhere('notes', 'like', '%'.$search.'%')
                     ->orWhereHas('farmer', function (Builder $farmer) use ($search) {
@@ -258,6 +260,10 @@ class HarvestRecordController extends Controller
                             ->orWhere('last_name', 'like', '%'.$search.'%')
                             ->orWhere('ffrs', 'like', '%'.$search.'%');
                     });
+
+                if ($farmerId !== null) {
+                    $inner->orWhere('farmer_id', $farmerId);
+                }
             });
         }
 

@@ -28,18 +28,18 @@ function finder() {
   return context;
 }
 
-test('a farmer is labelled by the name staff know plus the FFRS that separates namesakes', () => {
+test('the AgriGOV ID identifies a farmer even when no external registry number exists', () => {
   const { describe } = finder();
 
   assert.equal(
-    describe({ id: 7, first_name: 'Rosemarie', middle_name: 'Gabuya', last_name: 'Abad', ffrs: '03-69-11-001-000002' }).label,
-    'Rosemarie Gabuya Abad — 03-69-11-001-000002'
+    describe({ id: 7, agri_gov_id: 'AGRI-F-000007', first_name: 'Rosemarie', middle_name: 'Gabuya', last_name: 'Abad', ffrs: '03-69-11-001-000002' }).label,
+    'Rosemarie Gabuya Abad — AGRI-F-000007 — FFRS 03-69-11-001-000002'
   );
 
-  // A farmer with no FFRS is still findable, and says so rather than showing a blank.
+  // A missing FFRS does not hide the farmer's main ID.
   assert.equal(
-    describe({ id: 8, first_name: 'Juan', last_name: 'Cruz', ffrs: null }).label,
-    'Juan Cruz — No FFRS'
+    describe({ id: 8, agri_gov_id: 'AGRI-F-000008', first_name: 'Juan', last_name: 'Cruz', ffrs: null }).label,
+    'Juan Cruz — AGRI-F-000008'
   );
 });
 
@@ -81,24 +81,38 @@ test('a query below the minimum asks for more input rather than reporting no mat
 test('an exact label match wins over the substring matches it is contained in', () => {
   const { matchesFor, describe } = finder();
   const entries = [
-    describe({ id: 1, first_name: 'Juan', last_name: 'Cruz', ffrs: 'A1' }),
-    describe({ id: 2, first_name: 'Juana', last_name: 'Cruz', ffrs: 'A2' }),
+    describe({ id: 1, agri_gov_id: 'AGRI-F-000001', first_name: 'Juan', last_name: 'Cruz', ffrs: 'A1' }),
+    describe({ id: 2, agri_gov_id: 'AGRI-F-000002', first_name: 'Juana', last_name: 'Cruz', ffrs: 'A2' }),
   ];
 
   // Typing the full label of one farmer must select that one, not both, or the
   // Locate button would stay disabled after a valid pick from the list.
-  const matches = matchesFor(entries, 'Juan Cruz — A1');
+  const matches = matchesFor(entries, 'Juan Cruz — AGRI-F-000001 — FFRS A1');
 
   assert.equal(matches.length, 1);
   assert.equal(matches[0].id, '1');
 });
 
+test('searching a canonical ID locates its numeric record among farmers with the same name', () => {
+  const { matchesFor, describe } = finder();
+  const entries = [
+    describe({ id: 123, agri_gov_id: 'AGRI-F-000123', first_name: 'Juan', last_name: 'Cruz', ffrs: null }),
+    describe({ id: 124, agri_gov_id: 'AGRI-F-000124', first_name: 'Juan', last_name: 'Cruz', ffrs: null }),
+  ];
+
+  const matches = matchesFor(entries, '  agri-f-000123  ');
+
+  assert.equal(matches.length, 1);
+  assert.equal(matches[0].id, '123', 'Map routes still receive the numeric record ID');
+  assert.equal(matchesFor(entries, 'Juan Cruz').length, 2, 'Namesakes must not be silently merged');
+});
+
 test('a partial name still offers every farmer it could mean', () => {
   const { matchesFor, describe } = finder();
   const entries = [
-    describe({ id: 1, first_name: 'Juan', last_name: 'Cruz', ffrs: 'A1' }),
-    describe({ id: 2, first_name: 'Juana', last_name: 'Cruz', ffrs: 'A2' }),
-    describe({ id: 3, first_name: 'Maria', last_name: 'Santos', ffrs: 'B1' }),
+    describe({ id: 1, agri_gov_id: 'AGRI-F-000001', first_name: 'Juan', last_name: 'Cruz', ffrs: 'A1' }),
+    describe({ id: 2, agri_gov_id: 'AGRI-F-000002', first_name: 'Juana', last_name: 'Cruz', ffrs: 'A2' }),
+    describe({ id: 3, agri_gov_id: 'AGRI-F-000003', first_name: 'Maria', last_name: 'Santos', ffrs: 'B1' }),
   ];
 
   assert.equal(matchesFor(entries, 'cruz').length, 2);

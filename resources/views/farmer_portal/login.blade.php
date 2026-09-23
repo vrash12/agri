@@ -5,7 +5,7 @@
     <header><p class="fp-eyebrow">Your agriculture records</p><h1 id="sign-in-title">Farmer sign in</h1><p>View your profile, recorded farm parcels, and assistance history.</p></header>
     <form method="POST" action="{{ route('farmer-portal.login.attempt') }}" class="fp-form" data-portal-submit>
         @csrf
-        <x-module.field name="login_id" label="RSBSA number or AgriGOV login ID" required hint="Use the login ID your agriculture office provided.">
+        <x-module.field name="login_id" label="AgriGOV ID or RSBSA number" required hint="Use your AgriGOV ID, for example AGRI-F-000123, after activating your portal account.">
             <input class="module-input" id="login_id" name="login_id" type="text" value="{{ old('login_id') }}" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="100" required aria-describedby="login_id_hint login_id_error">
         </x-module.field>
         <x-module.field name="password" label="Password" required>
@@ -15,6 +15,6 @@
         <p class="fp-small">Use your chosen password. Your birthday is not a password.</p>
     </form>
     <div class="fp-auth-help"><h2>First time here?</h2><p>Ask your agriculture office to verify your record and issue an activation code.</p><a class="module-button" href="{{ route('farmer-portal.activate') }}">Activate my account</a></div>
-    <details class="fp-help"><summary>Forgot your password or login ID?</summary><p>Contact your city or municipal agriculture office. Staff will verify your identity and issue a new activation code. Do not send your password to anyone.</p></details>
+    <details class="fp-help"><summary>Forgot your password or AgriGOV ID?</summary><p>Contact your city or municipal agriculture office. Staff will verify your identity and issue a new activation code. Do not send your password to anyone.</p></details>
 </section>
 @endsection

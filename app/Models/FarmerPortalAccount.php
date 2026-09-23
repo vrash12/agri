@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\FarmerIdentifier;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -59,7 +60,7 @@ class FarmerPortalAccount extends Authenticatable
     {
         $id = $farmer instanceof Farmer ? $farmer->getKey() : $farmer;
 
-        return 'AGRI-F-'.str_pad((string) $id, 6, '0', STR_PAD_LEFT);
+        return FarmerIdentifier::format((int) $id);
     }
 
     public function hasUsableScope(): bool

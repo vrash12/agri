@@ -39,7 +39,7 @@
       <div class="member-list" id="selectedMemberList">
         @forelse($selectedFarmers as $farmer)
           @php $fullName = trim($farmer->last_name.', '.$farmer->first_name.' '.($farmer->middle_name ?? '').' '.($farmer->ext_name ?? '')); @endphp
-          <article class="member-card" data-selected-member="{{ $farmer->id }}"><div class="member-card-copy"><strong>{{ $fullName }}</strong><small>FFRS {{ $farmer->ffrs ?: 'not assigned' }} · {{ $farmer->farm_location ?: 'location not recorded' }} · {{ $farmer->farm_area_ha !== null ? number_format((float) $farmer->farm_area_ha, 2).' ha' : 'area not recorded' }}</small></div><button class="module-button module-button-danger module-button-small" type="button" data-remove-member="{{ $farmer->id }}">Remove</button></article>
+          <article class="member-card" data-selected-member="{{ $farmer->id }}"><div class="member-card-copy"><strong>{{ $fullName }}</strong><small>{{ $farmer->agri_gov_id }} · FFRS {{ $farmer->ffrs ?: 'not assigned' }} · {{ $farmer->farm_location ?: 'location not recorded' }} · {{ $farmer->farm_area_ha !== null ? number_format((float) $farmer->farm_area_ha, 2).' ha' : 'area not recorded' }}</small></div><button class="module-button module-button-danger module-button-small" type="button" data-remove-member="{{ $farmer->id }}">Remove</button></article>
         @empty
           <div class="member-empty" id="memberEmptyState">No farmers selected. Open the farmer picker to build this cooperative’s membership.</div>
         @endforelse
@@ -52,7 +52,7 @@
 
 <div class="member-modal-backdrop" id="memberModalBackdrop"></div>
 <section class="member-modal" id="memberModal" role="dialog" aria-modal="true" aria-labelledby="memberModalTitle">
-  <div class="member-modal-head"><div><h2 id="memberModalTitle">Select cooperative farmers</h2><p>Search and select any registered farmer available to this municipality.</p></div><div class="module-search-wrap member-modal-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg><input class="module-input" id="memberSearch" type="search" placeholder="Search name, FFRS, or location" aria-label="Search available farmers"></div></div>
+  <div class="member-modal-head"><div><h2 id="memberModalTitle">Select cooperative farmers</h2><p>Search and select any registered farmer available to this municipality.</p></div><div class="module-search-wrap member-modal-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg><input class="module-input" id="memberSearch" type="search" placeholder="Search AgriGOV ID, name, FFRS, or location" aria-label="Search available farmers"></div></div>
   <div class="member-modal-body">
     <table class="module-table member-modal-table" id="memberPickerTable">
       <thead><tr><th>Select</th><th>Farmer</th><th>FFRS</th><th>Gender</th><th>Farm location</th><th class="module-numeric">Farm area</th></tr></thead>
@@ -61,9 +61,9 @@
           @php
             $fullName = trim($farmer->last_name.', '.$farmer->first_name.' '.($farmer->middle_name ?? '').' '.($farmer->ext_name ?? ''));
             $location = trim(($farmer->farm_location ?: 'Not recorded').($farmer->farm_municipality ? ' · '.$farmer->farm_municipality : ''));
-            $search = mb_strtolower($fullName.' '.$farmer->ffrs.' '.$location);
+            $search = mb_strtolower($farmer->agri_gov_id.' '.$fullName.' '.$farmer->ffrs.' '.$location);
           @endphp
-          <tr data-member-row data-search="{{ $search }}"><td><input class="member-checkbox" type="checkbox" value="{{ $farmer->id }}" data-member-checkbox aria-label="Select {{ $fullName }}" data-name="{{ $fullName }}" data-ffrs="{{ $farmer->ffrs ?: 'not assigned' }}" data-location="{{ $location }}" data-area="{{ (float) ($farmer->farm_area_ha ?? 0) }}" @checked(in_array((int) $farmer->id, $selectedFarmerIds, true))></td><td><strong>{{ $fullName }}</strong></td><td class="module-mono">{{ $farmer->ffrs ?: '—' }}</td><td>{{ $farmer->gender ?: '—' }}</td><td>{{ $location }}</td><td class="module-numeric">{{ $farmer->farm_area_ha !== null ? number_format((float) $farmer->farm_area_ha, 2).' ha' : '—' }}</td></tr>
+          <tr data-member-row data-search="{{ $search }}"><td><input class="member-checkbox" type="checkbox" value="{{ $farmer->id }}" data-member-checkbox aria-label="Select {{ $fullName }}" data-name="{{ $fullName }}" data-agri-gov-id="{{ $farmer->agri_gov_id }}" data-ffrs="{{ $farmer->ffrs ?: 'not assigned' }}" data-location="{{ $location }}" data-area="{{ (float) ($farmer->farm_area_ha ?? 0) }}" @checked(in_array((int) $farmer->id, $selectedFarmerIds, true))></td><td><strong>{{ $fullName }}</strong><small class="module-mono">{{ $farmer->agri_gov_id }}</small></td><td class="module-mono">{{ $farmer->ffrs ?: '—' }}</td><td>{{ $farmer->gender ?: '—' }}</td><td>{{ $location }}</td><td class="module-numeric">{{ $farmer->farm_area_ha !== null ? number_format((float) $farmer->farm_area_ha, 2).' ha' : '—' }}</td></tr>
         @empty<tr><td colspan="6"><div class="module-empty"><strong>No farmers available</strong><span>Add farmer profiles to this municipality before assigning cooperative members.</span></div></td></tr>@endforelse
       </tbody>
     </table>
@@ -118,7 +118,7 @@
       const copy = document.createElement('div'); copy.className = 'member-card-copy';
       const name = document.createElement('strong'); name.textContent = box.dataset.name;
       const details = document.createElement('small');
-      details.textContent = `FFRS ${box.dataset.ffrs} · ${box.dataset.location} · ${memberArea.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ha`;
+      details.textContent = `${box.dataset.agriGovId} · FFRS ${box.dataset.ffrs} · ${box.dataset.location} · ${memberArea.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ha`;
       copy.append(name, details);
       const remove = document.createElement('button');
       remove.className = 'module-button module-button-danger module-button-small';

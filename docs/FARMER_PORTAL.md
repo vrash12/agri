@@ -4,11 +4,13 @@
 
 1. Staff open Farmer registry → View profile/history → **Farmer portal access**.
 2. Verify the farmer's identity using the office's identity-check procedure and confirm that the selected record belongs to them.
-3. Issue access and privately provide the AgriGOV login ID, activation page, and one-time code. The code is shown once and expires in 24 hours. No email or SMS is sent.
+3. Every saved farmer already has an AgriGOV ID (`AGRI-F-######`). Issue portal access and privately provide that ID, activation page, and one-time code. The code is shown once and expires in 24 hours. No email or SMS is sent.
 4. The farmer opens `/farmer-portal/activate`, enters the ID/code, chooses and confirms a password, then signs in at `/farmer-portal/login`.
 5. For recovery, staff verify identity again and reissue the code. This revokes the previous password and sessions. Disabling access retains the farmer's operational records.
 
 Installation creates no real farmer accounts. Birthdays, RSBSA numbers, or possession of a registry card cannot activate an account alone. Welcome and office login pages link to farmer sign-in.
+
+The primary-ID update uses the same AgriGOV ID on registry pages, cards, maps, portal pages and farmer selection controls before activation. The numeric farmer key and portal-account relationship remain unchanged. Old `PAIS-FRM-######` IDs remain searchable in staff tools, but are not portal login aliases. This display/search update is committed and awaits deployment; see [AgriGOV farmer IDs](AGRIGOV_FARMER_IDS.md).
 
 ## Included
 

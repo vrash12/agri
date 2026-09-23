@@ -61,7 +61,7 @@
       <div class="module-form-section-head">
         <div>
           <h2>Registry identity</h2>
-          <p>Enter the farmer's name and available registry numbers.</p>
+          <p>Enter the farmer's name and available registry numbers. The AgriGOV ID is assigned automatically when the profile is saved.</p>
         </div>
       </div>
       <div class="module-form-body">
@@ -220,7 +220,7 @@
     @if (data_get($r, 'exists'))
       <section class="module-aside-card farmer-record-reference">
         <h3>Profile record</h3>
-        <div class="farmer-registry-id"><span>Farmer ID</span><strong>{{ $r->registry_id }}</strong></div>
+        <div class="farmer-registry-id"><span>AgriGOV ID</span><strong>{{ $r->agri_gov_id }}</strong></div>
         <p>Last updated {{ \App\Support\LocalTime::fromUtc(data_get($r, 'updated_at'))?->format('M d, Y · h:i A') ?: '—' }} PHT.</p>
         <a class="farmer-card-link" href="{{ route('farmers.id-card', $r) }}">Open digital ID card</a>
       </section>

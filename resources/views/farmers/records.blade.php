@@ -32,13 +32,13 @@
       <div>
         <div class="module-eyebrow">Beneficiary assistance history</div>
         <h1>{{ $farmerName ?: 'Farmer profile' }}</h1>
-        <p>{{ $farmer->registry_id }} · {{ $farmAddress ?: 'Farm location not yet recorded' }}{{ $farmer->ffrs ? ' · FFRS '.$farmer->ffrs : '' }}</p>
+        <p>{{ $farmer->agri_gov_id }} · {{ $farmAddress ?: 'Farm location not yet recorded' }}{{ $farmer->ffrs ? ' · FFRS '.$farmer->ffrs : '' }}</p>
       </div>
     </div>
     <div class="module-actions">
       @can('update', $farmer)<a class="module-button" href="{{ route('farmers.portal-account.show', $farmer) }}">Farmer portal access</a>@endcan
       <a class="module-button" href="{{ route('farmers.id-card', $farmer) }}">View digital ID</a>
-      <a class="module-button" href="{{ route('machinery-inventory.index', ['holder_type' => 'farmer', 'q' => $farmer->ffrs ?: $farmer->last_name]) }}">{{ number_format((int) ($machineryCount ?? 0)) }} machinery {{ Str::plural('asset', (int) ($machineryCount ?? 0)) }}</a>
+      <a class="module-button" href="{{ route('machinery-inventory.index', ['holder_type' => 'farmer', 'q' => $farmer->agri_gov_id]) }}">{{ number_format((int) ($machineryCount ?? 0)) }} machinery {{ Str::plural('asset', (int) ($machineryCount ?? 0)) }}</a>
       @if($canManageOperations)<a class="module-button" href="{{ route('farmers.edit', $farmer) }}">Edit profile</a>@endif
       <a class="module-button" href="{{ route('farmers.index', ['municipality_id' => $farmer->municipality_id]) }}">Back to registry</a>
       @if($canManageOperations)

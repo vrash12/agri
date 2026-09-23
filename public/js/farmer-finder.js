@@ -24,8 +24,7 @@
     return String(value === null || value === undefined ? '' : value).trim().replace(/\s+/g, ' ');
   }
 
-  // A farmer as the finder shows them: the name staff know, plus the FFRS that tells
-  // two people with the same name apart.
+  // Keep the canonical ID visible so staff can distinguish farmers with the same name.
   function describe(farmer) {
     var name = clean([
       farmer.first_name,
@@ -33,9 +32,10 @@
       farmer.last_name,
       farmer.ext_name
     ].filter(Boolean).join(' '));
-    var ffrs = clean(farmer.ffrs) || 'No FFRS';
+    var identifier = clean(farmer.agri_gov_id);
+    var ffrs = clean(farmer.ffrs);
 
-    return { id: String(farmer.id), name: name, label: name + ' — ' + ffrs };
+    return { id: String(farmer.id), name: name, label: [name, identifier, ffrs ? 'FFRS ' + ffrs : ''].filter(Boolean).join(' — ') };
   }
 
   function matchesFor(entries, value) {
@@ -70,13 +70,13 @@
     }
     if (json.truncated) {
       return 'Showing ' + Number(json.returned).toLocaleString() + ' of ' +
-        Number(json.total).toLocaleString() + ' matches. Enter more of the name or FFRS.';
+        Number(json.total).toLocaleString() + ' matches. Enter more of the AgriGOV ID, name or FFRS.';
     }
     if (entries.length === 1) {
       return 'Ready to locate ' + entries[0].name + '.';
     }
 
-    return entries.length.toLocaleString() + ' matches. Enter more of the name or FFRS.';
+    return entries.length.toLocaleString() + ' matches. Enter more of the AgriGOV ID, name or FFRS.';
   }
 
   function start() {

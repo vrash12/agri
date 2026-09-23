@@ -73,7 +73,7 @@
     <div class="farmer-card-workspace-head farmer-card-address-list"><div><strong>Parcel addresses</strong><span>{{ $cardFarmLocation }}</span></div></div>
     <div class="farmer-card-workspace-head farmer-card-screen-only">
       <div><strong>Print-ready preview</strong><span>Standard CR80 card ratio · front and back</span></div>
-      <span class="farmer-card-id-chip">{{ $farmer->registry_id }}</span>
+      <span class="farmer-card-id-chip">{{ $farmer->agri_gov_id }}</span>
     </div>
 
     <div class="farmer-card-grid">
@@ -103,7 +103,7 @@
 
           <div class="farmer-card-front-details">
             <div class="farmer-card-field farmer-card-field-name"><span>Full name</span><strong>{{ strtoupper($fullName ?: 'NAME NOT RECORDED') }}</strong></div>
-            <div class="farmer-card-field"><span>Farmer ID <em>System-generated</em></span><strong class="farmer-card-code">{{ $farmer->registry_id }}</strong></div>
+            <div class="farmer-card-field"><span>AgriGOV ID <em>System-generated</em></span><strong class="farmer-card-code">{{ $farmer->agri_gov_id }}</strong></div>
             <div class="farmer-card-two-fields">
               <div class="farmer-card-field"><span>RSBSA number</span><strong>{{ $farmer->rsbsa_no ?: 'Not recorded' }}</strong></div>
               <div class="farmer-card-field"><span>FFRS number</span><strong>{{ $farmer->ffrs ?: 'Not recorded' }}</strong></div>
@@ -123,7 +123,7 @@
         <div class="farmer-id-card farmer-id-card-back" id="farmerIdCardBack">
           <header>
             <img src="{{ asset('images/mao-logo.jpg') }}" alt="Agriculture office logo">
-            <div><small>AgriGOV · Agriculture Information System</small><strong>{{ $farmer->registry_id }}</strong></div>
+            <div><small>AgriGOV · Agriculture Information System</small><strong>{{ $farmer->agri_gov_id }}</strong></div>
           </header>
           <div class="farmer-card-back-body">
             <div class="farmer-card-back-column">
@@ -199,7 +199,7 @@
       <div class="farmer-qr-image-wrap">
         <img src="{{ $qrDataUri }}" alt="Enlarged QR code for {{ $fullName }}'s interactive land map">
       </div>
-      <strong>{{ $farmer->registry_id }}</strong>
+      <strong>{{ $farmer->agri_gov_id }}</strong>
       <p>Scanning opens a read-only map with {{ $plotCount }} mapped {{ Str::plural('parcel', $plotCount) }}. Personal and assistance records remain private.</p>
       <div class="farmer-qr-actions">
         <button class="module-button" type="button" data-close-qr>Back to ID</button>
@@ -251,7 +251,7 @@
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     const cardData = {
-      farmerId: @json($farmer->registry_id),
+      farmerId: @json($farmer->agri_gov_id),
       fullName: @json(strtoupper($fullName ?: 'NAME NOT RECORDED')),
       rsbsa: @json($farmer->rsbsa_no ?: 'Not recorded'),
       ffrs: @json($farmer->ffrs ?: 'Not recorded'),
@@ -381,7 +381,7 @@
       else { ctx.fillStyle = '#245e3a'; ctx.fillRect(60,198,234,289); ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.font='900 92px Arial'; ctx.fillText(cardData.initials,177,370); ctx.textAlign='left'; }
       ctx.restore();
       field(ctx, 'FULL NAME', cardData.fullName, 340, 205, 610, 38);
-      field(ctx, 'FARMER ID · SYSTEM-GENERATED', cardData.farmerId, 340, 285, 610, 35, true);
+      field(ctx, 'AGRIGOV ID · SYSTEM-GENERATED', cardData.farmerId, 340, 285, 610, 35, true);
       field(ctx, 'RSBSA NUMBER', cardData.rsbsa, 340, 365, 285, 27);
       field(ctx, 'FFRS NUMBER', cardData.ffrs, 650, 365, 300, 27);
       field(ctx, 'REGISTRY MUNICIPALITY', cardData.municipality, 340, 445, 610, 26);

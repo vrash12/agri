@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Support\ConcurrentWrite;
 use App\Support\FarmerCardLocations;
 use App\Support\FarmerDataQuality;
+use App\Support\FarmerIdentifier;
 use App\Support\FarmerPicker;
 use App\Support\FarmerWorkspace;
 use App\Support\GeoGeometry;
@@ -1095,12 +1096,17 @@ class FarmerController extends Controller
         // than acting as a wildcard.
         $like = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $term).'%';
 
-        $query->where(function (Builder $search) use ($like) {
+        $farmerId = FarmerIdentifier::parse($term);
+        $query->where(function (Builder $search) use ($like, $farmerId) {
             $search->where('farmers.last_name', 'like', $like)
                 ->orWhere('farmers.first_name', 'like', $like)
                 ->orWhere('farmers.middle_name', 'like', $like)
                 ->orWhere('farmers.ffrs', 'like', $like)
                 ->orWhere('farmers.farm_location', 'like', $like);
+
+            if ($farmerId !== null) {
+                $search->orWhere('farmers.id', $farmerId);
+            }
         });
 
         $total = (clone $query)->count();
@@ -1154,6 +1160,7 @@ class FarmerController extends Controller
     {
         return [
             'id' => $farmer->id,
+            'agri_gov_id' => $farmer->agri_gov_id,
             'municipality_id' => $farmer->municipality_id,
             'profile_photo_url' => $farmer->profile_photo_path ? route('farmers.photo', $farmer) : null,
             'last_name' => $farmer->last_name,
@@ -1252,10 +1259,7 @@ class FarmerController extends Controller
         $q = trim((string) $request->query('q', ''));
 
         if ($q !== '') {
-            $registryId = null;
-            if (preg_match('/^PAIS-FRM-(\d+)$/i', $q, $matches) === 1) {
-                $registryId = (int) $matches[1];
-            }
+            $registryId = FarmerIdentifier::parse($q);
 
             $query->where(function ($sub) use ($q, $registryId) {
                 $sub->where('farmers.last_name', 'like', "%{$q}%")
@@ -1335,6 +1339,7 @@ class FarmerController extends Controller
         return response()->json([
             'id' => $farmer->id,
             'registry_id' => $farmer->registry_id,
+            'agri_gov_id' => $farmer->agri_gov_id,
             'profile_photo_url' => $farmer->profile_photo_path
                 ? route('farmers.photo', $farmer)
                 : null,

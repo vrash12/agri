@@ -41,7 +41,7 @@
   // The fields a selection writes onto the select. Listed rather than copied
   // wholesale so a future endpoint field cannot silently become a data attribute.
   function datasetFields() {
-    return ['name', 'ffrs', 'municipalityId', 'location', 'municipality', 'province', 'area', 'contact', 'tags'];
+    return ['name', 'agriGovId', 'ffrs', 'municipalityId', 'location', 'municipality', 'province', 'area', 'contact', 'tags'];
   }
 
   // What the control says when nobody has typed enough, or when nothing matched.
@@ -58,7 +58,7 @@
     }
 
     if (term.length < MIN_QUERY) {
-      return 'Type at least ' + MIN_QUERY + ' characters of a name, FFRS or RSBSA number.';
+      return 'Type at least ' + MIN_QUERY + ' characters of an AgriGOV ID, name, FFRS or RSBSA number.';
     }
 
     if (state.loading) {
@@ -189,7 +189,7 @@
       create: false,
       maxOptions: RESULT_LIMIT,
       allowEmptyOption: true,
-      placeholder: select.dataset.placeholder || 'Type a name, FFRS or RSBSA number',
+      placeholder: select.dataset.placeholder || 'Type an AgriGOV ID, name, FFRS or RSBSA number',
       // Searching happens in the database, so the widget must not also filter what
       // comes back — a server match on a middle name would otherwise be hidden
       // because the typed text is not in the visible label.

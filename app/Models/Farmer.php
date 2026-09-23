@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\FarmerIdentifier;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -125,9 +126,13 @@ class Farmer extends Model
         return $this->hasMany(AgriculturalMachinery::class);
     }
 
-    /**
-     * Stable, human-readable identifier used on the local farmer card.
-     */
+    /** Every saved farmer has an AgriGOV ID, independently of portal activation. */
+    public function getAgriGovIdAttribute(): ?string
+    {
+        return $this->getKey() === null ? null : FarmerIdentifier::format((int) $this->getKey());
+    }
+
+    /** Legacy printed-card identifier retained for compatibility. */
     public function getRegistryIdAttribute(): string
     {
         return 'PAIS-FRM-'.str_pad((string) $this->getKey(), 6, '0', STR_PAD_LEFT);

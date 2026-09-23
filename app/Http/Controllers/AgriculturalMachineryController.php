@@ -8,6 +8,7 @@ use App\Models\FarmersCooperative;
 use App\Support\AuditTrail;
 use App\Support\ConcurrentWrite;
 use App\Support\CsvExport;
+use App\Support\FarmerIdentifier;
 use App\Support\MunicipalityAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -333,7 +334,7 @@ class AgriculturalMachineryController extends Controller
 
                     return [
                         'id' => $farmer->id,
-                        'label' => $name.($farmer->ffrs ? ' · '.$farmer->ffrs : ''),
+                        'label' => $name.' · '.$farmer->agri_gov_id.($farmer->ffrs ? ' · '.$farmer->ffrs : ''),
                     ];
                 });
         }
@@ -351,10 +352,11 @@ class AgriculturalMachineryController extends Controller
         );
 
         $search = trim((string) $request->query('q', ''));
+        $farmerId = FarmerIdentifier::parse($search);
 
         return $query
-            ->when($search !== '', function (Builder $query) use ($search) {
-                $query->where(function (Builder $query) use ($search) {
+            ->when($search !== '', function (Builder $query) use ($search, $farmerId) {
+                $query->where(function (Builder $query) use ($search, $farmerId) {
                     $query->where('asset_code', 'like', "%{$search}%")
                         ->orWhere('name', 'like', "%{$search}%")
                         ->orWhere('brand', 'like', "%{$search}%")
@@ -368,6 +370,10 @@ class AgriculturalMachineryController extends Controller
                         })
                         ->orWhereHas('cooperative', fn (Builder $query) => $query->where('name', 'like', "%{$search}%")
                         );
+
+                    if ($farmerId !== null) {
+                        $query->orWhere('farmer_id', $farmerId);
+                    }
                 });
             })
             ->when(

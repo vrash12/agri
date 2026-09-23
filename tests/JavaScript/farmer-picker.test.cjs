@@ -13,7 +13,7 @@ const source = fs.readFileSync(path.join(root, 'public/js/farmer-picker.js'), 'u
  * The picker's pure helpers, lifted out of the IIFE. These decide what the operator
  * is told and what the server is asked for, which is the part worth pinning.
  */
-const helpers = ['clean', 'datasetFields', 'messageFor', 'searchUrl', 'selectionSurvives'].map(name => {
+const helpers = ['clean', 'datasetFields', 'messageFor', 'searchUrl', 'selectionSurvives', 'applyDataset'].map(name => {
   const match = source.match(new RegExp('^  function ' + name + '\\b[\\s\\S]*?\\n  }', 'm'));
   assert.ok(match, 'Missing picker helper ' + name);
   return match[0];
@@ -125,9 +125,52 @@ test('only the listed fields become data attributes on the select', () => {
   // The preview reads these by name. A field added to the endpoint should not turn
   // into a data attribute without someone deciding it should.
   assert.deepEqual(Array.from(datasetFields()), [
-    'name', 'ffrs', 'municipalityId',
+    'name', 'agriGovId', 'ffrs', 'municipalityId',
     'location', 'municipality', 'province', 'area', 'contact', 'tags'
   ]);
+});
+
+test('changing the farmer clears stale preview identity and leaves numeric selection values intact', () => {
+  const { applyDataset } = picker();
+  const select = { value: '123', dataset: { endpoint: '/farmers/picker' } };
+
+  applyDataset(select, { name: 'Juan Cruz', agriGovId: 'AGRI-F-000123', municipalityId: '12', unexpected: 'not for preview' });
+  assert.equal(select.value, '123');
+  assert.equal(select.dataset.agriGovId, 'AGRI-F-000123');
+  assert.equal(select.dataset.unexpected, undefined);
+
+  select.value = '124';
+  applyDataset(select, { name: 'Maria Santos', municipalityId: '12' });
+  assert.equal(select.value, '124');
+  assert.equal(select.dataset.name, 'Maria Santos');
+  assert.equal(select.dataset.agriGovId, undefined, 'A missing ID cannot retain the previous farmer identity');
+
+  applyDataset(select, null);
+  assert.equal(select.dataset.name, undefined);
+  assert.equal(select.dataset.municipalityId, undefined);
+  assert.equal(select.dataset.endpoint, '/farmers/picker', 'Resetting a selection keeps picker configuration');
+});
+
+test('the native select fallback shows the selected AgriGOV ID while submitting the numeric foreign key', () => {
+  const select = {
+    id: 'farmer_id',
+    value: '123',
+    dataset: { endpoint: '/farmers/picker' },
+    options: [{ value: '123', dataset: { name: 'Juan Cruz', agriGovId: 'AGRI-F-000123', municipalityId: '12' } }],
+  };
+  const help = { textContent: '' };
+  const document = {
+    readyState: 'complete',
+    querySelectorAll: () => [select],
+    getElementById: id => id === 'farmer_id_picker_help' ? help : null,
+  };
+
+  vm.runInNewContext(source, { document });
+
+  assert.equal(select.value, '123');
+  assert.equal(select.dataset.agriGovId, 'AGRI-F-000123');
+  assert.equal(select.dataset.name, 'Juan Cruz');
+  assert.match(help.textContent, /AgriGOV ID/);
 });
 
 test('whitespace in a typed term is collapsed rather than searched for', () => {

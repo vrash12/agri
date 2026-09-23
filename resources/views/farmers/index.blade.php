@@ -147,7 +147,7 @@
           <label for="farmer_q">Search farmers</label>
           <div class="module-search-wrap">
             <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-            <input class="module-input" type="search" id="farmer_q" name="q" value="{{ request('q') }}" placeholder="Name, Farmer ID, FFRS, RSBSA, owner, or location">
+            <input class="module-input" type="search" id="farmer_q" name="q" value="{{ request('q') }}" placeholder="AgriGOV ID, name, FFRS, RSBSA, owner, or location">
           </div>
         </div>
         <button class="module-button module-button-primary farmer-search-button" type="submit">
@@ -236,7 +236,7 @@
         <thead>
           <tr>
             <th>Farmer</th>
-            <th>Registry IDs</th>
+            <th>AgriGOV ID / registry references</th>
             <th>Farm location</th>
             <th>Mapping</th>
             <th style="text-align:right">Actions</th>
@@ -263,7 +263,7 @@
                   <span class="module-person-copy"><strong>{{ $name ?: 'Unnamed farmer' }}</strong><small>{{ $farmer->gender ?: 'Gender not recorded' }}{{ $farmer->contact_number ? ' · '.$farmer->contact_number : '' }}</small></span>
                 </div>
               </td>
-              <td data-label="Registry IDs"><strong class="module-mono">{{ $farmer->registry_id }}</strong><small class="module-mono">FFRS: {{ $farmer->ffrs ?: '—' }}</small><small class="module-mono">RSBSA: {{ $farmer->rsbsa_no ?: '—' }}</small></td>
+              <td data-label="AgriGOV ID / registry references"><strong class="module-mono">{{ $farmer->agri_gov_id }}</strong><small class="module-mono">FFRS: {{ $farmer->ffrs ?: '—' }}</small><small class="module-mono">RSBSA: {{ $farmer->rsbsa_no ?: '—' }}</small></td>
               <td data-label="Farm location"><strong>{{ $farmer->farm_location ?: 'Location needed' }}</strong><small>{{ $farmer->farm_municipality ?: 'Municipality not recorded' }}</small></td>
               <td data-label="Mapping">
                 @if ($plotCount > 0)

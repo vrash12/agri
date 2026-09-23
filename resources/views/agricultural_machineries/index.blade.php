@@ -137,7 +137,7 @@
       <div class="machinery-primary-filter {{ ($canChooseMunicipality ?? false) ? '' : 'no-municipality' }}">
         <div class="module-field">
           <label for="machinerySearch">Search inventory</label>
-          <div class="module-search-wrap"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg><input class="module-input" id="machinerySearch" type="search" name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Asset code, machine, holder, serial, or location"></div>
+          <div class="module-search-wrap"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg><input class="module-input" id="machinerySearch" type="search" name="q" value="{{ $filters['q'] ?? '' }}" placeholder="AgriGOV ID, asset code, machine, holder, serial, or location"></div>
         </div>
         @if($canChooseMunicipality ?? false)
           <div class="module-field">
@@ -198,7 +198,7 @@
               @endphp
               <tr class="machinery-table-row" data-attention="{{ $needsAttention ? 'true' : 'false' }}">
                 <td><div class="module-person"><span class="module-avatar">{{ mb_strtoupper(mb_substr($record->name, 0, 2)) }}</span><span class="module-person-copy"><strong>{{ $record->name }}</strong><small><span class="machinery-code module-mono">{{ $record->asset_code }}</span> · {{ $record->category_label }}</small></span></div></td>
-                <td><strong>{{ $record->holder_label }}</strong><small>{{ $record->holder_type === 'farmer' ? 'Individual farmer'.($record->farmer?->ffrs ? ' · '.$record->farmer->ffrs : '') : ($record->holder_type === 'cooperative' ? 'Farmers cooperative' : 'Assignment required') }}</small></td>
+                <td><strong>{{ $record->holder_label }}</strong><small>{{ $record->holder_type === 'farmer' ? 'Individual farmer'.($record->farmer ? ' · '.$record->farmer->agri_gov_id : '').($record->farmer?->ffrs ? ' · FFRS '.$record->farmer->ffrs : '') : ($record->holder_type === 'cooperative' ? 'Farmers cooperative' : 'Assignment required') }}</small></td>
                 <td><span class="module-badge {{ $conditionBadge($record->condition_status) }}"><span class="machinery-condition-dot"></span>{{ $record->condition_label }}</span><br><span class="module-badge {{ $availabilityBadge($record->availability_status) }}">{{ $record->availability_label }}</span></td>
                 <td><strong>{{ $record->location ?: 'Not recorded' }}</strong><small>{{ $record->municipality?->name ?? 'Municipality unavailable' }}</small></td>
                 <td><span class="machinery-maintenance-state {{ $maintenanceClass }}">{{ $maintenanceLabel }}</span>@if($record->next_maintenance_date)<small>{{ $record->next_maintenance_date->format('M d, Y') }} · {{ $record->next_maintenance_date->diffForHumans() }}</small>@else<small>No next service date</small>@endif</td>

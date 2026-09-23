@@ -504,7 +504,7 @@ class MunicipalitySeparationTest extends TestCase
         $this->actingAs($this->municipalUser)
             ->get(route('farmers.id-card', $ownFarmer))
             ->assertOk()
-            ->assertSee($ownFarmer->registry_id);
+            ->assertSee($ownFarmer->agri_gov_id);
 
         $this->actingAs($this->municipalUser)
             ->get(route('farmers.photo', $foreignFarmer))

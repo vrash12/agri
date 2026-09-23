@@ -232,7 +232,10 @@ class FarmerPickerTest extends TestCase
 
         $option = $picker->option($this->local->fresh());
 
-        $this->assertSame('Testsurname, Testfirst Testmiddle — '.$this->ffrs, $option['label']);
+        $this->assertStringContainsString('Testsurname, Testfirst Testmiddle', $option['label']);
+        $this->assertStringContainsString($this->local->agri_gov_id, $option['label']);
+        $this->assertSame((string) $this->local->id, $option['value']);
+        $this->assertSame($this->ffrs, $option['dataset']['ffrs']);
 
         $noIdentifier = Farmer::create([
             'municipality_id' => $this->municipality->id,
@@ -241,9 +244,9 @@ class FarmerPickerTest extends TestCase
             'farm_location' => 'Barangay Uno',
         ]);
 
-        // A farmer with no identifier is still pickable and says so rather than
-        // trailing an empty dash.
-        $this->assertSame('Nameless, Juan', $picker->option($noIdentifier)['label']);
+        // AgriGOV identifies even farmers without an FFRS or RSBSA reference.
+        $this->assertStringContainsString('Nameless, Juan', $picker->option($noIdentifier)['label']);
+        $this->assertStringContainsString($noIdentifier->agri_gov_id, $picker->option($noIdentifier)['label']);
         $this->assertSame('Not assigned', $picker->option($noIdentifier)['dataset']['ffrs']);
     }
 

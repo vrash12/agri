@@ -10,6 +10,7 @@ use App\Support\AuditTrail;
 use App\Support\ConcurrentWrite;
 use App\Support\CsvExport;
 use App\Support\DuplicateClaimCheck;
+use App\Support\FarmerIdentifier;
 use App\Support\FarmerPicker;
 use App\Support\HarvestFromRelease;
 use App\Support\MunicipalityAccess;
@@ -945,7 +946,8 @@ class RiceSeedDistributionController extends Controller
         );
 
         if ($q !== '') {
-            $query->where(function ($sub) use ($q) {
+            $farmerId = FarmerIdentifier::parse($q);
+            $query->where(function ($sub) use ($q, $farmerId) {
                 $sub->where('last_name', 'like', "%{$q}%")
                     ->orWhere('first_name', 'like', "%{$q}%")
                     ->orWhere('middle_name', 'like', "%{$q}%")
@@ -953,6 +955,10 @@ class RiceSeedDistributionController extends Controller
                     ->orWhere('farm_location', 'like', "%{$q}%")
                     ->orWhere('seed_variety_claimed', 'like', "%{$q}%")
                     ->orWhere('input_notes', 'like', "%{$q}%");
+
+                if ($farmerId !== null) {
+                    $sub->orWhere('farmer_id', $farmerId);
+                }
             });
         }
 

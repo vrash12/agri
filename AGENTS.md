@@ -379,7 +379,7 @@ Functions:
 - upload, replace, and remove JPG/PNG/WebP profile photos up to 3 MB;
 - keep photos on the private `local` disk and stream them only after authorization;
 - show each farmer's distribution history, weighted totals, date range, top item/variety, machinery count, and charts;
-- generate the display-only registry identifier `PAIS-FRM-######` from the database ID;
+- generate the primary displayed/searchable AgriGOV ID `AGRI-F-######` for every saved farmer, independently of portal activation;
 - generate a printable/downloadable two-sided local farmer registry card;
 - automatically present the same card in a responsive digital-ID dialog with front/back switching, current-side download, and an enlarged QR scanning view;
 - place a QR code on the ID that points to the farmer's public interactive land page;
@@ -387,6 +387,8 @@ Functions:
 - aggregate repeated parcel rows into one farmer and update/create farmers within the selected municipality.
 
 Farmer deletion is blocked when distributions or farm plots exist. Cooperative memberships are detached, and the private photo is removed when deletion succeeds. Machinery foreign keys are configured to become null at the database level when the machinery migration is active.
+
+`FarmerIdentifier` owns AgriGOV ID formatting and staff search parsing; `Farmer::agri_gov_id` and portal issuance share it. Keep numeric primary/foreign keys, route bindings, selection values and random public QR tokens unchanged. The old `registry_id` accessor retains `PAIS-FRM-######` for compatibility, and full legacy IDs remain searchable. ID matching must remain inside municipality scope. Every saved farmer has an ID without a portal account; activation is still staff-assisted. The update is committed but not yet deployed to Hostinger and requires no migration; see `docs/AGRIGOV_FARMER_IDS.md` for verification, deployment and the separately authorized local orphan-link repair.
 
 ### 5.3 Farm plotting and maps
 

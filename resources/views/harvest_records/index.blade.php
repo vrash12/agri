@@ -94,7 +94,7 @@
         <div class="module-field">
           <label for="harvestSearch">Search</label>
           <input class="module-input" id="harvestSearch" type="search" name="q" value="{{ $filters['q'] }}"
-            placeholder="Variety, notes, farmer name, or FFRS">
+            placeholder="AgriGOV ID, farmer name, FFRS, variety, or notes">
         </div>
 
         @if($canChooseMunicipality)

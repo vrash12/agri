@@ -2,10 +2,10 @@
 @section('title', 'Activate farmer account')
 @section('content')
 <section class="fp-auth-panel" aria-labelledby="activate-title">
-    <header><p class="fp-eyebrow">First sign in or account recovery</p><h1 id="activate-title">Activate your account</h1><p>Use the login ID and one-time code given to you by your agriculture office. Codes expire after 24 hours.</p></header>
+    <header><p class="fp-eyebrow">First sign in or account recovery</p><h1 id="activate-title">Activate your account</h1><p>Use your AgriGOV ID and the one-time code issued by your agriculture office. Codes expire after 24 hours.</p></header>
     <form method="POST" action="{{ route('farmer-portal.activate.submit') }}" class="fp-form" data-portal-submit>
         @csrf
-        <x-module.field name="login_id" label="AgriGOV login ID" required>
+        <x-module.field name="login_id" label="AgriGOV ID" required>
             <input class="module-input" id="login_id" name="login_id" type="text" value="{{ old('login_id') }}" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="100" required aria-describedby="login_id_error">
         </x-module.field>
         <x-module.field name="activation_code" label="One-time activation code" required hint="Enter the code exactly as your office provided it.">

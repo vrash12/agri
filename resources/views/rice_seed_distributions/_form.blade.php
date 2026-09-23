@@ -114,6 +114,7 @@
         <div class="rice-farmer-preview" id="riceFarmerPreview">
           <div class="rice-preview-heading"><strong id="farmer_preview_name">No farmer selected</strong><span>Profile information will be copied</span></div>
           <div class="module-preview-grid">
+            <div class="module-preview-item"><span>AgriGOV ID</span><strong id="farmer_preview_agri_gov_id">—</strong></div>
             <div class="module-preview-item"><span>FFRS / RSBSA</span><strong id="farmer_preview_ffrs">—</strong></div>
             <div class="module-preview-item"><span>Farm area</span><strong id="farmer_preview_area">—</strong></div>
             <div class="module-preview-item"><span>Contact</span><strong id="farmer_preview_contact">—</strong></div>
@@ -337,7 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const applyFarmer = source => {
     const hasFarmer = Boolean(source && (source.value || source.dataset.name !== 'No farmer selected'));
     preview?.classList.toggle('is-visible', hasFarmer);
-    setText('farmer_preview_name',source?.dataset.name,'No farmer selected'); setText('farmer_preview_ffrs',source?.dataset.ffrs); setText('farmer_preview_area',source?.dataset.area); setText('farmer_preview_contact',source?.dataset.contact); setText('farmer_preview_location',source ? `${source.dataset.location || 'Not recorded'} · ${source.dataset.municipality || ''}, ${source.dataset.province || ''}` : ''); setText('farmer_preview_tags',source?.dataset.tags,'None'); setText('riceSummaryFarmer',source?.dataset.name,'Not selected');
+    setText('farmer_preview_name',source?.dataset.name,'No farmer selected'); setText('farmer_preview_agri_gov_id',source?.dataset.agriGovId); setText('farmer_preview_ffrs',source?.dataset.ffrs); setText('farmer_preview_area',source?.dataset.area); setText('farmer_preview_contact',source?.dataset.contact); setText('farmer_preview_location',source ? `${source.dataset.location || 'Not recorded'} · ${source.dataset.municipality || ''}, ${source.dataset.province || ''}` : ''); setText('farmer_preview_tags',source?.dataset.tags,'None'); setText('riceSummaryFarmer',source?.dataset.name,'Not selected');
   };
   const refreshFarmer = () => { applyFarmer(farmer?.value ? (farmer.dataset.name ? farmer : fallback) : null); };
   const isSeedCategory = () => selectedCategory().endsWith('_seed');
