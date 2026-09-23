@@ -15,7 +15,7 @@ class CamarinesSurMunicipalityBoundarySeeder extends Seeder
 {
     private const SOURCE_FILE = 'seeders/data/camarines_sur_municipality_reference_boundaries.geojson';
 
-    private const SOURCE_CHECKSUM = 'd0cb1075d649726bc23c8b7fdbc9a4c48178b1c02bc73bc278fd6e20e39bcbad';
+    private const SOURCE_CHECKSUM = 'aa708d2385628ee72d38eaf71855e3970c245b04ee956c7befecee46329893cf';
 
     private const SOURCE_REVISION = '9469f09';
 

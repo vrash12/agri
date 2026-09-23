@@ -2,7 +2,6 @@
 
 Bicol Region is covered by 114 explicit planning/reference geofences: Albay 18, Camarines Norte 12, Camarines Sur 36 including Iriga City, Catanduanes 11, Masbate 21, separate Naga City 1, and Sorsogon 15. The import is atomic and idempotent, preserves existing rows and accounts, and is activated only through `BicolBoundarySeeder` plus `region-access:configure --region=region5`; it issues no accounts. Naga City is a separate scope. See `docs/BICOL_BOUNDARY_SOURCES.md` for sources and limitations.
 
-
 MIMAROPA is live on Hostinger as of September 23, 2026 (runtime `33a150c`), with 73 municipality/city planning geofences across its five provinces and the separate Puerto Princesa City scope. Calapan stays under Oriental Mindoro. The verified import preserved every existing record and account. Its region membership is configured, so MIMAROPA appears in the Farmers region chooser. The small-island checks retain Kalayaan's full source shape and all 36 Cagayancillo parts in a compact reference. These outlines require LGU/NAMRIA verification before official use. See [MIMAROPA sources, checks and deployment status](docs/MIMAROPA_BOUNDARY_SOURCES.md).
 
 Latest interface release: Hostinger installed `88d3bdc` on September 23, 2026. Farmers now selects Region → Municipality, and homepage collages use Previous/Next arrows. CALABARZON has one active Regional Head plus active provincial administrator and staff accounts for Cavite, Batangas and Laguna; each account's live sign-in and assigned municipality choices were checked.

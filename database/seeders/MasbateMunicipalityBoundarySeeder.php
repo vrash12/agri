@@ -15,7 +15,7 @@ class MasbateMunicipalityBoundarySeeder extends Seeder
 {
     private const SOURCE_FILE = 'seeders/data/masbate_municipality_reference_boundaries.geojson';
 
-    private const SOURCE_CHECKSUM = '2e76d047b8a3d3f8e137ccd572b1c8e10832c59784a59475628224f5e0a33d56';
+    private const SOURCE_CHECKSUM = 'c0f2456f6b4fd99c080cf90d5e7fa7dc1aeacf1ba9b190f7792422182f3bbace';
 
     private const SOURCE_REVISION = '9469f09';
 

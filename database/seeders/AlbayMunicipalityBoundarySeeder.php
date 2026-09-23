@@ -15,7 +15,7 @@ class AlbayMunicipalityBoundarySeeder extends Seeder
 {
     private const SOURCE_FILE = 'seeders/data/albay_municipality_reference_boundaries.geojson';
 
-    private const SOURCE_CHECKSUM = 'bcd78f134acc25faffce8356f343dd2458783ff92df22b89faa65506e4ae4bdc';
+    private const SOURCE_CHECKSUM = 'ff9e0c1cf97da45775230498c96e2b45b5bf9d5d0eaeb69806c8bfa21904ea01';
 
     private const SOURCE_REVISION = '9469f09';
 

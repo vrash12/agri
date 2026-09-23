@@ -15,7 +15,7 @@ class SorsogonMunicipalityBoundarySeeder extends Seeder
 {
     private const SOURCE_FILE = 'seeders/data/sorsogon_municipality_reference_boundaries.geojson';
 
-    private const SOURCE_CHECKSUM = 'e97bf9a75f5e6eea5d1fbfc62b666ea61bafe804af147995f0239c870518bf85';
+    private const SOURCE_CHECKSUM = '4600fea72e7b055363b03957840ef44f6402ca81470e884eeed779b438658480';
 
     private const SOURCE_REVISION = '9469f09';
 

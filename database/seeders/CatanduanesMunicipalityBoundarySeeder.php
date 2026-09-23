@@ -15,7 +15,7 @@ class CatanduanesMunicipalityBoundarySeeder extends Seeder
 {
     private const SOURCE_FILE = 'seeders/data/catanduanes_municipality_reference_boundaries.geojson';
 
-    private const SOURCE_CHECKSUM = 'd7ac47ec887c0f00b0e500ae1622e139a32d1e7059e88308dc7af6fd699279ea';
+    private const SOURCE_CHECKSUM = '0ba68f8e0ef6dbfd62bb5d438d45f35ce96206984f0190dc99b6f6bdcfa720ec';
 
     private const SOURCE_REVISION = '9469f09';
 
