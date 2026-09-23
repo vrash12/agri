@@ -1,5 +1,7 @@
 # Agriculture Information System — Complete Feature Catalog
 
+MIMAROPA preparation provides 73 municipality/city planning geofences across its five provinces and the separate Puerto Princesa City scope. Calapan stays under Oriental Mindoro. The explicit import preserves existing records and does not create accounts; region membership is configured separately. The small-island checks retain Kalayaan's full source shape and all 36 Cagayancillo parts in a compact reference. These outlines require LGU/NAMRIA verification before official use. See [MIMAROPA sources, checks and deployment status](docs/MIMAROPA_BOUNDARY_SOURCES.md).
+
 Latest interface release: Hostinger installed `88d3bdc` on September 23, 2026. Farmers now selects Region → Municipality, and homepage collages use Previous/Next arrows. CALABARZON has one active Regional Head plus active provincial administrator and staff accounts for Cavite, Batangas and Laguna; each account's live sign-in and assigned municipality choices were checked.
 
 Deployment status: the September 20, 2026 Hostinger release includes the welcome collage, dashboard graphs, assistance coverage, Ramos barangay references, Region II, Negros Island Region and Mountain Province geofences. See `docs/FULL_DEPLOYMENT_2026_09_20.md` for verified scope and limitations.

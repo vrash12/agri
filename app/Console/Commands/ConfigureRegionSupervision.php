@@ -8,9 +8,9 @@ use Illuminate\Console\Command;
 
 class ConfigureRegionSupervision extends Command
 {
-    protected $signature = 'region-access:configure {--owner= : Active System Owner ID for authorization and audit} {--region= : Configure only this region code; use region4a for CALABARZON}';
+    protected $signature = 'region-access:configure {--owner= : Active System Owner ID for authorization and audit} {--region= : Configure only this region code; use region4a for CALABARZON or mimaropa for MIMAROPA}';
 
-    protected $description = 'Explicitly configure the approved Region I, II, III and Negros Island supervision after a database backup';
+    protected $description = 'Configure regional supervision after a database backup; CALABARZON and MIMAROPA require --region';
 
     public function handle(RegionSupervision $supervision): int
     {

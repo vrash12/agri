@@ -581,12 +581,48 @@ final class GeoGeometry
         return false;
     }
 
-    /** @param  array<int, array<int, float>>  $first @param  array<int, array<int, float>>  $second */
+    /** @param  array<int, array<int, array{0:float,1:float}>>  $first @param  array<int, array<int, array{0:float,1:float}>>  $second */
     private function polygonsOverlap(array $first, array $second): bool
     {
-        return $this->ringsIntersect($first[0], $second[0])
-            || $this->pointInPolygon($first[0][0], $second, false)
-            || $this->pointInPolygon($second[0][0], $first, false);
+        // MultiPolygon parts may touch at isolated points (Gloria's pinned
+        // reference does), but cannot share a line or intersect interiors.
+        foreach ($first as $firstRing) {
+            foreach ($second as $secondRing) {
+                if ($this->ringsProperlyIntersect($firstRing, $secondRing)
+                    || $this->ringsShareSegment($firstRing, $secondRing)) {
+                    return true;
+                }
+            }
+        }
+
+        return $this->overlaps(
+            ['type' => 'Polygon', 'coordinates' => $first],
+            ['type' => 'Polygon', 'coordinates' => $second]
+        );
+    }
+
+    /** @param  array<int, array{0:float,1:float}>  $first @param  array<int, array{0:float,1:float}>  $second */
+    private function ringsShareSegment(array $first, array $second): bool
+    {
+        for ($a = 0; $a < count($first) - 1; $a++) {
+            for ($b = 0; $b < count($second) - 1; $b++) {
+                if ($this->orientation($first[$a], $first[$a + 1], $second[$b]) !== 0
+                    || $this->orientation($first[$a], $first[$a + 1], $second[$b + 1]) !== 0) {
+                    continue;
+                }
+
+                // Project collinear edges onto their longest coordinate axis.
+                // A zero-length intersection is a permitted point contact.
+                $axis = abs($first[$a + 1][0] - $first[$a][0]) >= abs($first[$a + 1][1] - $first[$a][1]) ? 0 : 1;
+                $start = max(min($first[$a][$axis], $first[$a + 1][$axis]), min($second[$b][$axis], $second[$b + 1][$axis]));
+                $end = min(max($first[$a][$axis], $first[$a + 1][$axis]), max($second[$b][$axis], $second[$b + 1][$axis]));
+                if ($end - $start > self::EPSILON) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /** @param  array{0:float,1:float}  $a @param  array{0:float,1:float}  $b @param  array{0:float,1:float}  $c @param  array{0:float,1:float}  $d */

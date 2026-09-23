@@ -197,6 +197,52 @@ class GeoGeometryTest extends TestCase
         $this->assertFalse($this->geometry->overlaps($multi, $this->square(1.2, 1.2, 1.5)));
     }
 
+    public function test_multipolygon_parts_may_touch_at_a_single_point(): void
+    {
+        foreach ([
+            $this->square(1, 1, 1)['coordinates'],
+            [[[0.5, 1], [0, 2], [1, 2], [0.5, 1]]],
+        ] as $neighbor) {
+            $multi = $this->geometry->prepare(['type' => 'MultiPolygon', 'coordinates' => [
+                $this->square(0, 0, 1)['coordinates'], $neighbor,
+            ]]);
+            $this->assertCount(2, $multi['coordinates']);
+        }
+    }
+
+    /** @dataProvider invalidMultipolygonParts */
+    public function test_multipolygon_parts_still_reject_shared_lines_and_overlapping_interiors(array $second): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Parts of a MultiPolygon');
+        $this->geometry->prepare(['type' => 'MultiPolygon', 'coordinates' => [
+            $this->square(0, 0, 2)['coordinates'], $second,
+        ]]);
+    }
+
+    public static function invalidMultipolygonParts(): array
+    {
+        return [
+            'shared edge' => [[[[2, 0], [3, 0], [3, 2], [2, 2], [2, 0]]]],
+            'partial shared edge' => [[[[2, 0.5], [3, 0.5], [3, 1.5], [2, 1.5], [2, 0.5]]]],
+            'identical' => [[[[0, 0], [2, 0], [2, 2], [0, 2], [0, 0]]]],
+            'contained' => [[[[0.5, 0.5], [1, 0.5], [1, 1], [0.5, 1], [0.5, 0.5]]]],
+            'crossing' => [[[[1, -1], [3, -1], [3, 1], [1, 1], [1, -1]]]],
+            'crossing through vertices' => [[[[-1, 1], [1, -1], [3, 1], [1, 3], [-1, 1]]]],
+        ];
+    }
+
+    public function test_a_multipolygon_island_can_touch_a_hole_at_one_point_but_not_share_its_edge(): void
+    {
+        $outer = $this->square(0, 0, 6)['coordinates'];
+        $outer[] = $this->square(1, 1, 4)['coordinates'][0];
+        $island = [[[3, 1], [4, 3], [3, 4], [2, 3], [3, 1]]];
+        $this->assertCount(2, $this->geometry->prepare(['type' => 'MultiPolygon', 'coordinates' => [$outer, $island]])['coordinates']);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->geometry->prepare(['type' => 'MultiPolygon', 'coordinates' => [$outer, $this->square(2, 1, 2)['coordinates']]]);
+    }
+
     /** @return array<string, mixed> */
     private function notchedBoundary(): array
     {
