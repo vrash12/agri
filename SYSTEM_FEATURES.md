@@ -20,6 +20,8 @@ The Agriculture Information System is a Laravel and MySQL platform for multiple 
 
 The application is designed for multiple offices using the system at the same time. Every operational record is assigned to a municipality, and users only receive the records and actions allowed by their role.
 
+An explicit System Owner demonstration import can populate four clearly labeled sample farmers in each of three Region I municipalities, three hypothetical plots per farmer and sample rice distribution: 12 farmers, 36 plots, 12 releases and three batches (480 kg total). It preserves existing records and accounts, issues no farmer sign-ins, and rejects duplicates or changed samples. **These samples appear in dashboard totals and do not represent actual farmers, surveyed land or seed delivery.** See `docs/REGION_I_SAMPLE_DATA.md` for workspaces and deployment status.
+
 ### Public farmer welcome page
 
 - Visitors to the homepage can read guides to farmer registration, crop inputs, fisheries assistance, animal health, farm mapping, cooperatives, and machinery inquiries.
