@@ -1,6 +1,10 @@
 # Bicol Region planning/reference geofences
 
-Status: prepared for the explicit Bicol release on September 23, 2026. The reviewed snapshot contains **114 planning references**: 107 municipalities, six component cities, and Naga City as a separate independent component city scope. The import and Region V membership are explicit maintenance actions; they are excluded from DatabaseSeeder and do not create accounts.
+Status: **deployed and verified** on Hostinger at `2026-09-23T07:21:29Z` (PHP 8.3.33), runtime commit `aabace9e5d957cd6b41bbb1010d7db70e2eb2439`, fast-forwarded from baseline `898eff793c0a7b1a545345560ecb85f595a44804`. The private backup contains all 21 tables and 11,220 pre-release rows (5,195,028 bytes; SHA-256 `a5f31724bec975a48148a6b1d4f5de0f70c6652eb3ad3b560b5aea2264793a78`). Existing rows were verified unchanged and all accounts remained unchanged; no migration, dependency update, public-asset change or account issuance ran.
+
+The live receipt verified Albay 18, Camarines Norte 12, Camarines Sur 36, Catanduanes 11, Masbate 21, Naga City 1 and Sorsogon 15: **114 active boundaries**. Region V membership, 114 Regional Head choices, province isolation, Naga City isolation, and the Region → Municipality Farmers chooser passed. Configuration, route and view caches were rebuilt. The site returned online; homepage and login returned HTTP 200, with private/no-store login headers.
+
+The reviewed snapshot contains **114 planning references**: 107 municipalities, six component cities, and Naga City as a separate independent component city scope. The import and Region V membership are explicit maintenance actions; they are excluded from DatabaseSeeder and do not create accounts.
 
 ## Coverage and ownership
 
@@ -43,7 +47,6 @@ No migration, runtime package, API key, or frontend asset is required. Existing 
 
 For an all-or-nothing release, execute both the explicit boundary seeder and RegionSupervision::configure($owner, 'region5') inside one database transaction. The command links Albay, Camarines Norte, Camarines Sur, Catanduanes, Masbate, Sorsogon and the separate Naga City scope. It does not issue a Regional Head or provincial account. Refresh config, route and view caches after verification. Never run legacy migrations or DatabaseSeeder for this addition.
 
-
 | Verification input | SHA-256 |
 | --- | --- |
 | geoBoundaries ADM3 simplified (9469f09) | `2ece3d44a5c6a2afb385ffbf3a6b88d83e4d3a3e7eed9a52cb3be1bc59e289fc` |
@@ -65,7 +68,7 @@ Computed area uses the application’s normalized geometry in hectares; the inde
 | `naga_city_municipality_reference_boundaries.geojson` | 1 | 4913 | `4ab9ffbc339e475c659508f3b2a0942bfbf535fadec1cad0904c8a2cf7b95ad9` |
 | `sorsogon_municipality_reference_boundaries.geojson` | 15 | 65216 | `4600fea72e7b055363b03957840ef44f6402ca81470e884eeed779b438658480` |
 
-The compact source snapshots contain only the approved 114 features and attribution metadata. The large HDX archive and full upstream geometry remain outside the repository.
+The seven compact snapshots total 557,852 bytes, with 12,851 vertices across 304 polygon parts and no more than 539 vertices in any feature. They contain only the approved 114 features and attribution metadata. The large HDX archive and full upstream geometry remain outside the repository.
 
 | Scope | Workspace | PSGC (legacy) | Source shape ID | Computed ha | Reference ha | Difference | Vertices |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: |
@@ -188,4 +191,4 @@ The compact source snapshots contain only the approved 114 features and attribut
 
 Local checks passed: 26 focused tests / 2,246 assertions, Pint on all 12 changed PHP files, Blade compilation, geofence route listing, PHP syntax and whitespace checks. No runtime library, geometry validation rule or frontend delivery code was changed. Interactive production Google Maps performance has not been benchmarked for this addition.
 
-Local focused tests cover all 114 references, Naga/Iriga isolation, attribution, repeat-import ID/geometry/style/audit preservation, qualified duplicate names, checksum rejection, authorized province scope and full-region rollback. Deployment is not complete until the reviewed commit is pushed to GitHub, Hostinger fast-forwards to that commit, and live verification confirms seven active scopes, 114 boundaries, Region V membership and preservation of all pre-existing rows/accounts. Credentials remain outside the repository and release notes.
+Local focused tests cover all 114 references, Naga/Iriga isolation, attribution, repeat-import ID/geometry/style/audit preservation, qualified duplicate names, checksum rejection, authorized province scope and full-region rollback. The GitHub push and Hostinger fast-forward are complete; live checks confirmed all seven scopes, 114 boundaries, Region V membership and preservation of all pre-existing rows/accounts. Credentials remain outside the repository and release notes.

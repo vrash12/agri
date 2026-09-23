@@ -67,3 +67,13 @@ Runtime `33a150cfe013ba6fc25f330a7a35b1d29dded8b2` was pushed to GitHub main and
 The verified private database backup contains 21 tables and 10,932 rows, SHA-256 `63e9ea73607b44ce4c923a3ec339f7b91286c6e0724c0438cb31e68a6b1a43bc`; affected runtime files were also archived privately. Every pre-existing row, all accounts, and the environment file remained unchanged. No migrations, dependency changes, public assets, account issuance or operational samples were involved.
 
 All 76 focused tests / 2,204 assertions, Pint, syntax, Blade, route and whitespace checks passed locally. Live service verification confirmed six scope counts, 73 regional choices, city isolation and the Farmers region chooser. Caches were rebuilt and maintenance ended; homepage and login returned HTTP 200, with login still private/non-storable. Interactive Google Maps performance was not benchmarked. See [MIMAROPA_BOUNDARY_SOURCES.md](MIMAROPA_BOUNDARY_SOURCES.md) for full attribution, small-island processing and limitations.
+
+## Verified Hostinger release — September 23, 2026 — Bicol Region
+
+Runtime commit `aabace9e5d957cd6b41bbb1010d7db70e2eb2439` was pushed to GitHub main and installed with `git pull --ff-only origin main` from the clean baseline `898eff793c0a7b1a545345560ecb85f595a44804`. The release was activated at `2026-09-23T07:21:29Z` on PHP 8.3.33.
+
+- The verified private database backup contains all 21 tables and 11,220 rows, 5,195,028 bytes, SHA-256 `a5f31724bec975a48148a6b1d4f5de0f70c6652eb3ad3b560b5aea2264793a78`.
+- The explicit Bicol transaction added 114 attributed planning/reference boundaries and Region V membership. Counts are Albay 18, Camarines Norte 12, Camarines Sur 36 including Iriga City, Catanduanes 11, Masbate 21, separate Naga City 1, and Sorsogon 15.
+- Live checks passed 114 Regional Head choices, provincial scope isolation, separate Naga City access, the Farmers Region → Municipality chooser, existing-row preservation and unchanged accounts. No migration, dependency update, public-asset change or account issuance ran.
+- Local validation passed 26 focused PHP tests / 2,246 assertions, Pint, syntax, Blade compilation, route listing, source geometry checks and whitespace checks. Homepage and login returned HTTP 200 after the release; login retained private/no-store headers. The site is online.
+- These are approximate planning/reference boundaries, not legal, cadastral or survey-grade boundaries. See [BICOL_BOUNDARY_SOURCES.md](BICOL_BOUNDARY_SOURCES.md) for source identities, checksums, validation and limitations.
