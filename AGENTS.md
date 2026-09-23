@@ -306,7 +306,7 @@ When adding a new municipality-owned module, reuse these components instead of c
 
 Route: `GET /` (`welcome`). Guests receive a public farmer-services guide in `resources/views/welcome.blade.php`; signed-in users retain the dashboard or Animal Health redirect. `/login` remains the staff sign-in entry. The page provides native service disclosures, an office-visit checklist, and links to official DA, RSBSA Finder, PhilRice, ATI, BFAR, and PAGASA resources. It does not query operational records or publish counts, accept farmer registrations/applications, or create bookings. Keep availability and eligibility inquiries with the responsible office.
 
-The page consumes `partials.design-tokens` and its scoped `public/css/welcome.css` / `public/js/welcome.js`. `partials.welcome-slideshow` and `public/js/welcome-slideshow.js` add 20 Philippine agriculture photographs in five distinct four-photo collages, with eight-second playback, collage selection, pause, reduced-motion handling, and hidden-tab suspension. Images hydrate only for the current, upcoming during playback, or manually selected collage. Keyboard interaction pauses playback until explicitly resumed. Navigation, the first collage, and service guidance remain usable without JavaScript. The About AgriGOV section explains six office capabilities without querying operational records. The unmodified existing DA seal identifies the linked DA resources separately from application branding. Preserve the footer photo credits and link to `public/photo-credits.html`; service thumbnails remain lazy-loaded. See `docs/WELCOME_PAGE.md`, `docs/WELCOME_PHOTO_SOURCES.md`, and `docs/WELCOME_COLLAGE_PHOTOS.md` for design, asset provenance, and verification. No migration or new configuration is required. Deploy the slideshow script before rebuilding views; mirror public assets to both Hostinger public directories.
+The page consumes `partials.design-tokens` and its scoped `public/css/welcome.css` / `public/js/welcome.js`. `partials.welcome-slideshow` and `public/js/welcome-slideshow.js` add 20 Philippine agriculture photographs in five distinct four-photo collages. The gallery uses manual Previous/Next arrow buttons that wrap between collages; the controls have labelled 44px targets, keyboard arrow support, and a live status announcement. Only the first collage loads before interaction; each other collage hydrates when visited. Navigation, the first collage, and service guidance remain usable without JavaScript. The About AgriGOV section explains six office capabilities without querying operational records. The unmodified existing DA seal identifies the linked DA resources separately from application branding. Preserve the footer photo credits and link to `public/photo-credits.html`; service thumbnails remain lazy-loaded. See `docs/WELCOME_PAGE.md`, `docs/WELCOME_PHOTO_SOURCES.md`, and `docs/WELCOME_COLLAGE_PHOTOS.md` for design, asset provenance, and verification. No migration or new configuration is required. Deploy the slideshow script before rebuilding views; mirror public assets to both Hostinger public directories.
 
 The homepage redesign uses a neobrutalist photo collage with page-scoped
 square borders and offset shadows, retaining the shared green/yellow colors,
@@ -318,11 +318,11 @@ exception to the ordinary management-panel geometry; do not apply it globally.
 The redesign was deployed September 20, 2026; see `docs/FULL_DEPLOYMENT_2026_09_20.md`.
 
 Welcome-page microinteractions are progressive enhancements: short button presses,
-link and disclosure feedback, active-section navigation, and one-time heading
-settling on `[data-welcome-reveal]`. Fragment links move focus to their destination
-without replacing native scrolling/history. Content stays visible without the
-observer or animation APIs. Respect reduced motion in CSS and JavaScript, including
-preference changes during playback; do not add continuous decorative movement.
+gallery arrow feedback, link and disclosure feedback, active-section navigation, and
+one-time heading settling on `[data-welcome-reveal]`. Fragment links move focus to
+their destination without replacing native scrolling/history. Content stays visible
+without the observer or animation APIs. Respect reduced motion for decorative
+transitions; do not add continuous decorative movement or automatic gallery playback.
 
 Inside AgriGOV presents six office capabilities in a numbered, expandable toolkit
 beside its introduction and office sign-in action. Keep these as native

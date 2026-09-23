@@ -1,6 +1,16 @@
 # Public farmer welcome page
 
-Current status: deployed to Hostinger on September 20, 2026 in release 54cc9e4. Earlier local-only statements below describe implementation-stage checks. See FULL_DEPLOYMENT_2026_09_20.md for the deployment receipt and remaining limits.
+Current status: the base welcome page was deployed to Hostinger on September 20, 2026 in release 54cc9e4. The September 23 collage-arrow refresh is prepared locally for the next GitHub release and still needs the normal Hostinger pull/cache refresh. Earlier local-only statements below describe implementation-stage checks. See FULL_DEPLOYMENT_2026_09_20.md for the base deployment receipt and remaining limits.
+
+## Manual collage navigation — September 23, 2026
+
+The hero collage now places labelled Previous and Next arrow buttons beside the
+photo stack. The old numbered selector, play control and counter were removed.
+Arrows wrap across all five four-photo collages, accept Left/Right arrow keys,
+and announce the selected collage in a polite live region. The first collage
+still works without JavaScript; the other 16 photos keep deferred URLs until a
+visitor opens their collage. Eight JavaScript tests and the updated welcome-page
+feature checks pass. The update has not yet been installed on Hostinger.
 
 ## Implementation scope
 
@@ -28,7 +38,7 @@ Major choices and their purposes:
 - External-link arrows identify outgoing resources; the hero arrow identifies an in-page destination. No decorative icon library is required.
 - Flat surfaces and varied section spacing separate service discovery, agency resources, visit preparation, and staff entry.
 - The fixed light theme follows the application direction and keeps reading surfaces clear; there is no theme switch.
-- Twenty Philippine agriculture photographs form five distinct four-photo collages, cycling every eight seconds with a brief fade and captions. Selection and pause controls have 44-pixel targets. Playback suspends on hover and hidden tabs; keyboard entry and manual selection pause until resumed. Reduced motion disables autoplay and fade. Only the first collage and upcoming collage load initially during playback; the first four photos remain visible without JavaScript.
+- Twenty Philippine agriculture photographs form five distinct four-photo collages with captions and manual Previous/Next arrow controls. The controls have 44-pixel targets, wrap at either end, accept keyboard arrow keys and announce the active collage. Only the first collage loads initially; the other collages load when visited, while the first four photos remain visible without JavaScript.
 - A forest-green About AgriGOV section groups six actual office capabilities in an expandable toolkit. Text explains the use of each tool without fictional statistics, testimonial claims, or sample private records.
 - The DA seal appears beside the DA resource link, separately from the AgriGOV wordmark. It is the existing unmodified asset, inherited from the initial repository commit; its original download source is not documented. It does not represent a new endorsement or integration claim.
 

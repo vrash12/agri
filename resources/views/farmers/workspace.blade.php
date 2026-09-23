@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Farmers — Choose workspace')
+@section('title', 'Farmers — Choose municipality')
 
 @section('content')
 @include('partials.operations-ui-styles')
@@ -8,7 +8,7 @@
   @if(session('success'))<div class="module-alert" role="status">{{ session('success') }}</div>@endif
   @if(session('error'))<div class="module-alert module-alert-error" role="alert">{{ session('error') }}</div>@endif
   <header class="module-header">
-    <div><div class="module-eyebrow">Registry and land management</div><h1>Farmers</h1><p>Open one municipality to work with its farmer records and mapped parcels.</p></div>
+    <div><h1>Farmers</h1><p>Find farmer records and farm parcels by location.</p></div>
   </header>
   @include('farmers.partials.workspace-nav')
 </div>

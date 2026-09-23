@@ -32,7 +32,7 @@
         ]],
     ];
 @endphp
-<section class="welcome-gallery" data-welcome-slideshow aria-label="Scenes of Philippine agriculture" aria-roledescription="carousel" aria-describedby="welcome-gallery-description">
+<section class="welcome-gallery" data-welcome-slideshow aria-label="Scenes of Philippine agriculture" aria-roledescription="carousel">
     <div class="welcome-collage">
         <p class="welcome-collage-label">Rooted in our communities</p>
         <div class="welcome-gallery-slides" id="welcome-scenes">
@@ -52,13 +52,13 @@
             @endforeach
         </div>
     </div>
-    <p class="welcome-gallery-description" id="welcome-gallery-description">20 photographs. Five different collages.</p>
-    <div class="welcome-gallery-toolbar" data-gallery-controls hidden>
-        <div class="welcome-gallery-select" role="group" aria-label="Choose a collage">
-            @foreach ($welcomeScenes as $scene)
-                <button type="button" data-scene-select="{{ $loop->index }}" aria-label="Show {{ strtolower($scene['title']) }} collage" aria-pressed="{{ $loop->first ? 'true' : 'false' }}" aria-controls="welcome-scenes"><span aria-hidden="true">{{ str_pad($loop->iteration, 2, '0', STR_PAD_LEFT) }}</span></button>
-            @endforeach
-        </div>
-        <button class="welcome-gallery-play" type="button" data-gallery-play aria-controls="welcome-scenes">Pause slideshow</button>
+    <div class="welcome-gallery-controls" data-gallery-controls hidden>
+        <button class="welcome-gallery-arrow" type="button" data-gallery-previous aria-label="Previous collage" title="Previous collage" aria-controls="welcome-scenes">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m15 5-7 7 7 7" /></svg>
+        </button>
+        <button class="welcome-gallery-arrow" type="button" data-gallery-next aria-label="Next collage" title="Next collage" aria-controls="welcome-scenes">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m9 5 7 7-7 7" /></svg>
+        </button>
     </div>
+    <p class="welcome-gallery-status" data-gallery-status role="status" aria-live="polite" aria-atomic="true"></p>
 </section>

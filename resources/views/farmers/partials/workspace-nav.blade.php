@@ -6,11 +6,7 @@
   $scopeFilters = request()->only(['q', 'gender', 'mapping', 'quality', 'per_page']);
   $workspaceMunicipalities = $municipalities ?? collect();
   $workspaceProvinces = $workspaceProvinces ?? collect();
-  $provinceName = static function ($municipality) use ($workspaceProvinces): string {
-      return (string) ($workspaceProvinces->firstWhere('id', $municipality->province_id)?->name
-          ?? $municipality->province
-          ?? 'Province not assigned');
-  };
+  $municipalitiesByProvince = $workspaceMunicipalities->groupBy('province_id');
 @endphp
 
 @once
@@ -22,7 +18,6 @@
       .workspace-current{margin-top:16px;padding-top:14px;border-top:1px solid var(--ui-border);font-size:14px}.workspace-current span{color:var(--ui-text-muted)}
       .workspace-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:18px}
       .workspace-step{min-width:0}.workspace-step label,.workspace-step-label{display:block;margin-bottom:8px;font-size:14px;font-weight:500}
-      .workspace-step-number{display:inline-grid;place-items:center;width:24px;height:24px;margin-right:6px;border-radius:50%;background:var(--ui-accent-soft);color:var(--ui-primary)}
       .workspace-select-row{display:flex;gap:8px;align-items:center}.workspace-select{min-width:0;width:100%;min-height:44px;padding:8px;border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit;font-size:16px}
       .workspace-step-locked{display:block;padding:11px 0;font-size:16px}.workspace-view-switch{justify-content:flex-start;margin-top:16px}
       .workspace-view-link{padding:10px 16px;min-height:44px;display:inline-flex;align-items:center;border:1px solid var(--ui-border);border-radius:var(--ui-radius-control);text-decoration:none;color:var(--ui-text);font-size:14px}
@@ -40,11 +35,11 @@
 <section class="farmer-workspace-control" aria-labelledby="workspaceHeading" data-farmer-workspace-control>
   <div class="workspace-heading">
     <div>
-      <h2 id="workspaceHeading">Municipality workspace</h2>
-      <p>{{ $workspaceCanChoose ? 'Choose a region, then choose the municipality you want to work in.' : 'Your registry and parcel map use your assigned municipality.' }}</p>
+      <h2 id="workspaceHeading">{{ $workspaceCanChoose ? 'Choose a municipality' : 'Your municipality' }}</h2>
+      <p>{{ $workspaceUser->isSystemOwner() ? 'Select a region, then a municipality to view its farmers.' : 'View farmer records and parcels in your assigned area.' }}</p>
     </div>
     @if($workspaceCanChoose && $workspaceReady && !isset($workspaceRegions))
-      <a class="module-button" href="{{ route('farmers.index') }}">Change workspace</a>
+      <a class="module-button" href="{{ route('farmers.index') }}">Change municipality</a>
     @endif
   </div>
 
@@ -53,38 +48,37 @@
       @if($workspaceUser->isSystemOwner())
         <form method="GET" action="{{ route('farmers.index') }}" class="workspace-step" data-workspace-scope-form>
           @foreach($scopeFilters as $key => $value) @if(is_scalar($value))<input type="hidden" name="{{ $key }}" value="{{ $value }}">@endif @endforeach
-          <label for="workspaceRegion"><span class="workspace-step-number">1</span>Region</label>
+          <label for="workspaceRegion">Region</label>
           <div class="workspace-select-row">
             <select class="workspace-select" id="workspaceRegion" name="region_id" required data-workspace-select>
               <option value="">Select region</option>
               @foreach($workspaceRegions as $region)<option value="{{ $region['id'] }}" @selected(($workspaceRegionId ?? '') === $region['id'])>{{ $region['name'] }}</option>@endforeach
             </select>
-            <button class="module-button" type="submit">Next</button>
+            <button class="module-button" type="submit">Show municipalities</button>
           </div>
         </form>
       @else
-        <div class="workspace-step"><span class="workspace-step-label"><span class="workspace-step-number">1</span>Region</span><strong class="workspace-step-locked">{{ $workspaceRegionName ?? 'Region not assigned' }}</strong></div>
+        <div class="workspace-step"><span class="workspace-step-label">{{ $workspaceUser->requiresProvince() ? 'Province' : 'Region' }}</span><strong class="workspace-step-locked">{{ $workspaceUser->requiresProvince() ? $workspaceProvince?->name : ($workspaceRegionName ?? 'Region not assigned') }}</strong></div>
       @endif
 
       @if(filled($workspaceRegionId ?? null))
         <form method="GET" action="{{ route('farmers.index') }}#farmerDirectory" class="workspace-step" data-workspace-scope-form data-workspace-open>
           @foreach($scopeFilters as $key => $value) @if(is_scalar($value))<input type="hidden" name="{{ $key }}" value="{{ $value }}">@endif @endforeach
           <input type="hidden" name="region_id" value="{{ $workspaceRegionId }}">
-          <label for="workspaceMunicipality"><span class="workspace-step-number">2</span>Municipality</label>
+          <label for="workspaceMunicipality">Municipality / City</label>
           <div class="workspace-select-row">
             <select class="workspace-select" id="workspaceMunicipality" name="municipality_id" required data-workspace-select>
               <option value="">Select municipality</option>
               @foreach($workspaceProvinces as $province)
-                @php($provinceMunicipalities = $workspaceMunicipalities->where('province_id', $province->id))
+                @php($provinceMunicipalities = $municipalitiesByProvince->get($province->id, collect()))
                 @if($provinceMunicipalities->isNotEmpty())
                   <optgroup label="{{ $province->name }}">
-                    @foreach($provinceMunicipalities as $municipality)<option value="{{ $municipality->id }}" @selected((int) $workspaceMunicipality?->id === (int) $municipality->id)>{{ $municipality->name }}</option>@endforeach
+                    @foreach($provinceMunicipalities as $municipality)<option value="{{ $municipality->id }}" @selected((int) $workspaceMunicipality?->id === (int) $municipality->id)>{{ $municipality->name }} · {{ $province->name }}</option>@endforeach
                   </optgroup>
                 @endif
               @endforeach
-              @foreach($workspaceMunicipalities->filter(fn ($municipality) => ! $workspaceProvinces->contains('id', $municipality->province_id)) as $municipality)<option value="{{ $municipality->id }}" @selected((int) $workspaceMunicipality?->id === (int) $municipality->id)>{{ $municipality->name }} · {{ $provinceName($municipality) }}</option>@endforeach
             </select>
-            <button class="module-button module-button-primary" type="submit">Open</button>
+            <button class="module-button module-button-primary" type="submit">View farmers</button>
           </div>
         </form>
       @endif
@@ -99,7 +93,6 @@
       <a class="workspace-view-link" href="{{ route('farmers.index', ['municipality_id' => $workspaceMunicipality->id]) }}#farmersMapModule" data-workspace-target="map">Parcel map</a>
     </nav>
   @else
-    <p class="workspace-selection-hint" role="status">{{ empty($workspaceRegionId) ? 'Select a region to see its municipalities.' : 'Select a municipality to open its farmer registry and parcel map.' }} Records and map boundaries load after you open a municipality.</p>
-    @if(isset($workspaceRegions) && $workspaceRegions->isEmpty())<p class="module-alert">No active municipalities are available in your account scope. Ask your administrator to review the office assignments.</p>@endif
+    @if(isset($workspaceRegions) && $workspaceRegions->isEmpty())<p class="module-alert" role="status">No municipalities are available. Ask your administrator to check your assigned area.</p>@endif
   @endif
 </section>

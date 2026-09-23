@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Support\FarmerWorkspace;
 use DOMDocument;
 use DOMXPath;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -45,8 +46,9 @@ class FarmerWorkspaceHierarchyTest extends TestCase
             ['id' => 2, 'name' => 'Independent City', 'region_id' => 1],
             ['id' => 3, 'name' => 'Province Beta', 'region_id' => 2],
             ['id' => 4, 'name' => 'Unassigned Province', 'region_id' => null],
+            ['id' => 5, 'name' => 'Province Gamma', 'region_id' => 1],
         ]);
-        for ($id = 1; $id <= 4; $id++) {
+        for ($id = 1; $id <= 5; $id++) {
             DB::table('municipalities')->insert(['id' => $id, 'name' => 'Town '.$id, 'province' => 'Province '.$id, 'province_id' => $id]);
         }
     }
@@ -73,14 +75,28 @@ class FarmerWorkspaceHierarchyTest extends TestCase
     {
         $user = $this->user(User::ROLE_SYSTEM_OWNER);
         $data = $this->resolve($user, ['region_id' => '1']);
-        $this->assertSame([2, 1], $data['workspaceProvinces']->pluck('id')->all());
-        $this->assertSame([1, 2], $data['municipalities']->pluck('id')->all());
+        $this->assertSame([2, 1, 5], $data['workspaceProvinces']->pluck('id')->all());
+        $this->assertSame([1, 2, 5], $data['municipalities']->pluck('id')->all());
+        $this->assertInstanceOf(Collection::class, $data['municipalities']);
         $data = $this->resolve($user, ['province_id' => '2']);
         $this->assertSame('1', $data['workspaceRegionId']);
-        $this->assertSame([1, 2], $data['municipalities']->pluck('id')->all());
+        $this->assertSame([1, 2, 5], $data['municipalities']->pluck('id')->all());
         $this->assertNull($data['selectedMunicipality']);
         $data = $this->resolve($user, ['region_id' => '1', 'municipality_id' => '2']);
         $this->assertSame(2, $data['selectedMunicipality']->id);
+    }
+
+    public function test_municipality_options_are_grouped_by_province_and_exclude_other_regions(): void
+    {
+        $request = $this->request($this->user(User::ROLE_SYSTEM_OWNER), ['region_id' => '1']);
+        $view = app(FarmerController::class)->index($request, app(FarmerWorkspace::class));
+        $xpath = $this->xpath($view->render());
+        $selector = '//select[@id="workspaceMunicipality"]';
+        foreach (['Province Alpha' => 1, 'Independent City' => 2, 'Province Gamma' => 5] as $province => $municipalityId) {
+            $this->assertSame(1, $xpath->query($selector.'/optgroup[@label="'.$province.'"]/option[@value="'.$municipalityId.'"]')->length);
+        }
+        $this->assertSame(3, $xpath->query($selector.'//option[@value!=""]')->length);
+        $this->assertSame(0, $xpath->query($selector.'//option[@value="3" or @value="4"]')->length);
     }
 
     public function test_municipality_bookmarks_restore_the_hierarchy_and_unassigned_regions_remain_reachable(): void
@@ -98,7 +114,7 @@ class FarmerWorkspaceHierarchyTest extends TestCase
         $data = $this->resolve($regional);
         $this->assertSame('1', $data['workspaceRegionId']);
         $this->assertSame(['1'], $data['workspaceRegions']->pluck('id')->all());
-        $this->assertSame([1, 2], $data['municipalities']->pluck('id')->all());
+        $this->assertSame([1, 2, 5], $data['municipalities']->pluck('id')->all());
         $provincial = $this->user(User::ROLE_SUPER_ADMIN, ['province_id' => 1]);
         $data = $this->resolve($provincial);
         $this->assertSame(1, $data['workspaceProvince']->id);
@@ -106,8 +122,36 @@ class FarmerWorkspaceHierarchyTest extends TestCase
         $municipal = $this->user(User::ROLE_MUNICIPAL_STAFF, ['municipality_id' => 1]);
         $this->assertSame(1, $this->resolve($municipal, ['municipality_id' => '3'])['selectedMunicipality']->id);
 
-        foreach ([[$regional, ['region_id' => '2']], [$regional, ['province_id' => '3']], [$provincial, ['municipality_id' => '3']]] as [$user, $input]) {
+        foreach ([[$regional, ['region_id' => '2']], [$regional, ['province_id' => '3']], [$provincial, ['municipality_id' => '3']], [$provincial, ['region_id' => '1', 'municipality_id' => '5']], [$provincial, ['province_id' => '5']]] as [$user, $input]) {
             $this->assertRejected($user, $input);
+        }
+    }
+
+    public function test_offices_without_active_municipalities_render_an_empty_chooser(): void
+    {
+        DB::table('municipalities')->update(['is_active' => false]);
+        foreach ([
+            $this->user(User::ROLE_SYSTEM_OWNER),
+            $this->user(User::ROLE_REGIONAL_HEAD, ['region_id' => 1]),
+            $this->user(User::ROLE_SUPER_ADMIN, ['province_id' => 1]),
+        ] as $user) {
+            // Operational tables do not exist; even the empty state must stay lazy.
+            $request = $this->request($user, []);
+            $view = app(FarmerController::class)->index($request, app(FarmerWorkspace::class));
+            $this->assertSame('farmers.workspace', $view->name());
+            $data = $view->getData();
+            $this->assertNull($data['selectedMunicipality']);
+            $this->assertCount(0, $data['workspaceRegions']);
+            $this->assertCount(0, $data['workspaceProvinces']);
+            $this->assertCount(0, $data['municipalities']);
+            $this->assertInstanceOf(Collection::class, $data['municipalities']);
+            $xpath = $this->xpath($view->render());
+            $notice = $xpath->query('//p[contains(@class,"module-alert") and @role="status"]');
+            $this->assertSame(1, $notice->length);
+            $this->assertStringContainsString('No municipalities are available', $notice->item(0)->textContent);
+            $this->assertRejected($user, ['municipality_id' => '1']);
+            $this->assertRejected($user, ['province_id' => '1']);
+            $this->assertRejected($user, ['region_id' => '2']);
         }
     }
 
@@ -126,11 +170,16 @@ class FarmerWorkspaceHierarchyTest extends TestCase
     public function test_stage_forms_preserve_registry_filters_and_do_not_submit_stale_children(): void
     {
         $user = $this->user(User::ROLE_SYSTEM_OWNER);
-        $request = $this->request($user, ['region_id' => '1', 'q' => 'Rice Grower', 'quality' => 'missing_ffrs']);
+        $request = $this->request($user, ['region_id' => '1', 'province_id' => '1', 'q' => 'Rice Grower', 'quality' => 'missing_ffrs']);
         $view = app(FarmerController::class)->index($request, app(FarmerWorkspace::class));
         $xpath = $this->xpath($view->render());
-        $this->assertGreaterThanOrEqual(1, $xpath->query('//form/input[@name="q" and @value="Rice Grower"]')->length);
-        $this->assertSame(0, $xpath->query('//form[.//select[@id="workspaceRegion"]]//*[@name="province_id"]')->length);
+        $forms = $xpath->query('//form[@data-workspace-scope-form]');
+        $this->assertSame(2, $forms->length);
+        foreach ($forms as $form) {
+            $this->assertSame(1, $xpath->query('.//input[@name="q" and @value="Rice Grower"]', $form)->length);
+            $this->assertSame(1, $xpath->query('.//input[@name="quality" and @value="missing_ffrs"]', $form)->length);
+            $this->assertSame(0, $xpath->query('.//*[@name="province_id"]', $form)->length);
+        }
         $this->assertSame(0, $xpath->query('//select[@id="workspaceProvince"]')->length);
         $this->assertSame(0, $xpath->query('//form[.//select[@id="workspaceRegion"]]//*[@name="municipality_id"]')->length);
         $this->assertSame(0, $xpath->query('//select[@disabled]')->length, 'Every visible step also works without JavaScript');

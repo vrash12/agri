@@ -60,73 +60,28 @@ class FarmerWorkspace
                 throw ValidationException::withMessages(['municipality_id' => 'The selected municipality is unavailable.']);
             }
         }
-        // province_id remains accepted for old bookmarks. New workspace forms only
-        // submit region_id and municipality_id, so a legacy province never narrows
-        // the municipality list to one province when a region is selected.
-        $legacyProvince = null;
-        if (! empty($input['province_id'])) {
-            $legacyProvince = $provinces->firstWhere('id', (int) $input['province_id']);
-            if (! $legacyProvince) {
-                throw ValidationException::withMessages(['province_id' => 'The selected province is unavailable for this workspace.']);
-            }
+        // Old province bookmarks still establish and validate their region, but
+        // municipality choices span every already authorized province in it.
+        $provinceId = $input['province_id'] ?? $selectedMunicipality?->province_id ?? ($user->requiresProvince() ? $user->province_id : null);
+        $selectedProvince = $provinceId ? $provinces->firstWhere('id', (int) $provinceId) : null;
+        if ((filled($input['province_id'] ?? null) && ! $selectedProvince) || ($selectedMunicipality && $selectedMunicipality->province_id !== $selectedProvince?->id)) {
+            throw ValidationException::withMessages(['province_id' => 'The selected province is unavailable for this workspace.']);
         }
-
-        $selectedProvince = $legacyProvince;
-        $fixedRegionId = null;
-        if ($user->isRegionalHead()) {
-            $fixedRegionId = (string) $user->region_id;
-        } elseif ($user->requiresProvince() && ! $user->isSystemOwner()) {
-            $selectedProvince = $provinces->firstWhere('id', (int) $user->province_id);
-            if (! $selectedProvince) {
-                throw ValidationException::withMessages(['province_id' => 'Your assigned province is unavailable for this workspace.']);
-            }
-            $fixedRegionId = $regionKey($selectedProvince);
-            if ($legacyProvince && $legacyProvince->id !== $selectedProvince->id) {
-                throw ValidationException::withMessages(['province_id' => 'The selected province is unavailable for this workspace.']);
-            }
-        }
-
-        $selectedRegionId = (string) ($fixedRegionId ?? ($input['region_id'] ?? ($legacyProvince ? $regionKey($legacyProvince) : '')));
-        if ($fixedRegionId !== null && filled($input['region_id'] ?? null) && (string) $input['region_id'] !== $fixedRegionId) {
+        $selectedRegionId = (string) ($input['region_id'] ?? ($selectedProvince ? $regionKey($selectedProvince) : ($user->isRegionalHead() ? $user->region_id : '')));
+        // An assigned office can have no active municipalities. Implicit scope
+        // still renders the empty chooser; an explicit unavailable choice fails.
+        if (($selectedRegionId !== '' && ! $regions->contains('id', $selectedRegionId) && (! $regions->isEmpty() || filled($input['region_id'] ?? null))) || ($selectedProvince && $regionKey($selectedProvince) !== $selectedRegionId)) {
             throw ValidationException::withMessages(['region_id' => 'The selected region is unavailable for this workspace.']);
         }
-        if ($selectedRegionId !== '' && ! $regions->contains('id', $selectedRegionId)) {
-            throw ValidationException::withMessages(['region_id' => 'The selected region is unavailable for this workspace.']);
-        }
-        if ($legacyProvince && $regionKey($legacyProvince) !== $selectedRegionId) {
-            throw ValidationException::withMessages(['region_id' => 'The selected region is unavailable for this workspace.']);
-        }
-
-        if ($selectedMunicipality) {
-            $municipalityProvince = $provinces->firstWhere('id', (int) $selectedMunicipality->province_id);
-            $municipalityRegionId = $municipalityProvince ? $regionKey($municipalityProvince) : null;
-            if ($municipalityRegionId === null || ($selectedRegionId !== '' && $municipalityRegionId !== $selectedRegionId)) {
-                throw ValidationException::withMessages(['municipality_id' => 'The selected municipality is unavailable for this region.']);
-            }
-            // A supplied province belongs to an old URL. Continue to enforce its
-            // parent relationship when present, while new region-only links may
-            // select any municipality in that region.
-            if ($legacyProvince && $selectedMunicipality->province_id !== $legacyProvince->id) {
-                throw ValidationException::withMessages(['province_id' => 'The selected municipality is unavailable for this province.']);
-            }
-            $selectedRegionId = $municipalityRegionId;
-        }
-
-        $regionProvinceIds = $selectedRegionId === ''
-            ? []
-            : $provinces->filter(fn (Province $province): bool => $regionKey($province) === $selectedRegionId)
-                ->pluck('id')->all();
-        $regionMunicipalities = $selectedRegionId === ''
-            ? collect()
-            : $municipalities->whereIn('province_id', $regionProvinceIds)->values();
+        $regionProvinces = $provinces->filter(fn (Province $province): bool => $regionKey($province) === $selectedRegionId)->values();
 
         return [
             'workspaceRegions' => $regions,
-            'workspaceProvinces' => $selectedRegionId === '' ? collect() : $provinces->filter(fn ($province) => $regionKey($province) === $selectedRegionId)->values(),
+            'workspaceProvinces' => $regionProvinces,
             'workspaceRegionId' => $selectedRegionId,
             'workspaceRegionName' => $regions->firstWhere('id', $selectedRegionId)['name'] ?? null,
             'workspaceProvince' => $selectedProvince,
-            'municipalities' => $regionMunicipalities,
+            'municipalities' => $municipalities->whereIn('province_id', $regionProvinces->pluck('id'))->values(),
             'selectedMunicipality' => $selectedMunicipality,
         ];
     }

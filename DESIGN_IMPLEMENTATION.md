@@ -1,5 +1,17 @@
 # Design and UX implementation record
 
+## Homepage collage arrows — September 23, 2026
+
+The homepage collage now uses level Previous and Next arrow buttons beside the
+photo stack. The numbered selector, play control and explanatory counter were
+removed so the hero has one clear interaction. Buttons wrap across the five
+collages, expose labelled 44px targets, support keyboard arrow keys and announce
+the active collage through a live status region. Only the first collage loads
+before interaction; each later collage loads when visited. Eight JavaScript tests,
+the welcome feature tests, Blade compilation and scoped whitespace checks pass.
+The change is ready for the GitHub release; Hostinger still needs its normal pull
+and cache refresh.
+
 ## Farmer workspace chooser and coverage figures — September 23, 2026
 
 Farmers now opens a progressive workspace chooser for oversight and provincial accounts, showing a simple Region → Municipality path with municipality options grouped by province, native 44px controls, explicit Next/Open actions and automatic selection navigation. Fixed assignments remain visible and direct municipality links retain their destination. Parent changes clear child choices. No farmer records or geometry are loaded during region/municipality selection. The dashboard adds a compact six-figure assistance/geofence panel beneath the reporting-year control, with definitions and review links. Existing design tokens are reused.

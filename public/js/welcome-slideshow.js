@@ -4,15 +4,11 @@
     const root = document.querySelector('[data-welcome-slideshow]');
     if (!root) return;
     const slides = Array.from(root.querySelectorAll('[data-scene]'));
-    const selectors = Array.from(root.querySelectorAll('[data-scene-select]'));
     const controls = root.querySelector('[data-gallery-controls]');
-    const play = root.querySelector('[data-gallery-play]');
-    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const previous = root.querySelector('[data-gallery-previous]');
+    const next = root.querySelector('[data-gallery-next]');
+    const status = root.querySelector('[data-gallery-status]');
     let current = 0;
-    let paused = false;
-    let hovering = false;
-    let timer;
-    let pointerPauseIntent = null;
 
     root.querySelectorAll('[data-collage-photo]').forEach(photo => {
         const image = photo.querySelector('img');
@@ -22,11 +18,12 @@
         image.addEventListener('error', fail);
         if (image.hasAttribute('src') && image.complete && image.naturalWidth === 0) fail();
     });
-    if (slides.length < 2 || !controls || !play) return;
-    controls.hidden = false;
+    if (!slides.length) return;
 
-    const loadScene = index => {
-        slides[index].querySelectorAll('img').forEach(image => {
+    const show = (index, announce = true) => {
+        current = (index + slides.length) % slides.length;
+        // Unvisited collages keep deferred URLs until the visitor requests them.
+        slides[current].querySelectorAll('img').forEach(image => {
             image.loading = 'eager';
             const source = image.getAttribute('data-src');
             if (source) {
@@ -34,46 +31,22 @@
                 image.removeAttribute('data-src');
             }
         });
+        slides.forEach((slide, i) => { slide.hidden = i !== current; });
+        if (announce && status) {
+            status.textContent = `Collage ${slides[current].getAttribute('aria-label') || `${current + 1} of ${slides.length}`}`;
+        }
     };
 
-    const schedule = () => {
-        window.clearTimeout(timer);
-        play.disabled = motion.matches;
-        play.textContent = motion.matches ? 'Motion reduced' : paused ? 'Play slideshow' : 'Pause slideshow';
-        if (motion.matches || document.hidden || paused || hovering) return;
-        // Only the current and upcoming collage get image URLs; the rest stay deferred.
-        loadScene((current + 1) % slides.length);
-        timer = window.setTimeout(() => show((current + 1) % slides.length), 8000);
-    };
-    const show = index => {
-        current = index;
-        loadScene(current);
-        slides.forEach((slide, i) => { slide.hidden = i !== current; });
-        selectors.forEach((button, i) => button.setAttribute('aria-pressed', String(i === current)));
-        schedule();
-    };
-    selectors.forEach((button, index) => button.addEventListener('click', () => {
-        paused = true;
-        show(index);
+    show(current, false);
+    if (slides.length < 2 || !previous || !next) return;
+
+    previous.addEventListener('click', () => show(current - 1));
+    next.addEventListener('click', () => show(current + 1));
+    [previous, next].forEach(button => button.addEventListener('keydown', event => {
+        if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+        event.preventDefault();
+        show(current + (event.key === 'ArrowRight' ? 1 : -1));
     }));
-    // Pointer focus arrives before click; retain the action the visitor clicked.
-    play.addEventListener('pointerdown', () => { pointerPauseIntent = !paused; });
-    play.addEventListener('pointercancel', () => { pointerPauseIntent = null; });
-    play.addEventListener('blur', () => { pointerPauseIntent = null; });
-    play.addEventListener('click', () => {
-        paused = pointerPauseIntent === null ? !paused : pointerPauseIntent;
-        pointerPauseIntent = null;
-        schedule();
-    });
-    // Keyboard users retain the chosen collage until they explicitly resume playback.
-    root.addEventListener('focusin', event => {
-        if (!root.contains(event.relatedTarget)) { paused = true; schedule(); }
-    });
-    root.addEventListener('mouseenter', () => { hovering = true; schedule(); });
-    root.addEventListener('mouseleave', () => { hovering = false; schedule(); });
-    document.addEventListener('visibilitychange', schedule);
-    if (motion.addEventListener) motion.addEventListener('change', schedule);
-    else motion.addListener(schedule);
-    loadScene(current);
-    schedule();
+    if (controls) controls.hidden = false;
 })();

@@ -17,13 +17,13 @@ The application is designed for multiple offices using the system at the same ti
 ### Public farmer welcome page
 
 - Visitors to the homepage can read guides to farmer registration, crop inputs, fisheries assistance, animal health, farm mapping, cooperatives, and machinery inquiries.
-- The homepage presents farming/fishing photographs as a bold collage, with services before the system overview, separate farmer/office sign-in, keyboard-friendly disclosures, and a controllable slideshow. Its layout adapts to phones and respects reduced motion; this visual redesign was deployed September 20, 2026.
+- The homepage presents farming/fishing photographs as a bold collage, with services before the system overview, separate farmer/office sign-in, keyboard-friendly disclosures, and manual Previous/Next collage arrows. Its layout adapts to phones and keeps decorative transitions low-motion; this visual redesign was deployed September 20, 2026.
 - A clearer three-line welcome message highlights the farmer audience. Buttons, links, photo frames, and service disclosures give subtle visual feedback; section shortcuts preserve keyboard focus and mark the current section. Reduced-motion preferences remove the decorative movement.
 - Official DA, RSBSA Finder, PhilRice, ATI, BFAR, and PAGASA links provide program, learning, and weather information.
 - An office-visit checklist helps visitors prepare their information; the local office confirms requirements, schedules, and eligibility.
 - Mobile navigation and keyboard-accessible service disclosures work alongside a separate office sign-in entry.
 - Credited Philippine agriculture photographs illustrate the services, including rice farming, fisheries, livestock, and machinery.
-- Twenty photographs show Philippine farming, fishing, crops and livestock in five different collages, with four photos per view, collage selection and pause controls. Reduced-motion preferences keep the collage still; the first four photos work without JavaScript.
+- Twenty photographs show Philippine farming, fishing, crops and livestock in five different collages, with four photos per view and wrapping Previous/Next arrows. The first four photos work without JavaScript; later collages load when visited.
 - About AgriGOV explains farmer records, parcel maps and dry/wet seasonal crops, assistance releases, animal-health services, cooperatives/machinery, and reports. The DA seal accompanies official DA resource links.
 - Inside AgriGOV groups these six capabilities in an expandable office-tools panel, with short benefits and an office sign-in button. Tool descriptions open by click or keyboard without requiring JavaScript; the layout stacks on phones.
 - The page displays no private records or operational totals and does not offer public applications, account registration, or equipment bookings.

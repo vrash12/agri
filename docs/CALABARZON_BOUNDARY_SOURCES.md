@@ -201,7 +201,19 @@ SHA-256 after normalizing line endings to LF.
 
 ## Requested accounts
 
-The owner requested one regional administrator (the existing Regional Head role) and selected three provincial administrators: Cavite, Batangas and Laguna. Inactive Super Admin accounts were prepared with the official office addresses `agriculture.cavite@yahoo.com`, `agri@batangas.gov.ph` and `faesopaglaguna@gmail.com`; each requires an owner-set password before activation. Account provisioning refused existing logins, validated usable province scope, and audited creation without credentials. No Quezon, Rizal or Lucena administrator was issued, and no invitation email was sent.
+The owner requested one regional administrator (the existing Regional Head role), three provincial administrators and one provincial staff account each for Cavite, Batangas and Laguna. On September 23, 2026, the existing Regional Head was retained and the three previously inactive Super Admin accounts were activated with unique random passwords. Three active Provincial Agriculture Staff accounts were created. A verified private backup of all 21 tables preceded the transaction; each changed account passed password-hash and usable-scope checks, and all six changes have attributed audit records without credentials.
+
+| Scope | Role | Sign-in email |
+| --- | --- | --- |
+| CALABARZON | Regional Head | `regional.region4a@agrigov.test` |
+| Cavite | Super Admin | `agriculture.cavite@yahoo.com` |
+| Batangas | Super Admin | `agri@batangas.gov.ph` |
+| Laguna | Super Admin | `faesopaglaguna@gmail.com` |
+| Cavite | Provincial Agriculture Staff | `cavite.staff@agrigov.test` |
+| Batangas | Provincial Agriculture Staff | `batangas.staff@agrigov.test` |
+| Laguna | Provincial Agriculture Staff | `laguna.staff@agrigov.test` |
+
+The `.test` addresses are invented sign-in identifiers, not deliverable mailboxes. Credentials are provided only through protected local handoff files. Provincial access checks returned exactly Cavite's 23, Batangas's 34 and Laguna's 30 municipalities, with no other province included. No Quezon, Rizal or Lucena administrator was issued, and no invitation email was sent.
 
 ## Verified production release
 
