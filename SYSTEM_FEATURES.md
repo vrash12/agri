@@ -1,5 +1,7 @@
 # Agriculture Information System — Complete Feature Catalog
 
+Latest interface release: Hostinger installed `88d3bdc` on September 23, 2026. Farmers now selects Region → Municipality, and homepage collages use Previous/Next arrows. CALABARZON has one active Regional Head plus active provincial administrator and staff accounts for Cavite, Batangas and Laguna; each account's live sign-in and assigned municipality choices were checked.
+
 Deployment status: the September 20, 2026 Hostinger release includes the welcome collage, dashboard graphs, assistance coverage, Ramos barangay references, Region II, Negros Island Region and Mountain Province geofences. See `docs/FULL_DEPLOYMENT_2026_09_20.md` for verified scope and limitations.
 
 The September 21 Hostinger release adds compact dashboard charts/tables, the remaining 53 CAR geofences (77 municipality/city references total), and the office sign-in confidentiality/testing notice. Existing data and account assignments were preserved. See `docs/CAR_DASHBOARD_DEPLOYMENT_2026_09_21.md`. The pending primary farmer-ID display/search update was not included.

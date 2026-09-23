@@ -1,6 +1,6 @@
 # Public farmer welcome page
 
-Current status: the base welcome page was deployed to Hostinger on September 20, 2026 in release 54cc9e4. The September 23 collage-arrow refresh is prepared locally for the next GitHub release and still needs the normal Hostinger pull/cache refresh. Earlier local-only statements below describe implementation-stage checks. See FULL_DEPLOYMENT_2026_09_20.md for the base deployment receipt and remaining limits.
+Current status: the base welcome page was deployed to Hostinger on September 20, 2026 in release 54cc9e4. The September 23 collage-arrow refresh was installed through GitHub and Hostinger in runtime commit `88d3bdc`; both served assets match the release and the live homepage returns HTTP 200 with the new arrows. Earlier local-only statements below describe implementation-stage checks. See GITHUB_DEPLOYMENT.md for the latest receipt and FULL_DEPLOYMENT_2026_09_20.md for the base deployment.
 
 ## Manual collage navigation — September 23, 2026
 
@@ -10,7 +10,7 @@ Arrows wrap across all five four-photo collages, accept Left/Right arrow keys,
 and announce the selected collage in a polite live region. The first collage
 still works without JavaScript; the other 16 photos keep deferred URLs until a
 visitor opens their collage. Eight JavaScript tests and the updated welcome-page
-feature checks pass. The update has not yet been installed on Hostinger.
+feature checks pass. Hostinger's public asset copies and compiled views were updated together.
 
 ## Implementation scope
 

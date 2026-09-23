@@ -215,6 +215,8 @@ The owner requested one regional administrator (the existing Regional Head role)
 
 The `.test` addresses are invented sign-in identifiers, not deliverable mailboxes. Credentials are provided only through protected local handoff files. Provincial access checks returned exactly Cavite's 23, Batangas's 34 and Laguna's 30 municipalities, with no other province included. No Quezon, Rizal or Lucena administrator was issued, and no invitation email was sent.
 
+After runtime release `88d3bdc`, all seven credentials were verified through actual HTTPS sign-in and the Farmers chooser. The existing Regional Head sees all 142 configured CALABARZON municipalities/cities; the six provincial accounts show only their respective province. Each verification session was signed out. Temporary provisioning files were removed, and the consolidated handoff file is restricted to the owner's Windows account.
+
 ## Verified production release
 
 Installed runtime commit `496b706`, then entered a brief maintenance window. Private, permission-restricted JSON backups of all affected tables were verified before the transaction. The import activated Batangas 34, Cavite 23, Laguna 30, Quezon 40, Rizal 14 and Lucena City 1. Region IV-A was configured with six province/city scopes. All pre-existing rows in the affected tables were compared and preserved; farmer, parcel, assistance and farmer-portal account snapshots were unchanged. No migration or public asset change was required. Configuration, routes and Blade caches were refreshed, and the site returned online.

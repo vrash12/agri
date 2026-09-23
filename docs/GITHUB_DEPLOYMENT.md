@@ -14,6 +14,17 @@ The owner selected GitHub deployment on September 21, 2026. The source repositor
 
 SSH authentication is interactive or uses an owner-approved existing key. Never include a password in a command argument, script, repository, deployment document or log. Existing verified SSH host keys must remain enforced.
 
+## Verified Hostinger release — September 23, 2026 — farmer chooser and collage arrows
+
+Runtime commit `88d3bdc550895d1feb46c32017edfe6d49f13cd1` was pushed to GitHub main and installed with `git pull --ff-only origin main` from the clean tracked baseline `d69eb4a`. PHP 8.3.33 was verified. A private archive preserved the affected application files and the separate public copies before a brief maintenance window.
+
+- A verified database backup contains all 21 tables and 10,909 rows, SHA-256 `ea16432a75a8058f7e63660c6c6e0c407160879a5656899334106ff8f1f430bf`. It includes the separately authorized CALABARZON account changes. The environment file checksum is unchanged.
+- Focused validation passed 73 PHP tests / 692 assertions and eight slideshow JavaScript tests, plus Pint, syntax, Blade compilation and whitespace checks. Desktop and 390px phone UI checks used local synthetic fixtures.
+- No migrations, dependency updates or operational data imports ran. Production configuration, route and view caches were rebuilt successfully.
+- `welcome.css` and `welcome-slideshow.js` match between both public directories and the live HTTPS responses. The homepage returns HTTP 200 with Previous/Next controls and without the old numbered/play controls.
+- All seven CALABARZON accounts signed in successfully and opened Farmers with the expected assigned municipality choices; all verification sessions were signed out. The existing Regional Head was retained, three provincial administrators were activated and three provincial staff accounts were created. See `CALABARZON_BOUNDARY_SOURCES.md` for account scope and handoff details.
+- The site is online. Production browser interaction with Google Maps was not repeated; the previously deployed hover optimization and slash-separated farmer-card parcel addresses remain in place.
+
 ## One-time reconciliation
 
 The old server checkout was at `6822f9e`, while individually deployed runtime files matched GitHub `4546096` except for the known CAR/dashboard/sign-in release. A metadata-only mixed reset to that verified baseline preserves working files; it is only appropriate for this audited transition, after recording the old revision. Back up and preserve the known manual changes and any incoming untracked-file collisions before the subsequent fast-forward pull. A normal future release should not need this reconciliation.
