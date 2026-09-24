@@ -76,6 +76,97 @@ test('failed HTTP responses never parse or display provider error content', asyn
   }
 });
 
+function collectionHarness(respond, mapsAvailable = true) {
+  const calls = { requests: [], maps: 0, polygons: 0, fits: 0, removed: 0 };
+  const makeElement = () => ({ hidden: false, disabled: false, textContent: '', value: '', events: {}, appendChild() {},
+    addEventListener(name, fn) { this.events[name] = fn; } });
+  const select = makeElement(), detail = makeElement(), detailName = makeElement(), detailArea = makeElement(), crops = makeElement(), warning = makeElement(), fit = makeElement(), retry = makeElement(), canvas = makeElement(), status = makeElement(), records = makeElement();
+  records.open = false;
+  const root = { dataset: { collectionUrl: '/farmer-portal/parcels/geometry', mapsKey: '', cropYear: '2026' },
+    querySelector: selector => ({ '[data-map-canvas]': canvas, '[data-map-status]': status, '[data-map-parcel-select]': select, '[data-map-detail]': detail,
+      '[data-map-detail-name]': detailName, '[data-map-detail-area]': detailArea, '[data-map-crops]': crops,
+      '[data-map-warning]': warning, '[data-fit-map]': fit, '[data-map-retry]': retry })[selector] };
+  const google = { maps: {
+    Map: class { constructor() { calls.maps++; } fitBounds() { calls.fits++; } },
+    Polygon: class { constructor() { calls.polygons++; } addListener() {} setOptions() {} setMap(map) { if (map === null) calls.removed++; } },
+    LatLngBounds: class { extend() {} }
+  } };
+  const context = { document: { querySelector: selector => selector === '[data-map-records]' ? records : root, createElement: makeElement, head: { appendChild() {} } },
+    window: { google: mapsAvailable ? google : undefined, location: { href: 'https://example.test/farmer-portal/parcels' } }, google, URL, AbortController,
+    setTimeout: () => 1, clearTimeout() {}, fetch: async (url, options) => { calls.requests.push({ url, options }); return respond(calls.requests.length); } };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../public/js/farmer-portal-map.js'), 'utf8'), context);
+  return { calls, select, detail, detailName, crops, fit, retry, canvas, status, records };
+}
+
+function samplePlot(id, name) {
+  return { id, name, area_ha: 0.25, color: '#236344', paths: [[{ lat: 15, lng: 120 }, { lat: 15, lng: 120.01 }, { lat: 15.01, lng: 120.01 }]], crops: [{ season: 'Wet season', crop: 'Rice / Palay' }] };
+}
+
+const mapResponse = page => ({ ok: true, json: async () => page });
+const settle = () => new Promise(resolve => setImmediate(resolve));
+
+test('farmer parcel overview loads every map page, fits all boundaries and exposes selection details', async () => {
+  const pages = [
+    { plots: [samplePlot(4, 'North plot')], total: 2, next_after_id: 4 },
+    { plots: [samplePlot(9, 'South plot')], total: 2, next_after_id: null }
+  ];
+  const h = collectionHarness(index => mapResponse(pages[index - 1]));
+  await settle();
+  assert.equal(h.calls.requests.length, 2);
+  assert.equal(new URL(h.calls.requests[1].url).searchParams.get('after_id'), '4');
+  assert.equal(h.calls.requests[0].options.cache, 'no-store');
+  assert.equal(h.calls.requests[0].options.credentials, 'same-origin');
+  assert.equal(h.calls.maps, 1);
+  assert.equal(h.calls.polygons, 2);
+  assert.ok(h.calls.fits >= 1);
+  assert.equal(h.select.disabled, false);
+  assert.equal(h.detailName.textContent, 'North plot');
+  h.select.value = '9'; h.select.events.change();
+  assert.equal(h.detailName.textContent, 'South plot');
+  assert.match(h.status.textContent, /2 of 2 recorded parcels/);
+  assert.equal(h.retry.hidden, true);
+});
+
+test('a failed later map page preserves loaded land and retries from the same cursor', async () => {
+  const h = collectionHarness(index => index === 2 ? { ok: false, status: 500 } : mapResponse({
+    plots: [samplePlot(index === 1 ? 4 : 9, index === 1 ? 'North plot' : 'South plot')], total: 2, next_after_id: index === 1 ? 4 : null
+  }));
+  await settle();
+  assert.equal(h.calls.polygons, 1);
+  assert.equal(h.canvas.hidden, false);
+  assert.match(h.status.textContent, /Only 1 of 2/);
+  assert.equal(h.records.open, true);
+  await h.retry.events.click();
+  assert.equal(h.calls.requests[1].url, h.calls.requests[2].url);
+  assert.equal(h.calls.polygons, 2);
+  assert.equal(h.calls.maps, 1);
+  assert.equal(h.retry.hidden, true);
+});
+
+test('session expiry during map paging removes already displayed private boundaries', async () => {
+  const h = collectionHarness(index => index === 1
+    ? mapResponse({ plots: [samplePlot(4, 'North plot')], total: 2, next_after_id: 4 })
+    : { ok: false, status: 401 });
+  await settle();
+  assert.equal(h.calls.removed, 1);
+  assert.equal(h.canvas.hidden, true);
+  assert.equal(h.detail.hidden, true);
+  assert.equal(h.select.disabled, true);
+  assert.equal(h.records.open, false);
+  assert.match(h.status.textContent, /Sign in again/);
+});
+
+test('unavailable maps reveal parcel records and keep owned area and crop selection usable', async () => {
+  const h = collectionHarness(() => mapResponse({ plots: [samplePlot(4, 'North plot')], total: 1, next_after_id: null }), false);
+  await settle();
+  assert.equal(h.calls.maps, 0);
+  assert.equal(h.canvas.hidden, true);
+  assert.equal(h.records.open, true);
+  assert.equal(h.select.disabled, false);
+  assert.equal(h.detailName.textContent, 'North plot');
+  assert.match(h.status.textContent, /Maps are unavailable/);
+});
+
 function sessionHarness() {
   let time = 100000, tick;
   const events = {}, calls = [], redirects = [];

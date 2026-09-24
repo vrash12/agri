@@ -48,6 +48,7 @@ class FarmerPortalTest extends TestCase
             $this->get(route('farmer-portal.'.$page))->assertRedirect(route('farmer-portal.login'));
         }
         $this->getJson($this->geometry(1))->assertUnauthorized();
+        $this->getJson(route('farmer-portal.parcels.geometries'))->assertUnauthorized();
     }
 
     public function test_staff_issue_hashed_one_time_activation_without_changing_farmer_or_leaking_code_to_session_or_audit(): void
@@ -215,6 +216,7 @@ class FarmerPortalTest extends TestCase
     {
         $this->account();
         $this->actingAs(User::findOrFail(1))->get(route('farmer-portal.home'))->assertRedirect(route('farmer-portal.login'));
+        $this->getJson(route('farmer-portal.parcels.geometries'))->assertUnauthorized();
         $this->assertGuest('farmer');
     }
 
@@ -319,6 +321,113 @@ class FarmerPortalTest extends TestCase
         $this->getJson($this->geometry(1))->assertUnprocessable();
         DB::table('farm_plots')->where('id', 1)->update(['polygon_json' => json_encode(array_fill(0, 10001, ['lat' => 15, 'lng' => 120]))]);
         $this->getJson($this->geometry(1))->assertUnprocessable();
+    }
+
+    public function test_all_owned_parcels_map_endpoint_returns_crops_and_never_foreign_geometry(): void
+    {
+        $this->account();
+        $this->login();
+        DB::table('parcel_crop_seasons')->insert(['farm_plot_id' => 1, 'municipality_id' => 1, 'crop_year' => 2026, 'season' => 'wet', 'crop' => 'rice']);
+
+        $this->getJson(route('farmer-portal.parcels.geometries', ['year' => 2026]))
+            ->assertOk()->assertJsonPath('total', 1)->assertJsonPath('plots.0.id', 1)
+            ->assertJsonPath('plots.0.crops.0.crop', 'Rice / Palay')
+            ->assertJsonPath('next_after_id', null)->assertJsonMissing(['farmer_id' => 2]);
+        $this->getJson(route('farmer-portal.parcels.geometries', ['after_id' => 1]))
+            ->assertOk()->assertJsonPath('plots', [])->assertJsonPath('total', 1);
+        $this->assertStringContainsString('no-store', $this->getJson(route('farmer-portal.parcels.geometries'))->headers->get('Cache-Control'));
+        DB::table('farm_plots')->where('id', 1)->update(['polygon_json' => json_encode([['lat' => 999, 'lng' => 120], ['lat' => 10, 'lng' => 120], ['lat' => 11, 'lng' => 120]])]);
+        $this->getJson(route('farmer-portal.parcels.geometries'))->assertOk()->assertJsonPath('plots.0.paths', null);
+        $this->getJson(route('farmer-portal.parcels.geometries', ['year' => 100]))->assertUnprocessable();
+        $this->getJson(route('farmer-portal.parcels.geometries', ['after_id' => -1]))->assertUnprocessable();
+    }
+
+    public function test_collection_map_retrieves_all_owned_parcels_beyond_the_record_page_with_constant_queries(): void
+    {
+        $this->account();
+        $this->login();
+        DB::table('farmers')->where('id', 2)->update(['municipality_id' => 1]);
+        $base = (array) DB::table('farm_plots')->where('id', 1)->first();
+        unset($base['id']);
+        for ($i = 0; $i < 24; $i++) {
+            DB::table('farm_plots')->insert(array_replace($base, ['name' => 'Additional owned parcel '.$i]));
+        }
+        DB::table('parcel_crop_seasons')->insert([
+            ['farm_plot_id' => 1, 'municipality_id' => 2, 'crop_year' => 2026, 'season' => 'wet', 'crop' => 'corn'],
+            ['farm_plot_id' => 2, 'municipality_id' => 1, 'crop_year' => 2026, 'season' => 'wet', 'crop' => 'vegetables'],
+            ['farm_plot_id' => 1, 'municipality_id' => 1, 'crop_year' => 2025, 'season' => 'dry', 'crop' => 'rice'],
+        ]);
+        $page = $this->get(route('farmer-portal.parcels'))->assertOk()
+            ->assertSee('data-collection-url', false)->assertSee('js/farmer-portal-map.js', false)
+            ->assertDontSee('120.51')->assertDontSee('polygon_json');
+        $this->assertCount(10, $page->viewData('plots'));
+        $this->assertSame(25, $page->viewData('totals')['parcels']);
+
+        DB::enableQueryLog();
+        DB::flushQueryLog();
+        $first = $this->getJson(route('farmer-portal.parcels.geometries', ['year' => 2026, 'farmer_id' => 2, 'municipality_id' => 2]))
+            ->assertOk()->assertJsonCount(20, 'plots')->assertJsonPath('total', 25)
+            ->assertJsonPath('plots.0.crops', []);
+        $queries = collect(DB::getQueryLog())->filter(fn ($query) => str_contains($query['query'], 'from "farm_plots"'))->count();
+        DB::disableQueryLog();
+        $this->assertLessThanOrEqual(4, $queries, 'Map query count must not grow with each parcel.');
+        $second = $this->getJson(route('farmer-portal.parcels.geometries', ['year' => 2026, 'after_id' => $first->json('next_after_id')]))
+            ->assertOk()->assertJsonCount(5, 'plots')->assertJsonPath('next_after_id', null);
+        $ids = array_column(array_merge($first->json('plots'), $second->json('plots')), 'id');
+        $this->assertCount(25, array_unique($ids));
+        $this->assertNotContains(2, $ids);
+        $this->getJson(route('farmer-portal.parcels.geometries', ['year' => 2025]))
+            ->assertOk()->assertJsonPath('plots.0.crops.0.crop', 'Rice / Palay');
+    }
+
+    public function test_collection_map_limits_byte_budget_and_reports_invalid_boundaries_without_hiding_valid_land(): void
+    {
+        $this->account();
+        $this->login();
+        $base = (array) DB::table('farm_plots')->where('id', 1)->first();
+        // Keep the large fixtures valid polygons so the test proves the page
+        // budget, rather than the geometry validator, controls cursoring.
+        $largeRing = json_encode(array_map(
+            fn (int $index): array => [
+                'lat' => 15 + ($index % 2) / 100000,
+                'lng' => 120 + ($index % 2) / 100000,
+                'note' => str_repeat('x', 55),
+            ],
+            range(1, 9000)
+        ));
+        DB::table('farm_plots')->where('id', 1)->update(['polygon_json' => $largeRing]);
+        DB::table('farm_plots')->insert(array_replace($base, ['id' => 3, 'polygon_json' => $largeRing]));
+        DB::table('farm_plots')->insert(array_replace($base, ['id' => 4, 'polygon_json' => json_encode(str_repeat('x', 1000001))]));
+        DB::table('farm_plots')->insert(array_replace($base, ['id' => 5, 'polygon_json' => json_encode(array_fill(0, 10001, ['lat' => 15, 'lng' => 120]))]));
+        DB::table('farm_plots')->insert(array_replace($base, ['id' => 6, 'color' => 'invalid']));
+        $first = $this->getJson(route('farmer-portal.parcels.geometries'))
+            ->assertOk()->assertJsonCount(1, 'plots')->assertJsonPath('next_after_id', 1);
+        $second = $this->getJson(route('farmer-portal.parcels.geometries', ['after_id' => 1]))
+            ->assertOk()->assertJsonCount(2, 'plots')->assertJsonPath('next_after_id', 4)
+            ->assertJsonPath('plots.0.id', 3)->assertJsonPath('plots.1.paths', null);
+        $this->assertNotEmpty($first->json('plots.0.paths'));
+        $this->assertNotEmpty($second->json('plots.0.paths'));
+        $this->assertStringNotContainsString('geometry_bytes', $second->getContent());
+        $this->assertStringNotContainsString('polygon_json', $second->getContent());
+        $third = $this->getJson(route('farmer-portal.parcels.geometries', ['after_id' => $second->json('next_after_id')]))
+            ->assertOk()->assertJsonCount(2, 'plots')->assertJsonPath('next_after_id', null)
+            ->assertJsonPath('plots.0.id', 5)->assertJsonPath('plots.0.paths', null)
+            ->assertJsonPath('plots.1.id', 6)->assertJsonPath('plots.1.color', '#236344');
+        $this->assertStringNotContainsString('polygon_json', $third->getContent());
+    }
+
+    public function test_collection_map_validation_and_empty_records_fail_safely(): void
+    {
+        $this->account();
+        $this->login();
+        foreach ([['year' => now()->year + 2], ['year' => [2026]], ['after_id' => 'invalid'], ['after_id' => 2147483648], ['after_id' => [1]]] as $parameters) {
+            $this->getJson(route('farmer-portal.parcels.geometries', $parameters))->assertUnprocessable();
+        }
+        DB::table('farm_plots')->where('farmer_id', 1)->delete();
+        $this->getJson(route('farmer-portal.parcels.geometries'))->assertOk()
+            ->assertJsonPath('plots', [])->assertJsonPath('total', 0)->assertJsonPath('next_after_id', null);
+        $this->get(route('farmer-portal.parcels'))->assertOk()->assertSee('No farm parcels recorded yet')
+            ->assertDontSee('data-collection-url', false);
     }
 
     public function test_password_breach_check_and_multibyte_limits_are_enforced(): void

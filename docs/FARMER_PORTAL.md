@@ -12,7 +12,7 @@ Installation creates no real farmer accounts. Birthdays, RSBSA numbers, or posse
 
 The September 24 release (`bd75ced`) installed the shared office/farmer sign-in layout, farmer audience switch, simplified Farmers workspace and related public assets on Hostinger. It accepts the AgriGOV ID or unique RSBSA alias and password, does not display activation-code prompts, and keeps staff-assisted activation at its separate route. The release required no migration or account provisioning; focused portal and office sign-in tests passed and live login/assets returned HTTP 200.
 
-The follow-up read-only records update is local and not yet pushed or deployed. It adds an overview with plotted-parcel area, seed/assistance count, harvest count and bounded recent activity; richer seed-release details; and `/farmer-portal/harvests` with an optional year filter, production, harvested area, owned parcel links and unit-safe summaries. It uses the existing `harvest_records` table and adds no migration or farmer accounts.
+The follow-up read-only records update is local and not yet pushed or deployed. It adds an overview with plotted-parcel area, seed/assistance count, harvest count and bounded recent activity; richer seed-release details; and `/farmer-portal/harvests` with an optional year filter, production, harvested area, owned parcel links and unit-safe summaries. My Farm now opens with one map for all owned boundaries, a parcel selector and area/crop details. It uses the existing tables and adds no migration or farmer accounts.
 
 The primary-ID update uses the same AgriGOV ID on registry pages, cards, maps, portal pages and farmer selection controls before activation. The numeric farmer key and portal-account relationship remain unchanged. Old `PAIS-FRM-######` IDs remain searchable in staff tools, but are not portal login aliases. This display/search update was installed on Hostinger in `bd75ced`; see [AgriGOV farmer IDs](AGRIGOV_FARMER_IDS.md).
 
@@ -23,7 +23,7 @@ On September 24, the owner explicitly limited live testing access to the 12 synt
 ## Included
 
 - My Profile: own local registry ID, recorded identity/contact/farm details, managing office, gender, farm province, ecosystem and login ID.
-- My Farm: own parcel list, recorded area, selected-year wet/dry crop entries, and an individual private satellite map loaded on demand.
+- My Farm: a map-first view of all owned parcel boundaries, fitted into one private satellite map on entry. A compact parcel selector shows the selected area and selected-year wet/dry crop entries; the existing individual parcel map URL remains available for direct links, and a records disclosure remains available when maps cannot load.
 - My Assistance: own linked releases with date, category, item/variety, quantity and recorded unit, plus seed bags, lot, claimed area, planted variety/class and sowing details where recorded. Unlinked legacy releases need staff correction before appearing.
 - My Harvests: own harvest records with commodity, variety, season/year, date, quantity/unit, harvested area and a parcel map link only when the linked parcel is also owned by the signed-in farmer. Missing quantities remain clearly marked; units are never converted or mixed.
 - Overview: bounded cards for plotted parcels/area, assistance and harvest totals, up to three parcel previews and five recent releases/harvests.
@@ -40,11 +40,11 @@ The canonical AgriGOV login ID works when RSBSA is missing or duplicated. The ex
 
 Recovery and disable increment a session version. Every private request rechecks account state, current farmer ownership, active municipality/province, activation, password and idle time. A moved farmer requires newly authorized staff to verify identity and reissue access. No remember-me cookie is offered. Audit metadata excludes credentials; portal audit URLs omit query strings. Responses are non-storable; history restoration reloads through authentication. CSRF, generic authentication errors, per-route throttles and five-attempt lockouts protect public forms.
 
-Page sizes are 10 parcels, 15 releases and 15 harvests. Crop queries cover the current parcel page and selected year. Overview activity is capped at five releases/harvests and three parcels; quantity summaries are capped at 24 type/unit groups. Map requests return one owned parcel, capped at 10,000 points and 1 MB stored geometry. Geometry and Google Maps load after a button click, with 20-second browser timeouts. Map failures show fixed, plain-language retry/session/office-help messages instead of raw browser or server errors. Existing map billing and website restrictions apply; stored geometry is not changed.
+Page sizes are 10 parcel records, 15 releases and 15 harvests. Crop queries cover the selected year and the visible parcel records. Overview activity is capped at five releases/harvests and three parcels; quantity summaries are capped at 24 type/unit groups. The private collection map loads owned boundaries through a cursor endpoint in pages of 20, with each page capped at 1 MB of stored geometry and each ring capped at 10,000 points. The browser fits every returned valid boundary, reports records that need office review, and never substitutes another farmer's geometry. After 20 pages, unusually large collections offer **Load remaining parcels**, preserving the cursor and visible land. Google Maps and collection data have 20-second timeouts with plain-language retry/session/office-help messages. Map failures open the records disclosure; expired sessions remove loaded map boundaries. Stored geometry is not changed.
 
 ## Follow-up records deployment (pending)
 
-Deploy the controller, support service, route and all changed portal views together. Mirror `public/css/farmer-portal.css` and `public/js/farmer-portal-map.js` to both Hostinger public directories, refresh route/view caches and verify the overview, assistance, harvest-year filters, own parcel links and privacy. The existing harvest, seasonal-crop and release tables must already be installed. No migration, dependency update, account provisioning or password change is part of this interface update.
+Deploy the controller, support service, route and all changed portal views together. Mirror `public/css/farmer-portal.css` and `public/js/farmer-portal-map.js` to both Hostinger public directories, refresh route/view caches and verify the overview, seed details, harvest-year filters, map-first My Farm page, parcel selection, crop details, fallback records, existing parcel links and privacy. The existing harvest, seasonal-crop and release tables must already be installed. No migration, dependency update, account provisioning or password change is part of this interface update.
 
 ## Original installation
 
@@ -74,6 +74,13 @@ The follow-up records enhancement was verified locally on September 24, 2026 usi
 - Synthetic browser checks at 1440px desktop, 390px phone and 320px small-phone widths cover profile, overview, seed details/totals, harvest filtering and empty state, own parcel links and a map failure/retry state. The totals disclosure works with Enter and visible focus. No horizontal page overflow was observed in the checked layouts; the final harvest page had no console warnings/errors. Actual Google satellite loading and real-farmer acceptance were not repeated.
 
 These richer screens remain local pending release. The separately authorized testing-account change is already live and verified as described above.
+
+The subsequent map-first My Farm enhancement was also verified locally on September 24:
+
+- 34 PHP tests / 424 assertions pass, including same-municipality foreign-farmer exclusion, cursor traversal beyond the record-list page, fixed query counts, byte/point limits, malformed boundaries, empty records and validation.
+- 11 JavaScript tests pass, including multi-page maps, selected parcel details, partial-page retry without duplicate polygons, session-expiry cleanup and automatic record fallback when maps cannot load.
+- Pint, PHP/JavaScript syntax, nine compiled portal templates, named-route checks and diff whitespace checks pass.
+- A real Google satellite map displayed all three synthetic owned parcels in the local preview. Desktop and 390px phone layouts were reviewed; parcel selection updated the recorded area/details, and no browser warnings/errors were captured. Production maps and real-farmer acceptance were not tested in this pass.
 
 Verified locally on September 20, 2026:
 

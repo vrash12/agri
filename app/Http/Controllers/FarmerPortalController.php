@@ -40,8 +40,9 @@ class FarmerPortalController extends Controller
         foreach ($plots as $plot) {
             $plot->setRelation('seasonalCrops', $crops->get($plot->id, collect()));
         }
+        $totals = $this->records->parcelTotals($account);
 
-        return view('farmer_portal.parcels', compact('account', 'farmer', 'plots', 'cropYear'));
+        return view('farmer_portal.parcels', compact('account', 'farmer', 'plots', 'cropYear', 'totals'));
     }
 
     public function assistance(Request $request)
@@ -85,6 +86,20 @@ class FarmerPortalController extends Controller
     public function geometry(Request $request, int $plot)
     {
         return response()->json(['plot' => $this->records->geometry($request->attributes->get('farmerPortalAccount'), $plot)]);
+    }
+
+    public function mapParcels(Request $request)
+    {
+        $data = $request->validate([
+            'year' => ['nullable', 'integer', 'between:1900,'.(now()->year + 1)],
+            'after_id' => ['nullable', 'integer', 'between:0,2147483647'],
+        ]);
+
+        return response()->json($this->records->mapPage(
+            $request->attributes->get('farmerPortalAccount'),
+            (int) ($data['year'] ?? now()->year),
+            (int) ($data['after_id'] ?? 0)
+        ));
     }
 
     private function context(Request $request): array

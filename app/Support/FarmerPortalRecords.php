@@ -13,6 +13,10 @@ use Illuminate\Support\Collection;
 
 final class FarmerPortalRecords
 {
+    private const MAP_PAGE_SIZE = 20;
+
+    private const MAP_GEOMETRY_BYTES = 1000000;
+
     public function farmer(FarmerPortalAccount $account): Farmer
     {
         abort_unless($account->hasUsableScope(), 403);
@@ -78,6 +82,15 @@ final class FarmerPortalRecords
      */
     public function overview(FarmerPortalAccount $account): array
     {
+        return $this->parcelTotals($account) + [
+            'assistance' => $this->releases($account)->count(),
+            'harvests' => $this->harvests($account)->count(),
+        ];
+    }
+
+    /** @return array{parcels:int, area_ha:?float, area_recorded:int} */
+    public function parcelTotals(FarmerPortalAccount $account): array
+    {
         $parcelTotals = $this->plots($account)
             ->selectRaw('COUNT(*) as parcels, COUNT(area_ha) as area_recorded, SUM(area_ha) as area_ha')
             ->toBase()->first();
@@ -86,8 +99,6 @@ final class FarmerPortalRecords
             'parcels' => (int) ($parcelTotals?->parcels ?? 0),
             'area_ha' => $parcelTotals?->area_ha === null ? null : (float) $parcelTotals->area_ha,
             'area_recorded' => (int) ($parcelTotals?->area_recorded ?? 0),
-            'assistance' => $this->releases($account)->count(),
-            'harvests' => $this->harvests($account)->count(),
         ];
     }
 
@@ -141,16 +152,77 @@ final class FarmerPortalRecords
         $query = $this->plots($account)->whereKey($plotId);
         abort_unless((clone $query)->exists(), 404);
         // Check the stored byte length before loading/decoding a large legacy ring.
-        $plot = $query->whereRaw('LENGTH(polygon_json) <= ?', [1000000])
+        $plot = $query->whereRaw('LENGTH(polygon_json) <= ?', [self::MAP_GEOMETRY_BYTES])
             ->first(['id', 'name', 'area_ha', 'color', 'polygon_json']);
         abort_unless($plot, 422, 'This parcel is too detailed to display here. Contact your agriculture office.');
+        $geometry = $this->parcelGeometry($plot);
+        abort_unless($geometry, 422, 'The recorded parcel geometry needs office review.');
+
+        return $geometry;
+    }
+
+    /**
+     * Progress through every owned parcel without loading all stored rings at once.
+     * Invalid/oversized boundaries remain listed, so missing land is never silent.
+     *
+     * @return array{plots:array, total:int, next_after_id:?int}
+     */
+    public function mapPage(FarmerPortalAccount $account, int $year, int $afterId = 0): array
+    {
+        $candidates = $this->plots($account)->where('id', '>', $afterId)->orderBy('id')
+            ->select(['id', 'name', 'area_ha', 'color'])->selectRaw('LENGTH(polygon_json) as geometry_bytes')
+            ->limit(self::MAP_PAGE_SIZE + 1)->get();
+        $selected = collect();
+        $bytes = 0;
+        foreach ($candidates->take(self::MAP_PAGE_SIZE) as $plot) {
+            $size = (int) $plot->geometry_bytes;
+            $loadableBytes = $size <= self::MAP_GEOMETRY_BYTES ? $size : 0;
+            if ($bytes + $loadableBytes > self::MAP_GEOMETRY_BYTES) {
+                break;
+            }
+            $bytes += $loadableBytes;
+            $selected->push($plot);
+        }
+        $ids = $selected->pluck('id')->all();
+        // A growing ring must not escape the page's byte budget between queries.
+        $loadable = $selected->filter(fn (FarmPlot $plot) => (int) $plot->geometry_bytes <= self::MAP_GEOMETRY_BYTES);
+        $rings = $loadable->isEmpty() ? collect() : $this->plots($account)
+            ->where(function (Builder $query) use ($loadable) {
+                foreach ($loadable as $plot) {
+                    $query->orWhere(fn (Builder $parcel) => $parcel->whereKey($plot->id)
+                        ->whereRaw('LENGTH(polygon_json) <= ?', [(int) $plot->geometry_bytes]));
+                }
+            })->get(['id', 'polygon_json'])->keyBy('id');
+        $crops = $this->seasonalCrops($account, $ids, $year);
+        $plots = $selected->map(function (FarmPlot $plot) use ($rings, $crops) {
+            $plot->polygon_json = $rings->get($plot->id)?->polygon_json;
+            $geometry = $this->parcelGeometry($plot) ?? [
+                'id' => $plot->id, 'name' => $plot->name, 'area_ha' => $plot->area_ha, 'paths' => null,
+            ];
+
+            return $geometry + ['crops' => $crops->get($plot->id, collect())->map(fn ($crop) => [
+                'season' => ParcelCropSeason::SEASONS[$crop->season] ?? 'Season not recorded',
+                'crop' => ParcelCropSeason::CROPS[$crop->crop] ?? 'Crop not recorded',
+            ])->values()->all()];
+        })->all();
+
+        return ['plots' => $plots, 'total' => $this->plots($account)->count(),
+            'next_after_id' => $candidates->count() > $selected->count() ? (int) $selected->last()->id : null];
+    }
+
+    private function parcelGeometry(FarmPlot $plot): ?array
+    {
         $ring = $plot->polygon_json;
-        abort_unless(is_array($ring) && count($ring) >= 3 && count($ring) <= 10000, 422, 'The recorded parcel geometry needs office review.');
+        if (! is_array($ring) || count($ring) < 3 || count($ring) > 10000) {
+            return null;
+        }
         $path = [];
         foreach ($ring as $point) {
-            abort_unless(is_array($point) && isset($point['lat'], $point['lng'])
-                && is_numeric($point['lat']) && is_numeric($point['lng'])
-                && abs((float) $point['lat']) <= 90 && abs((float) $point['lng']) <= 180, 422, 'The recorded parcel geometry needs office review.');
+            if (! is_array($point) || ! isset($point['lat'], $point['lng'])
+                || ! is_numeric($point['lat']) || ! is_numeric($point['lng'])
+                || abs((float) $point['lat']) > 90 || abs((float) $point['lng']) > 180) {
+                return null;
+            }
             $path[] = ['lat' => (float) $point['lat'], 'lng' => (float) $point['lng']];
         }
 

@@ -94,6 +94,7 @@ Route::prefix('farmer-portal')->name('farmer-portal.')->group(function () {
         Route::get('/', [\App\Http\Controllers\FarmerPortalController::class, 'home'])->name('home');
         Route::get('/profile', [\App\Http\Controllers\FarmerPortalController::class, 'profile'])->name('profile');
         Route::get('/parcels', [\App\Http\Controllers\FarmerPortalController::class, 'parcels'])->name('parcels');
+        Route::get('/parcels/geometry', [\App\Http\Controllers\FarmerPortalController::class, 'mapParcels'])->middleware('throttle:30,1')->name('parcels.geometries');
         Route::get('/parcels/{plot}', [\App\Http\Controllers\FarmerPortalController::class, 'map'])->whereNumber('plot')->name('parcels.map');
         Route::get('/parcels/{plot}/geometry', [\App\Http\Controllers\FarmerPortalController::class, 'geometry'])->whereNumber('plot')->middleware('throttle:30,1')->name('parcels.geometry');
         Route::get('/assistance', [\App\Http\Controllers\FarmerPortalController::class, 'assistance'])->name('assistance');
