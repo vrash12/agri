@@ -14,6 +14,16 @@ The owner selected GitHub deployment on September 21, 2026. The source repositor
 
 SSH authentication is interactive or uses an owner-approved existing key. Never include a password in a command argument, script, repository, deployment document or log. Existing verified SSH host keys must remain enforced.
 
+## Verified Hostinger release — September 24, 2026 — farmer records and all-parcel map
+
+Runtime `c07e78f7d075008114cd47edeeeea81218de8611` was pushed to GitHub main and installed through `git pull --ff-only origin main` from baseline `bd75ced`, on PHP 8.3.33. It includes the richer profile, overview, assistance and harvest screens plus the map-first My Farm view. Seed-history labels use the existing distribution reference and planting period. Verification completed at `2026-09-24T04:58:55+00:00`, followed by reopening the site.
+
+- A verified private database backup covers 21 tables / 11,830 rows, 5,384,833 bytes, SHA-256 `aa36aa75308c3b56a89ec269b30561382005ed1a508c0303ae6b3d17142cad79`. Private archives preserve the prior tracked checkout and affected separate public assets.
+- All 21 table fingerprints, account data and the environment remained unchanged after release verification. No migration, dependency update, account provisioning, password change or data import ran.
+- Read-only server checks passed for all 12 synthetic sample accounts: 60 rendered overview/profile/farm/assistance/harvest pages and 36 owned parcel boundaries. Routes and both public asset copies match; configuration, route and view caches rebuilt successfully.
+- Live office/farmer login and both changed assets return HTTP 200. The private collection endpoint rejects unauthenticated requests with HTTP 401 and no-store headers. Live asset hashes match the deployed files.
+- Local verification passed 34 PHP tests / 425 assertions, 11 JavaScript tests, Pint, PHP/JavaScript syntax, nine compiled portal templates, route checks and whitespace checks. Desktop/phone satellite-map interaction was checked with synthetic local data. Authenticated production browser interaction and real-farmer acceptance were not repeated.
+
 ## Verified Hostinger release — September 24, 2026 — Farmers overview and shared sign-in
 
 The owner approved runtime `bd75ced2c6c41fc9e1716a0649e73ccd857a6b56`, which was pushed to GitHub main and installed with `git pull --ff-only origin main` from server baseline `9cc3527`. This also installs the already reviewed primary farmer-ID changes in `e19756f`. PHP 8.3.33 was verified, tracked server files were clean, and existing untracked files were retained.
@@ -22,7 +32,7 @@ The verified private database backup contains 21 tables and 11,755 rows (approxi
 
 Configuration, route and Blade caches rebuilt successfully. The installed revision matches GitHub main, and both copies of `login-layout.css`, `farmer-finder.js`, `farmer-picker.js`, `farmer-workspace.js` and `farmers-maps.js` have matching hashes. Live login, workspace JavaScript and login CSS returned HTTP 200. Local release checks passed 87 PHP tests / 1,011 assertions and 140 JavaScript tests. Authenticated production browser flows and satellite performance were not repeated during this release.
 
-The subsequent farmer portal overview/seed-detail/harvest enhancement remains local and is not included in `bd75ced`. A separately authorized data operation then created testing sign-ins for the 12 synthetic Region I farmers only, after a fresh verified backup. All live sign-ins and non-target preservation checks passed; see `docs/REGION_I_SAMPLE_DATA.md`.
+The subsequent farmer portal overview/seed-detail/harvest enhancement was not included in `bd75ced`; it was later installed with the map enhancement in `c07e78f` as recorded above. A separately authorized data operation created testing sign-ins for the 12 synthetic Region I farmers only, after a fresh verified backup. All live sign-ins and non-target preservation checks passed; see `docs/REGION_I_SAMPLE_DATA.md`.
 
 ## Verified Hostinger release — September 23, 2026 — farmer chooser and collage arrows
 
