@@ -340,6 +340,31 @@ class FarmerWorkspaceHierarchyTest extends TestCase
         $this->assertSame(1, $xpath->query('//p[@role="status" and contains(., "Showing 2 of 4 municipality outlines")]')->length);
     }
 
+    public function test_default_boundary_ceiling_includes_the_broad_outline_set(): void
+    {
+        $geometry = json_encode(['type' => 'Polygon', 'coordinates' => [[[120, 15], [121, 15], [121, 16], [120, 15]]]]);
+        $extraBoundaries = [];
+        for ($id = 7; $id <= 205; $id++) {
+            $extraBoundaries[] = [
+                'id' => $id,
+                'municipality_id' => 1,
+                'name' => 'Boundary '.$id,
+                'status' => 'active',
+                'geojson' => $geometry,
+                'area_ha' => 1,
+                'centroid_lat' => 15.3,
+                'centroid_lng' => 120.7,
+            ];
+        }
+        DB::table('municipality_boundaries')->insert($extraBoundaries);
+
+        $view = $this->index($this->user(User::ROLE_SYSTEM_OWNER));
+        $data = $view->getData();
+        $this->assertSame(205, $data['mapBoundaryTotal']);
+        $this->assertCount(205, $data['mapMunicipalityBoundaries']);
+        $this->assertStringNotContainsString('Showing 200 of 205 municipality outlines', $view->render());
+    }
+
     private function schema(): void
     {
         Schema::create('regions', function (Blueprint $table): void {

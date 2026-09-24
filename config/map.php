@@ -26,8 +26,10 @@ return [
 
     'max_plots_per_request' => (int) env('MAP_MAX_PLOTS_PER_REQUEST', 2000),
 
-    // Broad Farmers views must not inline every administrative outline. The UI
-    // explicitly reports a partial outline layer and offers location filters.
-    'max_boundaries_per_request' => (int) env('MAP_MAX_BOUNDARIES_PER_REQUEST', 200),
+    // Broad Farmers views include the active outline set by default so the
+    // parcel map agrees with the Municipality Geofences view. Deployments can
+    // lower this ceiling for slower connections; the UI reports any partial
+    // outline layer and offers location filters when that happens.
+    'max_boundaries_per_request' => (int) env('MAP_MAX_BOUNDARIES_PER_REQUEST', 1000),
 
 ];
