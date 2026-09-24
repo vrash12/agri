@@ -8,6 +8,8 @@ The coat-of-arms raster is stored at `public/images/branding/philippines-coat-of
 
 The card uses `farmer-id-card.css` for shared screen/print styles. Canvas exports load the same background and logos before drawing; if an artwork asset cannot load, the export fails with a visible retry message rather than producing an incomplete ID. No database migration or record update is required.
 
+The card redesign was installed on Hostinger in runtime `d796071f6afff34bd609c92bae85a3fdbd793e29` on September 25, 2026. Production checks confirmed the homepage and login returned HTTP 200, all eight changed public assets matched their `public_html` copies, and the database remained unchanged.
+
 ## Outcome and status
 
 Every saved farmer uses AGRI-F-###### as the primary displayed and searchable

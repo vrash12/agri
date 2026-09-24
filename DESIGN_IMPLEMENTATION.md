@@ -1,8 +1,10 @@
 # Design and UX implementation record
 
-## Farmer registry card redesign — September 25, 2026 (local)
+## Farmer registry card redesign — September 25, 2026 (deployed)
 
-The farmer ID front and back now use a DA-aligned green-and-gold gradient with light agricultural linework, the Department of Agriculture logo and the Philippine coat of arms beside the Republic of the Philippines heading. The front carries the identity details; the back uses the shared AgriGOV wordmark without repeating the front header text. The QR panel stays white for scan contrast. Screen previews, digital ID canvas rendering, PNG downloads, and print cards share the same background and branding assets. Existing address wrapping, municipality authorization, data fields, QR privacy boundary and non-national-ID disclaimer remain in place. Focused card permission/address tests and three export JavaScript tests pass; visual print/browser inspection remains unverified in this environment.
+The farmer ID front and back now use a DA-aligned green-and-gold gradient with light agricultural linework, the Department of Agriculture logo and the Philippine coat of arms beside the Republic of the Philippines heading. The front carries the identity details; the back uses the shared AgriGOV wordmark without repeating the front header text. The QR panel stays white for scan contrast. Screen previews, digital ID canvas rendering, PNG downloads, and print cards share the same background and branding assets. Existing address wrapping, municipality authorization, data fields, QR privacy boundary and non-national-ID disclaimer remain in place. Focused card permission/address tests and three export JavaScript tests pass; production HTTP and mirrored asset checks passed after deployment. Authenticated live farmer-card visual inspection was not repeated.
+
+Runtime `d796071f6afff34bd609c92bae85a3fdbd793e29` was installed on Hostinger on September 25, 2026. The verified private database backup contains 21 tables and 11,852 rows (5,385,184 bytes; SHA-256 `53731625bd41f7001ba36adec92eac614e94baa7e1bbb7d7317826e0df49c8ff`). No migration, account change, import, or database write ran.
 
 ## Farmer profile card — September 24, 2026 (local)
 

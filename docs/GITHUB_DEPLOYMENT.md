@@ -1,5 +1,14 @@
 # GitHub-to-Hostinger deployment
 
+## Verified Hostinger release — September 25, 2026 — Sentinel-2 and farmer card
+
+Runtime `d796071f6afff34bd609c92bae85a3fdbd793e29` was installed through `git pull --ff-only origin main` after the approved GitHub push. The release includes the Sentinel-2 parcel analysis module, farmer-portal refinements, and the DA green/gold farmer registry card with the AgriGOV wordmark on the back. PHP 8.3.33 was verified.
+
+- A verified private database backup contains all 21 tables and 11,852 rows, 5,385,184 bytes, SHA-256 `53731625bd41f7001ba36adec92eac614e94baa7e1bbb7d7317826e0df49c8ff`.
+- All database table fingerprints and the environment checksum were unchanged. No migration, account change, import, or operational data write ran.
+- Eight public assets were mirrored to `public_html`, and their hashes match the Laravel `public` copies. Configuration, route and Blade caches were rebuilt.
+- Local focused checks passed 26 PHP tests / 143 assertions and 10 JavaScript tests. Homepage and login returned HTTP 200 after the release. Authenticated live farmer-card visual inspection and real Sentinel-2 provider calls were not repeated.
+
 The owner selected GitHub deployment on September 21, 2026. The source repository is `https://github.com/vrash12/agri`; production follows `main`. Prefer reviewed Git commits, a normal push, and `git pull --ff-only origin main` over ZIP/File Manager releases. Never force-push a deployment or discard unexplained server edits. The owner must authorize each production release.
 
 ## Normal release
