@@ -1426,6 +1426,7 @@
     ['plot' => '__PLOT__']
   ));
   window.__farmerMapCardUrlTemplate = "{{ url('/farmers/__ID__/map-card') }}";
+  window.__parcelSatelliteUrl = @json(route('farm-plots.satellite.show', ['plot' => '__ID__']));
   window.__farmerGeocodeUrl = "{{ route('geocode') }}";
   window.__canManageOperationalData = @json($canManageOperations ?? auth()->user()->canManageOperationalData());
   {{-- Letterhead images for the printable parcel sheet, previously inlined in the script. --}}

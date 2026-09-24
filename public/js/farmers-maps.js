@@ -3554,6 +3554,7 @@ window.__handleDownloadAllPlots = handleDownloadAllPlots;
         '</div>' +
         '<div class="map-plot-actions">' +
           '<button type="button" class="btn btn-soft btn-sm" data-action="focusPlot" data-plot-id="' + escapeHtml(pl.id) + '">Focus</button>' +
+          (window.__parcelSatelliteUrl ? '<a class="btn btn-soft btn-sm" href="' + escapeHtml(window.__parcelSatelliteUrl.replace('__ID__', encodeURIComponent(pl.id))) + '">Satellite / NDVI</a>' : '') +
           '<a class="btn btn-soft btn-sm" data-plot-crop-id="' + escapeHtml(pl.id) + '" href="' + escapeHtml((window.__parcelCropEditUrl || '').replace('__ID__', encodeURIComponent(pl.id)) + '?year=' + cropSettings.year + '&season=' + cropSettings.season) + '">Seasonal crops</a>' +
           (window.__canManageOperationalData ? '<button type="button" class="btn btn-soft btn-sm" data-action="editPlot" data-plot-id="' + escapeHtml(pl.id) + '">Edit</button>' : '') +
           '<button type="button" class="btn btn-soft btn-sm" data-action="downloadPlot" data-plot-id="' + escapeHtml(pl.id) + '">Download</button>' +

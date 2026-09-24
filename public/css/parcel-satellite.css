@@ -1,0 +1,31 @@
+.satellite-page { max-width: 1440px; margin-inline: auto; }
+.satellite-page .module-panel { margin-bottom: 20px; }
+.satellite-filters, .satellite-map-controls { display: flex; align-items: end; flex-wrap: wrap; gap: 16px; }
+.satellite-filters .module-form-field { flex: 1 1 190px; }
+.satellite-filters label, .satellite-map-controls label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; }
+.satellite-note { font-size: 13px; line-height: 1.65; color: var(--ui-text-muted); }
+.satellite-panel .satellite-note, .satellite-map-panel > .satellite-note, .satellite-filters + .satellite-note { margin: 0; padding: 0 20px 18px; }
+.satellite-status { padding: 12px 0; min-height: 44px; color: var(--ui-text); }
+.satellite-status.is-error { color: var(--ui-danger); }
+.satellite-workspace { display: grid; grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr); gap: 20px; }
+.satellite-workspace > * { min-width: 0; }
+.satellite-map-controls { padding: 16px 20px; }
+.satellite-map-controls > div { flex: 1 1 160px; }
+.satellite-map { height: 420px; background: var(--ui-surface-subtle); }
+.satellite-map > p { padding: 24px; }
+.satellite-metrics { margin: 0; }
+.satellite-metrics > div { border-bottom: 1px solid var(--ui-border); padding: 14px 0; }
+.satellite-metrics dt { color: var(--ui-text-muted); font-size: 13px; }
+.satellite-metrics dd { margin: 4px 0 0; font-size: 21px; font-weight: 650; color: var(--ui-text); overflow-wrap: anywhere; }
+.satellite-legend { display: flex; align-items: center; gap: 12px; padding: 18px 20px; font-size: 12px; }
+.satellite-ramp { flex: 1; height: 12px; background: linear-gradient(90deg, #334da6 0%, #a67a4d 50%, #f2d44d 60%, #80b840 75%, #0f5226 100%); }
+.satellite-preview { padding: 20px; text-align: center; background: repeating-conic-gradient(#f0f3f0 0% 25%, white 0% 50%) 0 / 20px 20px; }
+.satellite-preview img { max-width: 100%; max-height: 420px; image-rendering: pixelated; min-width: 100px; }
+.satellite-chart { padding: 0 20px; }
+.satellite-chart svg { width: 100%; height: 180px; display: block; }
+.satellite-method { padding: 18px 20px; line-height: 1.7; }
+.satellite-method summary { font-weight: 650; cursor: pointer; }
+.satellite-method p { max-width: 1000px; }
+.satellite-page [hidden] { display: none !important; }
+@media(max-width: 900px) { .satellite-workspace { grid-template-columns: 1fr; } .satellite-map { height: 340px; } }
+@media(max-width: 480px) { .satellite-filters, .satellite-map-controls { gap: 12px; } .satellite-map { height: 300px; } .satellite-filters > *, .satellite-map-controls > div { width: 100%; flex-basis: 100%; } }

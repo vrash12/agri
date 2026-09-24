@@ -22,7 +22,7 @@ On September 24, the owner explicitly limited live testing access to the 12 synt
 
 ## Included
 
-- My Profile: own local registry ID, recorded identity/contact/farm details, managing office, gender, farm province, ecosystem and login ID.
+- My Profile: own local registry ID, recorded identity/contact/farm details, managing office, gender, farm province, ecosystem and login ID. A local follow-up presents the name and clearly labeled **AgriGOV farmer ID** in the card header, groups personal/registry and farm details side by side on desktop and stacks them on phones. All 13 fields, missing-value messages and the local-record notice remain; a footer links directly to owned parcels and explains how to request corrections. This design change is pending deployment.
 - My Farm: a map-first view of all owned parcel boundaries, fitted into one private satellite map on entry. A compact parcel selector shows the selected area and selected-year wet/dry crop entries; the existing individual parcel map URL remains available for direct links, and a records disclosure remains available when maps cannot load.
 - My Assistance: own linked releases with date, category, item/variety, quantity and recorded unit, plus seed bags, lot, claimed area, planted variety/class and sowing details where recorded. Unlinked legacy releases need staff correction before appearing.
 - My Harvests: own harvest records with commodity, variety, season/year, date, quantity/unit, harvested area and a parcel map link only when the linked parcel is also owned by the signed-in farmer. Missing quantities remain clearly marked; units are never converted or mixed.
@@ -65,6 +65,8 @@ Deployed to Hostinger on September 20, 2026. See `docs/FARMER_PORTAL_DEPLOYMENT_
 For a code rollback, retain the additive table to avoid destroying issued accounts. The migration's `down()` drops that table and requires an approved backup/recovery plan once accounts are in use.
 
 ## Verification
+
+The local profile-card design follow-up passed two existing profile/isolation tests (38 assertions), nine-template Blade compilation, compiled-profile PHP syntax, named-route and whitespace checks. Synthetic browser review at desktop, 390px and 320px widths confirmed all 13 labels, no horizontal overflow and visible keyboard focus on the parcel link. Deploy the profile view and CSS together, mirror the CSS to both Hostinger public directories and refresh compiled views; no migration or account changes are required. This follow-up has not been pushed or deployed.
 
 The follow-up records enhancement was verified locally on September 24, 2026 using PHP 8.3.35:
 

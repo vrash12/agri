@@ -80,17 +80,16 @@
       <article>
         <div class="farmer-card-side-label farmer-card-screen-only"><strong>Front</strong><span>Identity and registry details</span></div>
         <div class="farmer-id-card farmer-id-card-front" id="farmerIdCardFront">
-          <div class="farmer-card-front-ribbon"></div>
-          <div class="farmer-card-front-ribbon farmer-card-front-ribbon-yellow"></div>
           <div class="farmer-card-header-brand">
-            <img src="{{ asset('images/da.jpg') }}" alt="Department of Agriculture logo">
+            <img class="farmer-card-republic-logo" src="{{ asset('images/branding/philippines-coat-of-arms.png') }}" alt="Coat of arms of the Republic of the Philippines">
             <div>
-              <small>Republic of the Philippines</small>
+              <small>REPUBLIKA NG PILIPINAS</small>
+              <span class="farmer-card-republic-translation">Republic of the Philippines</span>
               <strong>PROVINCIAL AGRICULTURE OFFICE</strong>
               <b>FARMER REGISTRY CARD</b>
               <span>{{ strtoupper($provinceName) }}</span>
             </div>
-            <img src="{{ asset('images/mao-logo.jpg') }}" alt="Agriculture registry logo">
+            <img class="farmer-card-da-logo" src="{{ asset('images/da.jpg') }}" alt="Department of Agriculture logo">
           </div>
 
           <div class="farmer-card-photo">
@@ -112,7 +111,8 @@
           </div>
 
           <div class="farmer-card-front-footer">
-            <span>REGISTERED FARMER</span>
+            <span>AgriGOV <i>AGRICULTURE INFORMATION SYSTEM</i></span>
+            <b>REGISTERED FARMER</b>
             <strong>{{ $farmer->created_at ? $farmer->created_at->format('Y') : now()->format('Y') }}</strong>
           </div>
         </div>
@@ -150,12 +150,13 @@
       </article>
     </div>
   </section>
+  <p class="farmer-card-art-credit farmer-card-screen-only">Coat of arms: Galo Ocampo; vector by Zachary Harden, <a href="https://commons.wikimedia.org/wiki/File:Coat_of_arms_of_the_Philippines.svg" target="_blank" rel="noopener">Wikimedia Commons</a>, <a href="https://creativecommons.org/licenses/by-sa/2.5/" target="_blank" rel="noopener">CC BY-SA 2.5</a>. Raster reproduction; colors unchanged.</p>
 
   <dialog class="farmer-digital-dialog farmer-card-screen-only" id="farmerDigitalIdDialog" aria-labelledby="farmerDigitalIdTitle">
     <div class="farmer-digital-shell">
       <header class="farmer-digital-header">
         <div>
-          <span class="farmer-digital-kicker">Verified registry card</span>
+          <span class="farmer-digital-kicker">Agriculture registry card</span>
           <h2 id="farmerDigitalIdTitle">{{ $fullName ?: 'Farmer' }}'s digital ID</h2>
         </div>
         <button class="farmer-digital-icon-button" type="button" data-close-digital-id aria-label="Close digital ID">&times;</button>
@@ -215,16 +216,6 @@
   .farmer-card-notice{display:flex;align-items:center;gap:11px;padding:11px 13px;border:1px solid #ead39d;border-radius:9px;background:#fffaf0}.farmer-card-notice>span{padding:5px 8px;border-radius:999px;color:#8a5b08;background:#f9e9bd;font-size:9px;font-weight:900;text-transform:uppercase}.farmer-card-notice p{margin:0;color:#6e624b;font-size:10px}.farmer-card-notice a{color:var(--module-green);font-weight:800}
   .farmer-card-workspace{overflow:hidden;border:1px solid var(--module-border);border-radius:12px;background:#eef3ef}.farmer-card-workspace-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;border-bottom:1px solid var(--module-border);background:#fff}.farmer-card-workspace-head strong,.farmer-card-workspace-head span{display:block}.farmer-card-workspace-head strong{font-size:12px}.farmer-card-workspace-head div>span{margin-top:3px;color:var(--module-muted);font-size:9px}.farmer-card-id-chip{padding:6px 9px;border-radius:7px;color:var(--module-green);background:var(--module-green-soft);font:800 9px ui-monospace,monospace}
   .farmer-card-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;padding:24px}.farmer-card-grid>article{min-width:0}.farmer-card-side-label{display:flex;justify-content:space-between;gap:10px;margin-bottom:8px}.farmer-card-side-label strong{font-size:11px}.farmer-card-side-label span{color:var(--module-muted);font-size:9px}
-  .farmer-id-card{position:relative;container-type:inline-size;width:100%;aspect-ratio:1.585;overflow:hidden;border:1px solid #cbd8cf;border-radius:2.5cqw;background:#fff;box-shadow:0 18px 45px rgba(15,35,22,.13);font-family:Arial,sans-serif}
-  .farmer-card-front-ribbon{position:absolute;right:-8%;bottom:-32%;width:78%;height:56%;transform:rotate(-10deg);border-radius:50%;background:#0b6c37}.farmer-card-front-ribbon-yellow{right:-12%;bottom:-21%;height:11%;background:#f7bd22}
-  .farmer-card-header-brand{position:absolute;z-index:2;top:4.2%;left:4.5%;right:4.5%;height:23%;display:grid;grid-template-columns:12% 1fr 12%;align-items:center;gap:2.4%;text-align:center}.farmer-card-header-brand img{width:100%;aspect-ratio:1;object-fit:contain;border-radius:50%;background:#fff}.farmer-card-header-brand div{min-width:0}.farmer-card-header-brand small,.farmer-card-header-brand strong,.farmer-card-header-brand b,.farmer-card-header-brand span{display:block}.farmer-card-header-brand small{font-size:1.55cqw}.farmer-card-header-brand strong{font-size:2.25cqw;letter-spacing:.07em}.farmer-card-header-brand b{margin-top:.25cqw;color:#075b2e;font-size:3.2cqw;line-height:1}.farmer-card-header-brand span{margin-top:.5cqw;color:#536158;font-size:1.45cqw;font-weight:700;letter-spacing:.12em}
-  .farmer-card-photo{position:absolute;z-index:2;left:5%;top:31%;width:25%;height:48%;display:grid;place-items:center;overflow:hidden;border:.8cqw solid #fff;border-radius:2cqw;color:#fff;background:#245e3a;box-shadow:0 0 0 .25cqw #1a422b;font-size:8cqw;font-weight:900}.farmer-card-photo img{width:100%;height:100%;object-fit:cover}
-  .farmer-card-front-details{position:absolute;z-index:2;top:31%;left:34%;right:5%;display:grid;gap:1.8cqw}.farmer-card-field{min-width:0}.farmer-card-field span{display:block;margin-bottom:.35cqw;color:#5e6a62;font-size:1.55cqw;font-weight:750}.farmer-card-field span em{margin-left:.5cqw;color:#1d7442;font-size:1.25cqw;font-style:normal}.farmer-card-field strong{display:block;overflow:hidden;color:#132018;font-size:2.35cqw;line-height:1.18;text-overflow:ellipsis;white-space:nowrap}.farmer-card-field-name strong{font-size:3.15cqw}.farmer-card-field .farmer-card-code{font:900 2.7cqw ui-monospace,monospace;letter-spacing:.035em}.farmer-card-two-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2cqw}
-  .farmer-card-front-footer{position:absolute;z-index:3;left:52%;right:5%;bottom:5%;display:flex;align-items:center;justify-content:space-between;color:#fff}.farmer-card-front-footer span{font-size:1.65cqw;font-weight:900;letter-spacing:.08em}.farmer-card-front-footer strong{font-size:2.2cqw}
-  .farmer-id-card-back{color:#142018;background:linear-gradient(145deg,#fff,#f4faf5)}.farmer-id-card-back>header{height:22%;display:flex;align-items:center;gap:2.5cqw;padding:2.6cqw 4cqw;color:#fff;background:linear-gradient(120deg,#0b5f31,#168046)}.farmer-id-card-back>header img{width:10%;aspect-ratio:1;object-fit:contain;border-radius:50%;background:#fff}.farmer-id-card-back>header small,.farmer-id-card-back>header strong{display:block}.farmer-id-card-back>header small{font-size:1.7cqw}.farmer-id-card-back>header strong{margin-top:.6cqw;font:900 3cqw ui-monospace,monospace;letter-spacing:.04em}
-  .farmer-card-back-body{display:grid;grid-template-columns:1.18fr .82fr;gap:3cqw;padding:3cqw 4cqw 2cqw}.farmer-card-back-column{display:grid;gap:1.5cqw}.farmer-card-back-column section>span{display:block;color:#68766d;font-size:1.45cqw;font-weight:750}.farmer-card-back-column section>strong{display:block;margin-top:.35cqw;overflow:hidden;font-size:2.05cqw;line-height:1.15;text-overflow:ellipsis;white-space:nowrap}.farmer-card-back-column section>small{display:block;margin-top:.25cqw;color:#6c786f;font-size:1.4cqw}.farmer-card-sector-list{display:flex;gap:.55cqw;flex-wrap:wrap;margin-top:.75cqw}.farmer-card-sector-list b{padding:.45cqw .7cqw;border-radius:999px;color:#0b6334;background:#e3f2e8;font-size:1.15cqw}.farmer-card-sector-list small{font-size:1.35cqw}.farmer-card-signature{margin-top:1.5cqw;text-align:center}.farmer-card-signature i{display:block;border-top:.18cqw solid #34473b}.farmer-card-signature strong{display:block;margin-top:.6cqw;font-size:1.25cqw}
-  .farmer-card-qr-card{display:grid;grid-template-columns:20.5cqw 1fr;align-items:center;gap:1.2cqw;margin-top:.2cqw;padding:1cqw;border:.16cqw solid #cbd9cf;border-radius:1.4cqw;background:#fff;box-shadow:0 .8cqw 2.2cqw rgba(18,69,36,.08)}.farmer-card-qr-card a{display:block;border-radius:.7cqw}.farmer-card-qr-card a:focus-visible{outline:.35cqw solid rgba(22,131,75,.3)}.farmer-card-qr-card img{display:block;width:20.5cqw;height:20.5cqw;object-fit:contain;background:#fff}.farmer-card-qr-card strong,.farmer-card-qr-card small{display:block}.farmer-card-qr-card strong{color:#086032;font-size:1.45cqw;line-height:1.1;letter-spacing:.05em}.farmer-card-qr-card small{margin-top:.7cqw;color:#627168;font-size:1.1cqw;line-height:1.3}
-  .farmer-id-card-back>footer{position:absolute;left:4%;right:4%;bottom:3.4%;display:flex;align-items:flex-end;justify-content:space-between;gap:3cqw;padding-top:1.4cqw;border-top:.15cqw solid #d2dcd5}.farmer-id-card-back>footer p{max-width:72%;margin:0;color:#68756d;font-size:1.2cqw;line-height:1.35}.farmer-id-card-back>footer span{font-size:1.25cqw;font-weight:800;white-space:nowrap}
   .farmer-digital-dialog,.farmer-qr-dialog{width:min(880px,calc(100vw - 28px));max-width:none;max-height:calc(100dvh - 28px);padding:0;overflow:hidden;border:0;border-radius:22px;background:transparent;box-shadow:0 32px 90px rgba(8,29,17,.28)}.farmer-digital-dialog::backdrop,.farmer-qr-dialog::backdrop{background:rgba(9,24,15,.72);backdrop-filter:blur(6px)}
   .farmer-digital-shell{display:grid;max-height:calc(100dvh - 28px);overflow:auto;background:#f8fbf8}.farmer-digital-header{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px 20px;border-bottom:1px solid #d9e4dc;background:#fff}.farmer-digital-header h2,.farmer-qr-shell h2{margin:3px 0 0;color:#102219;font-size:22px;line-height:1.1}.farmer-digital-kicker,.farmer-qr-shell header span{color:#14743f;font-size:10px;font-weight:900;letter-spacing:.09em;text-transform:uppercase}.farmer-digital-icon-button{display:grid;flex:0 0 38px;width:38px;height:38px;place-items:center;border:1px solid #d5dfd8;border-radius:50%;color:#425248;background:#fff;font-size:24px;line-height:1;cursor:pointer}.farmer-digital-icon-button:hover{color:#0b6736;background:#edf7f0}.farmer-digital-icon-button:focus-visible{outline:3px solid rgba(22,131,75,.24);outline-offset:2px}
   .farmer-digital-stage{display:grid;justify-items:center;padding:18px 20px 12px;background:radial-gradient(circle at 50% 0,#eff8f1 0,#e2eee6 48%,#dbe8df 100%)}.farmer-digital-status{display:flex;align-items:center;gap:7px;margin-bottom:10px;padding:6px 10px;border:1px solid rgba(23,119,65,.16);border-radius:999px;color:#135f35;background:rgba(255,255,255,.82);font-size:10px}.farmer-digital-status span{width:7px;height:7px;border-radius:50%;background:#24b865;box-shadow:0 0 0 4px rgba(36,184,101,.12)}.farmer-digital-card-frame{position:relative;width:min(650px,100%);aspect-ratio:1.585;display:grid;place-items:center;overflow:hidden;border-radius:22px;background:#fff;box-shadow:0 24px 62px rgba(15,54,31,.2)}.farmer-digital-card-frame img{display:block;width:100%;height:100%;object-fit:contain;opacity:0;transform:scale(.985);transition:opacity .22s ease,transform .22s ease}.farmer-digital-card-frame img.is-ready{opacity:1;transform:scale(1)}.farmer-digital-card-frame.is-changing img{opacity:.15;transform:scale(.975)}.farmer-digital-loading{position:absolute;max-width:90%;text-align:center;color:#65746a;font-size:12px;font-weight:800}.farmer-digital-hint{max-width:660px;margin:10px 0 0;color:#607067;font-size:11px;line-height:1.45;text-align:center}.farmer-digital-side-switch{display:flex;justify-content:center;gap:4px;padding:10px 20px 3px;background:#f8fbf8}.farmer-digital-side-switch button{min-width:120px;padding:9px 14px;border:0;border-radius:999px;color:#637168;background:transparent;font-size:11px;font-weight:850;cursor:pointer}.farmer-digital-side-switch button.is-active{color:#fff;background:#146f3c;box-shadow:0 6px 16px rgba(20,111,60,.2)}.farmer-digital-side-switch button:focus-visible{outline:3px solid rgba(22,131,75,.22);outline-offset:2px}.farmer-digital-actions{display:flex;align-items:center;justify-content:center;gap:8px;padding:9px 20px 14px;background:#f8fbf8}
@@ -234,17 +225,8 @@
   @media print{
     @page{size:A4 portrait;margin:12mm}.sidebar,.topbar,.farmer-card-screen-only,.farmer-digital-dialog,.farmer-qr-dialog{display:none!important}.main,.content{margin:0!important;padding:0!important;width:100%!important}.farmer-card-page,.farmer-card-workspace,.farmer-card-grid{display:block!important;border:0!important;background:#fff!important;padding:0!important}.farmer-card-grid>article{width:85.6mm!important;margin:0 auto 12mm!important;break-inside:avoid;page-break-inside:avoid}.farmer-id-card{width:85.6mm!important;height:54mm!important;border-radius:2.5mm!important;box-shadow:none!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   }
-  .farmer-card-back-body{grid-template-columns:1.4fr 1fr;gap:3cqw}
-  .farmer-card-back-column{min-width:0;gap:1.2cqw}
-  .farmer-card-back-column .farmer-card-parcel-address>strong{white-space:normal;overflow-wrap:anywhere;text-overflow:clip;font-size:1.7cqw;line-height:1.25;min-height:7cqw}
-  .farmer-card-address-list>div{min-width:0}.farmer-card-address-list div>span{font-size:14px;line-height:1.5;overflow-wrap:anywhere}
-  .farmer-card-parcel-address>strong{height:10cqw}
-  @media print{.farmer-card-address-list{break-after:avoid}.farmer-card-address-list div>span{font-size:10pt}}
-  .farmer-card-qr-card{grid-template-columns:1fr;justify-items:center;gap:.4cqw;padding:.7cqw;box-shadow:none}
-  .farmer-card-qr-card>div{text-align:center}
-  .farmer-card-qr-card img{width:18cqw;height:18cqw}
-  .farmer-card-qr-card small{margin-top:.3cqw}
 </style>
+<link rel="stylesheet" href="{{ asset('css/farmer-id-card.css') }}?v={{ @filemtime(public_path('css/farmer-id-card.css')) ?: 1 }}">
 @endpush
 
 @push('scripts')
@@ -267,8 +249,9 @@
       initials: @json($initials),
       photoUrl: @json($photoUrl),
       daLogo: @json(asset('images/da.jpg')),
+      republicLogo: @json(asset('images/branding/philippines-coat-of-arms.png')),
+      background: @json(asset('images/branding/farmer-card-background.svg')),
       officeLogo: @json(asset('images/mao-logo.jpg')),
-      registryLogo: @json(asset('images/mao-logo.jpg')),
       scanUrl: @json($scanUrl),
       qrDataUri: @json($qrDataUri),
       plotCount: @json($plotCount),
@@ -306,7 +289,7 @@
       do { ctx.font = `${weight || 700} ${size}px ${family}`; size -= 1; }
       while (ctx.measureText(String(text)).width > maxWidth && size > 18);
       ctx.fillStyle = color || '#132018';
-      ctx.fillText(String(text), x, y);
+      ctx.fillText(String(text), x, y, maxWidth);
     }
 
     function field(ctx, label, value, x, y, maxWidth, valueSize, mono) {
@@ -360,21 +343,22 @@
     window.addEventListener('beforeprint', fitPrintedAddress);
 
     async function renderFront() {
-      const [photo, daLogo, registryLogo] = await Promise.all([
-        loadImage(cardData.photoUrl), loadImage(cardData.daLogo), loadImage(cardData.registryLogo)
+      const [photo, daLogo, republicLogo, background] = await Promise.all([
+        loadImage(cardData.photoUrl), loadImage(cardData.daLogo), loadImage(cardData.republicLogo), loadImage(cardData.background)
       ]);
+      if (!daLogo || !republicLogo || !background) throw new Error('The card artwork could not load. Reload this page before downloading the ID.');
       const canvas = document.createElement('canvas');
       canvas.width = 1011; canvas.height = 638;
       const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.save(); ctx.beginPath(); ctx.ellipse(760, 650, 440, 230, -.18, 0, Math.PI * 2); ctx.fillStyle = '#0b6c37'; ctx.fill(); ctx.restore();
-      ctx.save(); ctx.beginPath(); ctx.ellipse(805, 625, 420, 52, -.18, 0, Math.PI * 2); ctx.fillStyle = '#f7bd22'; ctx.fill(); ctx.restore();
-      if (daLogo) ctx.drawImage(daLogo, 42, 30, 96, 96);
-      if (registryLogo) ctx.drawImage(registryLogo, 878, 30, 92, 92);
-      ctx.textAlign = 'center'; ctx.fillStyle = '#47554c'; ctx.font = '18px Arial'; ctx.fillText('Republic of the Philippines', 505, 42);
-      ctx.fillStyle = '#142018'; ctx.font = '800 25px Arial'; ctx.fillText('PROVINCIAL AGRICULTURE OFFICE', 505, 70);
-      ctx.fillStyle = '#075b2e'; ctx.font = '900 34px Arial'; ctx.fillText('FARMER REGISTRY CARD', 505, 104);
-      ctx.fillStyle = '#59675e'; ctx.font = '700 17px Arial'; ctx.fillText(cardData.province, 505, 128); ctx.textAlign = 'left';
+      ctx.drawImage(background, 0, 0, 1011, 638);
+      ctx.drawImage(republicLogo, 52, 30, 98, 109);
+      ctx.save(); ctx.beginPath(); ctx.arc(916, 86, 54, 0, Math.PI * 2); ctx.clip(); ctx.drawImage(daLogo, 862, 32, 108, 108); ctx.restore();
+      ctx.textAlign = 'center'; ctx.fillStyle = '#173e2d'; ctx.font = '700 22px Arial'; ctx.fillText('REPUBLIKA NG PILIPINAS', 505, 43);
+      ctx.fillStyle = '#53685c'; ctx.font = '15px Arial'; ctx.fillText('Republic of the Philippines', 505, 64);
+      ctx.fillStyle = '#243e30'; ctx.font = '700 22px Arial'; ctx.fillText('PROVINCIAL AGRICULTURE OFFICE', 505, 94);
+      ctx.fillStyle = '#075b2e'; ctx.font = '900 34px Arial'; ctx.fillText('FARMER REGISTRY CARD', 505, 131);
+      fittedText(ctx, cardData.province, 505, 155, 650, 17, 700, '#53685c'); ctx.textAlign = 'left';
+      ctx.strokeStyle='rgba(35,99,68,.2)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(48,172); ctx.lineTo(963,172); ctx.stroke();
       roundRect(ctx, 52, 190, 250, 305, 18, '#245e3a', '#173f28');
       ctx.save(); ctx.beginPath(); ctx.roundRect(60, 198, 234, 289, 12); ctx.clip();
       if (photo) coverImage(ctx, photo, 60, 198, 234, 289);
@@ -385,19 +369,24 @@
       field(ctx, 'RSBSA NUMBER', cardData.rsbsa, 340, 365, 285, 27);
       field(ctx, 'FFRS NUMBER', cardData.ffrs, 650, 365, 300, 27);
       field(ctx, 'REGISTRY MUNICIPALITY', cardData.municipality, 340, 445, 610, 26);
-      ctx.fillStyle='#fff'; ctx.font='900 19px Arial'; ctx.fillText('REGISTERED FARMER',520,600); ctx.textAlign='right'; ctx.font='800 22px Arial'; ctx.fillText(cardData.year,950,600); ctx.textAlign='left';
+      const footer = ctx.createLinearGradient(0, 555, 1011, 638); footer.addColorStop(0,'#144c32'); footer.addColorStop(1,'#25804c');
+      ctx.fillStyle=footer; ctx.fillRect(0,555,1011,83); ctx.fillStyle='#eac64d'; ctx.fillRect(0,550,1011,5);
+      ctx.fillStyle='#fff'; ctx.font='800 27px Arial'; ctx.fillText('AgriGOV',48,588); ctx.fillStyle='#e2f1e6'; ctx.font='13px Arial'; ctx.fillText('AGRICULTURE INFORMATION SYSTEM',48,612);
+      ctx.textAlign='right'; ctx.fillStyle='#fff'; ctx.font='800 19px Arial'; ctx.fillText('REGISTERED FARMER',860,602); ctx.font='800 22px Arial'; ctx.fillText(cardData.year,963,602); ctx.textAlign='left';
       return canvas;
     }
 
     async function renderBack() {
-      const [officeLogo, qrImage] = await Promise.all([
-        loadImage(cardData.officeLogo), loadImage(cardData.qrDataUri)
+      const [officeLogo, qrImage, background] = await Promise.all([
+        loadImage(cardData.officeLogo), loadImage(cardData.qrDataUri), loadImage(cardData.background)
       ]);
+      if (!officeLogo || !qrImage || !background) throw new Error('The card artwork or QR code could not load. Reload this page before downloading the ID.');
       const canvas = document.createElement('canvas');
       canvas.width = 1011; canvas.height = 638;
       const ctx = canvas.getContext('2d');
-      ctx.fillStyle='#f7fbf8'; ctx.fillRect(0,0,1011,638);
-      ctx.fillStyle='#0b6c37'; ctx.fillRect(0,0,1011,132);
+      ctx.drawImage(background, 0, 0, 1011, 638);
+      const header = ctx.createLinearGradient(0,0,1011,132); header.addColorStop(0,'#144c32'); header.addColorStop(1,'#25804c');
+      ctx.fillStyle=header; ctx.fillRect(0,0,1011,132); ctx.fillStyle='#eac64d'; ctx.fillRect(0,132,1011,5);
       if (officeLogo) ctx.drawImage(officeLogo,42,24,86,86);
       ctx.fillStyle='#fff'; ctx.font='20px Arial'; ctx.fillText('AgriGOV · Agriculture Information System',155,54);
       ctx.font='900 37px monospace'; ctx.fillText(cardData.farmerId,155,98);
@@ -408,12 +397,11 @@
       field(ctx,'ECOSYSTEM',cardData.ecosystem,52,480,420,28);
       ctx.fillStyle='#607067'; ctx.font='700 20px Arial'; ctx.fillText('SECTOR CLASSIFICATIONS',535,180);
       const sectors = cardData.sectors.length ? cardData.sectors.join(' · ') : 'None recorded';
-      fittedText(ctx,sectors,535,215,150,25,800,'#132018');
-      roundRect(ctx, 710, 156, 250, 338, 18, '#ffffff', '#cbd9cf');
-      if (qrImage) ctx.drawImage(qrImage, 728, 170, 214, 214);
-      ctx.fillStyle='#086032'; ctx.font='900 20px Arial'; ctx.textAlign='center'; ctx.fillText('SCAN LAND MAP',835,416);
-      ctx.fillStyle='#607067'; ctx.font='700 15px Arial'; ctx.fillText(cardData.plotCount+' mapped parcel'+(cardData.plotCount === 1 ? '' : 's'),835,443);
-      ctx.font='15px Arial'; ctx.fillText('Opens an interactive map',835,468); ctx.textAlign='left';
+      fittedText(ctx,sectors,535,215,415,25,800,'#132018');
+      roundRect(ctx, 615, 238, 260, 295, 14, '#ffffff', '#c4d6c7');
+      ctx.save(); ctx.imageSmoothingEnabled=false; ctx.drawImage(qrImage, 638, 250, 214, 214); ctx.restore();
+      ctx.fillStyle='#175334'; ctx.font='900 18px Arial'; ctx.textAlign='center'; ctx.fillText('SCAN LAND MAP',745,493);
+      ctx.fillStyle='#53685c'; ctx.font='700 14px Arial'; ctx.fillText(cardData.plotCount+' mapped parcel'+(cardData.plotCount === 1 ? '' : 's')+' · Interactive view',745,517); ctx.textAlign='left';
       ctx.strokeStyle='#cfdbd3'; ctx.beginPath(); ctx.moveTo(42,548); ctx.lineTo(969,548); ctx.stroke();
       ctx.fillStyle='#68756d'; ctx.font='16px Arial'; ctx.fillText('Local agriculture registry card — not a substitute for a Philippine national government ID.',42,579);
       ctx.textAlign='right'; ctx.font='700 16px Arial'; ctx.fillText('Issued '+cardData.issued,969,610); ctx.textAlign='left';
@@ -528,7 +516,7 @@
     document.getElementById('printFarmerCard')?.addEventListener('click', () => window.print());
     document.getElementById('downloadFarmerCardFront')?.addEventListener('click', async event => {
       const button = event.currentTarget; button.disabled = true; button.textContent = 'Preparing…';
-      try { downloadCanvas(await renderFront(), 'front'); } finally { button.disabled = false; button.textContent = 'Download front'; }
+      try { downloadCanvas(await renderFront(), 'front'); } catch (error) { alert(error.message); } finally { button.disabled = false; button.textContent = 'Download front'; }
     });
     document.getElementById('downloadFarmerCardBack')?.addEventListener('click', async event => {
       const button = event.currentTarget; button.disabled = true; button.textContent = 'Preparing…';

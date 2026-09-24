@@ -1,5 +1,13 @@
 # Design and UX implementation record
 
+## Farmer registry card redesign — September 25, 2026 (local)
+
+The farmer ID front and back now use a DA-aligned green-and-gold gradient with light agricultural linework, the Department of Agriculture logo and the Philippine coat of arms beside the Republic of the Philippines heading. The QR panel stays white for scan contrast. Screen previews, digital ID canvas rendering, PNG downloads, and print cards share the same background and branding assets. Existing address wrapping, municipality authorization, data fields, QR privacy boundary and non-national-ID disclaimer remain in place. Focused card permission/address tests and three export JavaScript tests pass; visual print/browser inspection remains unverified in this environment.
+
+## Farmer profile card — September 24, 2026 (local)
+
+My Profile now uses a compact white record card with a green/yellow brand stripe, prominent farmer name and a separate AgriGOV ID panel with sign-in guidance. Personal/registry and farm details appear in two sections, alongside each other on desktop and stacked on phones. All 13 existing fields, missing-value messages and the local-record notice are preserved. The footer combines office correction guidance with a 44px parcel-map action. Profile-only styles preserve other portal layouts. Synthetic desktop, 390px and 320px checks confirmed complete fields, wrapping without horizontal overflow and visible keyboard focus. Two existing profile/isolation tests (38 assertions), Blade compilation, syntax, named routes and whitespace checks pass. Local only; deploy the profile view and CSS together and mirror CSS to both Hostinger public directories. See `docs/FARMER_PORTAL.md`.
+
 ## Farmers overview — September 24, 2026 (deployed)
 
 Farmers now opens the registry and parcel map immediately. The top panel follows the owner's second screenshot with optional Region (System Owner), Province / City (Regional Head), and Municipality / City filters. Native Show municipalities/View farmers actions work without JavaScript; changing or clearing a selection submits automatically with JavaScript. A Showing summary and registry/map links remain below the controls. Municipality choices include their province or separate city label. The registry and map share location scope, while search/quality filters remain registry-only. The map disclosure opens by default and retains loading/retry states. Broad views label any capped administrative-outline layer. No account permissions, ownership or stored geometry change. Desktop and 390px phone layouts and clearing filters were checked with synthetic data; satellite loading was not verified. Installed on Hostinger in `bd75ced`; see `docs/FARMER_WORKSPACE_AND_COVERAGE.md`.

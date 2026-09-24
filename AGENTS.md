@@ -1,5 +1,7 @@
 # Agriculture Information System — Developer Guide
 
+The farmer registry card uses `public/css/farmer-id-card.css`, `public/images/branding/farmer-card-background.svg`, and `public/images/branding/philippines-coat-of-arms.png` for its green/gold DA-aligned visual treatment. Keep the Philippine emblem attribution in the card view and preserve the disclaimer that the card is not a national government ID. Screen, print and canvas PNG exports must use the same source artwork and must fail safely if artwork cannot load; farmer data, QR destination, role scope and parcel-address safeguards must not change. See [docs/AGRIGOV_FARMER_IDS.md](docs/AGRIGOV_FARMER_IDS.md).
+
 The September 23, 2026 Bicol planning-reference release deployed 114 geofences through `BicolBoundarySeeder` at runtime commit `aabace9`: Albay 18, Camarines Norte 12, Camarines Sur 36 including Iriga City, Catanduanes 11, Masbate 21, separate Naga City 1, and Sorsogon 15. `region-access:configure --owner=<id> --region=region5` explicitly links the seven scopes and never creates accounts. All references use the pinned geoBoundaries ADM3 revision 9469f09 with independent OCHA COD-AB v03 identity and polygon-area checks. Naga City remains outside Camarines Sur provincial choices. See `docs/BICOL_BOUNDARY_SOURCES.md`; credentials remain outside the repository.
 
 This file applies to the entire repository. It is both a functional map of the system and a set of implementation rules for developers and coding agents. Update it whenever a role, route, model, workflow, integration, or deployment requirement changes.
@@ -23,6 +25,8 @@ The current interface implementation and outstanding verification are recorded i
 The September 24, 2026 release installed runtime `bd75ced` through GitHub and Hostinger fast-forward pull. It includes the direct Farmers overview with optional location filters, shared office/farmer sign-in choices, and the primary AgriGOV farmer-ID display. No migration or account provisioning ran. The portal harvest/records and map follow-up was subsequently deployed in runtime `c07e78f`; see `docs/FARMER_PORTAL.md` and `docs/GITHUB_DEPLOYMENT.md`.
 
 The Farmer portal map enhancement was deployed through GitHub and Hostinger fast-forward pull in runtime `c07e78f` on September 24. **My farm** opens with a single private map containing all owned parcel boundaries, fits the valid boundaries into view, and provides a compact parcel selector with recorded area and selected-year crop details. Collection geometry is returned through the authenticated, municipality-scoped cursor endpoint in bounded pages; invalid or oversized records remain listed with an office-review message. Existing one-parcel routes remain compatible, and the records disclosure opens when map loading fails. All 21 database tables and the environment were preserved; 60 page renders and 36 sample boundaries passed live server checks. See `docs/FARMER_PORTAL.md`; credentials remain outside the repository.
+
+On September 24, an explicitly authorized data-only operation assigned unique `01-00-00-000-######` demonstration RSBSA aliases to the 12 existing synthetic Region I farmers. These dummy values are not official registrations. Account/password data and all other operational records were preserved; required audit receipt `6131` records the change. Original import receipt `6073` is immutable, so `demo:region1` intentionally rejects this now-edited cohort rather than overwriting it. See `docs/REGION_I_SAMPLE_DATA.md` for backup and verification evidence. No runtime code or schema changed.
 
 ## Application branding
 
@@ -262,6 +266,8 @@ The standalone `/login` page keeps the credential form on the left and an eight-
 Office accounts have no public registration, forgotten-password, email-verification, or self-service password-reset workflow. Farmer portal accounts have staff-assisted activation and recovery; they cannot self-register or recover using a birthday.
 
 ### Farmer portal
+
+The local My Profile follow-up presents the farmer name and existing `Farmer::agri_gov_id` in a clearly labeled identity header, followed by separate personal/registry and farm sections and a parcel-map link. The white card uses shared green/yellow tokens, preserves all 13 fields and stacks on phones. Profile styles are scoped under `.fp-profile`. It reuses the authenticated, municipality-scoped farmer record and requires no migration or account changes; pending deployment. Deploy the profile view and `public/css/farmer-portal.css` together, mirror CSS to both Hostinger public directories, then refresh views.
 
 On September 24, 2026 the owner separately authorized direct testing access only for the 12 synthetic Region I farmers in Bacarra, Narvacan and Bacnotan. All 12 accounts were created and verified on Hostinger; no real-farmer or office access changed. This private one-time operation is not a seeder, default password or relaxation of normal activation/password validation. See `docs/REGION_I_SAMPLE_DATA.md`.
 

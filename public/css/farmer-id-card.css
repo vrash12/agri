@@ -1,0 +1,57 @@
+.farmer-id-card{position:relative;container-type:inline-size;width:100%;aspect-ratio:1.585;overflow:hidden;border:1px solid #b8cdbd;border-radius:18px;background:#edf5e7 url('../images/branding/farmer-card-background.svg') center/100% 100% no-repeat;box-shadow:0 12px 28px rgba(15,35,22,.12);color:#132018;font-family:Arial,sans-serif}
+.farmer-card-header-brand{position:absolute;z-index:2;top:3.8%;left:5.1%;right:4.1%;height:21%;display:grid;grid-template-columns:10.8% 1fr 11.9%;align-items:center;gap:2.4%;text-align:center}
+.farmer-card-header-brand:after{content:"";position:absolute;left:0;right:0;bottom:-2.3cqw;border-bottom:1px solid rgba(35,99,68,.2)}
+.farmer-card-header-brand img{display:block;width:100%;height:auto;object-fit:contain}
+.farmer-card-header-brand .farmer-card-republic-logo{aspect-ratio:500/555;border-radius:0;background:transparent}
+.farmer-card-header-brand .farmer-card-da-logo{aspect-ratio:1;border-radius:50%;background:#fff}
+.farmer-card-header-brand div{min-width:0}
+.farmer-card-header-brand small,.farmer-card-header-brand strong,.farmer-card-header-brand b,.farmer-card-header-brand span{display:block}
+.farmer-card-header-brand small{color:#173e2d;font-size:2.15cqw;font-weight:700;line-height:1.15;letter-spacing:.045em}
+.farmer-card-header-brand .farmer-card-republic-translation{margin:.2cqw 0 1cqw;color:#53685c;font-size:1.4cqw;font-weight:400;letter-spacing:0;line-height:1.1}
+.farmer-card-header-brand strong{font-size:2.1cqw;letter-spacing:.025em;line-height:1.2}
+.farmer-card-header-brand b{margin-top:.55cqw;color:#075b2e;font-size:3.25cqw;line-height:1.05;letter-spacing:.015em}
+.farmer-card-header-brand span{margin-top:.55cqw;color:#53685c;font-size:1.55cqw;font-weight:700;letter-spacing:.1em;line-height:1.1}
+.farmer-card-photo{position:absolute;z-index:2;left:5.15%;top:29.8%;width:24.73%;height:47.8%;display:grid;place-items:center;overflow:hidden;border:.7cqw solid #fff;border-radius:1.8cqw;color:#fff;background:#245e3a;box-shadow:0 0 0 .2cqw #215938,0 .4cqw 1.4cqw rgba(24,73,47,.1);font-size:8cqw;font-weight:900;box-sizing:border-box}
+.farmer-card-photo img{width:100%;height:100%;object-fit:cover}
+.farmer-card-front-details{position:absolute;z-index:2;top:29.4%;left:33.63%;right:5.14%;display:grid;gap:1.95cqw}
+.farmer-card-field{min-width:0}
+.farmer-card-field span{display:block;margin-bottom:.6cqw;color:#53685c;font-size:1.7cqw;font-weight:700}
+.farmer-card-field span em{margin-left:.5cqw;color:#28613e;font-size:1.35cqw;font-style:normal}
+.farmer-card-field strong{display:block;overflow:hidden;color:#132018;font-size:2.55cqw;line-height:1.18;text-overflow:ellipsis;white-space:nowrap}
+.farmer-card-field-name strong{font-size:3.2cqw}
+.farmer-card-field .farmer-card-code{font:900 3.2cqw ui-monospace,monospace;letter-spacing:.01em}
+.farmer-card-two-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2cqw}
+.farmer-card-front-footer{position:absolute;z-index:3;left:0;right:0;bottom:0;height:13.8%;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:2cqw;padding:1.3cqw 4.75cqw;border-top:.5cqw solid #eac64d;color:#fff;background:linear-gradient(100deg,#144c32,#25804c)}
+.farmer-card-front-footer span{font-size:2.6cqw;font-weight:800;line-height:1.15}
+.farmer-card-front-footer i{display:block;margin-top:.45cqw;color:#e2f1e6;font-size:1.15cqw;font-style:normal;font-weight:400;letter-spacing:.07em}
+.farmer-card-front-footer b{margin-left:auto;font-size:1.8cqw;letter-spacing:.04em}
+.farmer-card-front-footer strong{font-size:2.2cqw}
+.farmer-id-card-back>header{height:21.5%;box-sizing:border-box;display:flex;align-items:center;gap:2.5cqw;padding:2.3cqw 4cqw;border-bottom:.5cqw solid #eac64d;color:#fff;background:linear-gradient(100deg,#144c32,#25804c)}
+.farmer-id-card-back>header img{width:8.5%;aspect-ratio:1;object-fit:contain;border-radius:50%;background:#fff}
+.farmer-id-card-back>header small,.farmer-id-card-back>header strong{display:block}
+.farmer-id-card-back>header small{font-size:1.7cqw}
+.farmer-id-card-back>header strong{margin-top:.6cqw;font:900 3.2cqw ui-monospace,monospace;letter-spacing:.03em}
+.farmer-card-back-body{display:grid;grid-template-columns:1.15fr 1fr;gap:4cqw;padding:2.4cqw 5.15cqw 0}
+.farmer-card-back-column{display:grid;gap:1.4cqw;min-width:0}
+.farmer-card-back-column-right{align-content:start}
+.farmer-card-back-column section>span{display:block;color:#53685c;font-size:1.65cqw;font-weight:700}
+.farmer-card-back-column section>strong{display:block;margin-top:.45cqw;overflow:hidden;font-size:2.25cqw;line-height:1.15;text-overflow:ellipsis;white-space:nowrap}
+.farmer-card-back-column .farmer-card-parcel-address>strong{white-space:normal;overflow-wrap:anywhere;text-overflow:clip;font-size:1.7cqw;line-height:1.25;height:10cqw}
+.farmer-card-sector-list{display:flex;gap:.55cqw;flex-wrap:wrap;margin-top:.6cqw}
+.farmer-card-sector-list b{padding:.3cqw .6cqw;border-radius:.45cqw;color:#174d31;background:#e0eee3;font-size:1.35cqw}
+.farmer-card-sector-list small{font-size:1.6cqw}
+.farmer-card-qr-card{display:grid;grid-template-columns:1fr;justify-items:center;gap:.4cqw;width:max-content;max-width:100%;margin:.3cqw auto 0;padding:1.2cqw 1.7cqw;border:.15cqw solid #c4d6c7;border-radius:1.2cqw;background:#fff}
+.farmer-card-qr-card a{display:block}
+.farmer-card-qr-card a:focus-visible{outline:.3cqw solid #236344;outline-offset:.3cqw}
+.farmer-card-qr-card img{display:block;width:21.2cqw;height:21.2cqw;object-fit:contain;background:#fff}
+.farmer-card-qr-card>div{text-align:center}
+.farmer-card-qr-card strong,.farmer-card-qr-card small{display:block}
+.farmer-card-qr-card strong{color:#175334;font-size:1.6cqw;line-height:1.1;letter-spacing:.04em}
+.farmer-card-qr-card small{margin-top:.3cqw;color:#53685c;font-size:1.2cqw;line-height:1.25}
+.farmer-id-card-back>footer{position:absolute;left:4.2%;right:4.2%;bottom:3.4%;display:flex;align-items:flex-end;justify-content:space-between;gap:3cqw;padding-top:1.4cqw;border-top:1px solid #b8cdbd}
+.farmer-id-card-back>footer p{max-width:72%;margin:0;color:#53685c;font-size:1.3cqw;line-height:1.4}
+.farmer-id-card-back>footer span{color:#284d36;font-size:1.35cqw;font-weight:700;white-space:nowrap}
+.farmer-card-art-credit{margin:0;color:#607269;font-size:11px;line-height:1.5}
+.farmer-card-art-credit a{color:#236344;text-decoration:underline}
+.farmer-card-address-list>div{min-width:0}.farmer-card-address-list div>span{font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+@media print{.farmer-id-card{width:85.6mm!important;height:54mm!important;border-radius:2.5mm!important;box-shadow:none!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}.farmer-card-address-list{break-after:avoid}.farmer-card-address-list div>span{font-size:10pt}}

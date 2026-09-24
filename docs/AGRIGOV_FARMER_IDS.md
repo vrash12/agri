@@ -1,5 +1,13 @@
 # AgriGOV farmer IDs
 
+## Green-and-gold registry card design — September 25, 2026
+
+The front and back card previews, print layout, digital dialog, and PNG exports now share a DA-aligned green-and-gold treatment. The front uses a pale green/yellow gradient with subtle crop-line artwork, the AgriGOV wordmark, the Department of Agriculture logo, and the Philippine coat of arms beside the heading. The QR code remains on a plain white panel for reliable scanning. The back keeps parcel addresses, classifications, registry identifier, and the read-only map QR flow.
+
+The coat-of-arms raster is stored at `public/images/branding/philippines-coat-of-arms.png`; the supporting background is `public/images/branding/farmer-card-background.svg`. The page includes attribution to the [Wikimedia Commons source](https://commons.wikimedia.org/wiki/File:Coat_of_arms_of_the_Philippines.svg) and [CC BY-SA 2.5 license](https://creativecommons.org/licenses/by-sa/2.5/). The card footer continues to state that it is a local agriculture registry card and not a substitute for a Philippine national government ID. The artwork is a visual redesign only: farmer data, QR destination, municipality authorization, address filtering, print size, and download behavior remain unchanged.
+
+The card uses `farmer-id-card.css` for shared screen/print styles. Canvas exports load the same background and logos before drawing; if an artwork asset cannot load, the export fails with a visible retry message rather than producing an incomplete ID. No database migration or record update is required.
+
 ## Outcome and status
 
 Every saved farmer uses AGRI-F-###### as the primary displayed and searchable

@@ -1,5 +1,7 @@
 # Agriculture Information System — Complete Feature Catalog
 
+The farmer digital/printable ID now uses a DA green-and-gold gradient card design with the Republic of the Philippines coat of arms, Department of Agriculture logo, AgriGOV identity, and a QR panel for the read-only parcel map. The same artwork is used by on-screen, print, and PNG export views. Farmer fields, parcel-address safeguards, role-scoped access, and the statement that the card is not a national government ID remain unchanged. See [AGRIGOV_FARMER_IDS.md](docs/AGRIGOV_FARMER_IDS.md).
+
 Bicol Region is live with 114 explicit planning/reference geofences: Albay 18, Camarines Norte 12, Camarines Sur 36 including Iriga City, Catanduanes 11, Masbate 21, separate Naga City 1, and Sorsogon 15. The import is atomic and idempotent, preserves existing rows and accounts, and is activated only through `BicolBoundarySeeder` plus `region-access:configure --region=region5`; it issues no accounts. Naga City is a separate scope. See `docs/BICOL_BOUNDARY_SOURCES.md` for sources and limitations.
 
 MIMAROPA is live on Hostinger as of September 23, 2026 (runtime `33a150c`), with 73 municipality/city planning geofences across its five provinces and the separate Puerto Princesa City scope. Calapan stays under Oriental Mindoro. The verified import preserved every existing record and account. Its region membership is configured, so MIMAROPA appears in the Farmers region chooser. The small-island checks retain Kalayaan's full source shape and all 36 Cagayancillo parts in a compact reference. These outlines require LGU/NAMRIA verification before official use. See [MIMAROPA sources, checks and deployment status](docs/MIMAROPA_BOUNDARY_SOURCES.md).
@@ -698,6 +700,10 @@ The assistance entry/edit form provides a searchable beneficiary selector with n
 The local setup now matches the four Hostinger Baguio/Benguet accounts and their roles. Baguio City is separately supervised; the Benguet Super Admin cannot access its records. The Benguet office Head Agriculturist is limited to the legacy Benguet office workspace, and the La Trinidad staff account is limited to La Trinidad.
 
 ## Farmer portal — September 24, 2026
+
+Local follow-up, pending deployment: **My Profile** has a clearer farmer card with a prominent name and **AgriGOV farmer ID** (`AGRI-F-######`), grouped personal/registry and farm details, office correction guidance and a **View my farm and parcels** button. The layout stacks on phones and preserves all existing information. RSBSA and FFRS remain separate from the AgriGOV sign-in ID.
+
+The 12 existing synthetic Region I farmers in Bacarra, Narvacan and Bacnotan now also have unique random demonstration RSBSA aliases in the form `01-00-00-000-######`. These dummy values resolve to their existing activated accounts and do not represent official RSBSA registrations. Existing passwords and real farmer records were preserved. See `docs/REGION_I_SAMPLE_DATA.md` for the September 24 data-operation receipt and verification.
 
 Farmers can sign in separately from office users to see their own profile, farm parcels, recorded crops by year and wet/dry season, assistance history and harvest history. The overview shows bounded parcel, area, assistance and harvest figures plus recent records. Each account belongs to one verified farmer record. Other farmers and office modules remain inaccessible.
 
