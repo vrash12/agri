@@ -49,7 +49,7 @@ final class FarmerPortalRecords
             'seed_bags', 'seed_bag_kg', 'claimed_area_ha', 'registered_rice_area_ha', 'lot_series',
             'crop_establishment', 'date_of_sowing_label', 'seed_variety_planted', 'seed_class',
         ])->with(['batch' => fn ($query) => $query->where('municipality_id', $account->municipality_id)
-            ->select(['id', 'title', 'reference', 'planting_year', 'planting_season'])]);
+            ->select(['id', 'reference', 'planting_year', 'planting_season'])]);
     }
 
     /**

@@ -11,7 +11,7 @@
             <div class="fp-quantity-badge"><span class="fp-small">Quantity received</span><strong>{{ $release->kgs_received !== null ? number_format((float) $release->kgs_received, 2) : 'Not recorded' }} @if($release->kgs_received !== null){{ \App\Models\RiceSeedDistribution::QUANTITY_UNIT_LABELS[$release->quantity_unit] ?? '— unit not recorded' }}@endif</strong></div>
         </header>
         @if($release->batch)
-            <p class="fp-batch-label"><strong>{{ $release->batch->title ?: 'Distribution program' }}</strong>@if($release->batch->reference) · {{ $release->batch->reference }}@endif</p>
+            <p class="fp-batch-label"><strong>{{ $release->batch->displayLabel() }}</strong></p>
         @endif
         <details class="fp-record-details"><summary>View release and planting details</summary>
             <dl class="fp-details">

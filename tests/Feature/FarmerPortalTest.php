@@ -526,7 +526,7 @@ class FarmerPortalTest extends TestCase
     public function test_bad_related_record_links_cannot_expose_foreign_parcel_or_distribution_program(): void
     {
         DB::table('harvest_records')->where('id', 1)->update(['farm_plot_id' => 2]);
-        DB::table('rice_distribution_batches')->insert(['id' => 1, 'municipality_id' => 2, 'title' => 'PRIVATE-FOREIGN-PROGRAM']);
+        DB::table('rice_distribution_batches')->insert(['id' => 1, 'municipality_id' => 2, 'reference' => 'PRIVATE-FOREIGN-PROGRAM']);
         DB::table('rice_seed_distributions')->where('id', 1)->update(['batch_id' => 1]);
         $this->account();
         $this->login();
@@ -590,13 +590,13 @@ class FarmerPortalTest extends TestCase
     public function test_profile_and_release_details_show_recorded_values_and_escape_text(): void
     {
         DB::table('farmers')->where('id', 1)->update(['farm_province' => 'Recorded province', 'ecosystem' => 'Irrigated', 'ecosystem_source' => 'Canal', 'public_map_token' => 'PRIVATE-TOKEN']);
-        DB::table('rice_distribution_batches')->insert(['id' => 1, 'municipality_id' => 1, 'title' => 'Local seed program', 'reference' => 'TEST-BATCH', 'planting_year' => 2026, 'planting_season' => 'wet']);
+        DB::table('rice_distribution_batches')->insert(['id' => 1, 'municipality_id' => 1, 'reference' => 'TEST-BATCH', 'planting_year' => 2026, 'planting_season' => 'wet']);
         $unsafe = '<img src=x onerror=alert(1)>';
         DB::table('rice_seed_distributions')->where('id', 1)->update(['batch_id' => 1, 'seed_bags' => 0, 'seed_bag_kg' => 20, 'lot_series' => $unsafe, 'claimed_area_ha' => 0.75, 'registered_rice_area_ha' => 1, 'seed_variety_planted' => 'NSIC Rc 222', 'seed_class' => 'Certified', 'crop_establishment' => 'Transplanted', 'date_of_sowing_label' => 'June 2026']);
         $this->account();
         $this->login();
         $this->get(route('farmer-portal.profile'))->assertOk()->assertSee('Recorded province')->assertSee('Irrigated')->assertSee('Canal')->assertDontSee('PRIVATE-TOKEN');
-        $this->get(route('farmer-portal.assistance'))->assertOk()->assertSee('Local seed program')->assertSee('NSIC Rc 222')->assertSee('Certified')->assertSee('20.00 kg per bag')->assertSee('0.75 ha')->assertSee('June 2026')->assertSee($unsafe)->assertDontSee($unsafe, false);
+        $this->get(route('farmer-portal.assistance'))->assertOk()->assertSee('TEST-BATCH')->assertSee('2026 WS')->assertSee('NSIC Rc 222')->assertSee('Certified')->assertSee('20.00 kg per bag')->assertSee('0.75 ha')->assertSee('June 2026')->assertSee($unsafe)->assertDontSee($unsafe, false);
     }
 
     public function test_empty_overview_and_missing_quantities_do_not_invent_zero_production(): void
@@ -739,7 +739,6 @@ class FarmerPortalTest extends TestCase
             $t->string('reference')->nullable();
             $t->string('planting_season')->nullable();
             $t->integer('planting_year')->nullable();
-            $t->string('title')->nullable();
             $t->timestamps();
         });
         Schema::create('rice_seed_distributions', function (Blueprint $t) {
