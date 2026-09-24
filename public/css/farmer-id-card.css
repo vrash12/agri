@@ -26,11 +26,8 @@
 .farmer-card-front-footer i{display:block;margin-top:.45cqw;color:#e2f1e6;font-size:1.15cqw;font-style:normal;font-weight:400;letter-spacing:.07em}
 .farmer-card-front-footer b{margin-left:auto;font-size:1.8cqw;letter-spacing:.04em}
 .farmer-card-front-footer strong{font-size:2.2cqw}
-.farmer-id-card-back>header{height:21.5%;box-sizing:border-box;display:flex;align-items:center;gap:2.5cqw;padding:2.3cqw 4cqw;border-bottom:.5cqw solid #eac64d;color:#fff;background:linear-gradient(100deg,#144c32,#25804c)}
-.farmer-id-card-back>header img{width:8.5%;aspect-ratio:1;object-fit:contain;border-radius:50%;background:#fff}
-.farmer-id-card-back>header small,.farmer-id-card-back>header strong{display:block}
-.farmer-id-card-back>header small{font-size:1.7cqw}
-.farmer-id-card-back>header strong{margin-top:.6cqw;font:900 3.2cqw ui-monospace,monospace;letter-spacing:.03em}
+.farmer-id-card-back>header{height:21.5%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;padding:1.2cqw 4cqw;border-bottom:.5cqw solid #eac64d;background:linear-gradient(100deg,#144c32,#25804c)}
+.farmer-id-card-back>header img{display:block;flex:none;width:24cqw;height:auto;max-width:none;padding:.8cqw 1.8cqw;box-sizing:content-box;object-fit:contain;border-radius:.8cqw;background:#fff}
 .farmer-card-back-body{display:grid;grid-template-columns:1.15fr 1fr;gap:4cqw;padding:2.4cqw 5.15cqw 0}
 .farmer-card-back-column{display:grid;gap:1.4cqw;min-width:0}
 .farmer-card-back-column-right{align-content:start}

@@ -2,7 +2,7 @@
 
 ## Farmer registry card redesign — September 25, 2026 (local)
 
-The farmer ID front and back now use a DA-aligned green-and-gold gradient with light agricultural linework, the Department of Agriculture logo and the Philippine coat of arms beside the Republic of the Philippines heading. The QR panel stays white for scan contrast. Screen previews, digital ID canvas rendering, PNG downloads, and print cards share the same background and branding assets. Existing address wrapping, municipality authorization, data fields, QR privacy boundary and non-national-ID disclaimer remain in place. Focused card permission/address tests and three export JavaScript tests pass; visual print/browser inspection remains unverified in this environment.
+The farmer ID front and back now use a DA-aligned green-and-gold gradient with light agricultural linework, the Department of Agriculture logo and the Philippine coat of arms beside the Republic of the Philippines heading. The front carries the identity details; the back uses the shared AgriGOV wordmark without repeating the front header text. The QR panel stays white for scan contrast. Screen previews, digital ID canvas rendering, PNG downloads, and print cards share the same background and branding assets. Existing address wrapping, municipality authorization, data fields, QR privacy boundary and non-national-ID disclaimer remain in place. Focused card permission/address tests and three export JavaScript tests pass; visual print/browser inspection remains unverified in this environment.
 
 ## Farmer profile card — September 24, 2026 (local)
 

@@ -122,8 +122,7 @@
         <div class="farmer-card-side-label farmer-card-screen-only"><strong>Back</strong><span>Farm details and scannable interactive land map</span></div>
         <div class="farmer-id-card farmer-id-card-back" id="farmerIdCardBack">
           <header>
-            <img src="{{ asset('images/mao-logo.jpg') }}" alt="Agriculture office logo">
-            <div><small>AgriGOV · Agriculture Information System</small><strong>{{ $farmer->agri_gov_id }}</strong></div>
+            <x-brand />
           </header>
           <div class="farmer-card-back-body">
             <div class="farmer-card-back-column">
@@ -251,7 +250,7 @@
       daLogo: @json(asset('images/da.jpg')),
       republicLogo: @json(asset('images/branding/philippines-coat-of-arms.png')),
       background: @json(asset('images/branding/farmer-card-background.svg')),
-      officeLogo: @json(asset('images/mao-logo.jpg')),
+      agrigovLogo: @json(asset('images/branding/agrigov-wordmark-v2.png')),
       scanUrl: @json($scanUrl),
       qrDataUri: @json($qrDataUri),
       plotCount: @json($plotCount),
@@ -377,19 +376,18 @@
     }
 
     async function renderBack() {
-      const [officeLogo, qrImage, background] = await Promise.all([
-        loadImage(cardData.officeLogo), loadImage(cardData.qrDataUri), loadImage(cardData.background)
+      const [agrigovLogo, qrImage, background] = await Promise.all([
+        loadImage(cardData.agrigovLogo), loadImage(cardData.qrDataUri), loadImage(cardData.background)
       ]);
-      if (!officeLogo || !qrImage || !background) throw new Error('The card artwork or QR code could not load. Reload this page before downloading the ID.');
+      if (!agrigovLogo || !qrImage || !background) throw new Error('The card artwork or QR code could not load. Reload this page before downloading the ID.');
       const canvas = document.createElement('canvas');
       canvas.width = 1011; canvas.height = 638;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(background, 0, 0, 1011, 638);
       const header = ctx.createLinearGradient(0,0,1011,132); header.addColorStop(0,'#144c32'); header.addColorStop(1,'#25804c');
       ctx.fillStyle=header; ctx.fillRect(0,0,1011,132); ctx.fillStyle='#eac64d'; ctx.fillRect(0,132,1011,5);
-      if (officeLogo) ctx.drawImage(officeLogo,42,24,86,86);
-      ctx.fillStyle='#fff'; ctx.font='20px Arial'; ctx.fillText('AgriGOV · Agriculture Information System',155,54);
-      ctx.font='900 37px monospace'; ctx.fillText(cardData.farmerId,155,98);
+      roundRect(ctx,366,12,279,108,8,'#ffffff');
+      ctx.drawImage(agrigovLogo,384,20,243,243 * agrigovLogo.height / agrigovLogo.width);
       field(ctx,'CONTACT NUMBER',cardData.contact,52,180,420,28);
       ctx.fillStyle='#607067'; ctx.font='700 20px Arial'; ctx.fillText('FARM LOCATION · PARCEL ADDRESS',52,255);
       addressText(ctx,cardData.farmLocation,52,288,440,100);
