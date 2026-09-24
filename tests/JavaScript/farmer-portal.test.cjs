@@ -54,6 +54,28 @@ test('network timeouts permit a later retry without a partial parcel map', async
   assert.equal(h.calls.maps, 1);
 });
 
+test('malformed geometry responses show a helpful retry message without raw errors', async () => {
+  const h = mapHarness(() => ({ ok: true, json: async () => { throw new SyntaxError('PRIVATE RESPONSE CONTENT'); } }));
+  await h.events.click();
+  assert.match(h.status.textContent, /Check your connection and try again/);
+  assert.doesNotMatch(h.status.textContent, /PRIVATE|SyntaxError/);
+  assert.equal(h.canvas.hidden, true);
+  assert.equal(h.button.disabled, false);
+  assert.equal(h.calls.maps, 0);
+});
+
+test('failed HTTP responses never parse or display provider error content', async () => {
+  for (const status of [401, 404, 422, 429, 500]) {
+    let parsed = false;
+    const h = mapHarness(() => ({ ok: false, status, json: async () => { parsed = true; return { message: 'PRIVATE SERVER DETAIL' }; } }));
+    await h.events.click();
+    assert.equal(parsed, false);
+    assert.doesNotMatch(h.status.textContent, /PRIVATE/);
+    assert.equal(h.button.disabled, false);
+    assert.equal(h.canvas.hidden, true);
+  }
+});
+
 function sessionHarness() {
   let time = 100000, tick;
   const events = {}, calls = [], redirects = [];

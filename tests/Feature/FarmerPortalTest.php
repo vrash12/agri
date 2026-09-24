@@ -44,7 +44,7 @@ class FarmerPortalTest extends TestCase
             ->assertDontSee('activation code')
             ->assertDontSee('Activate my account');
         $this->get(route('farmer-portal.activate'))->assertOk()->assertSee('activation_code');
-        foreach (['home', 'profile', 'parcels', 'assistance'] as $page) {
+        foreach (['home', 'profile', 'parcels', 'assistance', 'harvests'] as $page) {
             $this->get(route('farmer-portal.'.$page))->assertRedirect(route('farmer-portal.login'));
         }
         $this->getJson($this->geometry(1))->assertUnauthorized();
@@ -367,6 +367,143 @@ class FarmerPortalTest extends TestCase
         $this->assertTrue(Schema::hasTable('users'));
     }
 
+    public function test_overview_has_owned_records_area_and_bounded_recent_lists_without_geometry(): void
+    {
+        $this->account();
+        $this->login();
+        $response = $this->get(route('farmer-portal.home'))->assertOk()
+            ->assertSee('My plotted land')->assertSee('OWN-RELEASE')->assertSee('OWN-HARVEST')
+            ->assertDontSee('FOREIGN-RELEASE')->assertDontSee('FOREIGN-HARVEST')->assertDontSee('WRONG-HARVEST')
+            ->assertDontSee('polygon_json')->assertDontSee('120.51')->assertDontSee('Foreign parcel');
+        $this->assertSame(['parcels' => 1, 'area_ha' => 1.2, 'area_recorded' => 1, 'assistance' => 1, 'harvests' => 1], $response->viewData('overview'));
+        $harvest = (array) DB::table('harvest_records')->where('id', 1)->first();
+        $release = (array) DB::table('rice_seed_distributions')->where('id', 1)->first();
+        $plot = (array) DB::table('farm_plots')->where('id', 1)->first();
+        unset($harvest['id'], $release['id'], $plot['id']);
+        for ($i = 0; $i < 20; $i++) {
+            DB::table('harvest_records')->insert($harvest);
+            DB::table('rice_seed_distributions')->insert($release);
+            DB::table('farm_plots')->insert($plot);
+        }
+        $response = $this->get(route('farmer-portal.home'))->assertOk();
+        $this->assertSame(21, $response->viewData('overview')['harvests']);
+        $this->assertSame(21, $response->viewData('overview')['assistance']);
+        $this->assertCount(5, $response->viewData('recent')['harvests']);
+        $this->assertCount(5, $response->viewData('recent')['assistance']);
+        $this->assertCount(3, $response->viewData('recent')['parcels']);
+    }
+
+    public function test_harvests_require_both_farmer_and_municipality_and_keep_unknown_years_in_all_years(): void
+    {
+        DB::table('farmers')->where('id', 2)->update(['municipality_id' => 1]);
+        DB::table('harvest_records')->where('farmer_id', 2)->update(['municipality_id' => 1]);
+        DB::table('harvest_records')->insert(['municipality_id' => 1, 'farmer_id' => 1, 'commodity' => 'corn', 'variety' => 'UNDATED-OWN', 'harvest_year' => null]);
+        $this->account();
+        $this->login();
+        foreach ([[], ['year' => ''], ['farmer_id' => 2, 'municipality_id' => 2]] as $parameters) {
+            $response = $this->get(route('farmer-portal.harvests', $parameters))->assertOk()
+                ->assertSee('OWN-HARVEST')->assertSee('UNDATED-OWN')->assertDontSee('FOREIGN-HARVEST')
+                ->assertDontSee('WRONG-HARVEST')->assertDontSee('UNLINKED-HARVEST');
+            $this->assertSame(2, $response->viewData('harvests')->total());
+            $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
+        }
+        $this->get(route('farmer-portal.harvests', ['year' => 2026]))->assertOk()->assertSee('OWN-HARVEST')->assertDontSee('UNDATED-OWN');
+        $this->get(route('farmer-portal.harvests', ['year' => 2025]))->assertOk()->assertSee('No harvest records for this period')->assertDontSee('OWN-HARVEST');
+        foreach ([['year' => 1899], ['year' => now()->year + 2], ['year' => [2026]], ['page' => 0], ['page' => 100001]] as $parameters) {
+            $this->getJson(route('farmer-portal.harvests', $parameters))->assertUnprocessable();
+        }
+    }
+
+    public function test_bad_related_record_links_cannot_expose_foreign_parcel_or_distribution_program(): void
+    {
+        DB::table('harvest_records')->where('id', 1)->update(['farm_plot_id' => 2]);
+        DB::table('rice_distribution_batches')->insert(['id' => 1, 'municipality_id' => 2, 'title' => 'PRIVATE-FOREIGN-PROGRAM']);
+        DB::table('rice_seed_distributions')->where('id', 1)->update(['batch_id' => 1]);
+        $this->account();
+        $this->login();
+        $harvests = $this->get(route('farmer-portal.harvests'))->assertOk()->assertSee('OWN-HARVEST')
+            ->assertSee('No parcel linked to your account')->assertDontSee('Foreign parcel');
+        $this->assertNull($harvests->viewData('harvests')->first()->farmPlot);
+        $this->get(route('farmer-portal.assistance'))->assertOk()->assertDontSee('PRIVATE-FOREIGN-PROGRAM');
+        $this->get(route('farmer-portal.home'))->assertOk()->assertDontSee('Foreign parcel');
+        $this->getJson($this->geometry(2))->assertNotFound();
+    }
+
+    public function test_quantity_totals_keep_types_units_and_missing_values_separate(): void
+    {
+        foreach ([['rice', 'kg', null], ['rice', 'sack', 2], ['corn', 'kg', 10], ['fruit', 'piece', null]] as [$commodity, $unit, $quantity]) {
+            DB::table('harvest_records')->insert(['municipality_id' => 1, 'farmer_id' => 1, 'commodity' => $commodity, 'quantity_unit' => $unit, 'quantity' => $quantity, 'harvest_year' => 2026]);
+        }
+        foreach ([['rice_seed', 'kg', null], ['rice_seed', 'sack', 1], ['fertilizer', 'kg', 50], ['vegetable_seed', 'pack', null]] as [$category, $unit, $quantity]) {
+            DB::table('rice_seed_distributions')->insert(['municipality_id' => 1, 'farmer_id' => 1, 'input_category' => $category, 'quantity_unit' => $unit, 'kgs_received' => $quantity]);
+        }
+        $this->account();
+        $this->login();
+        $harvests = $this->get(route('farmer-portal.harvests'))->assertOk()
+            ->assertSee('1 without quantity')->assertDontSee('0 without quantity')->assertDontSee('@if', false)
+            ->viewData('totals')->keyBy(fn ($row) => $row->commodity.':'.$row->quantity_unit);
+        $this->assertCount(4, $harvests);
+        $this->assertSame(100.0, (float) $harvests['rice:kg']->total_quantity);
+        $this->assertSame(2, (int) $harvests['rice:kg']->records);
+        $this->assertSame(1, (int) $harvests['rice:kg']->quantities_recorded);
+        $this->assertSame(2.0, (float) $harvests['rice:sack']->total_quantity);
+        $this->assertSame(10.0, (float) $harvests['corn:kg']->total_quantity);
+        $this->assertNull($harvests['fruit:piece']->total_quantity);
+        $assistance = $this->get(route('farmer-portal.assistance'))->assertOk()
+            ->assertSee('1 without quantity')->assertDontSee('0 without quantity')->assertDontSee('@if', false)
+            ->viewData('totals')->keyBy(fn ($row) => $row->input_category.':'.$row->quantity_unit);
+        $this->assertCount(4, $assistance);
+        $this->assertSame(20.0, (float) $assistance['rice_seed:kg']->total_quantity);
+        $this->assertSame(50.0, (float) $assistance['fertilizer:kg']->total_quantity);
+        $this->assertSame(1.0, (float) $assistance['rice_seed:sack']->total_quantity);
+        $this->assertNull($assistance['vegetable_seed:pack']->total_quantity);
+    }
+
+    public function test_history_pagination_retains_year_and_does_not_load_all_records(): void
+    {
+        for ($i = 1; $i <= 16; $i++) {
+            DB::table('harvest_records')->insert(['municipality_id' => 1, 'farmer_id' => 1, 'commodity' => 'rice', 'harvest_year' => 2025, 'variety' => 'OLDER-'.$i]);
+            DB::table('rice_seed_distributions')->insert(['municipality_id' => 1, 'farmer_id' => 1, 'input_category' => 'rice_seed']);
+        }
+        $this->account();
+        $this->login();
+        $harvests = $this->get(route('farmer-portal.harvests', ['year' => 2025]))->assertOk()->viewData('harvests');
+        $this->assertCount(15, $harvests);
+        $this->assertSame(16, $harvests->total());
+        $this->assertStringContainsString('year=2025', $harvests->nextPageUrl());
+        $this->assertCount(1, $this->get($harvests->nextPageUrl())->assertOk()->viewData('harvests'));
+        $releases = $this->get(route('farmer-portal.assistance'))->assertOk()->viewData('releases');
+        $this->assertCount(15, $releases);
+        $this->assertSame(17, $releases->total());
+        $this->assertCount(2, $this->get($releases->nextPageUrl())->assertOk()->viewData('releases'));
+    }
+
+    public function test_profile_and_release_details_show_recorded_values_and_escape_text(): void
+    {
+        DB::table('farmers')->where('id', 1)->update(['farm_province' => 'Recorded province', 'ecosystem' => 'Irrigated', 'ecosystem_source' => 'Canal', 'public_map_token' => 'PRIVATE-TOKEN']);
+        DB::table('rice_distribution_batches')->insert(['id' => 1, 'municipality_id' => 1, 'title' => 'Local seed program', 'reference' => 'TEST-BATCH', 'planting_year' => 2026, 'planting_season' => 'wet']);
+        $unsafe = '<img src=x onerror=alert(1)>';
+        DB::table('rice_seed_distributions')->where('id', 1)->update(['batch_id' => 1, 'seed_bags' => 0, 'seed_bag_kg' => 20, 'lot_series' => $unsafe, 'claimed_area_ha' => 0.75, 'registered_rice_area_ha' => 1, 'seed_variety_planted' => 'NSIC Rc 222', 'seed_class' => 'Certified', 'crop_establishment' => 'Transplanted', 'date_of_sowing_label' => 'June 2026']);
+        $this->account();
+        $this->login();
+        $this->get(route('farmer-portal.profile'))->assertOk()->assertSee('Recorded province')->assertSee('Irrigated')->assertSee('Canal')->assertDontSee('PRIVATE-TOKEN');
+        $this->get(route('farmer-portal.assistance'))->assertOk()->assertSee('Local seed program')->assertSee('NSIC Rc 222')->assertSee('Certified')->assertSee('20.00 kg per bag')->assertSee('0.75 ha')->assertSee('June 2026')->assertSee($unsafe)->assertDontSee($unsafe, false);
+    }
+
+    public function test_empty_overview_and_missing_quantities_do_not_invent_zero_production(): void
+    {
+        DB::table('farm_plots')->where('farmer_id', 1)->delete();
+        DB::table('harvest_records')->where('farmer_id', 1)->delete();
+        DB::table('rice_seed_distributions')->where('farmer_id', 1)->delete();
+        $this->account();
+        $this->login();
+        $response = $this->get(route('farmer-portal.home'))->assertOk()->assertSee('No farm parcels recorded yet')->assertSee('No harvest records yet');
+        $this->assertNull($response->viewData('overview')['area_ha']);
+        $this->assertSame(0, $response->viewData('overview')['harvests']);
+        $this->get(route('farmer-portal.harvests'))->assertOk()->assertSee('No harvest records for this period');
+        $this->get(route('farmer-portal.assistance'))->assertOk()->assertSee('No assistance releases recorded yet');
+    }
+
     private function login(string $id = 'AGRI-F-000001', bool $trueJson = false)
     {
         $method = $trueJson ? 'postJson' : 'post';
@@ -426,6 +563,9 @@ class FarmerPortalTest extends TestCase
         foreach ([[1, 1, 'OWN-RELEASE'], [2, 2, 'FOREIGN-RELEASE'], [2, 1, 'WRONG-MUNICIPALITY'], [1, null, 'UNLINKED-RELEASE']] as [$municipality, $farmer, $label]) {
             DB::table('rice_seed_distributions')->insert(['municipality_id' => $municipality, 'farmer_id' => $farmer,
                 'seed_variety_claimed' => $label, 'input_category' => 'rice_seed', 'kgs_received' => 20, 'quantity_unit' => 'kg', 'date_received' => '2026-09-01']);
+        }
+        foreach ([[1, 1, 'OWN-HARVEST'], [2, 2, 'FOREIGN-HARVEST'], [2, 1, 'WRONG-HARVEST'], [1, null, 'UNLINKED-HARVEST']] as [$municipality, $farmer, $label]) {
+            DB::table('harvest_records')->insert(['municipality_id' => $municipality, 'farmer_id' => $farmer, 'farm_plot_id' => $farmer, 'commodity' => 'rice', 'variety' => $label, 'quantity' => 100, 'quantity_unit' => 'kg', 'date_harvested' => '2026-09-02', 'harvest_year' => 2026, 'season' => 'wet', 'area_harvested_ha' => 1.1]);
         }
     }
 
@@ -498,14 +638,19 @@ class FarmerPortalTest extends TestCase
             $t->unsignedBigInteger('municipality_id');
             $t->unsignedBigInteger('farmer_id')->nullable();
             $t->unsignedBigInteger('batch_id')->nullable();
-            foreach (['seed_variety_claimed', 'input_category', 'quantity_unit', 'input_notes', 'lot_series'] as $field) {
+            foreach (['seed_variety_claimed', 'input_category', 'quantity_unit', 'input_notes', 'lot_series', 'crop_establishment', 'date_of_sowing_label', 'seed_variety_planted', 'seed_class'] as $field) {
                 $t->string($field)->nullable();
             }
             $t->decimal('kgs_received', 15, 4)->nullable();
+            $t->integer('seed_bags')->nullable();
+            foreach (['seed_bag_kg', 'claimed_area_ha', 'registered_rice_area_ha'] as $field) {
+                $t->decimal($field, 15, 4)->nullable();
+            }
             $t->date('date_received')->nullable();
             $t->timestamps();
         });
         (require database_path('migrations/2026_09_19_000100_create_parcel_crop_seasons_table.php'))->up();
+        (require database_path('migrations/2026_09_19_000100_create_harvest_records_table.php'))->up();
         (require database_path('migrations/2026_08_19_000300_create_audit_logs_table.php'))->up();
         $migrations = glob(database_path('migrations/*_create_farmer_portal_accounts_table.php'));
         $this->assertCount(1, $migrations);

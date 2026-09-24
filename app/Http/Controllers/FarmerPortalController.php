@@ -15,11 +15,12 @@ class FarmerPortalController extends Controller
     public function home(Request $request)
     {
         [$account, $farmer] = $this->context($request);
+        $overview = $this->records->overview($account);
+        $recent = $this->records->recentActivity($account);
+        $cropYear = now()->year;
+        $crops = $this->records->seasonalCrops($account, $recent['parcels']->pluck('id')->all(), $cropYear);
 
-        return view('farmer_portal.home', compact('account', 'farmer') + [
-            'parcelCount' => $this->records->plots($account)->count(),
-            'assistanceCount' => $this->records->releases($account)->count(),
-        ]);
+        return view('farmer_portal.home', compact('account', 'farmer', 'overview', 'recent', 'cropYear', 'crops'));
     }
 
     public function profile(Request $request)
@@ -47,11 +48,30 @@ class FarmerPortalController extends Controller
     {
         $request->validate(['page' => ['nullable', 'integer', 'min:1', 'max:100000']]);
         [$account, $farmer] = $this->context($request);
-        $releases = $this->records->releases($account)
-            ->select(['id', 'date_received', 'input_category', 'seed_variety_claimed', 'kgs_received', 'quantity_unit'])
+        $releases = $this->records->releaseDetails($account)
             ->orderByDesc('date_received')->orderByDesc('id')->paginate(15)->withQueryString();
+        $totals = $this->records->assistanceTotals($account);
 
-        return view('farmer_portal.assistance', compact('account', 'farmer', 'releases'));
+        return view('farmer_portal.assistance', compact('account', 'farmer', 'releases', 'totals'));
+    }
+
+    public function harvests(Request $request)
+    {
+        $data = $request->validate([
+            'year' => ['nullable', 'integer', 'between:1900,'.(now()->year + 1)],
+            'page' => ['nullable', 'integer', 'min:1', 'max:100000'],
+        ]);
+        [$account, $farmer] = $this->context($request);
+        $harvestYear = isset($data['year']) ? (int) $data['year'] : null;
+        $query = $this->records->harvestDetails($account)
+            ->orderByDesc('date_harvested')->orderByDesc('harvest_year')->orderByDesc('id');
+        if ($harvestYear !== null) {
+            $query->where('harvest_year', $harvestYear);
+        }
+        $harvests = $query->paginate(15)->withQueryString();
+        $totals = $this->records->harvestTotals($account, $harvestYear);
+
+        return view('farmer_portal.harvests', compact('account', 'farmer', 'harvests', 'harvestYear', 'totals'));
     }
 
     public function map(Request $request, int $plot)

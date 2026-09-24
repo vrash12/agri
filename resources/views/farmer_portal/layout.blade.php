@@ -27,8 +27,8 @@
         </div>
         @if(isset($account))
             <nav class="fp-nav" aria-label="Farmer portal">
-                @foreach(['home' => 'Overview', 'profile' => 'My profile', 'parcels' => 'My farm', 'assistance' => 'My assistance'] as $page => $label)
-                    <a href="{{ route('farmer-portal.'.$page) }}" @if(request()->routeIs('farmer-portal.'.$page)) aria-current="page" @endif>{{ $label }}</a>
+                @foreach(['home' => 'Overview', 'profile' => 'My profile', 'parcels' => 'My farm', 'assistance' => 'My assistance', 'harvests' => 'My harvests'] as $page => $label)
+                    <a href="{{ route('farmer-portal.'.$page) }}" @if(request()->routeIs('farmer-portal.'.$page) || ($page === 'parcels' && request()->routeIs('farmer-portal.parcels.*'))) aria-current="page" @endif>{{ $label }}</a>
                 @endforeach
             </nav>
         @endif

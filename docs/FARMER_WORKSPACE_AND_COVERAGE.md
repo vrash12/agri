@@ -1,6 +1,6 @@
 # Farmer workspace hierarchy and coverage statistics
 
-## September 24 overview update — local, not yet deployed
+## September 24 overview update — deployed in `bd75ced`
 
 Farmers now opens the paginated directory and an expanded parcel map directly, across active municipalities the account can access. System Owners see an **All regions** filter; Regional Heads see **All provinces in your region**, including separate city scopes. Provincial users see their province and can optionally narrow to a municipality; municipal users stay assigned to their municipality. The optional Municipality / City dropdown preserves direct bookmarks and municipality-only map exports/weather.
 
@@ -10,9 +10,11 @@ The top panel follows the owner's second screenshot: location controls sit side 
 
 The administrative-outline layer is capped at `MAP_MAX_BOUNDARIES_PER_REQUEST=200` (hard maximum 1000), with a visible count and instruction to narrow by location. This bounds broad initial pages; stored geometry is unchanged. Parcel responses retain the existing `MAP_MAX_PLOTS_PER_REQUEST=2000` cap and truncation metadata. Table rows paginate, map farmer searches remain bounded, and same-municipality assistance links are enforced in totals.
 
-Deployment requires the support/controller/view/config changes together and mirroring changed `farmer-finder.js`, `farmer-workspace.js` and `farmers-maps.js` to both Hostinger public directories. Refresh compiled views and configuration. No migration, dependency update or data import is required. The prior deployment notes below describe the older chooser release, not this local change.
+The support/controller/view/config changes and changed `farmer-finder.js`, `farmer-workspace.js` and `farmers-maps.js` were deployed together through GitHub and Hostinger `git pull --ff-only` in `bd75ced`. The production database backup, cache refresh, public-asset mirroring and HTTP checks passed. No migration, dependency update or data import ran. The prior deployment notes below describe the older chooser release.
 
-Local verification: 87 PHP tests / 1,011 assertions cover the workspace, primary farmer ID, geofences, portal and office sign-in. The unchanged JavaScript checks from this update pass 140 tests. Pint was run explicitly on the nine changed PHP classes/tests. Synthetic browser checks cover desktop and 390px phone layout, region/municipality selection, clearing both filters, and the expanded map's provider-unavailable state. No Google Maps key was used in the preview, so actual satellite loading and production performance were not verified. This release remains uncommitted and has not been pushed or installed on Hostinger.
+Local verification for that release: 87 PHP tests / 1,011 assertions cover the workspace, primary farmer ID, geofences, portal and office sign-in. The unchanged JavaScript checks pass 140 tests. Pint was run explicitly on the nine changed PHP classes/tests. Synthetic browser checks cover desktop and 390px phone layout, region/municipality selection, clearing both filters, and the expanded map's provider-unavailable state. No Google Maps key was used in the preview, so actual satellite loading and production performance were not verified.
+
+The separate farmer portal records enhancement is still local. Its verification and pending release requirements are recorded in `docs/FARMER_PORTAL.md`.
 
 ## Earlier deployed chooser — September 23, 2026
 

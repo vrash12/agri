@@ -8,7 +8,7 @@ and record 1000000 is AGRI-F-1000000. IDs do not depend on name, municipality,
 RSBSA, or whether portal access has been issued. Unsaved records have no ID.
 
 Implemented on September 21, 2026 and committed to the repository on
-September 24, 2026. Not deployed to Hostinger.
+September 24, 2026. Installed on Hostinger in runtime `bd75ced` through GitHub and a fast-forward pull.
 No migration, backfill, portal-account issuance, credential change, or database
 key replacement is needed. Existing farmers receive the display ID immediately
 when the updated code runs; new farmers receive it after persistence.

@@ -1,12 +1,12 @@
 # Design and UX implementation record
 
-## Farmers overview — September 24, 2026 (local)
+## Farmers overview — September 24, 2026 (deployed)
 
-Farmers now opens the registry and parcel map immediately. The top panel follows the owner's second screenshot with optional Region (System Owner), Province / City (Regional Head), and Municipality / City filters. Native Show municipalities/View farmers actions work without JavaScript; changing or clearing a selection submits automatically with JavaScript. A Showing summary and registry/map links remain below the controls. Municipality choices include their province or separate city label. The registry and map share location scope, while search/quality filters remain registry-only. The map disclosure opens by default and retains loading/retry states. Broad views label any capped administrative-outline layer. No account permissions, ownership or stored geometry change. Desktop and 390px phone layouts and clearing filters were checked with synthetic data; satellite loading was not verified. Deployment remains pending; see `docs/FARMER_WORKSPACE_AND_COVERAGE.md`.
+Farmers now opens the registry and parcel map immediately. The top panel follows the owner's second screenshot with optional Region (System Owner), Province / City (Regional Head), and Municipality / City filters. Native Show municipalities/View farmers actions work without JavaScript; changing or clearing a selection submits automatically with JavaScript. A Showing summary and registry/map links remain below the controls. Municipality choices include their province or separate city label. The registry and map share location scope, while search/quality filters remain registry-only. The map disclosure opens by default and retains loading/retry states. Broad views label any capped administrative-outline layer. No account permissions, ownership or stored geometry change. Desktop and 390px phone layouts and clearing filters were checked with synthetic data; satellite loading was not verified. Installed on Hostinger in `bd75ced`; see `docs/FARMER_WORKSPACE_AND_COVERAGE.md`.
 
-## Shared sign-in choices — September 24, 2026 (local)
+## Shared sign-in choices — September 24, 2026 (deployed)
 
-Office and Farmer sign-in use the same page layout and slideshow, with two clearly labeled links above the form. The farmer form shows only its ID/password fields and office-help text; activation prompts are removed from this screen and the homepage. The office acknowledgment remains required. Existing authentication routes, guards, staff-assisted activation and password rules are unchanged. The portal and office sign-in suites and desktop browser switching pass. Deploy the login views, welcome view and `login-layout.css` together; mirror CSS to both Hostinger public directories. No migration or account provisioning is required.
+Office and Farmer sign-in use the same page layout and slideshow, with two clearly labeled links above the form. The farmer form shows only its ID/password fields and office-help text; activation prompts are removed from this screen and the homepage. The office acknowledgment remains required. Existing authentication routes, guards, staff-assisted activation and password rules are unchanged. The portal and office sign-in suites and desktop browser switching pass. The login views, welcome view and `login-layout.css` were installed together in `bd75ced`, with CSS mirrored to both Hostinger public directories. No migration or account provisioning ran.
 
 ## Homepage collage arrows — September 23, 2026
 
@@ -61,7 +61,7 @@ The subsequent local checkbox update moves the notice inside the sign-in form, r
 
 ## Primary AgriGOV farmer ID - September 21, 2026
 
-Registry, cards, map details, farmer history, portal and farmer-selection controls now use AGRI-F-###### as the primary visible identity, while FFRS/RSBSA remain separate references. Search hints name the supported AgriGOV ID. The staff portal screen shows the ID before access is issued and states that activation is required. Existing shared styles, numeric control values and QR tokens are preserved. Synthetic browser checks verified the registry, card and pre-activation staff screen; live Google Maps and production acceptance were not performed. See `docs/AGRIGOV_FARMER_IDS.md`; this update is committed and has not been deployed.
+Registry, cards, map details, farmer history, portal and farmer-selection controls now use AGRI-F-###### as the primary visible identity, while FFRS/RSBSA remain separate references. Search hints name the supported AgriGOV ID. The staff portal screen shows the ID before access is issued and states that activation is required. Existing shared styles, numeric control values and QR tokens are preserved. Synthetic browser checks verified the registry, card and pre-activation staff screen; live Google Maps and production acceptance were not performed. See `docs/AGRIGOV_FARMER_IDS.md`; this update was included in Hostinger runtime `bd75ced`.
 
 ## Regional account assignment — September 21, 2026
 
@@ -359,13 +359,13 @@ checks passing and existing records unchanged. Signed-in production browser
 submissions and office-data acceptance remain pending. See
 `docs/SEASONAL_CROPS_DEPLOYMENT_2026_09_19.md`.
 
-## Farmer portal — September 20, 2026
+## Farmer portal — September 24, 2026
 
-Added a separate mobile-friendly farmer shell using shared design tokens, operations styles, module field components, branding and form feedback. Pages cover sign-in, activation, overview, profile, paginated parcels/year-season records, a lazy private parcel map, and assistance history. Office-side access management reuses the authenticated layout and Farmer update policy. Both entry pages link to farmer sign-in.
+Added a separate mobile-friendly farmer shell using shared design tokens, operations styles, module field components, branding and form feedback. Pages cover sign-in, activation, overview, profile, paginated parcels/year-season records, a lazy private parcel map, assistance history and the local follow-up harvest history. The follow-up overview adds bounded parcel, assistance and harvest cards, recent activity, seed-release details and unit-safe quantity summaries. Office-side access management reuses the authenticated layout and Farmer update policy. Both entry pages link to farmer sign-in.
 
-Includes accessible labels, password reveal controls, generic validation feedback, submission guards, empty/loading/retry states, native year filtering, pagination, session-history protection and active-session heartbeat. Scope is one verified farmer record. No placeholder farmer data is installed.
+Includes accessible labels, password reveal controls, generic validation feedback, submission guards, empty/loading/retry states, native year filtering, pagination, session-history protection and active-session heartbeat. Scope is one verified farmer record. The interface release installs no placeholder farmer data; the separately authorized Region I sample cohort and its testing accounts are documented in `docs/REGION_I_SAMPLE_DATA.md`.
 
-Verification uses isolated automated fixtures and browser previews; migration is additive and applied locally. Hostinger deployment completed on September 20, 2026; 55 read-only production checks and public HTTP/asset checks passed. Office acceptance and a verified farmer pilot remain pending. See `docs/FARMER_PORTAL_DEPLOYMENT_2026_09_20.md`. Implementation and deployment details: `docs/FARMER_PORTAL.md`.
+Verification uses isolated automated fixtures and browser previews; migration is additive and applied locally. The shared sign-in/workspace release is installed on Hostinger in `bd75ced`; the new records views remain local pending a separate release. The follow-up portal suite passes 30 tests / 352 assertions and seven JavaScript tests, including cross-farmer isolation and bounded queries. Synthetic browser checks passed at 1440px desktop, 390px phone and 320px small-phone widths, including navigation, seed details, quantity disclosures, harvest-year filtering/empty state and parcel links. Keyboard disclosure focus and the map retry message were checked; actual satellite loading was not repeated. The separately authorized 12 sample accounts passed live sign-in, own profile/parcel/assistance and logout checks. Real-farmer acceptance remains pending. See `docs/FARMER_PORTAL_DEPLOYMENT_2026_09_20.md` and `docs/FARMER_PORTAL.md`.
 
 
 ## Map label controls - September 21, 2026

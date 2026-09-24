@@ -14,6 +14,16 @@ The owner selected GitHub deployment on September 21, 2026. The source repositor
 
 SSH authentication is interactive or uses an owner-approved existing key. Never include a password in a command argument, script, repository, deployment document or log. Existing verified SSH host keys must remain enforced.
 
+## Verified Hostinger release — September 24, 2026 — Farmers overview and shared sign-in
+
+The owner approved runtime `bd75ced2c6c41fc9e1716a0649e73ccd857a6b56`, which was pushed to GitHub main and installed with `git pull --ff-only origin main` from server baseline `9cc3527`. This also installs the already reviewed primary farmer-ID changes in `e19756f`. PHP 8.3.33 was verified, tracked server files were clean, and existing untracked files were retained.
+
+The verified private database backup contains 21 tables and 11,755 rows (approximately 5.1 MB; SHA-256 `4e4bc9e5ad83adb89f80071f4e24d8d1e5371dbb6706d2d434847f74b1325257`). Private archives also preserve the prior tracked checkout and the separate public directory. No migrations, account changes, imports or dependency installations ran. The backup command records its normal audit event.
+
+Configuration, route and Blade caches rebuilt successfully. The installed revision matches GitHub main, and both copies of `login-layout.css`, `farmer-finder.js`, `farmer-picker.js`, `farmer-workspace.js` and `farmers-maps.js` have matching hashes. Live login, workspace JavaScript and login CSS returned HTTP 200. Local release checks passed 87 PHP tests / 1,011 assertions and 140 JavaScript tests. Authenticated production browser flows and satellite performance were not repeated during this release.
+
+The subsequent farmer portal overview/seed-detail/harvest enhancement remains local and is not included in `bd75ced`. A separately authorized data operation then created testing sign-ins for the 12 synthetic Region I farmers only, after a fresh verified backup. All live sign-ins and non-target preservation checks passed; see `docs/REGION_I_SAMPLE_DATA.md`.
+
 ## Verified Hostinger release — September 23, 2026 — farmer chooser and collage arrows
 
 Runtime commit `88d3bdc550895d1feb46c32017edfe6d49f13cd1` was pushed to GitHub main and installed with `git pull --ff-only origin main` from the clean tracked baseline `d69eb4a`. PHP 8.3.33 was verified. A private archive preserved the affected application files and the separate public copies before a brief maintenance window.
