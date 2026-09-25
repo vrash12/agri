@@ -1,5 +1,15 @@
 # GitHub-to-Hostinger deployment
 
+## Verified Hostinger release — September 25, 2026 — Sentinel-2 modal UX
+
+Runtime `a7421fc9b644f549ff7d754b8473f4db64a3afad` was pushed to GitHub main and installed through `git pull --ff-only origin main`. The release keeps Sentinel-2 parcel analysis on the Farmers map in an accessible in-page modal, adds a full-page fallback, and rewrites NDVI results with plain-language guidance for field-check planning.
+
+- A verified private database backup contains all 21 tables and 11,874 rows, 5.1 MB compressed, SHA-256 `f0cca1bd6d4c6bb1bac1c2f9237b946fc7fd3f2e6c1dafb425dd7fb6abdab406`.
+- The tracked application and separate `public_html` directory were archived before release. Five changed public assets were mirrored and their source/served copies match: `parcel-satellite.css`, `parcel-satellite-modal.css`, `parcel-satellite.js`, `parcel-satellite-modal.js`, and `farmers-maps.js`.
+- No migration, account change, import, operational data write, Composer install or npm build ran. Existing untracked recovery files were preserved, and the tracked server tree is clean after the pull.
+- Configuration, route and Blade caches rebuilt successfully. All three Sentinel parcel routes are present; login and the five affected asset URLs returned HTTP 200 after release.
+- Local focused verification passed 27 satellite PHP tests / 150 assertions, 5 farmer-workspace presentation tests / 29 assertions, 18 JavaScript tests, Pint, PHP/JavaScript syntax, Blade compilation and whitespace checks.
+
 ## Verified Hostinger release — September 25, 2026 — Sentinel-2 and farmer card
 
 Runtime `d796071f6afff34bd609c92bae85a3fdbd793e29` was installed through `git pull --ff-only origin main` after the approved GitHub push. The release includes the Sentinel-2 parcel analysis module, farmer-portal refinements, and the DA green/gold farmer registry card with the AgriGOV wordmark on the back. PHP 8.3.33 was verified.
