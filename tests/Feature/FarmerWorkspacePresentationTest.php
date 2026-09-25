@@ -32,7 +32,8 @@ class FarmerWorkspacePresentationTest extends TestCase
         $this->assertSame(1, $xpath->query('//details[@id="farmerMapWorkspace" and @open]')->length);
         $this->assertSame(1, $xpath->query('//details[@id="farmerInsights" and not(@open)]')->length);
         $view->assertSee('Details &amp; history', false)->assertSee('Digital ID')->assertSee('Edit profile')->assertSee('Open parcel map');
-        $view->assertSee('Registry figures for the current filters')->assertSee('farmersMapModule');
+        $view->assertSee('Registry figures for the current filters')->assertSee('farmersMapModule')
+            ->assertSee('parcelSatelliteModal')->assertSee('Satellite / NDVI');
     }
 
     public function test_super_admin_directory_keeps_read_only_actions(): void

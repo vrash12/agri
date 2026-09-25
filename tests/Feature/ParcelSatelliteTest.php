@@ -47,6 +47,20 @@ class ParcelSatelliteTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_modal_view_explains_ndvi_in_plain_language_and_keeps_scope_authorization(): void
+    {
+        $this->actingAs(User::find(1))->get(route('farm-plots.satellite.show', ['plot' => 1, 'modal' => 1]))
+            ->assertOk()
+            ->assertSee('What this shows')
+            ->assertSee('vegetation greenness score called NDVI')
+            ->assertSee('Use the result to decide where a field check may help')
+            ->assertSee('Sentinel-2 images')
+            ->assertDontSee('Back to parcel map');
+
+        $this->actingAs(User::find(2))->get(route('farm-plots.satellite.show', ['plot' => 1, 'modal' => 1]))
+            ->assertForbidden();
+    }
+
     public function test_guests_cannot_read_pages_statistics_or_images(): void
     {
         $this->getJson(route('farm-plots.satellite.show', 1))->assertUnauthorized();

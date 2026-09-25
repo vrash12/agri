@@ -4,6 +4,9 @@
 .satellite-filters .module-form-field { flex: 1 1 190px; }
 .satellite-filters label, .satellite-map-controls label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; }
 .satellite-note { font-size: 13px; line-height: 1.65; color: var(--ui-text-muted); }
+.satellite-explainer { margin: 0 0 20px; padding: 16px 20px; border: 1px solid #d5e5d8; border-left: 4px solid #d69e2e; border-radius: 10px; background: linear-gradient(135deg, #f4faf4, #fffdf4); color: var(--ui-text); }
+.satellite-explainer strong { display: block; margin-bottom: 5px; color: #155f3d; font-size: 14px; }
+.satellite-explainer p { max-width: 950px; margin: 4px 0 0; color: var(--ui-text-muted); font-size: 13px; line-height: 1.6; }
 .satellite-panel .satellite-note, .satellite-map-panel > .satellite-note, .satellite-filters + .satellite-note { margin: 0; padding: 0 20px 18px; }
 .satellite-status { padding: 12px 0; min-height: 44px; color: var(--ui-text); }
 .satellite-status.is-error { color: var(--ui-danger); }

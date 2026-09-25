@@ -164,10 +164,10 @@
     byId('satelliteRange').textContent = available ? row.min.toFixed(3) + ' / ' + row.max.toFixed(3) : '—';
     byId('satellitePixels').textContent = row ? row.valid_pixels.toLocaleString() : '—';
     byId('satelliteDay').textContent = row ? row.date : '—';
-    byId('satelliteQuality').textContent = !row ? 'No vegetation measurement has been loaded.' : !available ?
-      'No usable pixels on this day. Clouds, scene coverage or other masks may prevent a measurement.' : row.valid_pixels < 25 ?
-        'Few usable pixels. Edge effects and mixed land cover can strongly affect this value; confirm conditions in the field.' :
-        'Statistics describe only usable pixels, which may cover part of the parcel. Usable pixel counts are not a parcel cloud percentage.';
+    byId('satelliteQuality').textContent = !row ? 'No greenness measurement has been loaded yet.' : !available ?
+      'No clear image area was available on this day. Clouds, scene coverage or other filters may have blocked the measurement.' : row.valid_pixels < 25 ?
+        'Only a small clear area was available. Edge effects and mixed land cover can affect the score, so confirm conditions in the field.' :
+        'This score uses clear pixels only and may cover part of the parcel. The pixel count is not a parcel cloud percentage.';
   }
   async function loadImage() {
     clearImage();
@@ -175,7 +175,7 @@
     metrics(row);
     layerSelect.disabled = !row || row.status !== 'available';
     if (!row || row.status !== 'available') {
-      byId('satelliteImageCaption').textContent = row ? 'No usable observation for ' + row.date + ' (UTC).' : 'No satellite observation loaded.';
+      byId('satelliteImageCaption').textContent = row ? 'No clear image area was available for ' + row.date + ' (UTC).' : 'No satellite observation loaded.';
       return;
     }
     const layer = layerSelect.value;
@@ -214,7 +214,7 @@
     rows.forEach(function (row) {
       const tr = document.createElement('tr');
       [row.date, row.mean === null ? '—' : row.mean.toFixed(3), row.min === null ? '—' : row.min.toFixed(3),
-        row.max === null ? '—' : row.max.toFixed(3), row.valid_pixels.toLocaleString(), row.status === 'available' ? 'Usable observation' : 'No usable pixels'].forEach(function (value) {
+        row.max === null ? '—' : row.max.toFixed(3), row.valid_pixels.toLocaleString(), row.status === 'available' ? 'Clear image found' : 'No clear image area'].forEach(function (value) {
         const td = document.createElement('td'); td.textContent = value; tr.appendChild(td);
       });
       body.appendChild(tr);
@@ -228,7 +228,7 @@
       if (label !== undefined) node.textContent = label;
       return node;
     }
-    const svg = element('svg', { viewBox: '0 0 760 180', role: 'img', 'aria-label': 'Mean NDVI by UTC day. Individual observations only; see the table for values.' });
+    const svg = element('svg', { viewBox: '0 0 760 180', role: 'img', 'aria-label': 'Average greenness score by UTC day. Individual observations only; see the table for values.' });
     const left = 45, right = 735, top = 16, bottom = 146;
     const start = Date.parse(period.from), span = Math.max(86400000, Date.parse(period.to) - start);
     [-1, 0, 1].forEach(function (value) {
@@ -273,13 +273,13 @@
       rows = result.value; period = next;
       history();
       daySelect.replaceChildren();
-      rows.forEach(row => daySelect.add(new Option(row.date + (row.status === 'no_data' ? ' · No usable pixels' : ''), row.date)));
+      rows.forEach(row => daySelect.add(new Option(row.date + (row.status === 'no_data' ? ' · No clear image area' : ''), row.date)));
       if (!rows.length) daySelect.add(new Option('No observations found', ''));
       daySelect.disabled = !rows.length;
       const usable = rows.filter(row => row.status === 'available');
       daySelect.value = (usable[usable.length - 1] || rows[rows.length - 1] || {}).date || '';
-      status(usable.length + ' usable observation day(s) · ' + period.from + ' to ' + period.to + ' (UTC) · Scene cloud limit ' + period.max_cloud + '%.' +
-        (usable.length ? '' : ' Try different dates or a higher scene cloud limit.'));
+      status(usable.length + ' clear day(s) found · ' + period.from + ' to ' + period.to + ' (UTC) · Scene cloud limit ' + period.max_cloud + '%.' +
+        (usable.length ? ' Select a day to view its map and score.' : ' Try different dates or a higher scene cloud limit.'));
       loadImage();
     } catch (error) {
       daySelect.replaceChildren(new Option('No observations loaded', ''));

@@ -230,6 +230,7 @@ Implementation status and remaining staff/staging checks are documented in [DESI
 - Printable parcel information sheet.
 - High-resolution parcel PNG export.
 - Same-origin Google Static Maps proxy for satellite exports.
+- Authorized Sentinel-2 parcel monitoring through Copernicus Data Space. Staff can choose a date range, compare cloud-masked NDVI and true-color imagery, and review clear-pixel summaries inside a saved parcel. The Farmers parcel action opens the analysis in an in-page dialog and keeps a full-page fallback for unsupported browsers. The screen explains NDVI in plain language and identifies it as a field-check signal rather than a diagnosis, yield estimate or eligibility decision.
 
 ## 8. Official municipality geofencing
 

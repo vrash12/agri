@@ -436,6 +436,8 @@ canvas and forces the coordinate-grid fallback.
 
 The server-side bulk-import form currently validates KML/XML only. Browser-side selected-farmer import supports KML and KMZ through JSZip.
 
+Saved parcel actions also offer authorized Sentinel-2 monitoring through Copernicus Data Space. The view supports a date range of up to 31 days, cloud-masked NDVI and true-color images, and daily clear-pixel summaries. The Farmers map opens it in an accessible in-page dialog with a full-page fallback. Explain NDVI as a vegetation greenness signal for field-check planning; it does not establish crop type, disease, yield, ownership or assistance eligibility.
+
 Plot actions authorize either the owning `Farmer` or the `FarmPlot`. Municipal users cannot retrieve all provincial plots, open a foreign farmer, add a plot to a foreign farmer, or mutate a plot owned by another municipality.
 
 ### 5.4 Public QR land verification
@@ -804,6 +806,7 @@ Functions:
 - classify every existing parcel as inside, near the boundary, crossing the boundary, outside, invalid, or unconfigured and provide a field-review list;
 - download a map-only municipality snapshot containing the active boundary and all municipality-owned parcels; parcels outside remain visible as white polygons with warning outlines, while report titles, summaries, legends, review text, and footers are omitted;
 - obtain the satellite base through an authenticated, throttled, same-origin Google Static Maps proxy, mask the image so land outside the official boundary remains white, and preserve Google's complete attribution strip in the exported PNG;
+
 - validate all new, edited, browser-imported, and server-imported farm parcels: completely outside or invalid parcels are blocked, while crossing and near-boundary parcels are saved with a visible review warning;
 - cache the active municipality boundary used by parcel writes and clear it after boundary changes;
 - use HMAC record versions and municipality-level mutation locks so drawing and import cannot create competing active boundaries;

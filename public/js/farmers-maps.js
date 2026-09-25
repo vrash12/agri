@@ -3554,7 +3554,7 @@ window.__handleDownloadAllPlots = handleDownloadAllPlots;
         '</div>' +
         '<div class="map-plot-actions">' +
           '<button type="button" class="btn btn-soft btn-sm" data-action="focusPlot" data-plot-id="' + escapeHtml(pl.id) + '">Focus</button>' +
-          (window.__parcelSatelliteUrl ? '<a class="btn btn-soft btn-sm" href="' + escapeHtml(window.__parcelSatelliteUrl.replace('__ID__', encodeURIComponent(pl.id))) + '">Satellite / NDVI</a>' : '') +
+          (window.__parcelSatelliteUrl ? '<a class="btn btn-soft btn-sm" data-action="openSatellite" data-plot-id="' + escapeHtml(pl.id) + '" aria-haspopup="dialog" aria-controls="parcelSatelliteModal" href="' + escapeHtml(window.__parcelSatelliteUrl.replace('__ID__', encodeURIComponent(pl.id))) + '">Satellite / NDVI</a>' : '') +
           '<a class="btn btn-soft btn-sm" data-plot-crop-id="' + escapeHtml(pl.id) + '" href="' + escapeHtml((window.__parcelCropEditUrl || '').replace('__ID__', encodeURIComponent(pl.id)) + '?year=' + cropSettings.year + '&season=' + cropSettings.season) + '">Seasonal crops</a>' +
           (window.__canManageOperationalData ? '<button type="button" class="btn btn-soft btn-sm" data-action="editPlot" data-plot-id="' + escapeHtml(pl.id) + '">Edit</button>' : '') +
           '<button type="button" class="btn btn-soft btn-sm" data-action="downloadPlot" data-plot-id="' + escapeHtml(pl.id) + '">Download</button>' +
@@ -3572,6 +3572,18 @@ window.__handleDownloadAllPlots = handleDownloadAllPlots;
       var pid = this.getAttribute('data-plot-id');
       if (!pid) return;
       focusPlotById(pid);
+    });
+  }
+
+  var btnsSatellite = list.querySelectorAll('[data-action="openSatellite"]');
+  for (var s4 = 0; s4 < btnsSatellite.length; s4++) {
+    btnsSatellite[s4].addEventListener('click', function (event) {
+      var pid = this.getAttribute('data-plot-id');
+      if (!pid) return;
+      if (typeof window.__openParcelSatelliteModal === 'function' && window.__openParcelSatelliteModal(pid, this)) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
     });
   }
 

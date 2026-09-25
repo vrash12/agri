@@ -18,7 +18,7 @@ class ParcelSatelliteController extends Controller
     {
     }
 
-    public function show(FarmPlot $plot)
+    public function show(Request $request, FarmPlot $plot)
     {
         $this->authorize('view', $plot);
         $parcel = null;
@@ -29,7 +29,9 @@ class ParcelSatelliteController extends Controller
             $geometryError = $exception->getMessage();
         }
 
-        return view('farm_plots.satellite', [
+        $view = $request->boolean('modal') ? 'farm_plots.satellite_modal' : 'farm_plots.satellite';
+
+        return view($view, [
             'plot' => $plot, 'parcel' => $parcel, 'geometryError' => $geometryError,
             'configured' => $this->imagery->configured(),
             'from' => now()->utc()->subDays(30)->toDateString(), 'to' => now()->utc()->subDay()->toDateString(),

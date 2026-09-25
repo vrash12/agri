@@ -17,6 +17,7 @@
 @endphp
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('css/parcel-satellite-modal.css') }}?v={{ @filemtime(public_path('css/parcel-satellite-modal.css')) ?: 1 }}">
 <style>
   /* Adjusted map height: shorter than before */
   #farmersMapModule .farmers-map-main{
@@ -1407,6 +1408,8 @@
   </div>
 </div>
 
+@include('farm_plots._satellite_dialog')
+
 <script>
   window.__municipalityGeofenceData = @json($mapMunicipalityBoundaries->values());
   window.__municipalitySnapshotDataUrl = @json(
@@ -2030,3 +2033,7 @@
 </script>
 @php($farmerFinderScriptVersion = @filemtime(public_path('js/farmer-finder.js')) ?: 1)
 <script src="{{ asset('js/farmer-finder.js') }}?v={{ $farmerFinderScriptVersion }}" defer></script>
+@push('scripts')
+@php($parcelSatelliteModalScriptVersion = @filemtime(public_path('js/parcel-satellite-modal.js')) ?: 1)
+<script src="{{ asset('js/parcel-satellite-modal.js') }}?v={{ $parcelSatelliteModalScriptVersion }}"></script>
+@endpush
