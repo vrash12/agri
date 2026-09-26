@@ -29,7 +29,7 @@
 
   function load() {
     clearTimeout(loadingTimer);
-    status.textContent = 'Loading parcel health view…';
+    status.textContent = 'Opening satellite field check…';
     status.hidden = false;
     frame.hidden = true;
     errorPanel.hidden = true;

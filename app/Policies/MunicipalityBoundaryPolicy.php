@@ -32,7 +32,7 @@ class MunicipalityBoundaryPolicy
 
     public function create(User $user): bool
     {
-        if ($user->isGisEvaluator()) {
+        if ($user->isGisEvaluator() || $user->isVisitor()) {
             return false;
         }
 

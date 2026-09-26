@@ -60,6 +60,7 @@ An explicit System Owner demonstration import can populate four clearly labeled 
 - Provincial agriculture and veterinary staff require their own province assignment. Unassigned or inactive province access is blocked at login and on protected requests.
 - System Owners can manage geofences across provinces; Super Administrators can manage only their province’s geofences.
 - Dedicated GIS Evaluator accounts can review active municipality geofences and available read-only barangay reference layers across configured provinces. They cannot access farmers, parcels, assistance, dashboards, snapshots, exports, drafts, accounts, audit trails, or editing actions; those operational queries are not run for evaluator sessions.
+- Restricted visitor accounts keep the `super_admin` role for compatibility while using `visitor_mode` to provide an independent, unassigned identity. They can view aggregate system coverage and active municipality geofences only. Farmer, parcel, assistance, harvest, account, audit, and export details are excluded from their dashboard and boundary responses.
 - Evaluators must change their temporary password before viewing maps and have an enforced expiry date. Boundary visits and password changes are audited. NAMRIA evaluation access is issued for 30 days.
 - System Owners and Super Administrators cannot access the Backup Folder.
 - Municipal Heads can only manage Municipal Staff accounts from their own municipality.
@@ -230,7 +231,7 @@ Implementation status and remaining staff/staging checks are documented in [DESI
 - Printable parcel information sheet.
 - High-resolution parcel PNG export.
 - Same-origin Google Static Maps proxy for satellite exports.
-- Authorized Sentinel-2 parcel monitoring through Copernicus Data Space. Staff can choose a date range, compare cloud-masked NDVI and true-color imagery, and review clear-pixel summaries inside a saved parcel. The Farmers parcel action opens the analysis in an in-page dialog and keeps a full-page fallback for unsupported browsers. The screen explains NDVI in plain language and identifies it as a field-check signal rather than a diagnosis, yield estimate or eligibility decision.
+- Authorized Sentinel-2 parcel monitoring through Copernicus Data Space. Staff can choose a date range, compare cloud-masked NDVI and true-color imagery, and review clear-pixel summaries inside a saved parcel. The Farmers map action is labeled **Satellite field check** and opens the analysis in an accessible in-page modal with a three-step flow, plain-language controls, a colour guide and expandable technical details; a full-page fallback remains available. Cloudy/no-data states explain that no reading is not crop damage. NDVI is identified as a field-check signal rather than a diagnosis, yield estimate, ownership proof or eligibility decision.
 
 ## 8. Official municipality geofencing
 

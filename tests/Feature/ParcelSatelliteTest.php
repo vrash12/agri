@@ -51,10 +51,11 @@ class ParcelSatelliteTest extends TestCase
     {
         $this->actingAs(User::find(1))->get(route('farm-plots.satellite.show', ['plot' => 1, 'modal' => 1]))
             ->assertOk()
-            ->assertSee('What this shows')
-            ->assertSee('vegetation greenness score called NDVI')
-            ->assertSee('Use the result to decide where a field check may help')
-            ->assertSee('Sentinel-2 images')
+            ->assertSee('Satellite field check')
+            ->assertSee('Find a satellite picture')
+            ->assertSee('vegetation greenness score from')
+            ->assertSee('Use this to plan a field check')
+            ->assertSee('Sentinel-2 images with clouds')
             ->assertDontSee('Back to parcel map');
 
         $this->actingAs(User::find(2))->get(route('farm-plots.satellite.show', ['plot' => 1, 'modal' => 1]))
@@ -199,7 +200,7 @@ class ParcelSatelliteTest extends TestCase
     {
         Http::fake([self::TOKEN => Http::response(['access_token' => 'synthetic-test-token', 'expires_in' => 3600]),
             self::STATS => function () {
-            throw new ConnectionException('synthetic-sensitive-request');
+                throw new ConnectionException('synthetic-sensitive-request');
             }]);
         $this->actingAs(User::find(1))->postJson($this->url(), $this->period())->assertStatus(502)
             ->assertDontSee('synthetic-sensitive-request')->assertJsonMissingPath('observations');

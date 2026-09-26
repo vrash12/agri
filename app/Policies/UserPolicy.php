@@ -8,6 +8,10 @@ class UserPolicy
 {
     public function before(User $user): ?bool
     {
+        if ($user->isVisitor()) {
+            return false;
+        }
+
         return $user->isActive() && $user->hasAnyRole(User::ROLES) && $user->hasUsableScope()
             ? null
             : false;

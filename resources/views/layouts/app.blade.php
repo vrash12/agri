@@ -1049,7 +1049,9 @@
         'admin' => 'Admin',
       ];
 
-      $roleLabel = $roleLabels[$role] ?? ucwords(str_replace('_', ' ', $role));
+      $roleLabel = $user->isVisitor()
+        ? 'Super Admin · Visitor'
+        : ($roleLabels[$role] ?? ucwords(str_replace('_', ' ', $role)));
       $canManageUsers = $user->canManageMunicipalStaff();
       $officeLabel = $user->scopeLabel();
 
@@ -1214,6 +1216,27 @@
           'label' => 'Evaluation',
           'items' => [[
             'label' => 'Administrative Geofences',
+            'description' => 'Read-only boundary references',
+            'icon' => 'boundary',
+            'route' => 'municipality-boundaries.index',
+            'patterns' => ['municipality-boundaries.*'],
+            'badge' => 'View',
+          ]],
+        ]];
+      }
+
+      if ($user->isVisitor()) {
+        $navigationGroups = ['visitor' => [
+          'label' => 'Visitor access',
+          'items' => [[
+            'label' => 'System overview',
+            'description' => 'Aggregate coverage without farmer records',
+            'icon' => 'dashboard',
+            'route' => 'dashboard',
+            'patterns' => ['dashboard'],
+            'badge' => 'View',
+          ], [
+            'label' => 'Municipality Geofences',
             'description' => 'Read-only boundary references',
             'icon' => 'boundary',
             'route' => 'municipality-boundaries.index',

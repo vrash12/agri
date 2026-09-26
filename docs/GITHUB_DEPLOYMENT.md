@@ -1,5 +1,9 @@
 # GitHub-to-Hostinger deployment
 
+## Local follow-up — September 26, 2026 — satellite field-check modal
+
+The Sentinel-2 parcel action now reads **Satellite field check** and the modal uses a farmer-friendly three-step flow, plain controls, a colour guide, expandable details and actionable no-data guidance. This follow-up is local and has not been pushed or deployed. A future release must deploy the changed `_satellite_content.blade.php`, `_satellite_dialog.blade.php`, `satellite_modal.blade.php`, `parcel-satellite.css`, `parcel-satellite-modal.css`, `parcel-satellite.js`, `parcel-satellite-modal.js`, `farmers-maps.js` and focused tests together, then rebuild views/caches. No migration or account/data operation is required.
+
 ## Verified Hostinger release — September 25, 2026 — Sentinel-2 modal UX
 
 Runtime `a7421fc9b644f549ff7d754b8473f4db64a3afad` was pushed to GitHub main and installed through `git pull --ff-only origin main`. The release keeps Sentinel-2 parcel analysis on the Farmers map in an accessible in-page modal, adds a full-page fallback, and rewrites NDVI results with plain-language guidance for field-check planning.
@@ -116,3 +120,7 @@ Runtime commit `aabace9e5d957cd6b41bbb1010d7db70e2eb2439` was pushed to GitHub m
 - Live checks passed 114 Regional Head choices, provincial scope isolation, separate Naga City access, the Farmers Region → Municipality chooser, existing-row preservation and unchanged accounts. No migration, dependency update, public-asset change or account issuance ran.
 - Local validation passed 26 focused PHP tests / 2,246 assertions, Pint, syntax, Blade compilation, route listing, source geometry checks and whitespace checks. Homepage and login returned HTTP 200 after the release; login retained private/no-store headers. The site is online.
 - These are approximate planning/reference boundaries, not legal, cadastral or survey-grade boundaries. See [BICOL_BOUNDARY_SOURCES.md](BICOL_BOUNDARY_SOURCES.md) for source identities, checksums, validation and limitations.
+
+## Pending release — restricted visitor access
+
+The visitor release adds the `visitor_mode` column and a dedicated `visitor:create` command. Run the migration before provisioning an account, then create the active unassigned identity through the command's hidden password prompt. The visitor role remains `super_admin` for compatibility, but server middleware and scoped controllers expose only the aggregate overview and active municipality boundaries. Do not place visitor credentials in GitHub, deployment notes, logs, or support messages.

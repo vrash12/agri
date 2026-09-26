@@ -42,23 +42,24 @@ class MunicipalityBoundaryController extends Controller
 
         $municipalities = $this->municipalityAccess->choices($request->user());
         $isGisEvaluator = $request->user()->isGisEvaluator();
+        $boundaryOnly = $isGisEvaluator || $request->user()->isVisitor();
         $boundaryQuery = MunicipalityBoundary::query()
             ->with('municipality:id,name,province')
             ->current();
         $this->municipalityAccess->scope($boundaryQuery, $request->user());
-        if ($isGisEvaluator) {
+        if ($boundaryOnly) {
             $boundaryQuery->where('status', MunicipalityBoundary::STATUS_ACTIVE);
         }
         $boundaries = $boundaryQuery
             ->orderByRaw("CASE status WHEN 'active' THEN 0 ELSE 1 END")
             ->orderByDesc('updated_at')
             ->get()
-            ->map(fn (MunicipalityBoundary $boundary) => $this->boundaryData($boundary, ! $isGisEvaluator));
+            ->map(fn (MunicipalityBoundary $boundary) => $this->boundaryData($boundary, ! $boundaryOnly));
 
         $farmerCount = 0;
         $parcelCount = 0;
         $mappedArea = 0.0;
-        if (! $isGisEvaluator) {
+        if (! $boundaryOnly) {
             $municipalityIds = $municipalities->pluck('id');
             $farmerCount = Farmer::query()->whereIn('municipality_id', $municipalityIds)->count();
             $plotQuery = FarmPlot::query()->whereHas(
@@ -74,6 +75,7 @@ class MunicipalityBoundaryController extends Controller
             'barangayMunicipalityIds' => $barangayReferences->availableMunicipalityIds($request->user()),
             'boundaries' => $boundaries,
             'isGisEvaluator' => $isGisEvaluator,
+            'boundaryOnly' => $boundaryOnly,
             'canManageBoundaries' => $request->user()->can('create', MunicipalityBoundary::class),
             'googleMapsApiKey' => (string) config('services.google_maps.key', ''),
             'googleMapsMapId' => (string) config('services.google_maps.map_id', ''),
@@ -115,7 +117,7 @@ class MunicipalityBoundaryController extends Controller
             ->firstOrFail();
         $activeBoundary = $boundaries->firstWhere('status', MunicipalityBoundary::STATUS_ACTIVE);
 
-        if ($request->user()->isGisEvaluator()) {
+        if ($request->user()->isGisEvaluator() || $request->user()->isVisitor()) {
             return response()->json([
                 'municipality' => [
                     'id' => $municipality->id,

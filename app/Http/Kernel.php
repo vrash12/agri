@@ -68,6 +68,7 @@ class Kernel extends HttpKernel
         'account-scope' => \App\Http\Middleware\EnsureAccountScope::class,
         'provincial-vet-scope' => \App\Http\Middleware\RestrictProvincialVeterinaryAccess::class,
         'gis-evaluator-scope' => \App\Http\Middleware\RestrictGisEvaluatorAccess::class,
+        'visitor-scope' => \App\Http\Middleware\RestrictVisitorAccess::class,
         'synchronized' => \App\Http\Middleware\SynchronizeMutatingRequests::class,
 
     ];

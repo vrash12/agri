@@ -114,6 +114,7 @@ Route::middleware([
     'account-scope',
     'provincial-vet-scope',
     'gis-evaluator-scope',
+    'visitor-scope',
     'synchronized',
 ])->group(function () {
     Route::get('/evaluation/password', [\App\Http\Controllers\EvaluatorPasswordController::class, 'edit'])->name('evaluation.password');

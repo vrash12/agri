@@ -129,6 +129,7 @@ class User extends Authenticatable
         'province_id' => 'integer',
         'region_id' => 'integer',
         'is_active' => 'boolean',
+        'visitor_mode' => 'boolean',
     ];
 
     /*
@@ -180,6 +181,18 @@ class User extends Authenticatable
     }
 
     /**
+     * Determine whether this Super Admin is a restricted visitor identity.
+     *
+     * The role column deliberately remains `super_admin` for compatibility with
+     * existing account tooling; the additive flag removes access to operational
+     * records and exposes only the read-only boundary viewer.
+     */
+    public function isVisitor(): bool
+    {
+        return (bool) $this->visitor_mode;
+    }
+
+    /**
      * Determine whether the user is provincial agriculture office staff.
      */
     public function isProvincialStaff(): bool
@@ -224,13 +237,20 @@ class User extends Authenticatable
 
     public function canOverseeSystem(): bool
     {
-        return $this->isActive() && ($this->isSystemOwner() || $this->isRegionalHead() || $this->isSuperAdmin());
+        return $this->isActive() && ! $this->isVisitor()
+            && ($this->isSystemOwner() || $this->isRegionalHead() || $this->isSuperAdmin());
     }
 
     public function hasUsableScope(): bool
     {
         if (! $this->isActive() || ! $this->hasAnyRole(self::ROLES)) {
             return false;
+        }
+        if ($this->isVisitor()) {
+            return $this->isSuperAdmin()
+                && $this->region_id === null
+                && $this->province_id === null
+                && $this->municipality_id === null;
         }
         if ($this->isGisEvaluator()) {
             return $this->evaluation_expires_at !== null && $this->evaluation_expires_at->isFuture()
@@ -261,6 +281,9 @@ class User extends Authenticatable
 
     public function getScopeLabelAttribute(): string
     {
+        if ($this->isVisitor()) {
+            return 'Restricted visitor access';
+        }
         if ($this->isSystemOwner()) {
             return 'All supervised provinces';
         }
@@ -377,7 +400,7 @@ class User extends Authenticatable
      */
     public function canManageMunicipalStaff(): bool
     {
-        return $this->isActive()
+        return $this->isActive() && ! $this->isVisitor()
             && ($this->canOverseeSystem()
                 || ($this->isMunicipalHead() && $this->municipality_id !== null));
     }
@@ -423,7 +446,7 @@ class User extends Authenticatable
             self::ROLE_SYSTEM_OWNER => 'System Owner',
             self::ROLE_REGIONAL_HEAD => 'Regional Head',
             self::ROLE_GIS_EVALUATOR => 'GIS Evaluator',
-            self::ROLE_SUPER_ADMIN => 'Super Admin',
+            self::ROLE_SUPER_ADMIN => $this->isVisitor() ? 'Super Admin · Visitor' : 'Super Admin',
             self::ROLE_PROVINCIAL_STAFF => 'Provincial Staff',
             self::ROLE_PROVINCIAL_VET => 'Provincial Veterinary Office',
             self::ROLE_MUNICIPAL_HEAD => 'Head Agriculturist',
@@ -437,6 +460,9 @@ class User extends Authenticatable
      */
     public function getOfficeLabelAttribute(): string
     {
+        if ($this->isVisitor()) {
+            return 'Restricted Visitor Access';
+        }
         if ($this->isSystemOwner()) {
             return 'System Administration';
         }

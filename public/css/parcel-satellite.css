@@ -1,4 +1,10 @@
 .satellite-page { max-width: 1440px; margin-inline: auto; }
+.satellite-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:22px; padding:20px 24px; border:1px solid var(--module-border); border-radius:var(--ui-radius-panel); background:var(--ui-surface); }
+.satellite-heading h1 { margin:7px 0 5px; color:var(--module-ink); font-size:clamp(25px,3vw,34px); line-height:1.08; letter-spacing:-.035em; }
+.satellite-heading p { max-width:680px; margin:0; color:var(--module-muted); font-size:14px; }
+.satellite-area { flex:none; color:var(--module-green); font-size:20px; font-weight:700; text-align:right; }
+.satellite-area small { display:block; color:var(--module-muted); font-size:12px; font-weight:400; }
+.satellite-step { display:inline-grid; place-items:center; width:28px; height:28px; margin-right:7px; border-radius:50%; color:var(--ui-on-accent); background:var(--ui-accent); font-size:14px; vertical-align:middle; }
 .satellite-page .module-panel { margin-bottom: 20px; }
 .satellite-filters, .satellite-map-controls { display: flex; align-items: end; flex-wrap: wrap; gap: 16px; }
 .satellite-filters .module-form-field { flex: 1 1 190px; }
@@ -10,6 +16,15 @@
 .satellite-panel .satellite-note, .satellite-map-panel > .satellite-note, .satellite-filters + .satellite-note { margin: 0; padding: 0 20px 18px; }
 .satellite-status { padding: 12px 0; min-height: 44px; color: var(--ui-text); }
 .satellite-status.is-error { color: var(--ui-danger); }
+.satellite-search .module-form-body { padding-bottom:12px; }
+.satellite-search .satellite-filters { align-items:end; }
+.satellite-search .satellite-filters .module-button { flex:none; }
+.satellite-options { border-top:1px solid var(--ui-border); margin:0 24px; }
+.satellite-options > summary { min-height:44px; padding:13px 0; color:var(--ui-primary); font-size:14px; font-weight:600; cursor:pointer; }
+.satellite-option-content { padding:0 0 16px; }
+.satellite-option-content label { display:block; margin-bottom:6px; font-size:13px; font-weight:600; }
+.satellite-option-content .module-input { max-width:520px; }
+.satellite-option-content .satellite-note { margin:8px 0 0; }
 .satellite-workspace { display: grid; grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr); gap: 20px; }
 .satellite-workspace > * { min-width: 0; }
 .satellite-map-controls { padding: 16px 20px; }
@@ -22,6 +37,12 @@
 .satellite-metrics dd { margin: 4px 0 0; font-size: 21px; font-weight: 650; color: var(--ui-text); overflow-wrap: anywhere; }
 .satellite-legend { display: flex; align-items: center; gap: 12px; padding: 18px 20px; font-size: 12px; }
 .satellite-ramp { flex: 1; height: 12px; background: linear-gradient(90deg, #334da6 0%, #a67a4d 50%, #f2d44d 60%, #80b840 75%, #0f5226 100%); }
+.satellite-legend { flex-wrap:wrap; }
+.satellite-legend strong { flex:0 0 100%; color:var(--module-ink); font-size:14px; }
+.satellite-legend-labels { display:flex; justify-content:space-between; gap:12px; flex:1 1 100%; color:var(--module-muted); font-size:12px; }
+.satellite-legend .satellite-note { flex:0 0 100%; margin:0; }
+.satellite-display-options { margin:0 20px; }
+.satellite-source { margin:0; padding:0 20px 18px; color:var(--module-muted); font-size:12px; }
 .satellite-preview { padding: 20px; text-align: center; background: repeating-conic-gradient(#f0f3f0 0% 25%, white 0% 50%) 0 / 20px 20px; }
 .satellite-preview img { max-width: 100%; max-height: 420px; image-rendering: pixelated; min-width: 100px; }
 .satellite-chart { padding: 0 20px; }
@@ -29,6 +50,25 @@
 .satellite-method { padding: 18px 20px; line-height: 1.7; }
 .satellite-method summary { font-weight: 650; cursor: pointer; }
 .satellite-method p { max-width: 1000px; }
+.satellite-result { margin-bottom:18px; padding:16px; border-left:4px solid var(--ui-control-border); border-radius:8px; background:var(--ui-surface-subtle); }
+.satellite-result[data-state="available"] { border-left-color:var(--ui-primary); background:var(--ui-primary-soft); }
+.satellite-result[data-state="no-data"] { border-left-color:var(--ui-warning); background:var(--ui-warning-soft); }
+.satellite-result p { margin:0; }
+.satellite-result-label { font-size:16px; font-weight:700; }
+.satellite-result #satelliteQuality { margin-top:5px; color:var(--module-muted); font-size:13px; line-height:1.55; }
+.satellite-score { margin:0; }
+.satellite-score dt { color:var(--module-muted); font-size:13px; }
+.satellite-score dd { margin:4px 0 8px; color:var(--module-ink); font-size:34px; font-weight:700; line-height:1; }
+.satellite-summary meter { width:100%; height:14px; accent-color:var(--ui-primary); }
+.satellite-scale-labels { display:flex; justify-content:space-between; gap:12px; color:var(--module-muted); font-size:12px; }
+.satellite-next-step { margin:18px 0; padding-top:16px; border-top:1px solid var(--ui-border); }
+.satellite-next-step h3 { margin:0 0 4px; font-size:14px; }
+.satellite-next-step p { margin:0; color:var(--module-muted); font-size:13px; }
+.satellite-caution { margin:18px 0 0; padding:12px; border-radius:8px; color:var(--ui-warning); background:var(--ui-warning-soft); font-size:13px; line-height:1.55; }
+.satellite-history { padding:0; }
+.satellite-history > summary { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:18px 20px; color:var(--module-ink); font-size:16px; font-weight:700; cursor:pointer; }
+.satellite-history > summary .satellite-note { font-weight:400; }
 .satellite-page [hidden] { display: none !important; }
 @media(max-width: 900px) { .satellite-workspace { grid-template-columns: 1fr; } .satellite-map { height: 340px; } }
-@media(max-width: 480px) { .satellite-filters, .satellite-map-controls { gap: 12px; } .satellite-map { height: 300px; } .satellite-filters > *, .satellite-map-controls > div { width: 100%; flex-basis: 100%; } }
+@media(max-width: 600px) { .satellite-heading { align-items:flex-start; flex-direction:column; padding:16px; } .satellite-area { text-align:left; } .satellite-history > summary { align-items:flex-start; flex-direction:column; gap:4px; } }
+@media(max-width: 480px) { .satellite-filters, .satellite-map-controls { gap: 12px; } .satellite-map { height: 300px; } .satellite-filters > *, .satellite-map-controls > div, .satellite-search .satellite-filters .module-button { width: 100%; flex-basis: 100%; } .satellite-options { margin-inline:16px; } .satellite-legend-labels { font-size:11px; } }

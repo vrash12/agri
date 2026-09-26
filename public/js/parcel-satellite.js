@@ -164,10 +164,18 @@
     byId('satelliteRange').textContent = available ? row.min.toFixed(3) + ' / ' + row.max.toFixed(3) : '—';
     byId('satellitePixels').textContent = row ? row.valid_pixels.toLocaleString() : '—';
     byId('satelliteDay').textContent = row ? row.date : '—';
-    byId('satelliteQuality').textContent = !row ? 'No greenness measurement has been loaded yet.' : !available ?
-      'No clear image area was available on this day. Clouds, scene coverage or other filters may have blocked the measurement.' : row.valid_pixels < 25 ?
-        'Only a small clear area was available. Edge effects and mixed land cover can affect the score, so confirm conditions in the field.' :
-        'This score uses clear pixels only and may cover part of the parcel. The pixel count is not a parcel cloud percentage.';
+    byId('satelliteScore').hidden = !available;
+    byId('satelliteResult').dataset.state = !row ? 'empty' : available ? 'available' : 'no-data';
+    byId('satelliteResultTitle').textContent = !row ? 'Your result will appear here' : !available ? 'No clear picture for this day' : 'Vegetation reading available';
+    byId('satelliteScoreMeter').value = available ? row.mean : 0;
+    byId('satelliteQuality').textContent = !row ? 'Find a picture to see the vegetation reading for this parcel.' : !available ?
+      'Clouds, shadows or incomplete coverage blocked a clear reading. This does not mean the crop is unhealthy.' : row.valid_pixels < 25 ?
+        'Only a small clear area was available. Confirm the result during a field visit.' :
+        'This reading uses clear image cells only. Compare it with crop stage and what you see on the ground.';
+    byId('satelliteNextStep').textContent = !row ? 'Start with the suggested dates. If clouds hide your parcel, try another period.' : !available ?
+      'Choose another date or widen the search under More search options.' : row.valid_pixels < 25 ?
+        'Use this as a prompt for a closer field check because only a small clear area was measured.' :
+        'Compare the picture with your crop records and conditions in the field.';
   }
   async function loadImage() {
     clearImage();
@@ -175,7 +183,7 @@
     metrics(row);
     layerSelect.disabled = !row || row.status !== 'available';
     if (!row || row.status !== 'available') {
-      byId('satelliteImageCaption').textContent = row ? 'No clear image area was available for ' + row.date + ' (UTC).' : 'No satellite observation loaded.';
+      byId('satelliteImageCaption').textContent = row ? 'No clear picture was available for ' + row.date + ' (UTC).' : 'Find pictures to load a satellite view.';
       return;
     }
     const layer = layerSelect.value;
@@ -205,6 +213,8 @@
 
   function history() {
     const body = byId('satelliteHistory');
+    const availableCount = rows.filter(row => row.status === 'available').length;
+    byId('satelliteHistorySummary').textContent = rows.length ? availableCount + ' usable picture' + (availableCount === 1 ? '' : 's') + ' in this period' : 'Find pictures to see past readings';
     body.replaceChildren();
     if (!rows.length) {
       const cell = document.createElement('td'); cell.colSpan = 6;
@@ -278,14 +288,14 @@
       daySelect.disabled = !rows.length;
       const usable = rows.filter(row => row.status === 'available');
       daySelect.value = (usable[usable.length - 1] || rows[rows.length - 1] || {}).date || '';
-      status(usable.length + ' clear day(s) found · ' + period.from + ' to ' + period.to + ' (UTC) · Scene cloud limit ' + period.max_cloud + '%.' +
-        (usable.length ? ' Select a day to view its map and score.' : ' Try different dates or a higher scene cloud limit.'));
+      status(usable.length + ' clear day(s) found · ' + period.from + ' to ' + period.to + ' (UTC) · Cloud filter ' + period.max_cloud + '%.' +
+        (usable.length ? ' Select a picture date to view the map and reading.' : ' Try different dates or use More search options.'));
       loadImage();
     } catch (error) {
       daySelect.replaceChildren(new Option('No observations loaded', ''));
       status(error.message || 'Unable to load observations. Check the connection and retry.', true);
     } finally {
-      loadButton.disabled = false; loadButton.textContent = 'Load observations'; form.removeAttribute('aria-busy');
+      loadButton.disabled = false; loadButton.innerHTML = 'Find pictures <span aria-hidden="true">→</span>'; form.removeAttribute('aria-busy');
     }
   });
   daySelect.addEventListener('change', loadImage);

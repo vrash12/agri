@@ -17,6 +17,10 @@ trait AuthorizesMunicipalityRecords
             return false;
         }
 
+        if ($user->isVisitor()) {
+            return false;
+        }
+
         if (
             $user->isProvincialVeterinaryOffice()
             && ! $this->allowsProvincialVeterinaryOffice()

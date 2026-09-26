@@ -9,6 +9,7 @@ use App\Models\Farmer;
 use App\Models\FarmersCooperative;
 use App\Models\FarmPlot;
 use App\Models\Municipality;
+use App\Models\MunicipalityBoundary;
 use App\Models\RiceSeedDistribution;
 use App\Models\User;
 use App\Support\DashboardCoverage;
@@ -44,6 +45,14 @@ class DashboardController extends Controller
         */
 
         abort_unless($user->hasUsableScope(), 403, 'Your account does not have an active workspace.');
+
+        if ($user->isVisitor()) {
+            return view('dashboard_visitor', [
+                'boundaryCount' => MunicipalityBoundary::query()->where('status', 'active')->count(),
+                'municipalityCount' => Municipality::query()->active()->count(),
+                'provinceCount' => \App\Models\Province::query()->active()->count(),
+            ]);
+        }
 
         $currentYear = (int) now()->year;
         $validated = $request->validate(['report_year' => ['nullable', 'integer', 'between:1900,2100']]);

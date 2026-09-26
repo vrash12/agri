@@ -243,6 +243,8 @@ All accounts must be active. Regional Heads require an active region with no pro
 
 External GIS Evaluators require no operational office assignment. `RestrictGisEvaluatorAccess` confines them to the read-only municipality-geofence page and its boundary and barangay JSON endpoints. The geofence controller returns active boundaries only and deliberately skips every farmer, parcel, snapshot, export, draft, account, audit and write query for this role. Evaluator accounts are provisioned directly by the System Owner outside the general account-management form and should be disabled when an evaluation ends.
 
+Restricted visitor accounts retain the `super_admin` role for compatibility but set the additive `visitor_mode` flag. They are active, unassigned identities with no province or municipality scope. `RestrictVisitorAccess` limits them to the aggregate system overview and active municipality boundary viewer; dashboard and boundary responses omit farmer, parcel, assistance, harvest, account, audit, and export details. The flag is guarded server-side and is never accepted from ordinary account forms. Visitor provisioning requires an explicit System Owner operation; credentials remain outside the repository.
+
 ### Authentication workflow
 
 GIS Evaluators additionally require a future `evaluation_expires_at`, null geographic assignments, and a first-use password change when `evaluation_password_pending` is true. The evaluator password routes require the current password and a confirmed replacement of at least 15 characters (maximum 72 bytes), lock the account during changes, and never flash credentials. Apply `2026_09_22_000100_add_evaluator_access_limits.php` explicitly before provisioning. Expiry is enforced at sign-in and on each scoped request. Evaluator boundary visits and password changes are audited without credentials.
@@ -436,7 +438,7 @@ canvas and forces the coordinate-grid fallback.
 
 The server-side bulk-import form currently validates KML/XML only. Browser-side selected-farmer import supports KML and KMZ through JSZip.
 
-Saved parcel actions also offer authorized Sentinel-2 monitoring through Copernicus Data Space. The view supports a date range of up to 31 days, cloud-masked NDVI and true-color images, and daily clear-pixel summaries. The Farmers map opens it in an accessible in-page dialog with a full-page fallback. Explain NDVI as a vegetation greenness signal for field-check planning; it does not establish crop type, disease, yield, ownership or assistance eligibility.
+Saved parcel actions also offer authorized Sentinel-2 monitoring through Copernicus Data Space. The view supports a date range of up to 31 days, cloud-masked NDVI and true-color images, and daily clear-pixel summaries. The Farmers map action is labeled **Satellite field check** and opens an accessible in-page modal; the modal uses a three-step flow (find a picture, look at the parcel, understand the result), plain labels, a simple colour guide, expandable search/measurement details, and a full-page fallback. Explain NDVI as a vegetation greenness signal for field-check planning; it does not establish crop type, disease, yield, ownership or assistance eligibility. Keep no-data states reassuring and actionable: a cloudy or incomplete image is not evidence of crop damage.
 
 Plot actions authorize either the owning `Farmer` or the `FarmPlot`. Municipal users cannot retrieve all provincial plots, open a foreign farmer, add a plot to a foreign farmer, or mutate a plot owned by another municipality.
 
