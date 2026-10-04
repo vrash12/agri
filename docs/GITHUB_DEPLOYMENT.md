@@ -1,5 +1,13 @@
 # GitHub-to-Hostinger deployment
 
+## Verified Hostinger follow-up — October 4, 2026 — longer Lot Series references
+
+Runtime `77a1e41` was pushed to GitHub main and installed through `git pull --ff-only origin main` from `3f79957`. Only `2026_10_04_000100_expand_rice_seed_lot_series.php` ran by explicit path with `--force`. The nullable Lot Series column is now TEXT, retaining its original charset/collation. Import and manual entry support 10,000 characters; rollback refuses to truncate longer stored references.
+
+- Fresh private backup: 21 tables / 8,310 rows, 3,277,633 compressed bytes; SHA-256 `a268810a247023386e6a83fd23b5c5183fd5080ee53e9a9caeda6a84f65dae69`. Runtime and environment were separately preserved.
+- All existing table rows and the environment matched their fingerprints; only the targeted migration receipt was added. No operational workbook, baseline migration, visitor migration or account operation ran. No public assets changed. Unfinished Land Plots work remains local.
+- Local checks passed 14 import tests / 46 assertions and 18 operations view tests / 66 assertions, Pint and syntax checks. Hostinger PHP 8.3.33 passed the new import-page render and storage of 10,000 four-byte Unicode characters in a separate temporary MySQL table. Configuration, route and view caches rebuilt. See `docs/RICE_SEED_IMPORT_VALIDATION.md`.
+
 ## Verified Hostinger release — October 4, 2026 — rice seed import validation
 
 Runtime `3e81caf` was pushed to GitHub main and installed by Hostinger `git pull --ff-only origin main` from `4033cc2`. The importer now rejects oversized database text with an Excel-row/column correction message and rolls back the entire rejected import. Genuine XLS/XLSX reader failures receive recovery guidance.

@@ -20,8 +20,27 @@ MySQL column expansion must be checked on Hostinger.
 
 Local checks passed 14 import tests / 46 assertions and 18 operations view tests
 / 66 assertions, including long-reference import/reimport, multibyte boundaries,
-atomic failure and refusal of lossy rollback. Deployment of this follow-up is
-pending. No actual confidential workbook is available to the coding agent.
+atomic failure and refusal of lossy rollback. Runtime `77a1e41` was pushed to
+GitHub and installed through Hostinger `git pull --ff-only origin main` from
+`3f79957`, continuing the authorized import repair. Only the named Lot Series
+migration ran; no baseline or visitor migration, account operation, or
+operational workbook import ran.
+
+A verified private backup preserved 21 tables / 8,310 rows, 3,277,633 compressed
+bytes, SHA-256
+`a268810a247023386e6a83fd23b5c5183fd5080ee53e9a9caeda6a84f65dae69`.
+The preceding runtime and environment were archived outside public directories.
+After migration, every existing row fingerprint and the environment hash
+matched; only the expected migration receipt was added. No Lot Series index
+existed. The column is now nullable TEXT with the original `utf8mb4` /
+`utf8mb4_unicode_ci` settings.
+
+Hostinger PHP 8.3 passed an authorized import-page render and a 10,000-character
+four-byte Unicode round trip in a separate temporary MySQL table. This check
+created no operational records. Configuration, route and view caches rebuilt.
+No actual confidential workbook is available to the coding agent; the owner
+can resubmit it with longer references unchanged, subject to the new limit and
+the other existing validations.
 
 ## Verified production cause
 
@@ -32,7 +51,7 @@ not the GET import form. Production was running commit `4033cc2`, PHP 8.3.33,
 with no tracked runtime changes. Logs were inspected with cell contents and SQL
 bindings withheld. No operational or account data was changed.
 
-## Deployed fix
+## Initial deployed validation fix — runtime 3e81caf
 
 `RiceSeedImportValidation` checks persisted text lengths before each save and
 returns the Excel row, column label and permitted character count. It never
@@ -86,8 +105,9 @@ were mirrored to `public_html` and their hashes match `public`. Hostinger PHP
 120/121-character validation boundary. Homepage and office sign-in returned
 HTTP 200; the unauthenticated import URL returned its expected HTTP 302. The
 tracked server checkout was clean. No actual confidential workbook was
-resubmitted during verification; the original oversized cell still needs
-correction before that workbook can import successfully.
+resubmitted during verification. This initial release still rejected longer
+lot references; the `77a1e41` follow-up above removes that old 120-character
+Lot Series restriction.
 
 Credentials and database backups must remain outside source control and public
 directories. Follow `docs/GITHUB_DEPLOYMENT.md` for private backups and release
