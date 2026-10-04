@@ -2,13 +2,14 @@
 
 namespace App\Support;
 
+use App\Models\RiceSeedDistribution;
 use Illuminate\Validation\ValidationException;
 
 final class RiceSeedImportValidation
 {
     /** Database text limits, including legacy identity snapshot columns. */
     private const TEXT_FIELDS = [
-        'lot_series' => ['Lot Series', 120],
+        'lot_series' => ['Lot Series', RiceSeedDistribution::LOT_SERIES_MAX_LENGTH],
         'seed_variety_claimed' => ['Seed Variety Claimed', 120],
         'seed_variety_planted' => ['Seed Variety Planted', 120],
         'date_of_sowing_label' => ['Date of Sowing', 120],

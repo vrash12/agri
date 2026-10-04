@@ -11,6 +11,9 @@ class RiceSeedDistribution extends Model
 {
     use HasFactory;
 
+    // A TEXT column safely stores this many four-byte Unicode characters.
+    public const LOT_SERIES_MAX_LENGTH = 10000;
+
     public const FISHERIES_INPUT_CATEGORIES = [
         'fish_fingerlings',
         'fish_feed',

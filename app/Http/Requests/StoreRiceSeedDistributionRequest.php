@@ -98,7 +98,7 @@ class StoreRiceSeedDistributionRequest extends FormRequest
             'input_notes' => ['nullable', 'string', 'max:1000'],
             'claimed_area_ha' => ['nullable', 'numeric', 'min:0'],
             'claimed_seeds_kg' => ['nullable', 'numeric', 'min:0'],
-            'lot_series' => ['nullable', 'string'],
+            'lot_series' => ['nullable', 'string', 'max:'.RiceSeedDistribution::LOT_SERIES_MAX_LENGTH],
             'crop_establishment' => ['nullable', Rule::in($this->allowedWithStoredValue(self::CROP_ESTABLISHMENT, 'crop_establishment'))],
             'date_of_sowing_label' => ['nullable', 'string', 'max:60'],
             'registered_rice_area_ha' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],

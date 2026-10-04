@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\RiceSeedDistribution;
 use App\Models\User;
 use App\Support\HarvestFromRelease;
 use Illuminate\Database\Schema\Blueprint;
@@ -37,7 +38,7 @@ class RiceSeedImportTest extends TestCase
             $table->id();
             $table->unsignedBigInteger('municipality_id');
             $table->unsignedBigInteger('farmer_id')->nullable();
-            foreach (['seed_variety_claimed', 'seed_variety_planted', 'lot_series', 'date_of_sowing_label'] as $field) {
+            foreach (['seed_variety_claimed', 'seed_variety_planted', 'date_of_sowing_label'] as $field) {
                 $table->string($field, 120)->nullable();
             }
             foreach (['last_name', 'first_name', 'middle_name', 'ffrs', 'farm_location', 'farm_province', 'farm_municipality', 'ecosystem', 'ecosystem_source'] as $field) {
@@ -46,6 +47,7 @@ class RiceSeedImportTest extends TestCase
             foreach (['ext_name', 'contact_number', 'crop_establishment'] as $field) {
                 $table->string($field, 50)->nullable();
             }
+            $table->text('lot_series')->nullable();
             $table->string('gender', 30)->nullable();
             $table->string('seed_class', 80)->nullable();
             $table->string('input_category', 40);
@@ -66,7 +68,7 @@ class RiceSeedImportTest extends TestCase
 
     public function test_valid_workbook_imports_and_reimport_updates_without_duplicates(): void
     {
-        $lot = str_repeat('L', 120);
+        $lot = str_repeat('LONG-LOT/', 75);
         $this->upload([['TEST-001', $lot, 40]])->assertRedirect(route('rice-seed-distributions.index'))->assertSessionHasNoErrors();
         $this->upload([['TEST-001', $lot, 80]])->assertRedirect(route('rice-seed-distributions.index'))->assertSessionHasNoErrors();
 
@@ -76,9 +78,9 @@ class RiceSeedImportTest extends TestCase
 
     public function test_long_lot_series_gives_excel_row_error_and_rolls_back_earlier_rows(): void
     {
-        $this->upload([['TEST-001', 'LOT-A', 40], ['TEST-002', str_repeat('L', 121), 40]])
+        $this->upload([['TEST-001', 'LOT-A', 40], ['TEST-002', str_repeat('L', RiceSeedDistribution::LOT_SERIES_MAX_LENGTH + 1), 40]])
             ->assertRedirect(route('rice-seed-distributions.import.form'))
-            ->assertSessionHasErrors(['file' => 'Excel row 3: Lot Series exceeds 120 characters. Correct this cell and upload the workbook again. No rows were imported or updated.']);
+            ->assertSessionHasErrors(['file' => 'Excel row 3: Lot Series exceeds 10000 characters. Correct this cell and upload the workbook again. No rows were imported or updated.']);
 
         $this->assertDatabaseCount('rice_seed_distributions', 0);
     }
@@ -86,7 +88,7 @@ class RiceSeedImportTest extends TestCase
     public function test_rejected_reimport_preserves_existing_release(): void
     {
         $this->upload([['TEST-001', 'LOT-A', 40]])->assertSessionHasNoErrors();
-        $this->upload([['TEST-001', 'LOT-A', 80], ['TEST-002', str_repeat('L', 121), 40]])->assertSessionHasErrors('file');
+        $this->upload([['TEST-001', 'LOT-A', 80], ['TEST-002', str_repeat('L', RiceSeedDistribution::LOT_SERIES_MAX_LENGTH + 1), 40]])->assertSessionHasErrors('file');
 
         $this->assertDatabaseCount('rice_seed_distributions', 1);
         $this->assertDatabaseHas('rice_seed_distributions', ['ffrs' => 'TEST-001', 'kgs_received' => 40]);
@@ -94,8 +96,8 @@ class RiceSeedImportTest extends TestCase
 
     public function test_multibyte_lot_series_uses_character_length_and_never_echoes_cell_values(): void
     {
-        $this->upload([['TEST-001', str_repeat('ñ', 120), 40]])->assertSessionHasNoErrors();
-        $privateCell = str_repeat('ñ', 121);
+        $this->upload([['TEST-001', str_repeat('ñ', RiceSeedDistribution::LOT_SERIES_MAX_LENGTH), 40]])->assertSessionHasNoErrors();
+        $privateCell = str_repeat('ñ', RiceSeedDistribution::LOT_SERIES_MAX_LENGTH + 1);
         $this->upload([['TEST-002', $privateCell, 40]])->assertSessionHasErrors('file');
 
         $this->assertStringNotContainsString($privateCell, session('errors')->first('file'));
@@ -139,6 +141,33 @@ class RiceSeedImportTest extends TestCase
             ->assertRedirect(route('rice-seed-distributions.import.form'))
             ->assertSessionHasErrors(['file' => 'The workbook could not be read. Open it in Excel, save a new .xlsx copy, and upload it again. No rows were imported or updated.']);
         $this->assertDatabaseCount('rice_seed_distributions', 0);
+    }
+
+    public function test_lossy_lot_series_migration_rollback_is_refused(): void
+    {
+        $lot = str_repeat('LONG-LOT/', 75);
+        $this->upload([['TEST-001', $lot, 40]])->assertSessionHasNoErrors();
+        $migration = require database_path('migrations/2026_10_04_000100_expand_rice_seed_lot_series.php');
+        $migration->up();
+
+        try {
+            $migration->down();
+            $this->fail('Rollback must not shorten stored lot references.');
+        } catch (\RuntimeException $exception) {
+            $this->assertStringContainsString('rollback never truncates', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('rice_seed_distributions', ['lot_series' => $lot]);
+    }
+
+    public function test_lot_series_migration_is_safe_for_existing_short_references(): void
+    {
+        $this->upload([['TEST-001', 'LOT-A', 40]])->assertSessionHasNoErrors();
+        $migration = require database_path('migrations/2026_10_04_000100_expand_rice_seed_lot_series.php');
+        $migration->up();
+        $migration->up();
+        $migration->down();
+        $this->assertDatabaseHas('rice_seed_distributions', ['lot_series' => 'LOT-A']);
     }
 
     /** @param array<int, array{string, string, int}> $rows */

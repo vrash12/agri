@@ -31,7 +31,7 @@
           <div class="module-form-actions"><a class="module-button" href="{{ route('rice-seed-distributions.index') }}">Cancel</a><button class="module-button module-button-primary" type="submit">Import workbook</button></div>
         </section>
       </div>
-      <aside class="module-form-aside"><section class="module-aside-card"><h3>Before uploading</h3><ul><li>Use the expected NRP column layout.</li><li>Confirm the municipality before import.</li><li>Keep farmer identifiers consistent.</li><li>Lot Series, seed varieties and Date of Sowing allow up to 120 characters each.</li><li>If a row fails validation, correct the indicated Excel cell and upload again. The rejected import saves no rows.</li></ul></section><section class="module-aside-card"><h3>Import behavior</h3><p>Matching farmer records are linked within the selected municipality. Existing matching releases may be updated rather than duplicated.</p></section></aside>
+      <aside class="module-form-aside"><section class="module-aside-card"><h3>Before uploading</h3><ul><li>Use the expected NRP column layout.</li><li>Confirm the municipality before import.</li><li>Keep farmer identifiers consistent.</li><li>Lot Series supports longer references, up to 10,000 characters. Seed varieties and Date of Sowing allow up to 120 characters each.</li><li>If a row fails validation, correct the indicated Excel cell and upload again. The rejected import saves no rows.</li></ul></section><section class="module-aside-card"><h3>Import behavior</h3><p>Matching farmer records are linked within the selected municipality. Existing matching releases may be updated rather than duplicated.</p></section></aside>
     </div>
   </form>
 </div>

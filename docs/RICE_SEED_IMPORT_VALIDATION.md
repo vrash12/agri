@@ -1,5 +1,28 @@
 # Rice seed import validation — October 4, 2026
 
+## Long Lot Series follow-up
+
+The initial validation removed the 500 error but still rejected the owner's
+workbook at Excel row 9. Lot Series legitimately needs room for longer batch
+references. This follow-up expands only that nullable column from VARCHAR(120)
+to TEXT; import and manual-entry validation share a 10,000-character limit,
+which safely fits TEXT even with four-byte Unicode characters. Full values are
+preserved for display, export and exact repeat-import matching. Other text
+limits, permissions, municipality scope and transaction behavior are unchanged.
+
+Deploy code and `2026_10_04_000100_expand_rice_seed_lot_series.php` in one
+maintenance window with a verified private backup. Apply only that migration
+by path using `--force`; never run the incomplete baseline or visitor migration.
+The migration preserves the original charset and collation. Down refuses to
+reduce the column while any reference exceeds 120 characters. SQLite already
+stores VARCHAR as text, so tests check persistence/rollback guards; actual
+MySQL column expansion must be checked on Hostinger.
+
+Local checks passed 14 import tests / 46 assertions and 18 operations view tests
+/ 66 assertions, including long-reference import/reimport, multibyte boundaries,
+atomic failure and refusal of lossy rollback. Deployment of this follow-up is
+pending. No actual confidential workbook is available to the coding agent.
+
 ## Verified production cause
 
 An authorized read-only Hostinger inspection identified the October 4 06:25 UTC
