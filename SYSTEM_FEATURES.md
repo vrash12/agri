@@ -384,6 +384,7 @@ The historical database name remains `rice_seed_distributions`, but the module s
 - Item, category, location, gender, age, eligibility, crop-establishment, yield-variety, seed-class, and municipality-area charts.
 - Chunked filtered CSV export with spreadsheet-formula protection.
 - NRP Excel import with municipality-scoped FFRS and RSBSA matching.
+- Local import follow-up: oversized text identifies the Excel row and column to correct, without shortening values or showing confidential cell contents. Lot Series, seed varieties and sowing labels allow 120 characters each. Rejected imports save no rows or updates; unreadable Excel files receive recovery guidance. Deployment is pending; see `docs/RICE_SEED_IMPORT_VALIDATION.md`.
 - Certified, Registered, and Not Specified seed classes, with imported legacy values kept editable.
 
 ### Assistance coverage map

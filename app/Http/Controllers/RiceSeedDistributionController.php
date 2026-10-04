@@ -14,12 +14,14 @@ use App\Support\FarmerIdentifier;
 use App\Support\FarmerPicker;
 use App\Support\HarvestFromRelease;
 use App\Support\MunicipalityAccess;
+use App\Support\RiceSeedImportValidation;
 use App\Support\SeedReleaseQuantity;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Reader\Exception as SpreadsheetReadException;
 use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
 class RiceSeedDistributionController extends Controller
@@ -419,7 +421,7 @@ class RiceSeedDistributionController extends Controller
         return $this->importForm($request);
     }
 
-    public function import(Request $request, HarvestFromRelease $harvestProjection)
+    public function import(Request $request, HarvestFromRelease $harvestProjection, RiceSeedImportValidation $rowValidation)
     {
         $this->authorize('import', RiceSeedDistribution::class);
 
@@ -437,10 +439,20 @@ class RiceSeedDistributionController extends Controller
         );
 
         $path = $request->file('file')->getRealPath();
-        $spreadsheet = IOFactory::load($path);
+        try {
+            $spreadsheet = IOFactory::load($path, 0, [IOFactory::READER_XLSX, IOFactory::READER_XLS]);
+        } catch (SpreadsheetReadException $exception) {
+            throw ValidationException::withMessages([
+                'file' => 'The workbook could not be read. Open it in Excel, save a new .xlsx copy, and upload it again. No rows were imported or updated.',
+            ]);
+        }
 
-        $sheet = $spreadsheet->getSheetByName('NRP DISTRIBUTION') ?? $spreadsheet->getActiveSheet();
-        $rows = $sheet->toArray(null, true, true, true);
+        try {
+            $sheet = $spreadsheet->getSheetByName('NRP DISTRIBUTION') ?? $spreadsheet->getActiveSheet();
+            $rows = $sheet->toArray(null, true, true, true);
+        } finally {
+            $spreadsheet->disconnectWorksheets();
+        }
 
         if (count($rows) < 2) {
             return back()->with('error', 'No data rows found in the file.');
@@ -460,9 +472,10 @@ class RiceSeedDistributionController extends Controller
             $rows,
             $headerMap,
             $municipalityId,
-            $harvestProjection
+            $harvestProjection,
+            $rowValidation
         ) {
-            foreach ($rows as $row) {
+            foreach ($rows as $rowIndex => $row) {
                 $ffrs = $this->cellStr($row, $headerMap, ['FFRS RSBSA Number']);
                 if ($ffrs === '') {
                     $skipped++;
@@ -541,6 +554,8 @@ class RiceSeedDistributionController extends Controller
                     'seed_variety_planted' => $this->nullIfEmpty($this->cellStr($row, $headerMap, ['Seed Variety Planted'])),
                     'seed_class' => $seedClass,
                 ];
+
+                $rowValidation->validate($data, $rowIndex + 2);
 
                 $unique = [
                     'municipality_id' => $municipalityId,

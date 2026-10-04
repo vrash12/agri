@@ -471,6 +471,7 @@ Functions:
 - filter by text, identity fields, municipality, assistance sector, category, gender, eligibility flags, numeric ranges, and date ranges;
 - display filtered KPIs and charts for monthly releases, item/category mix, fisheries records, fingerlings issued, locations, gender, age, eligibility, establishment method, yield variety, seed class, and area by municipality;
 - import an `NRP DISTRIBUTION` Excel sheet, match farmers by FFRS/RSBSA inside the selected municipality, and update/create release rows;
+- validate imported text against the existing database column lengths through `RiceSeedImportValidation` before saving each row. Oversized values produce an Excel-row/column message without exposing cell contents; the import transaction rolls back all earlier inserts and updates. Lot Series, seed varieties and sowing labels retain their 120-character limits. Restrict the reader to genuine XLS/XLSX workbooks and return a safe validation message for unreadable files. See `docs/RICE_SEED_IMPORT_VALIDATION.md` for the October 4 production diagnosis and local fix; deployment is pending;
 - stream filtered CSV exports in chunks.
 
 Only rows whose `quantity_unit` is empty or `kg` are included in kilogram totals. Do not add fingerlings, pieces, sacks, bottles, or liters directly to kilogram aggregates. Fisheries KPIs count `fish_fingerlings` only when the unit is `piece`.
