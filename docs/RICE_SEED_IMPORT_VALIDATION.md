@@ -9,7 +9,7 @@ not the GET import form. Production was running commit `4033cc2`, PHP 8.3.33,
 with no tracked runtime changes. Logs were inspected with cell contents and SQL
 bindings withheld. No operational or account data was changed.
 
-## Local fix
+## Deployed fix
 
 `RiceSeedImportValidation` checks persisted text lengths before each save and
 returns the Excel row, column label and permitted character count. It never
@@ -40,18 +40,32 @@ Production MySQL confirms the column limits; no live workbook was submitted.
 Local verification passed 12 import tests / 41 assertions and 18 operations
 presentation tests / 66 assertions, Pint, changed-file PHP syntax checks, Blade
 compilation, both import routes and `git diff --check`. These local tests ran on
-PHP 8.4.10; production's PHP 8.3.33 was inspected but the patch has not been run
-there. The harvest projection is mocked in the isolated import regression
+PHP 8.4.10. The harvest projection is mocked in the isolated import regression
 suite; its production behavior is preserved and was not re-exercised live.
 
-Deployment is pending explicit owner authorization. No migration, dependency
-update, account change or data import is required. Deploy the controller,
-support class and import view together through GitHub and Hostinger
-`git pull --ff-only`, refresh the optimized autoloader if required by its
-configuration, and rebuild view/route caches. Preserve unrelated local Land
-Plots UI work and review intervening commits before advancing production from
-`4033cc2`; the already-pushed visitor work is a separate release scope.
+The owner explicitly authorized push and deployment. Runtime `3e81caf` was
+pushed to GitHub main and installed on Hostinger by `git pull --ff-only origin
+main` from baseline `4033cc2`. No migration, dependency update, account change
+or operational import ran. Previously pushed visitor and satellite UX code was
+included in the fast-forward; visitor provisioning and its additive migration
+were not run. The uncommitted Land Plots UI work was preserved locally.
+
+Before the pull, a verified private backup captured 21 tables / 8,304 rows,
+3,277,550 compressed bytes, SHA-256
+`b48e4e4464375af993880ce1e14a788cd6813fa796605dba596f999047182223`.
+Private archives preserve the prior tracked runtime, served public directory
+and environment. All 21 table fingerprints and the environment hash remained
+unchanged after deployment and the read-only render check.
+
+Configuration, route and view caches rebuilt. Five intervening public assets
+were mirrored to `public_html` and their hashes match `public`. Hostinger PHP
+8.3.33 passed syntax checks, an authorized import-page render, and the exact
+120/121-character validation boundary. Homepage and office sign-in returned
+HTTP 200; the unauthenticated import URL returned its expected HTTP 302. The
+tracked server checkout was clean. No actual confidential workbook was
+resubmitted during verification; the original oversized cell still needs
+correction before that workbook can import successfully.
 
 Credentials and database backups must remain outside source control and public
 directories. Follow `docs/GITHUB_DEPLOYMENT.md` for private backups and release
-verification. This document records a local fix, not a completed deployment.
+verification.

@@ -1,5 +1,14 @@
 # GitHub-to-Hostinger deployment
 
+## Verified Hostinger release — October 4, 2026 — rice seed import validation
+
+Runtime `3e81caf` was pushed to GitHub main and installed by Hostinger `git pull --ff-only origin main` from `4033cc2`. The importer now rejects oversized database text with an Excel-row/column correction message and rolls back the entire rejected import. Genuine XLS/XLSX reader failures receive recovery guidance.
+
+- Private database backup: 21 tables, 8,304 rows, 3,277,550 compressed bytes; SHA-256 `b48e4e4464375af993880ce1e14a788cd6813fa796605dba596f999047182223`. Prior runtime, served public files and environment were separately preserved.
+- All table fingerprints and the environment remained unchanged. No migration, account provisioning, password change, dependency update or operational import ran. The previously pushed visitor/satellite follow-up code was included, with visitor provisioning and migration left unapplied; unfinished Land Plots UI edits remain local.
+- Five changed public assets were mirrored and verified. Configuration, routes and Blade caches rebuilt. PHP 8.3.33 passed syntax, an authorized import-page render and 120/121-character boundary checks. Homepage/sign-in returned HTTP 200 and guest import returned HTTP 302. The tracked server checkout was clean.
+- Local checks passed 12 import tests / 41 assertions, 18 operations presentation tests / 66 assertions and 5 workspace presentation tests / 29 assertions, Pint, syntax, Blade compilation, route and whitespace checks. No actual confidential workbook was imported during verification. See `docs/RICE_SEED_IMPORT_VALIDATION.md`.
+
 ## Local follow-up — September 26, 2026 — satellite field-check modal
 
 The Sentinel-2 parcel action now reads **Satellite field check** and the modal uses a farmer-friendly three-step flow, plain controls, a colour guide, expandable details and actionable no-data guidance. This follow-up is local and has not been pushed or deployed. A future release must deploy the changed `_satellite_content.blade.php`, `_satellite_dialog.blade.php`, `satellite_modal.blade.php`, `parcel-satellite.css`, `parcel-satellite-modal.css`, `parcel-satellite.js`, `parcel-satellite-modal.js`, `farmers-maps.js` and focused tests together, then rebuild views/caches. No migration or account/data operation is required.
