@@ -11,6 +11,7 @@ use App\Models\RiceSeedDistribution;
 use App\Models\User;
 use App\Support\ConcurrentWrite;
 use App\Support\FarmerCardLocations;
+use App\Support\FarmerCardSignatory;
 use App\Support\FarmerDataQuality;
 use App\Support\FarmerIdentifier;
 use App\Support\FarmerPicker;
@@ -377,7 +378,7 @@ class FarmerController extends Controller
     /**
      * Display one farmer's printable local registry card.
      */
-    public function idCard(Request $request, Farmer $farmer, FarmerCardLocations $cardLocations)
+    public function idCard(Request $request, Farmer $farmer, FarmerCardLocations $cardLocations, FarmerCardSignatory $cardSignatories)
     {
         $this->authorize('view', $farmer);
         $user = $this->authenticatedUser($request);
@@ -399,11 +400,13 @@ class FarmerController extends Controller
         $qrDataUri = (new SvgWriter())->write($qrCode)->getDataUri();
 
         $cardFarmLocation = $cardLocations->forFarmer($farmer);
+        $cardSignatory = $cardSignatories->forFarmer($farmer);
 
         return view('farmers.id-card', compact(
             'farmer',
             'scanUrl',
             'cardFarmLocation',
+            'cardSignatory',
             'qrDataUri'
         ));
     }

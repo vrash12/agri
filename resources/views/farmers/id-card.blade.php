@@ -34,6 +34,17 @@
   ])->filter()->values();
   $plotCount = $farmer->farmPlots->count();
   $cardFarmLocation = $cardFarmLocation ?? 'Parcel address not recorded';
+  // 24x24 stroke icons. The same path data is drawn inline on the printed card and
+  // through Path2D on the canvas export, so both renderings show identical icons.
+  $cardIcons = [
+      'phone' => 'M8 2h8a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM11 18h2',
+      'pin' => 'M12 22s7-6.4 7-12a7 7 0 1 0-14 0c0 5.6 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
+      'area' => 'M3 3h18v18H3zM3 10h18M10 3v18',
+      'sprout' => 'M12 21v-9M12 12c0-4.2 3-7 8-7 0 5-3 7.6-8 7zM12 14.5c0-3.4-2.4-6-7-6 0 4 2.8 6.3 7 6z',
+      'people' => 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21c0-4 3-7 7-7s7 3 7 7M16 3.6a4 4 0 0 1 0 7.3M22 21c0-3.1-1.9-5.6-4.6-6.5',
+      'shield' => 'M12 2 4 5.2V11c0 5.1 3.4 9.4 8 11 4.6-1.6 8-5.9 8-11V5.2zM8.6 12.1l2.4 2.4 4.6-4.8',
+  ];
+  $cardIcon = fn (string $name): string => '<svg class="farmer-card-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="'.$cardIcons[$name].'"/></svg>';
 @endphp
 
 <div class="module-page farmer-card-page">
@@ -99,6 +110,10 @@
               <span>{{ $initials }}</span>
             @endif
           </div>
+          {{-- Translucent repeat of the portrait, a familiar ID-card detail. Initials alone would only read as a grey patch. --}}
+          @if($photoUrl)
+            <div class="farmer-card-ghost" aria-hidden="true"><img src="{{ $photoUrl }}" alt=""></div>
+          @endif
 
           <div class="farmer-card-front-details">
             <div class="farmer-card-field farmer-card-field-name"><span>Full name</span><strong>{{ strtoupper($fullName ?: 'NAME NOT RECORDED') }}</strong></div>
@@ -107,12 +122,12 @@
               <div class="farmer-card-field"><span>RSBSA number</span><strong>{{ $farmer->rsbsa_no ?: 'Not recorded' }}</strong></div>
               <div class="farmer-card-field"><span>FFRS number</span><strong>{{ $farmer->ffrs ?: 'Not recorded' }}</strong></div>
             </div>
-            <div class="farmer-card-field"><span>Registry municipality</span><strong>{{ strtoupper($municipalityName) }}</strong></div>
+            <div class="farmer-card-field farmer-card-field-municipality"><span>Registry municipality</span><strong>{{ strtoupper($municipalityName) }}</strong></div>
           </div>
 
           <div class="farmer-card-front-footer">
-            <span>AgriGOV <i>AGRICULTURE INFORMATION SYSTEM</i></span>
-            <b>REGISTERED FARMER</b>
+            <span class="farmer-card-footer-brand"><span aria-hidden="true"><x-brand compact /></span><span>AgriGOV <i>AGRICULTURE INFORMATION SYSTEM</i></span></span>
+            <b>{!! $cardIcon('shield') !!}REGISTERED FARMER</b>
             <strong>{{ $farmer->created_at ? $farmer->created_at->format('Y') : now()->format('Y') }}</strong>
           </div>
         </div>
@@ -126,13 +141,13 @@
           </header>
           <div class="farmer-card-back-body">
             <div class="farmer-card-back-column">
-              <section><span>Contact number</span><strong>{{ $farmer->contact_number ?: 'Not recorded' }}</strong></section>
-              <section class="farmer-card-parcel-address"><span>Farm location · Parcel address</span><strong>{{ mb_strlen($cardFarmLocation) <= 120 ? $cardFarmLocation : 'Full parcel address list attached.' }}</strong></section>
-              <section><span>Declared farm area</span><strong>{{ $farmer->farm_area_ha !== null ? number_format((float)$farmer->farm_area_ha, 2).' hectares' : 'Not recorded' }}</strong></section>
-              <section><span>Ecosystem</span><strong>{{ $farmer->ecosystem ?: 'Not recorded' }}</strong></section>
+              <section><span>{!! $cardIcon('phone') !!}Contact number</span><strong>{{ $farmer->contact_number ?: 'Not recorded' }}</strong></section>
+              <section class="farmer-card-parcel-address"><span>{!! $cardIcon('pin') !!}Farm location · Parcel address</span><strong>{{ mb_strlen($cardFarmLocation) <= 120 ? $cardFarmLocation : 'Full parcel address list attached.' }}</strong></section>
+              <section><span>{!! $cardIcon('area') !!}Declared farm area</span><strong>{{ $farmer->farm_area_ha !== null ? number_format((float)$farmer->farm_area_ha, 2).' hectares' : 'Not recorded' }}</strong></section>
+              <section><span>{!! $cardIcon('sprout') !!}Ecosystem</span><strong>{{ $farmer->ecosystem ?: 'Not recorded' }}</strong></section>
             </div>
             <div class="farmer-card-back-column farmer-card-back-column-right">
-              <section><span>Sector classifications</span><div class="farmer-card-sector-list">@forelse($sectorTags as $tag)<b>{{ $tag }}</b>@empty<small>No classifications recorded</small>@endforelse</div></section>
+              <section><span>{!! $cardIcon('people') !!}Sector classifications</span><div class="farmer-card-sector-list">@forelse($sectorTags as $tag)<b>{{ $tag }}</b>@empty<small>No classifications recorded</small>@endforelse</div></section>
               <div class="farmer-card-qr-card">
                 <a href="{{ $scanUrl }}" target="_blank" rel="noopener" title="Open interactive land map">
                   <img src="{{ $qrDataUri }}" alt="QR code for {{ $fullName }}'s interactive land map">
@@ -141,9 +156,22 @@
               </div>
             </div>
           </div>
-          <footer>
-            <p>This card identifies a record in the local agriculture information system. It is not a substitute for a Philippine national government ID.</p>
-            <span>Issued {{ $farmer->created_at ? $farmer->created_at->format('M d, Y') : now()->format('M d, Y') }}</span>
+          {{-- Both signatures are written in ink above their lines after printing; no signature image is stored. --}}
+          <footer @class(['has-signatory' => $cardSignatory])>
+            <div class="farmer-card-signature farmer-card-holder-signature">
+              @if($fullName)<strong>{{ mb_strtoupper($fullName) }}</strong>@endif
+              <small>Cardholder's signature</small>
+            </div>
+            <div class="farmer-card-back-notes">
+              <p>Local agriculture registry card — not a substitute for a Philippine national government ID.</p>
+              <span>Issued {{ $farmer->created_at ? $farmer->created_at->format('M d, Y') : now()->format('M d, Y') }}</span>
+            </div>
+            @if($cardSignatory)
+              <div class="farmer-card-signature farmer-card-signatory">
+                <strong>{{ mb_strtoupper($cardSignatory['name']) }}</strong>
+                <small>{{ $cardSignatory['title'] }}</small>
+              </div>
+            @endif
           </footer>
         </div>
       </article>
@@ -250,7 +278,13 @@
       daLogo: @json(asset('images/da.jpg')),
       republicLogo: @json(asset('images/branding/philippines-coat-of-arms.png')),
       background: @json(asset('images/branding/farmer-card-background.svg')),
+      frontArt: @json(asset('images/branding/farmer-card-front-art.svg')),
+      backArt: @json(asset('images/branding/farmer-card-back-art.svg')),
       agrigovLogo: @json(asset('images/branding/agrigov-wordmark-v2.png')),
+      agrigovMark: @json(asset('images/branding/agrigov-mark-v1.png')),
+      icons: @json($cardIcons),
+      signatory: @json($cardSignatory ? ['name' => mb_strtoupper($cardSignatory['name']), 'title' => $cardSignatory['title']] : null),
+      holderName: @json($fullName ? mb_strtoupper($fullName) : null),
       scanUrl: @json($scanUrl),
       qrDataUri: @json($qrDataUri),
       plotCount: @json($plotCount),
@@ -291,11 +325,63 @@
       ctx.fillText(String(text), x, y, maxWidth);
     }
 
-    function field(ctx, label, value, x, y, maxWidth, valueSize, mono) {
+    function drawIcon(ctx, name, x, y, size, color, width) {
+      if (!cardData.icons[name] || typeof Path2D === 'undefined') return;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(size / 24, size / 24);
+      ctx.strokeStyle = color; ctx.lineWidth = width || 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.stroke(new Path2D(cardData.icons[name]));
+      ctx.restore();
+    }
+
+    function label(ctx, text, x, y, icon) {
+      if (icon) { drawIcon(ctx, icon, x, y - 18, 22, '#2f7a52'); x += 30; }
       ctx.fillStyle = '#607067';
       ctx.font = '700 20px Arial';
-      ctx.fillText(label, x, y);
+      ctx.fillText(text, x, y);
+    }
+
+    function field(ctx, text, value, x, y, maxWidth, valueSize, mono, icon) {
+      label(ctx, text, x, y, icon);
       fittedText(ctx, value, x, y + 35, maxWidth, valueSize || 28, 800, '#132018', mono ? 'monospace' : 'Arial');
+    }
+
+    function wrapText(ctx, text, maxWidth) {
+      const lines = [''];
+      for (const word of String(text).split(/\s+/)) {
+        const current = lines[lines.length - 1];
+        const next = current ? current + ' ' + word : word;
+        if (!current || ctx.measureText(next).width <= maxWidth) lines[lines.length - 1] = next;
+        else lines.push(word);
+      }
+      return lines;
+    }
+
+    // A line to sign above, with the printed name and caption centred beneath it.
+    function signatureLine(ctx, left, right, name, caption) {
+      const middle = (left + right) / 2;
+      ctx.strokeStyle = '#284d36'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(left, 576); ctx.lineTo(right, 576); ctx.stroke();
+      ctx.textAlign = 'center';
+      if (name) fittedText(ctx, name, middle, 598, right - left - 8, 16, 800, '#132018');
+      ctx.fillStyle = '#53685c'; ctx.font = '700 13px Arial';
+      ctx.fillText(caption, middle, name ? 616 : 598, right - left);
+      ctx.textAlign = 'left';
+    }
+
+    // Classification pills matching the printed card; false when they need more
+    // than one row, so the caller can fall back to a single fitted line.
+    function sectorChips(ctx, tags, x, y, maxWidth) {
+      ctx.font = '700 19px Arial';
+      const widths = tags.map(tag => ctx.measureText(tag).width + 24);
+      if (!tags.length || widths.reduce((sum, width) => sum + width, 0) + (tags.length - 1) * 8 > maxWidth) return false;
+      tags.forEach((tag, index) => {
+        roundRect(ctx, x, y, widths[index], 32, 8, '#e0eee3');
+        ctx.fillStyle = '#174d31'; ctx.fillText(tag, x + 12, y + 23);
+        x += widths[index] + 8;
+      });
+      return true;
     }
 
     function addressText(ctx, text, x, y, width, height) {
@@ -342,14 +428,17 @@
     window.addEventListener('beforeprint', fitPrintedAddress);
 
     async function renderFront() {
-      const [photo, daLogo, republicLogo, background] = await Promise.all([
-        loadImage(cardData.photoUrl), loadImage(cardData.daLogo), loadImage(cardData.republicLogo), loadImage(cardData.background)
+      const [photo, daLogo, republicLogo, background, frontArt, agrigovMark] = await Promise.all([
+        loadImage(cardData.photoUrl), loadImage(cardData.daLogo), loadImage(cardData.republicLogo), loadImage(cardData.background),
+        loadImage(cardData.frontArt), loadImage(cardData.agrigovMark)
       ]);
-      if (!daLogo || !republicLogo || !background) throw new Error('The card artwork could not load. Reload this page before downloading the ID.');
+      if (!daLogo || !republicLogo || !background || !frontArt || !agrigovMark) throw new Error('The card artwork could not load. Reload this page before downloading the ID.');
       const canvas = document.createElement('canvas');
       canvas.width = 1011; canvas.height = 638;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(background, 0, 0, 1011, 638);
+      // Rosette, title sprigs, microtext rule, photo corners and footer band.
+      ctx.drawImage(frontArt, 0, 0, 1011, 638);
       ctx.drawImage(republicLogo, 52, 30, 98, 109);
       ctx.save(); ctx.beginPath(); ctx.arc(916, 86, 54, 0, Math.PI * 2); ctx.clip(); ctx.drawImage(daLogo, 862, 32, 108, 108); ctx.restore();
       ctx.textAlign = 'center'; ctx.fillStyle = '#173e2d'; ctx.font = '700 22px Arial'; ctx.fillText('REPUBLIKA NG PILIPINAS', 505, 43);
@@ -357,52 +446,80 @@
       ctx.fillStyle = '#243e30'; ctx.font = '700 22px Arial'; ctx.fillText('PROVINCIAL AGRICULTURE OFFICE', 505, 94);
       ctx.fillStyle = '#075b2e'; ctx.font = '900 34px Arial'; ctx.fillText('FARMER REGISTRY CARD', 505, 131);
       fittedText(ctx, cardData.province, 505, 155, 650, 17, 700, '#53685c'); ctx.textAlign = 'left';
-      ctx.strokeStyle='rgba(35,99,68,.2)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(48,172); ctx.lineTo(963,172); ctx.stroke();
       roundRect(ctx, 52, 190, 250, 305, 18, '#245e3a', '#173f28');
       ctx.save(); ctx.beginPath(); ctx.roundRect(60, 198, 234, 289, 12); ctx.clip();
       if (photo) coverImage(ctx, photo, 60, 198, 234, 289);
       else { ctx.fillStyle = '#245e3a'; ctx.fillRect(60,198,234,289); ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.font='900 92px Arial'; ctx.fillText(cardData.initials,177,370); ctx.textAlign='left'; }
       ctx.restore();
+      // Ghost portrait: a faint grayscale repeat of the photo beside the details.
+      if (photo) {
+        ctx.save(); ctx.globalAlpha = .2; ctx.beginPath(); ctx.roundRect(858, 424, 92, 112, 10); ctx.clip();
+        if ('filter' in ctx) ctx.filter = 'grayscale(1)';
+        coverImage(ctx, photo, 858, 424, 92, 112);
+        ctx.restore();
+      }
       field(ctx, 'FULL NAME', cardData.fullName, 340, 205, 610, 38);
-      field(ctx, 'AGRIGOV ID · SYSTEM-GENERATED', cardData.farmerId, 340, 285, 610, 35, true);
+      label(ctx, 'AGRIGOV ID · SYSTEM-GENERATED', 340, 285);
+      ctx.font = '800 35px monospace';
+      roundRect(ctx, 333, 290, Math.min(ctx.measureText(cardData.farmerId).width, 610) + 15, 42, 9, 'rgba(20,116,63,.08)', 'rgba(20,116,63,.3)');
+      fittedText(ctx, cardData.farmerId, 340, 320, 610, 35, 800, '#132018', 'monospace');
       field(ctx, 'RSBSA NUMBER', cardData.rsbsa, 340, 365, 285, 27);
       field(ctx, 'FFRS NUMBER', cardData.ffrs, 650, 365, 300, 27);
-      field(ctx, 'REGISTRY MUNICIPALITY', cardData.municipality, 340, 445, 610, 26);
-      const footer = ctx.createLinearGradient(0, 555, 1011, 638); footer.addColorStop(0,'#144c32'); footer.addColorStop(1,'#25804c');
-      ctx.fillStyle=footer; ctx.fillRect(0,555,1011,83); ctx.fillStyle='#eac64d'; ctx.fillRect(0,550,1011,5);
-      ctx.fillStyle='#fff'; ctx.font='800 27px Arial'; ctx.fillText('AgriGOV',48,588); ctx.fillStyle='#e2f1e6'; ctx.font='13px Arial'; ctx.fillText('AGRICULTURE INFORMATION SYSTEM',48,612);
-      ctx.textAlign='right'; ctx.fillStyle='#fff'; ctx.font='800 19px Arial'; ctx.fillText('REGISTERED FARMER',860,602); ctx.font='800 22px Arial'; ctx.fillText(cardData.year,963,602); ctx.textAlign='left';
+      field(ctx, 'REGISTRY MUNICIPALITY', cardData.municipality, 340, 445, 490, 26);
+      roundRect(ctx, 48, 567, 58, 58, 10, '#ffffff');
+      ctx.drawImage(agrigovMark, 52, 571, 50, 50);
+      ctx.fillStyle='#fff'; ctx.font='800 27px Arial'; ctx.fillText('AgriGOV',120,592); ctx.fillStyle='#e2f1e6'; ctx.font='13px Arial'; ctx.fillText('AGRICULTURE INFORMATION SYSTEM',120,614);
+      ctx.textAlign='right'; ctx.fillStyle='#fff'; ctx.font='800 19px Arial'; ctx.fillText('REGISTERED FARMER',860,602);
+      drawIcon(ctx, 'shield', 860 - ctx.measureText('REGISTERED FARMER').width - 32, 582, 24, '#eac64d', 2.2);
+      ctx.font='800 22px Arial'; ctx.fillText(cardData.year,963,602); ctx.textAlign='left';
       return canvas;
     }
 
     async function renderBack() {
-      const [agrigovLogo, qrImage, background] = await Promise.all([
-        loadImage(cardData.agrigovLogo), loadImage(cardData.qrDataUri), loadImage(cardData.background)
+      const [agrigovLogo, qrImage, background, backArt] = await Promise.all([
+        loadImage(cardData.agrigovLogo), loadImage(cardData.qrDataUri), loadImage(cardData.background), loadImage(cardData.backArt)
       ]);
-      if (!agrigovLogo || !qrImage || !background) throw new Error('The card artwork or QR code could not load. Reload this page before downloading the ID.');
+      if (!agrigovLogo || !qrImage || !background || !backArt) throw new Error('The card artwork or QR code could not load. Reload this page before downloading the ID.');
       const canvas = document.createElement('canvas');
       canvas.width = 1011; canvas.height = 638;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(background, 0, 0, 1011, 638);
-      const header = ctx.createLinearGradient(0,0,1011,132); header.addColorStop(0,'#144c32'); header.addColorStop(1,'#25804c');
-      ctx.fillStyle=header; ctx.fillRect(0,0,1011,132); ctx.fillStyle='#eac64d'; ctx.fillRect(0,132,1011,5);
-      roundRect(ctx,366,12,279,108,8,'#ffffff');
-      ctx.drawImage(agrigovLogo,384,20,243,243 * agrigovLogo.height / agrigovLogo.width);
-      field(ctx,'CONTACT NUMBER',cardData.contact,52,180,420,28);
-      ctx.fillStyle='#607067'; ctx.font='700 20px Arial'; ctx.fillText('FARM LOCATION · PARCEL ADDRESS',52,255);
-      addressText(ctx,cardData.farmLocation,52,288,440,100);
-      field(ctx,'DECLARED FARM AREA',cardData.area,52,405,420,28);
-      field(ctx,'ECOSYSTEM',cardData.ecosystem,52,480,420,28);
-      ctx.fillStyle='#607067'; ctx.font='700 20px Arial'; ctx.fillText('SECTOR CLASSIFICATIONS',535,180);
-      const sectors = cardData.sectors.length ? cardData.sectors.join(' · ') : 'None recorded';
-      fittedText(ctx,sectors,535,215,415,25,800,'#132018');
-      roundRect(ctx, 615, 238, 260, 295, 14, '#ffffff', '#c4d6c7');
-      ctx.save(); ctx.imageSmoothingEnabled=false; ctx.drawImage(qrImage, 638, 250, 214, 214); ctx.restore();
-      ctx.fillStyle='#175334'; ctx.font='900 18px Arial'; ctx.textAlign='center'; ctx.fillText('SCAN LAND MAP',745,493);
-      ctx.fillStyle='#53685c'; ctx.font='700 14px Arial'; ctx.fillText(cardData.plotCount+' mapped parcel'+(cardData.plotCount === 1 ? '' : 's')+' · Interactive view',745,517); ctx.textAlign='left';
-      ctx.strokeStyle='#cfdbd3'; ctx.beginPath(); ctx.moveTo(42,548); ctx.lineTo(969,548); ctx.stroke();
-      ctx.fillStyle='#68756d'; ctx.font='16px Arial'; ctx.fillText('Local agriculture registry card — not a substitute for a Philippine national government ID.',42,579);
-      ctx.textAlign='right'; ctx.font='700 16px Arial'; ctx.fillText('Issued '+cardData.issued,969,610); ctx.textAlign='left';
+      // Patterned header band with rice sprigs, plus the faint rosette.
+      ctx.drawImage(backArt, 0, 0, 1011, 638);
+      roundRect(ctx,366,8,279,98,8,'#ffffff');
+      ctx.drawImage(agrigovLogo,390,13,230,230 * agrigovLogo.height / agrigovLogo.width);
+      field(ctx,'CONTACT NUMBER',cardData.contact,52,162,420,28,false,'phone');
+      label(ctx,'FARM LOCATION · PARCEL ADDRESS',52,237,'pin');
+      addressText(ctx,cardData.farmLocation,52,270,440,100);
+      field(ctx,'DECLARED FARM AREA',cardData.area,52,387,420,28,false,'area');
+      field(ctx,'ECOSYSTEM',cardData.ecosystem,52,462,420,28,false,'sprout');
+      label(ctx,'SECTOR CLASSIFICATIONS',535,162,'people');
+      if (!sectorChips(ctx,cardData.sectors,535,174,415)) {
+        fittedText(ctx,cardData.sectors.length ? cardData.sectors.join(' · ') : 'None recorded',535,197,415,25,800,'#132018');
+      }
+      roundRect(ctx, 615, 218, 260, 297, 14, '#ffffff', '#c4d6c7');
+      ctx.save(); ctx.imageSmoothingEnabled=false; ctx.drawImage(qrImage, 638, 234, 214, 214); ctx.restore();
+      // Scan-frame corners, kept 12px clear of the code's own quiet zone.
+      ctx.save(); ctx.strokeStyle='#1f7a46'; ctx.lineWidth=4; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.beginPath();
+      [[626,222,1,1],[864,222,-1,1],[626,460,1,-1],[864,460,-1,-1]].forEach(([x,y,dx,dy]) => {
+        ctx.moveTo(x, y + dy * 24); ctx.lineTo(x, y); ctx.lineTo(x + dx * 24, y);
+      });
+      ctx.stroke(); ctx.restore();
+      ctx.fillStyle='#175334'; ctx.font='900 18px Arial'; ctx.textAlign='center'; ctx.fillText('SCAN LAND MAP',745,482);
+      ctx.fillStyle='#53685c'; ctx.font='700 14px Arial'; ctx.fillText(cardData.plotCount+' mapped parcel'+(cardData.plotCount === 1 ? '' : 's')+' · Interactive view',745,504); ctx.textAlign='left';
+      // Ink signatures go above these lines after printing: cardholder on the left,
+      // the office signatory on the right when one is configured, notes between.
+      signatureLine(ctx, 42, 320, cardData.holderName, "Cardholder's signature");
+      if (cardData.signatory) signatureLine(ctx, 705, 969, cardData.signatory.name, cardData.signatory.title);
+      const notesLeft = 350, notesRight = cardData.signatory ? 675 : 969, notesMid = (notesLeft + notesRight) / 2;
+      ctx.font = '13px Arial';
+      const notice = wrapText(ctx, 'Local agriculture registry card — not a substitute for a Philippine national government ID.', notesRight - notesLeft);
+      const firstLine = 597 - (notice.length - 1) * 17;
+      ctx.strokeStyle='#cfdbd3'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(notesLeft, firstLine - 20); ctx.lineTo(notesRight, firstLine - 20); ctx.stroke();
+      ctx.textAlign='center'; ctx.fillStyle='#68756d';
+      notice.forEach((line, index) => ctx.fillText(line, notesMid, firstLine + index * 17));
+      ctx.fillStyle='#284d36'; ctx.font='700 14px Arial'; ctx.fillText('Issued '+cardData.issued, notesMid, 617);
+      ctx.textAlign='left';
       return canvas;
     }
 

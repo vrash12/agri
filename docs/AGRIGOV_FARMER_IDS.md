@@ -1,5 +1,20 @@
 # AgriGOV farmer IDs
 
+## ID-style design details — October 7, 2026
+
+Two artwork overlays sit above the existing `farmer-card-background.svg`: `farmer-card-front-art.svg` (top green/gold strip, a fine-line guilloche rosette, grain-ear accents beside the title, a microtext rule in place of the plain divider, gold photo corners, and the patterned footer band) and `farmer-card-back-art.svg` (the patterned header band with grain ears and a faint rosette). The CSS card layers each overlay over the background, and the canvas export draws the same files, so screen, print and PNG stay identical; the export still refuses to run if any artwork fails to load.
+
+Per-farmer details are drawn by both renderers: a 20% grayscale repeat of the photo (shown only when a photo exists), the AgriGOV ID in a highlighted chip, the AgriGOV mark and a shield icon in the footer, icons beside each back-of-card label from one shared path list, classification pills (falling back to one fitted line when they need more than a row), and scan-frame corners kept clear of the QR code's own margin. The QR panel stays plain white; renders of the new back decode at the same sizes and blur levels as the previous design. No data, QR destination, permission or address rule changed, and no migration is needed. Deploy the two new SVGs with the view and CSS, mirrored to both Hostinger public directories.
+
+### Cardholder and office signatures
+
+Every card's back ends in one row: the cardholder's signature line on the left (the farmer's printed name in capitals, captioned "Cardholder's signature"), the not-a-national-ID notice and issue date in the middle, and the office signatory on the right when one is configured. Both lines sit at the same fixed height in the printed card and the canvas export, with clear space above them for an ink signature. Farmers sign their printed card when it is handed over; no signature is captured or stored, and the digital ID and PNG downloads show the unsigned lines. The printed card now uses the export's shorter notice wording so both versions match.
+
+
+The back of a Ramos, Tarlac card prints a signature line with **ENGR. DENNISH C. PASCUA** and **Head Agriculturist** beneath it; the card is signed by hand after printing, and the digital ID and PNG downloads show the unsigned line. Signatories live in `config/farmer_card.php`. `App\Support\FarmerCardSignatory` matches the farmer's municipality by name and its active supervising province, never the legacy province string or a database ID, so a same-named municipality in another province and every unlisted office keep the original unsigned footer. An incomplete entry prints nothing. To give another office its own signatory, add an entry with its municipality, province, name and title, then run `php artisan config:cache` on the server.
+
+To leave clear space above the signature line (about 5 mm at CR80 size), the back header is 18 px shorter (`header` height 18.65%) and the body moves up accordingly; the QR code still decodes at the same sizes and blur levels as before. `FarmerCardSignatoryTest` covers Ramos, other offices, a same-named municipality under another province, inactive scope, incomplete entries and the rendered card.
+
 ## Green-and-gold registry card design — September 25, 2026
 
 The front and back card previews, print layout, digital dialog, and PNG exports now share a DA-aligned green-and-gold treatment. The front uses a pale green/yellow gradient with subtle crop-line artwork, the AgriGOV wordmark, the Department of Agriculture logo, and the Philippine coat of arms beside the heading. The back uses the AgriGOV wordmark alone in its green header so the repeated title and identifier are not duplicated. The QR code remains on a plain white panel for reliable scanning. The back keeps parcel addresses, classifications, and the read-only map QR flow.
