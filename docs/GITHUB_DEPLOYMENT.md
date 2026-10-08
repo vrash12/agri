@@ -1,5 +1,15 @@
 # GitHub-to-Hostinger deployment
 
+## Verified Hostinger release — October 8, 2026 — crop areas and multiple animals
+
+Runtime `571a408` was pushed to GitHub main and installed through Hostinger `git pull --ff-only origin main` from `f2e9cac`, on PHP 8.3.33. Staff can draw separate crop sections inside a parcel and record multiple animals/groups under one owner.
+
+- Private verified backup: 21 tables / 9,331 rows, 3,373,968 compressed bytes; SHA-256 `e11a9ebadc2eacd57d74960a01ca73ccc4dca1c9344f4300e665312d43b47d06`. Prior tracked runtime, served public directory and environment were separately archived outside the document root.
+- Only `2026_10_08_000100_add_planted_areas_to_parcel_crop_seasons.php` ran by explicit path. All original columns/rows in all 21 tables and the environment passed fingerprint verification; only its migration receipt was added. Existing account, animal service, seasonal classification and parcel-boundary data were preserved. No seeder, account operation, dependency installation or operational data write ran.
+- Mirrored all five scripts: `animal-health-services.js`, `planted-area-editor.js`, `planted-area-layer.js`, `parcel-crop-layer.js` and `farmers-maps.js`, with matching source/served files and 0644 permissions. Configuration, route and Blade caches rebuilt. Sign-in and all five live asset URLs returned HTTP 200 after maintenance ended.
+- Local verification: 55 focused PHP tests / 457 assertions, 22 JavaScript tests, Pint on all 17 changed PHP files, syntax, Blade, route and whitespace checks. Hostinger checks passed existing-row/environment preservation, targeted migration, MySQL JSON extraction, actual authorized classification/section service calls, crop-editor and animal-create form renders, and PHP syntax checks.
+- Live crop drawing/saving through Google Maps and real-user animal submissions were not repeated during deployment. Existing saved coordinates remain untouched; the local disposable preview database was not uploaded. See `PLANTED_CROP_AREAS.md` and `ANIMAL_HEALTH_MULTIPLE_ANIMALS.md` for workflow and limits.
+
 ## Verified Hostinger release — October 8, 2026 — ID signatures and Land Plots cards
 
 Runtime `18cf956` was installed through `git pull --ff-only origin main` from `0ccf369`, including ID artwork/signature commit `52a5e23` and expandable Land Plots cards. No migration, account operation, dependency installation or operational data write ran.

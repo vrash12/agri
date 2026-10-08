@@ -85,8 +85,8 @@ used disposable SQLite and synthetic Maps adapters on local PHP 8.4.10;
 Hostinger PHP 8.3, the MySQL JSON-extraction path and real Google satellite
 interaction remain deployment checks.
 
-Local only; not pushed or deployed. Preserve the pending multi-animal service
-work when preparing a release. After explicit approval, back up production,
+Deployed with the multi-animal service follow-up in runtime `571a408` on
+October 8, 2026 after explicit owner authorization. For future releases, back up production,
 pull the reviewed GitHub revision, and apply **only** this additive migration
 by path. Mirror `planted-area-editor.js`, `planted-area-layer.js`,
 `parcel-crop-layer.js` and `farmers-maps.js` to `public_html/js` with readable
@@ -94,5 +94,5 @@ by path. Mirror `planted-area-editor.js`, `planted-area-layer.js`,
 migrations, seeders or account operations. Verify existing rows and polygons,
 authorized drawing/save/season filtering and served asset hashes. Schema
 rollback drops the new drawings, so preserve them privately before reversing;
-legacy classifications remain. No production or account change ran for this
-implementation.
+legacy classifications remain. Only the targeted additive schema migration ran during this release; no
+account, seed, parcel-boundary or operational-record changes ran.

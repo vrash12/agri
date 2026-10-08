@@ -60,10 +60,10 @@ this follow-up. No live MySQL, production browser or real-user operation ran.
 
 ## Deployment status
 
-Local only; not pushed or deployed. Deploy the controller, Form Request, shared
+Deployed on Hostinger October 8, 2026 in runtime `571a408`. For future releases, deploy the controller, Form Request, shared
 support classes, create/edit form partials and
 `public/js/animal-health-services.js` together through the normal GitHub and
 Hostinger release. Mirror the script to `public_html/js` with readable 0644
 permissions, rebuild views/routes, and verify the create form and owner lookup.
 No migration, data conversion or account operation is needed. Existing records
-must be preserved. User approval is required for a production release.
+must be preserved. The owner explicitly authorized this release; all existing service/account rows were preserved.
