@@ -63,3 +63,12 @@ test('switching the loaded municipality replaces the prior classifications', asy
   await layer.load(settings,[1]); await layer.load(settings,[2]);
   assert.equal(layer.record(1),null); assert.equal(layer.record(2).crop,'rice');
 });
+
+
+test('crop filter includes the corn section of a mixed-crop parcel', async () => {
+  const layer=create({url:'/layer',fetch:async()=>({ok:true,json:async()=>({year:2026,season:'dry',records:[{plot_id:1,crop:'mixed',area_crops:['corn','rice'],color:'#4263C7'}],legend:[]})}),onChange:()=>{}});
+  await layer.load({...settings,filter:'corn'},[1]);
+  assert.equal(layer.visible(1),true);
+  await layer.load({...settings,filter:'vegetables'},[1]);
+  assert.equal(layer.visible(1),false);
+});

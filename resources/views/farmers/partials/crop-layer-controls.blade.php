@@ -10,11 +10,14 @@
   </div>
   <p id="parcelCropStatus" role="status">Waiting for the parcel map to load. Saved parcel colors are shown first.</p>
   <div id="parcelCropLegend" class="parcel-crop-legend" aria-label="Seasonal crop legend"></div>
-  <p class="parcel-crop-help">Choose a farmer, then use Seasonal crops beside a parcel to record its crop. Colors describe the selected season; they do not confirm current planting or planted hectares. Gray means Not recorded, not fallow.</p>
+  <p id="plantedAreaLayerStatus" role="status">Select a farmer and enable Crops by season to see planted-area boundaries.</p>
+  <button type="button" class="btn btn-soft btn-sm" id="plantedAreaRetry" hidden>Retry crop boundaries</button>
+  <p class="parcel-crop-help">Choose a farmer, then use Crop areas / season beside a parcel to draw its planted sections. Click Focus to highlight a parcel and its crop sections. Colors describe the selected season; they do not confirm current growth. Mapped hectares are approximate. Unmarked land stays unclassified. Gray means Not recorded, not fallow.</p>
 </details>
 <style>
   #farmersMapModule .parcel-tool-group.parcel-crop-controls { grid-column:1 / -1; min-width:0; border-right:0; border-top:1px solid var(--ui-border); }
   #farmersMapModule #parcelCropRetry[hidden] { display:none; }
+  #farmersMapModule #plantedAreaRetry[hidden] { display:none; }
   #farmersMapModule .parcel-crop-fields { display:flex; flex-wrap:wrap; gap:12px; align-items:end; margin-top:12px; }
   #farmersMapModule .parcel-crop-fields label { display:flex; flex-direction:column; gap:6px; font-size:14px; flex:1 1 150px; min-width:0; }
   #farmersMapModule .parcel-crop-fields select, #farmersMapModule .parcel-crop-fields input { box-sizing:border-box; width:100%; min-height:44px; font:inherit; font-size:16px; padding:8px; border:1px solid var(--ui-control-border); border-radius:8px; background:var(--ui-surface); color:var(--ui-text); }

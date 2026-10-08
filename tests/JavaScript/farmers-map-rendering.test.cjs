@@ -94,13 +94,14 @@ function harness(plots = []) {
       // Reproduce the Maps beta lifecycle failure observed in the browser.
       set path(value) { assert.ok(this.ready, 'Set interactive polygon paths after construction'); this.currentPath = value; }
       get path() { return this.currentPath; }
+      addEventListener(name, callback) { (this.events ||= {})[name] = callback; }
     },
     // Any accidental restoration of the invisible line doubles the map workload.
     Polyline3DInteractiveElement: class { constructor() { throw new Error('Unexpected duplicate outline'); } },
     AltitudeMode: { CLAMP_TO_GROUND: 'ground' },
     savedPlotOverlays: [], renderedPlotDataByFarmerId: new Map(), plotsCacheByFarmerId: new Map(),
     savedPlotsHiddenForEditing: false, focusedParcelFarmerId: null, selectedFarmerId: null, editingPlotId: null,
-    cropLayer: null, queueCropLayer: () => {},
+    cropLayer: null, queueCropLayer: () => {}, plantedAreaLayer: null, refreshPlantedAreas: () => {},
     plotDisplayRevision: 0, plotDisplayTimer: null, mapGeocodedPillEl: { textContent: '' },
     normalizePolygonRing: points => points.slice(), getEffectivePlotColor: plot => plot.color || '#22c55e',
     hexAlpha: color => color, hexToRgba: color => color, bindClickablePlotOverlay: () => {},
@@ -234,4 +235,30 @@ test('initial background batches cannot replace a newer selected-farmer response
   context.renderPlotsForFarmer('7', []);
   context.renderPlotsForFarmer('7', old, { append: true });
   assert.equal(mounted.size, 0, 'a newly deleted plot stays deleted');
+});
+
+
+test('planted section overlays reuse GPU objects, follow visibility and respect reduced motion', () => {
+  const {context,metrics,toggle} = harness();
+  const status={textContent:''};
+  context.document.getElementById=id=>id==='togglePlots'?toggle:id==='plantedAreaLayerStatus'?status:null;
+  context.window.matchMedia=()=>({matches:true});
+  context.plantedAreaOverlays=[];context.plantedAreaKey='';context.plantedAreaRecords=null;
+  context.cropSettings={filter:'all'};context.plotMode=false;
+  vm.runInContext(declaration('renderPlantedAreas'),context);
+  const parcel={id:1,farmer_id:1,color:'#123456',polygon_json:ring()};
+  context.renderPlotsForFarmer('1',[parcel]);
+  const state={status:'ready',partial:false,records:[{plot_id:1,areas:[{crop:'corn',crop_label:'Corn',name:'Section A',variety:'Recorded variety',color:'#D4A017',area_ha:.4,polygon:ring().slice(0,3)}]}]};
+  context.renderPlantedAreas(state);
+  const polygon=context.plantedAreaOverlays[0].poly;
+  context.renderPlantedAreas(state);
+  assert.equal(metrics.constructed,2,'One parent and one section; camera refresh must not recreate geometry');
+  assert.equal(polygon.isConnected,true);
+  toggle.checked=false;context.renderPlantedAreas(state);assert.equal(polygon.isConnected,false);
+  toggle.checked=true;context.cropSettings.filter='rice';context.renderPlantedAreas(state);assert.equal(polygon.isConnected,false);
+  context.cropSettings.filter='corn';context.renderPlantedAreas(state);assert.equal(polygon.isConnected,true);
+  polygon.events['gmp-click']({stopPropagation(){}});
+  assert.match(status.textContent,/Corn.*Recorded variety.*0\.4000/);
+  assert.equal(polygon.strokeWidth,2,'Reduced motion keeps a steady boundary');
+  context.renderPlantedAreas({status:'off',records:[]});assert.equal(polygon.isConnected,false);
 });

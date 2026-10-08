@@ -261,6 +261,8 @@ Route::middleware([
 
     Route::get('/farm-plots/crop-layer', [\App\Http\Controllers\ParcelCropSeasonController::class, 'layer'])
         ->name('farm-plots.crop-layer');
+    Route::get('/farm-plots/planted-area-layer', [\App\Http\Controllers\ParcelCropSeasonController::class, 'plantedLayer'])
+        ->middleware('throttle:30,1')->name('farm-plots.planted-area-layer');
     Route::get('/farm-plots/{plot}/satellite', [\App\Http\Controllers\ParcelSatelliteController::class, 'show'])
         ->whereNumber('plot')->name('farm-plots.satellite.show');
     Route::post('/farm-plots/{plot}/satellite/observations', [\App\Http\Controllers\ParcelSatelliteController::class, 'analyse'])

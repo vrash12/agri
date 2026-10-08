@@ -71,6 +71,12 @@ class AuditModelObserver
         ?array $newValues,
         array $metadata = []
     ): void {
+        if ($model instanceof \App\Models\ParcelCropSeason) {
+            // Crop-area edits are audited by counts/crops; do not duplicate
+            // private polygon coordinates into the audit log.
+            $oldValues = $this->cropAreaSummary($oldValues);
+            $newValues = $this->cropAreaSummary($newValues);
+        }
         $module = $this->moduleName($model);
         $action = match ($event) {
             'created' => 'created',
@@ -93,6 +99,20 @@ class AuditModelObserver
                 'metadata' => $metadata,
             ]
         );
+    }
+
+    private function cropAreaSummary(?array $values): ?array
+    {
+        if ($values === null || ! array_key_exists('planted_areas', $values)) {
+            return $values;
+        }
+        $areas = $values['planted_areas'];
+        $areas = is_string($areas) ? json_decode($areas, true) : $areas;
+        $areas = is_array($areas) ? $areas : [];
+        unset($values['planted_areas']);
+        $values['planted_area_summary'] = ['count' => count($areas), 'crops' => array_values(array_unique(array_column($areas, 'crop')))];
+
+        return $values;
     }
 
     private function changedMunicipalityProvince(Model $model): bool

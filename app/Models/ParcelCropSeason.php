@@ -21,9 +21,9 @@ class ParcelCropSeason extends Model
 
     public const SEASONS = ['dry' => 'Dry season', 'wet' => 'Wet season'];
 
-    protected $fillable = ['municipality_id', 'farm_plot_id', 'crop_year', 'season', 'crop', 'notes', 'recorded_by'];
+    protected $fillable = ['municipality_id', 'farm_plot_id', 'crop_year', 'season', 'crop', 'notes', 'recorded_by', 'planted_areas'];
 
-    protected $casts = ['municipality_id' => 'integer', 'farm_plot_id' => 'integer', 'crop_year' => 'integer', 'recorded_by' => 'integer'];
+    protected $casts = ['municipality_id' => 'integer', 'farm_plot_id' => 'integer', 'crop_year' => 'integer', 'recorded_by' => 'integer', 'planted_areas' => 'array'];
 
     public function plot(): BelongsTo
     {

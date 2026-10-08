@@ -9,6 +9,7 @@ use App\Support\ConcurrentWrite;
 use App\Support\LocalTime;
 use App\Support\ParcelCropSeasons;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
 class ParcelCropSeasonController extends Controller
@@ -29,9 +30,11 @@ class ParcelCropSeasonController extends Controller
             ->where('municipality_id', $plot->farmer->municipality_id);
         $cropRecord = (clone $query)->where('crop_year', $year)->where('season', $season)->first();
         $recordVersion = $cropRecord ? ConcurrentWrite::version($cropRecord) : 'new';
+        $plotVersion = ConcurrentWrite::version($plot);
+        $plantedAreasAvailable = Schema::hasColumn('parcel_crop_seasons', 'planted_areas');
         $history = $query->orderByDesc('crop_year')->orderBy('season')->paginate(10)->withQueryString();
 
-        return view('farm_plots.seasonal_crops', compact('plot', 'year', 'season', 'cropRecord', 'recordVersion', 'history') + [
+        return view('farm_plots.seasonal_crops', compact('plot', 'year', 'season', 'cropRecord', 'recordVersion', 'history', 'plotVersion', 'plantedAreasAvailable') + [
             'cropChoices' => ParcelCropSeason::CROPS, 'seasonChoices' => ParcelCropSeason::SEASONS,
         ]);
     }
@@ -54,6 +57,17 @@ class ParcelCropSeasonController extends Controller
         ]);
 
         return response()->json($this->crops->layer($request->user(), $data['plot_ids'], (int) $data['year'], $data['season']));
+    }
+
+    public function plantedLayer(Request $request)
+    {
+        $this->authorize('viewAny', FarmPlot::class);
+        $data = $request->validate($this->periodRules(true) + [
+            'plot_ids' => ['required', 'array', 'max:20'],
+            'plot_ids.*' => ['required', 'integer', 'min:1', 'distinct'],
+        ]);
+
+        return response()->json($this->crops->plantedLayer($request->user(), $data['plot_ids'], (int) $data['year'], $data['season']));
     }
 
     private function periodRules(bool $required): array

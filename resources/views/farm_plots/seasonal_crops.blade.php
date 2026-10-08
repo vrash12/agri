@@ -58,8 +58,13 @@
         <input type="hidden" name="crop_year" value="{{ $year }}">
         <input type="hidden" name="season" value="{{ $season }}">
         <input type="hidden" name="_record_version" value="{{ old('_record_version', $recordVersion) }}">
+        @if($plantedAreasAvailable)
+          @include('farm_plots.partials.planted-area-editor', ['canDraw' => true])
+        @else
+          <p class="module-form-body crop-record-note">Planted-area drawing is not available yet. Your existing seasonal crop records remain available.</p>
+        @endif
         <div class="module-form-body module-form-grid">
-          <x-module.field name="crop" label="Recorded crop" :required="true" :full="true" hint="For intercropping or several crops in the same season, choose Mixed crops and describe them below. Not recorded means unknown, not fallow land.">
+          <x-module.field name="crop" label="Parcel crop summary" :required="true" :full="true" hint="When drawn areas are saved, this summary follows their crops automatically. Without drawings, choose a parcel-wide classification. Not recorded means unknown, not fallow.">
             <select class="module-input" id="crop" name="crop" required aria-describedby="crop_hint crop_error">
               @foreach($cropChoices as $code => $label)<option value="{{ $code }}" @selected(old('crop', $cropRecord?->crop ?? 'not_recorded') === $code)>{{ $label }}</option>@endforeach
             </select>
@@ -71,6 +76,7 @@
         <div class="module-form-actions"><button class="module-button module-button-primary" type="submit">Save seasonal crop</button></div>
       </form>
     @else
+      @if($plantedAreasAvailable) @include('farm_plots.partials.planted-area-editor', ['canDraw' => false]) @endif
       <div class="module-form-body">
         <p><strong>Recorded crop:</strong> {{ $cropChoices[$cropRecord?->crop ?? 'not_recorded'] ?? 'Not recorded' }}</p>
         @if($cropRecord?->notes)<p>{{ $cropRecord->notes }}</p>@endif

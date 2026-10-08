@@ -1,4 +1,6 @@
 @php
+  $serviceSuggestions = \App\Support\AnimalHealthFormOptions::SERVICE_SUGGESTIONS;
+  $breedsByType = \App\Support\AnimalHealthFormOptions::BREEDS_BY_TYPE;
   $record = $record ?? null;
   $value = fn ($key, $default = '') => old($key, data_get($record, $key, $default));
   $dateValue = function ($key, $default = '') use ($record) {
@@ -12,21 +14,6 @@
   $selectedAnimalType = old('pet_type', $record->pet_type ?? '');
   $serviceNameValue = old('service_name', $record?->service_name ?: ($selectedServiceType === 'vaccination' ? 'Anti-rabies vaccine' : ''));
   $barangays = ['Poblacion Center','Poblacion South','Poblacion North','Toledo','Coral-Iloco','Guiteb','San Raymundo','Balite','Pance'];
-  $serviceSuggestions = [
-    'vaccination' => ['Anti-rabies vaccine','Hemorrhagic septicemia vaccine','Hog cholera vaccine','Newcastle disease vaccine','Fowl pox vaccine','Other livestock vaccine'],
-    'deworming' => ['Ivermectin','Albendazole','Levamisole','Fenbendazole','Piperazine','Other dewormer'],
-    'vitamins' => ['Multivitamins','Vitamin A-D-E','Vitamin B complex','Iron dextran','Electrolytes with vitamins','Mineral supplementation'],
-    'treatment' => ['Wound treatment','Antibiotic treatment','Respiratory treatment','Diarrhea treatment','Ectoparasite treatment','Supportive treatment'],
-  ];
-  $breedsByType = [
-    'Dog' => ['Aspin (Asong Pinoy)','Mixed Breed','Other'], 'Cat' => ['Domestic Shorthair (Puspin)','Mixed Breed','Other'],
-    'Cattle' => ['Brahman','Holstein Friesian','Sahiwal','Native cattle','Crossbreed','Other'], 'Carabao' => ['Philippine native carabao','Murrah cross','Other'],
-    'Goat' => ['Native goat','Boer','Anglo-Nubian','Crossbreed','Other'], 'Sheep' => ['Native sheep','Dorper','Crossbreed','Other'],
-    'Swine' => ['Large White','Landrace','Duroc','Native pig','Crossbreed','Other'], 'Chicken' => ['Native chicken','Broiler','Layer','Free-range','Other'],
-    'Duck' => ['Itik Pinas','Muscovy','Mallard','Other'], 'Turkey' => ['Native turkey','Broad Breasted White','Other'],
-    'Horse' => ['Native horse','Thoroughbred','Crossbreed','Other'], 'Rabbit' => ['New Zealand White','Californian','Native / Mixed','Other'],
-    'Other' => ['Not specified','Other'],
-  ];
   $administrationRoutes = ['Oral','Injectable - intramuscular','Injectable - subcutaneous','Topical','In drinking water','Mixed with feed','Spray / dip','Other'];
 @endphp
 
@@ -151,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const lookup = async () => { const name=ownerInput?.value.trim()||''; const municipalityId=municipalityInput?.value||''; if(name.length<2||(municipalityInput&&!municipalityId)){hideOwner();return;} try{const query=new URLSearchParams({name});if(municipalityId)query.set('municipality_id',municipalityId);const response=await fetch(`${lookupUrl}?${query}`,{headers:{'X-Requested-With':'XMLHttpRequest'}});const data=response.ok?await response.json():{exists:false};if(!data.exists){hideOwner();return;}showOwner(data.owner||{});populateAnimals(data.pets||[]);}catch(error){hideOwner();} };
   const scheduleLookup = () => { clearTimeout(timer); timer=setTimeout(lookup,350); refreshSummary(); };
   ownerInput?.addEventListener('input',scheduleLookup); ownerInput?.addEventListener('change',scheduleLookup); municipalityInput?.addEventListener('change',()=>{hideOwner();scheduleLookup();});
-  document.getElementById('btnUseSelectedPet')?.addEventListener('click',()=>{const animal=animals[Number(animalSelect?.value)];if(!animal)return;setSelect(animalType,animal.pet_type);animalName.value=animal.pet_name||'';animalBreed.value=animal.pet_breed||'';animalColor.value=animal.pet_color||'';animalCount.value=1;serviceDate.value=today;refreshSuggestions();refreshSummary();});
+  document.getElementById('btnUseSelectedPet')?.addEventListener('click',()=>{const animal=animals[Number(animalSelect?.value)];if(!animal)return;setSelect(animalType,animal.pet_type);animalName.value=animal.pet_name||'';animalBreed.value=animal.pet_breed||'';animalColor.value=animal.pet_color||'';animalCount.value=animal.animal_count||1;serviceDate.value=today;refreshSuggestions();refreshSummary();});
   document.getElementById('btnAddNewPet')?.addEventListener('click',()=>{setSelect(animalType,'');animalName.value='';animalBreed.value='';animalColor.value='';animalCount.value=1;serviceDate.value=today;refreshSuggestions();refreshSummary();});
   document.querySelectorAll('input[name="service_type"]').forEach(input=>input.addEventListener('change',()=>{refreshSuggestions();refreshSummary();}));
   animalType?.addEventListener('change',()=>{refreshSuggestions();refreshSummary();}); animalCount?.addEventListener('input',refreshSummary); serviceDate?.addEventListener('change',()=>{if(nextServiceDate)nextServiceDate.min=serviceDate.value||today;});

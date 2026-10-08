@@ -156,6 +156,140 @@ class ParcelCropSeasonTest extends TestCase
         return route('farm-plots.seasonal-crops.edit', 1);
     }
 
+    public function test_drawn_corn_and_rice_areas_save_as_mixed_without_changing_parcel(): void
+    {
+        $this->prepareParcel();
+        $before = FarmPlot::findOrFail(1)->getAttributes();
+        $this->actingAs(User::find(1))->postJson($this->editUrl(), $this->drawnPayload())->assertRedirect();
+        $record = ParcelCropSeason::firstOrFail();
+        $this->assertSame('mixed', $record->crop);
+        $this->assertCount(2, $record->planted_areas);
+        $this->assertGreaterThan(0, $record->planted_areas[0]['area_ha']);
+        $this->assertSame($before, FarmPlot::findOrFail(1)->getAttributes());
+        $this->getJson(route('farm-plots.planted-area-layer', ['year' => 2026, 'season' => 'dry', 'plot_ids' => [1, 2]]))
+            ->assertOk()->assertJsonCount(1, 'records')->assertJsonCount(2, 'records.0.areas')->assertJsonPath('records.0.areas.0.crop', 'corn');
+        $this->getJson($this->layerUrl([1]))->assertJsonPath('records.0.has_planted_areas', true)->assertJsonPath('records.0.area_crops', ['corn', 'rice']);
+        $this->get($this->editUrl().'?year=2026&season=dry')->assertOk()->assertSee('Draw the planted areas')->assertSee('Corn section');
+        $audit = DB::table('audit_logs')->where('module', 'Seasonal parcel crops')->first();
+        $values = json_decode($audit->new_values, true);
+        $this->assertSame(2, $values['planted_area_summary']['count']);
+        $this->assertArrayNotHasKey('planted_areas', $values);
+        $this->assertStringNotContainsString('120.47', $audit->new_values);
+    }
+
+    public function test_outside_overlapping_and_self_crossing_crop_areas_are_rejected(): void
+    {
+        $this->prepareParcel();
+        $this->actingAs(User::find(1));
+        $payload = $this->drawnPayload();
+        $payload['planted_areas'][0]['polygon'][0]['lng'] = 120.4;
+        $this->postJson($this->editUrl(), $payload)->assertUnprocessable()->assertJsonValidationErrors('planted_areas');
+        $payload = $this->drawnPayload();
+        $payload['planted_areas'][1]['polygon'] = $payload['planted_areas'][0]['polygon'];
+        $this->postJson($this->editUrl(), $payload)->assertUnprocessable()->assertJsonValidationErrors('planted_areas');
+        $payload = $this->drawnPayload();
+        [$payload['planted_areas'][0]['polygon'][1], $payload['planted_areas'][0]['polygon'][2]] = [$payload['planted_areas'][0]['polygon'][2], $payload['planted_areas'][0]['polygon'][1]];
+        $this->postJson($this->editUrl(), $payload)->assertUnprocessable()->assertJsonValidationErrors('planted_areas');
+        $this->assertDatabaseCount('parcel_crop_seasons', 0);
+    }
+
+    public function test_shared_boundaries_are_allowed_and_stale_parent_is_rejected(): void
+    {
+        $this->prepareParcel();
+        $payload = $this->drawnPayload();
+        $this->actingAs(User::find(1));
+        $plot = FarmPlot::findOrFail(1);
+        $plot->update(['name' => 'Renamed parcel']);
+        $this->postJson($this->editUrl(), $payload)->assertUnprocessable()->assertJsonValidationErrors('_plot_version');
+        $payload['_plot_version'] = ConcurrentWrite::version($plot->fresh());
+        $this->postJson($this->editUrl(), $payload)->assertRedirect();
+        $this->assertDatabaseCount('parcel_crop_seasons', 1);
+    }
+
+    public function test_crop_area_geometry_needs_review_after_parcel_shrinks(): void
+    {
+        $this->prepareParcel();
+        $this->actingAs(User::find(1))->postJson($this->editUrl(), $this->drawnPayload())->assertRedirect();
+        FarmPlot::findOrFail(1)->update(['polygon_json' => $this->rectangle(120.47, 15.6, 120.4704, 15.6004)]);
+        $this->getJson(route('farm-plots.planted-area-layer', ['year' => 2026, 'season' => 'dry', 'plot_ids' => [1]]))
+            ->assertOk()->assertJsonPath('records.0.needs_review', true)->assertJsonCount(0, 'records.0.areas');
+        $this->assertCount(2, ParcelCropSeason::first()->planted_areas);
+    }
+
+    public function test_crop_area_bounds_coordinates_privileges_and_period_scope(): void
+    {
+        $this->prepareParcel();
+        $payload = $this->drawnPayload();
+        $this->actingAs(User::find(1));
+        $payload['planted_areas'] = array_fill(0, 9, $payload['planted_areas'][0]);
+        $this->postJson($this->editUrl(), $payload)->assertUnprocessable()->assertJsonValidationErrors('planted_areas');
+        $payload = $this->drawnPayload();
+        $payload['planted_areas'][0]['polygon'][0]['lat'] = 200;
+        $this->postJson($this->editUrl(), $payload)->assertUnprocessable()->assertJsonValidationErrors('planted_areas.0.polygon.0.lat');
+        $this->getJson(route('farm-plots.planted-area-layer', ['year' => 2026, 'season' => 'dry', 'plot_ids' => range(1, 21)]))->assertUnprocessable();
+        foreach ([2, 3, 4, 5] as $id) {
+            $this->actingAs(User::find($id))->postJson($this->editUrl(), $this->drawnPayload())->assertForbidden();
+        }
+        $this->actingAs(User::find(3))->getJson(route('farm-plots.planted-area-layer', ['year' => 2026, 'season' => 'wet', 'plot_ids' => [1, 2]]))
+            ->assertOk()->assertJsonCount(1, 'records')->assertJsonCount(0, 'records.0.areas');
+        $this->assertDatabaseCount('parcel_crop_seasons', 0);
+    }
+
+    public function test_explicit_empty_drawings_clear_areas_and_allow_legacy_classification(): void
+    {
+        $this->prepareParcel();
+        $this->actingAs(User::find(1))->postJson($this->editUrl(), $this->drawnPayload())->assertRedirect();
+        $payload = $this->drawnPayload();
+        $payload['_record_version'] = ConcurrentWrite::version(ParcelCropSeason::first());
+        $payload['planted_areas'] = [];
+        $payload['crop'] = 'corn';
+        $this->postJson($this->editUrl(), $payload)->assertRedirect();
+        $this->assertSame([], ParcelCropSeason::first()->planted_areas);
+        $this->assertSame('corn', ParcelCropSeason::first()->crop);
+    }
+
+    public function test_json_form_payload_and_invalid_json_fail_safely(): void
+    {
+        $this->prepareParcel();
+        $payload = $this->drawnPayload();
+        $payload['planted_areas'] = json_encode($payload['planted_areas']);
+        $this->actingAs(User::find(1))->post($this->editUrl(), $payload)->assertRedirect()->assertSessionHasNoErrors();
+        $payload['planted_areas'] = '{bad json';
+        $this->postJson($this->editUrl(), $payload)->assertUnprocessable()->assertJsonValidationErrors('planted_areas');
+    }
+
+    private function prepareParcel(): void
+    {
+        FarmPlot::findOrFail(1)->update(['polygon_json' => $this->rectangle(120.47, 15.6, 120.471, 15.601)]);
+    }
+
+    public function test_additive_area_migration_preserves_legacy_records_on_reversal(): void
+    {
+        $this->actingAs(User::find(1))->postJson($this->editUrl(), $this->payload())->assertRedirect();
+        $migration = require database_path('migrations/2026_10_08_000100_add_planted_areas_to_parcel_crop_seasons.php');
+        $migration->down();
+        $this->assertFalse(Schema::hasColumn('parcel_crop_seasons', 'planted_areas'));
+        $this->assertDatabaseHas('parcel_crop_seasons', ['farm_plot_id' => 1, 'crop' => 'rice']);
+        $migration->up();
+        $this->assertNull(ParcelCropSeason::first()->planted_areas);
+    }
+
+    private function drawnPayload(): array
+    {
+        return array_replace($this->payload(), [
+            '_plot_version' => ConcurrentWrite::version(FarmPlot::findOrFail(1)),
+            'planted_areas' => [
+                ['name' => 'Corn section', 'crop' => 'corn', 'variety' => 'Recorded variety', 'polygon' => $this->rectangle(120.47, 15.6, 120.4705, 15.601)],
+                ['name' => 'Rice section', 'crop' => 'rice', 'polygon' => $this->rectangle(120.4705, 15.6, 120.471, 15.601)],
+            ],
+        ]);
+    }
+
+    private function rectangle(float $west, float $south, float $east, float $north): array
+    {
+        return [['lat' => $south, 'lng' => $west], ['lat' => $south, 'lng' => $east], ['lat' => $north, 'lng' => $east], ['lat' => $north, 'lng' => $west]];
+    }
+
     private function layerUrl(array $ids): string
     {
         return route('farm-plots.crop-layer', ['year' => 2026, 'season' => 'dry', 'plot_ids' => $ids]);
@@ -225,6 +359,7 @@ class ParcelCropSeasonTest extends TestCase
             $t->timestamps();
         });
         (require database_path('migrations/2026_09_19_000100_create_parcel_crop_seasons_table.php'))->up();
+        (require database_path('migrations/2026_10_08_000100_add_planted_areas_to_parcel_crop_seasons.php'))->up();
         (require database_path('migrations/2026_08_19_000300_create_audit_logs_table.php'))->up();
     }
 }

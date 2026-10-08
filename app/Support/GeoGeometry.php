@@ -14,7 +14,7 @@ final class GeoGeometry
      * @param  array<string, mixed>  $geometry
      * @return array<string, mixed>
      */
-    public function prepare(array $geometry): array
+    public function prepare(array $geometry, bool $simplify = true): array
     {
         $geometry = $this->normalize($geometry);
         $vertices = $this->vertexCount($geometry);
@@ -27,7 +27,7 @@ final class GeoGeometry
         }
 
         $simplifyAbove = max(50, (int) config('geofencing.simplify_above_vertices', 2500));
-        if ($vertices > $simplifyAbove) {
+        if ($simplify && $vertices > $simplifyAbove) {
             $geometry = $this->simplifyToLimit($geometry, $simplifyAbove);
             $geometry = $this->normalize($geometry);
         }
@@ -41,7 +41,7 @@ final class GeoGeometry
      * @param  array<int, array{lat:mixed,lng:mixed}>  $points
      * @return array<string, mixed>
      */
-    public function fromLatLngRing(array $points): array
+    public function fromLatLngRing(array $points, bool $simplify = true): array
     {
         $coordinates = [];
 
@@ -56,7 +56,7 @@ final class GeoGeometry
         return $this->prepare([
             'type' => 'Polygon',
             'coordinates' => [$coordinates],
-        ]);
+        ], $simplify);
     }
 
     /** @param  array<string, mixed>  $geometry */
@@ -200,6 +200,65 @@ final class GeoGeometry
         }
 
         return 'outside';
+    }
+
+    /**
+     * Inclusive containment for an already validated simple polygon. Split edges
+     * at boundary vertices to catch excursions through a concave notch even when
+     * the crossing hits a vertex rather than intersecting an edge properly.
+     */
+    public function containsPolygon(array $outer, array $inner): bool
+    {
+        foreach ($this->polygons($inner) as $polygon) {
+            $ring = $polygon[0];
+            foreach ($ring as $point) {
+                if (! $this->pointInGeometry($point, $outer, true)) {
+                    return false;
+                }
+            }
+            foreach ($this->polygons($outer) as $boundary) {
+                foreach ($boundary as $edgeRing) {
+                    if ($this->ringsProperlyIntersect($ring, $edgeRing)) {
+                        return false;
+                    }
+                }
+                foreach (array_slice($boundary, 1) as $hole) {
+                    $point = $this->polygonInteriorPoint([$hole]);
+                    if ($point && $this->pointInPolygon($point, $polygon, false)) {
+                        return false;
+                    }
+                }
+            }
+            for ($i = 0; $i < count($ring) - 1; $i++) {
+                $a = $ring[$i];
+                $b = $ring[$i + 1];
+                $dx = $b[0] - $a[0];
+                $dy = $b[1] - $a[1];
+                $length = $dx * $dx + $dy * $dy;
+                if ($length === 0.0) {
+                    continue;
+                }
+                $cuts = [0.0, 1.0];
+                foreach ($this->polygons($outer) as $boundary) {
+                    foreach ($boundary as $edgeRing) {
+                        foreach ($edgeRing as $point) {
+                            if ($this->onSegment($a, $point, $b) && $this->orientation($a, $b, $point) === 0) {
+                                $cuts[] = max(0.0, min(1.0, (($point[0] - $a[0]) * $dx + ($point[1] - $a[1]) * $dy) / $length));
+                            }
+                        }
+                    }
+                }
+                sort($cuts, SORT_NUMERIC);
+                for ($j = 1; $j < count($cuts); $j++) {
+                    $t = ($cuts[$j - 1] + $cuts[$j]) / 2;
+                    if (! $this->pointInGeometry([$a[0] + $dx * $t, $a[1] + $dy * $t], $outer, true)) {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        return true;
     }
 
     /** @param  array<string, mixed>  $first @param  array<string, mixed>  $second */

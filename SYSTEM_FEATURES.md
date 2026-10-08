@@ -224,6 +224,7 @@ Implementation status and remaining staff/staging checks are documented in [DESI
 - Municipality-scoped parcel loading prevents parcels from different municipalities from being mixed.
 - **Crops by season:** select a year and dry/wet season to color parcels by recorded rice/palay, corn, vegetables, root crops, fruit, legumes, mixed crops, or other crops. A crop filter and labeled legend show the classifications and counts for loaded parcels.
 - Staff record and correct a parcel's seasonal crop from the **Seasonal crops** action beside that parcel. Optional notes can identify crops grown together or the source of the observation; saved seasons remain available for review.
+- Local planted-area drawing: the **Crop areas / season** action lets staff mark separate corn, rice or other crop sections inside one plot, with a section name and optional seed/crop variety. Drawn boundaries may touch but cannot overlap or extend outside the parcel. The selected farmer's map shows crop-colored section outlines and a brief selection highlight. Unmarked land remains unclassified; mapped hectares are approximate. This follow-up needs an additive migration and is not deployed yet.
 - Super Admin and System Owner accounts may inspect seasonal crops but cannot change them. Municipality ownership, audit logging, and stale-edit protection apply to crop records.
 - Missing crop records appear in gray as **Not recorded**. This does not mean fallow. Seasonal classifications do not establish current planting, planted hectares, or production; assistance and harvest records are not automatically assigned to parcels.
 - Switching back to **Saved parcel colors** restores the original display. Crop styling does not alter parcel boundaries, saved colors, or exports. Loading/error states are distinct from missing crop records.
@@ -451,6 +452,7 @@ The historical route and table names retain “anti-rabies” for compatibility,
 
 ### Animal-health records and reports
 
+- Local multi-animal entry: enter an owner once and add up to 20 animals or groups, such as 2 dogs and 1 cow. Each row has its own service and medicine; all rows save together or none save. Previously served animals can be added with their recorded counts. Reports count the animals served across the separate records; this is not an animal inventory. Saved services remain individually editable. Deployment is pending.
 - Create, view, edit, delete, search, filter, and paginate service records.
 - Owner or raiser information.
 - Barangay and optional birthday.

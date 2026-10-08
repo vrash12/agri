@@ -5,7 +5,7 @@
     var state = { enabled: false, status: 'off', year: null, season: null, filter: 'all', legend: [], count: 0, error: '' };
     function notify() { options.onChange(state); }
     function record(id) { return state.status === 'ready' ? records.get(String(id)) || null : null; }
-    function visible(id) { return !state.enabled || state.status !== 'ready' || state.filter === 'all' || record(id)?.crop === state.filter; }
+    function visible(id) { var row = record(id); return !state.enabled || state.status !== 'ready' || state.filter === 'all' || row?.crop === state.filter || (row?.area_crops || []).includes(state.filter); }
     function color(id, savedColor) { return !state.enabled ? savedColor : record(id)?.color || '#64748B'; }
     async function load(settings, ids, force) {
       state.enabled = !!settings.enabled;
