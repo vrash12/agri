@@ -3547,11 +3547,15 @@ window.__handleDownloadAllPlots = handleDownloadAllPlots;
     var c = pl.color ? String(pl.color) : "#22c55e";
 
     html +=
-      '<div class="map-plot-item">' +
-        '<div>' +
-          '<div class="map-plot-name"><span class="plot-swatch" style="background:' + escapeHtml(c) + ';"></span>' + escapeHtml(name) + '</div>' +
-          '<div class="map-plot-sub">' + escapeHtml(sub) + '</div>' +
-        '</div>' +
+      '<details class="map-plot-item map-plot-card">' +
+        '<summary class="map-plot-toggle">' +
+          '<span class="map-plot-summary-copy">' +
+            '<span class="map-plot-name"><span class="plot-swatch" aria-hidden="true" style="background:' + escapeHtml(c) + ';"></span>' + escapeHtml(name) + '</span>' +
+            '<span class="map-plot-sub">' + escapeHtml(sub) + '</span>' +
+            '<span class="map-plot-toggle-label"><span class="map-plot-show-label">Show actions</span><span class="map-plot-hide-label">Hide actions</span></span>' +
+          '</span>' +
+          '<svg class="map-plot-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"></path></svg>' +
+        '</summary>' +
         '<div class="map-plot-actions">' +
           '<button type="button" class="btn btn-soft btn-sm" data-action="focusPlot" data-plot-id="' + escapeHtml(pl.id) + '">Focus</button>' +
           (window.__parcelSatelliteUrl ? '<a class="btn btn-soft btn-sm" data-action="openSatellite" data-plot-id="' + escapeHtml(pl.id) + '" aria-haspopup="dialog" aria-controls="parcelSatelliteModal" href="' + escapeHtml(window.__parcelSatelliteUrl.replace('__ID__', encodeURIComponent(pl.id))) + '">Satellite field check</a>' : '') +
@@ -3561,7 +3565,7 @@ window.__handleDownloadAllPlots = handleDownloadAllPlots;
           '<button type="button" class="btn btn-soft btn-sm" data-action="printPlot" data-plot-id="' + escapeHtml(pl.id) + '">Print</button>' +
           (window.__canManageOperationalData ? '<button type="button" class="btn btn-soft btn-sm" data-action="deletePlot" data-plot-id="' + escapeHtml(pl.id) + '">Delete</button>' : '') +
         '</div>' +
-      '</div>';
+      '</details>';
   }
 
   list.innerHTML = html;

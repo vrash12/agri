@@ -1214,7 +1214,7 @@
               <div>
                 <h4 class="fd-section-title">Land Plots</h4>
                 <p class="fd-section-subtitle">
-                  Saved boundaries and mapped farm area
+                  Open a plot below to see its actions.
                 </p>
               </div>
             </div>

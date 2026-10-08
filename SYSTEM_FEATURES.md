@@ -232,6 +232,7 @@ Implementation status and remaining staff/staging checks are documented in [DESI
 - Each completed bulk parcel import records one aggregate audit event with counts; farmer names and parcel coordinates are excluded from the audit metadata.
 - Imported KML colors are preserved when available.
 - Printable parcel information sheet.
+- In the Farmers map, saved Land Plots appear as compact expandable cards. The card header keeps the plot name, date, area and color marker visible; opening it reveals map focus, satellite field check, seasonal crops, edit, download, print and delete actions according to the user's existing permissions.
 - High-resolution parcel PNG export.
 - Same-origin Google Static Maps proxy for satellite exports.
 - Authorized Sentinel-2 parcel monitoring through Copernicus Data Space. Staff can choose a date range, compare cloud-masked NDVI and true-color imagery, and review clear-pixel summaries inside a saved parcel. The Farmers map action is labeled **Satellite field check** and opens the analysis in an accessible in-page modal with a three-step flow, plain-language controls, a colour guide and expandable technical details; a full-page fallback remains available. Cloudy/no-data states explain that no reading is not crop damage. NDVI is identified as a field-check signal rather than a diagnosis, yield estimate, ownership proof or eligibility decision.

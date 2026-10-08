@@ -310,22 +310,91 @@
 
   .map-plot-list{ display:flex; flex-direction:column; gap: 8px; }
 
-  .map-plot-item{
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 10px;
-    background: linear-gradient(180deg, #fff, #fbfdff);
-    display:flex;
-    justify-content:space-between;
-    gap: 10px;
-    align-items:flex-start;
-    transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+  #farmersMapModule .fd-plot-list .map-plot-card{
+    min-width:0;
+    padding:0;
+    border:1px solid var(--ui-control-border);
+    border-radius:var(--ui-radius-panel);
+    background:var(--ui-surface);
   }
 
-  .map-plot-item:hover{
-    border-color: rgba(59,130,246,.22);
-    box-shadow: 0 10px 18px rgba(2,6,23,.05);
-    transform: translateY(-1px);
+  #farmersMapModule .map-plot-card[open]{
+    border-color:var(--ui-primary);
+  }
+
+  #farmersMapModule .map-plot-toggle{
+    min-height:72px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:12px;
+    border-radius:var(--ui-radius-panel);
+    color:var(--ui-text);
+    text-align:left;
+    list-style:none;
+    cursor:pointer;
+    font:inherit;
+  }
+
+  #farmersMapModule .map-plot-toggle::-webkit-details-marker{ display:none; }
+  #farmersMapModule .map-plot-toggle:hover{ background:var(--ui-surface-subtle); }
+  #farmersMapModule .map-plot-toggle:focus-visible{ outline:3px solid var(--ui-focus); outline-offset:3px; }
+  #farmersMapModule .map-plot-summary-copy{ min-width:0; display:block; flex:1; }
+  #farmersMapModule .map-plot-card .map-plot-name{
+    display:block;
+    color:var(--ui-text);
+    font-size:14px;
+    line-height:1.5;
+    overflow-wrap:anywhere;
+  }
+  #farmersMapModule .map-plot-card .map-plot-sub{
+    display:block;
+    color:var(--ui-text-muted);
+    font-size:12px;
+    font-weight:400;
+    line-height:1.5;
+  }
+  #farmersMapModule .map-plot-toggle-label{
+    display:block;
+    margin-top:4px;
+    color:var(--ui-primary);
+    font-size:12px;
+    font-weight:500;
+  }
+  #farmersMapModule .map-plot-chevron{
+    flex:none;
+    width:20px;
+    height:20px;
+    fill:none;
+    stroke:var(--ui-primary);
+    stroke-width:2;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+  #farmersMapModule .map-plot-card[open] .map-plot-chevron{ transform:rotate(180deg); }
+  #farmersMapModule .map-plot-hide-label,
+  #farmersMapModule .map-plot-card[open] .map-plot-show-label{ display:none; }
+  #farmersMapModule .map-plot-card[open] .map-plot-hide-label{ display:inline; }
+  #farmersMapModule .map-plot-card .map-plot-actions{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px;
+    padding:12px;
+    border-top:1px solid var(--ui-border);
+  }
+  #farmersMapModule .map-plot-card .map-plot-actions .btn{
+    box-sizing:border-box;
+    min-width:0;
+    min-height:44px;
+    justify-content:center;
+    text-align:center;
+    white-space:normal;
+    overflow-wrap:anywhere;
+    font-size:14px;
+  }
+  #farmersMapModule .map-plot-card [data-action="deletePlot"]{
+    color:var(--ui-danger);
   }
 
   .plot-swatch{

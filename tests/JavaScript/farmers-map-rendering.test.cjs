@@ -6,6 +6,14 @@ const path = require('node:path');
 const geometry = require('../../public/js/parcel-display-geometry.js');
 const source = fs.readFileSync(path.join(__dirname, '../../public/js/farmers-maps.js'), 'utf8');
 
+test('land plot actions stay collapsed inside an accessible details card', () => {
+  assert.match(source, /<details class="map-plot-item map-plot-card">/);
+  assert.match(source, /<summary class="map-plot-toggle">/);
+  assert.match(source, /map-plot-show-label/);
+  assert.match(source, /map-plot-hide-label/);
+  assert.match(source, /map-plot-actions/);
+});
+
 // Run the real renderer with a lightweight Maps DOM adapter. No Google service,
 // credentials, database, or source farmer data are used by these regressions.
 function declaration(name) {

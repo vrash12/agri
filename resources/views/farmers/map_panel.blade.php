@@ -624,8 +624,116 @@
   }
 
   .farmer-detail-panel .fd-plot-list .map-plot-item {
+    min-width: 0;
+    padding: 0;
+    border: 1px solid var(--fd-border);
     border-radius: 15px;
-    padding: 11px;
+    background: #fff;
+  }
+
+  .farmer-detail-panel .fd-plot-list .map-plot-item[open] {
+    border-color: var(--fd-green);
+  }
+
+  .farmer-detail-panel .map-plot-toggle {
+    min-height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 15px;
+    color: var(--fd-text);
+    text-align: left;
+    list-style: none;
+    cursor: pointer;
+    font: inherit;
+  }
+
+  .farmer-detail-panel .map-plot-toggle::-webkit-details-marker {
+    display: none;
+  }
+
+  .farmer-detail-panel .map-plot-toggle:hover {
+    background: var(--fd-bg);
+  }
+
+  .farmer-detail-panel .map-plot-toggle:focus-visible {
+    outline: 3px solid rgba(22, 163, 74, .35);
+    outline-offset: 3px;
+  }
+
+  .farmer-detail-panel .map-plot-summary-copy {
+    min-width: 0;
+    display: block;
+    flex: 1;
+  }
+
+  .farmer-detail-panel .map-plot-card .map-plot-name {
+    display: block;
+    color: var(--fd-text);
+    font-size: 12px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+
+  .farmer-detail-panel .map-plot-card .map-plot-sub {
+    display: block;
+    color: var(--fd-muted);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.45;
+  }
+
+  .farmer-detail-panel .map-plot-toggle-label {
+    display: block;
+    margin-top: 4px;
+    color: var(--fd-green-dark);
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .farmer-detail-panel .map-plot-chevron {
+    flex: none;
+    width: 19px;
+    height: 19px;
+    fill: none;
+    stroke: var(--fd-green-dark);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .farmer-detail-panel .map-plot-card[open] .map-plot-chevron {
+    transform: rotate(180deg);
+  }
+
+  .farmer-detail-panel .map-plot-hide-label,
+  .farmer-detail-panel .map-plot-card[open] .map-plot-show-label {
+    display: none;
+  }
+
+  .farmer-detail-panel .map-plot-card[open] .map-plot-hide-label {
+    display: inline;
+  }
+
+  .farmer-detail-panel .map-plot-card .map-plot-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 12px;
+    border-top: 1px solid var(--fd-border);
+  }
+
+  .farmer-detail-panel .map-plot-card .map-plot-actions .btn {
+    box-sizing: border-box;
+    min-width: 0;
+    min-height: 44px;
+    justify-content: center;
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    font-size: 12px;
   }
 
   .farmer-detail-panel .fd-empty {
