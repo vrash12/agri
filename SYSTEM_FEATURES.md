@@ -201,6 +201,7 @@ Implementation status and remaining staff/staging checks are documented in [DESI
 - ID-style design details: fine-line rosette and microtext rule, grain-ear accents beside the title, gold photo corners, a faint repeat of the farmer's photo, a highlighted AgriGOV ID, a patterned AgriGOV footer and back header, icons beside the back-of-card labels, classification pills, and scan corners around the QR code. The printed card, digital ID and PNG downloads show the same design; the QR code keeps its plain white panel.
 - Cardholder signature line on the back of every card, over the farmer's printed name, for the farmer to sign in ink when the card is handed over.
 - Office signature line on the back of Ramos, Tarlac cards: "ENGR. DENNISH C. PASCUA, Head Agriculturist" printed beneath a line that is signed by hand after printing. Other municipalities' cards show no signatory until their own head is configured. No signature image is stored.
+- Signature artwork and compact expandable Land Plots cards deployed on Hostinger on October 8, 2026 in runtime `18cf956`; existing farmer and account records were preserved.
 
 ## 7. GIS farmer and parcel workspace
 

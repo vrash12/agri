@@ -30,7 +30,7 @@ On September 24, an explicitly authorized data-only operation assigned unique `0
 
 ## Application branding
 
-The Farmers map Land Plots list uses native `details`/`summary` cards: name, date, area and stored color remain visible, while actions appear on expansion. Preserve existing role-gated actions and geometry; shared map styles provide keyboard focus and 44px action targets. This interface follow-up is committed for GitHub release; Hostinger deployment is separate.
+The Farmers map Land Plots list uses native `details`/`summary` cards: name, date, area and stored color remain visible, while actions appear on expansion. Preserve existing role-gated actions and geometry; shared map styles provide keyboard focus and 44px action targets. This interface follow-up and farmer-card signature artwork deployed on Hostinger in runtime `18cf956` on October 8, 2026; see `docs/GITHUB_DEPLOYMENT.md`. New public artwork must have readable 0644 permissions in both public directories.
 
 Farmer registry cards use `FarmerCardLocations` to join distinct non-delisted, same-municipality imported `PARCEL ADDRESS 1–3` values with ` / `. Residence fields and mapped-plot names are never substituted for parcel addresses. Missing addresses are explicitly labeled. The front shows the registry municipality separately; the back and PNG/digital rendering wrap parcel addresses. The full address list is also printed on the sheet; oversized card text explicitly refers to that list, and oversized digital/PNG backs fail with guidance instead of dropping addresses. No new parcel-address geocoding or database mutation is performed. See `docs/FARMER_CARD_PARCEL_ADDRESSES.md` for checks and deployment status.
 

@@ -1,5 +1,14 @@
 # GitHub-to-Hostinger deployment
 
+## Verified Hostinger release — October 8, 2026 — ID signatures and Land Plots cards
+
+Runtime `18cf956` was installed through `git pull --ff-only origin main` from `0ccf369`, including ID artwork/signature commit `52a5e23` and expandable Land Plots cards. No migration, account operation, dependency installation or operational data write ran.
+
+- Verified private backup: 21 tables / 9,305 rows, 3,372,922 compressed bytes; SHA-256 `f1e24a5a30026827db0861bb21160f0552fe5f6914a4ef9afafa6cdd6bb9cde8`. Prior tracked runtime, served public directory and environment were archived outside public directories. All table fingerprints and the environment remained unchanged, including Ramos account assignments.
+- Mirrored `farmer-id-card.css`, both card-art SVGs and `farmers-maps.js`. All four source/served hashes match. New SVGs require 0644 permissions in both public directories: their initial restrictive creation permissions caused HTTP 403 and were corrected before completion. All four public URLs and sign-in now return HTTP 200.
+- Configuration, route and Blade caches rebuilt. PHP 8.3.33 passed changed PHP syntax and a private, authorized Ramos ID render confirming cardholder and office signature lines, correct name/title and shared artwork. Another office's signatory is excluded. No protected page HTML or farmer data was emitted.
+- Local verification passed 8 signature tests / 35 assertions, 5 workspace tests / 29 assertions, 9 JavaScript tests, syntax, Blade compilation and whitespace checks. Live browser print/PNG export and interactive Land Plots expansion were not repeated. Signature lines are unsigned until signed by hand after printing; no digital signature image is stored.
+
 ## Verified Hostinger follow-up — October 4, 2026 — longer Lot Series references
 
 Runtime `77a1e41` was pushed to GitHub main and installed through `git pull --ff-only origin main` from `3f79957`. Only `2026_10_04_000100_expand_rice_seed_lot_series.php` ran by explicit path with `--force`. The nullable Lot Series column is now TEXT, retaining its original charset/collation. Import and manual entry support 10,000 characters; rollback refuses to truncate longer stored references.

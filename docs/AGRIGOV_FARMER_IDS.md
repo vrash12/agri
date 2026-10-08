@@ -1,5 +1,7 @@
 # AgriGOV farmer IDs
 
+The October 7 artwork and signature-line changes deployed on Hostinger on October 8, 2026 in runtime `18cf956`. Both SVG overlays and the stylesheet were mirrored to the served public directory and verified over HTTP; new public SVG files require 0644 permissions. The authorized server render confirms Ramos office and cardholder lines without altering account or farmer records. See `docs/GITHUB_DEPLOYMENT.md` for backup, verification and live print/PNG limitations.
+
 ## ID-style design details — October 7, 2026
 
 Two artwork overlays sit above the existing `farmer-card-background.svg`: `farmer-card-front-art.svg` (top green/gold strip, a fine-line guilloche rosette, grain-ear accents beside the title, a microtext rule in place of the plain divider, gold photo corners, and the patterned footer band) and `farmer-card-back-art.svg` (the patterned header band with grain ears and a faint rosette). The CSS card layers each overlay over the background, and the canvas export draws the same files, so screen, print and PNG stay identical; the export still refuses to run if any artwork fails to load.
