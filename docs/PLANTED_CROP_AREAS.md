@@ -108,3 +108,7 @@ model the provider's missing-ring behavior and cover start, finish, serializatio
 undo, outside-point refusal, cancellation/restart, unfinished-submit refusal and
 the fifty-corner limit. All 25 focused JavaScript tests and syntax/whitespace
 checks pass. No migration or record conversion is needed.
+
+Correction deployed on Hostinger in runtime `437b645` on October 9, 2026.
+Existing records, including crop drawings, and environment were preserved;
+the versioned live editor script matches both public copies. No migration ran.

@@ -1,5 +1,11 @@
 # GitHub-to-Hostinger deployment
 
+## Verified Hostinger correction — October 9, 2026 — empty crop drawing ring
+
+Runtime `437b645` was pushed to GitHub main and installed through Hostinger fast-forward pull from `163cac2`. New polygon drafts now explicitly create their first MVCArray ring before any path access. The earlier synthetic provider adapter always supplied a ring, so it missed this provider behavior; three new regressions reproduce it and cover draft start/corners/finish/serialization, undo/cancel/restart, outside points, unfinished submission and the 50-corner bound. All 25 JavaScript tests, syntax and whitespace checks pass.
+
+A private verified backup covers 21 tables / 9,345 rows, 3,374,571 compressed bytes, SHA-256 `c553472732df2896e634220bcbafb7e61ce1845f3d279465ad95f87b23141122`; prior runtime, affected served script and environment were preserved outside the document root. All existing table row fingerprints, including recorded crop sections, and environment matched after installation. No migration, account or operational-record change ran. Both public script copies match with 0644 permissions; the live filemtime-versioned HTTPS script hash matches, and sign-in returns HTTP 200. Compiled views refreshed, server renders/layer checks passed and maintenance ended. Real-user satellite drawing/save has not been repeated; reload the open crop editor to receive its new versioned script.
+
 ## Verified Hostinger release — October 8, 2026 — crop areas and multiple animals
 
 Runtime `571a408` was pushed to GitHub main and installed through Hostinger `git pull --ff-only origin main` from `f2e9cac`, on PHP 8.3.33. Staff can draw separate crop sections inside a parcel and record multiple animals/groups under one owner.
