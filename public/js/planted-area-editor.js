@@ -104,6 +104,8 @@
         selected=-1;shapes.forEach(s=>s.setEditable(false));drawing=true;outline.setOptions({clickable:true});
         const color=config.colors[byId('plantedCrop').value];
         draft=new google.maps.Polygon({map,paths:[],clickable:false,strokeColor:color,fillColor:color,strokeWeight:3,fillOpacity:.25,zIndex:10});
+        // An empty paths array contains no ring, so getPath() may be undefined.
+        draft.setPath(new google.maps.MVCArray());
         sync();renderList();status('Click or tap corners inside the white parcel outline, then choose Finish boundary.');
       });
       byId('plantedFinish').addEventListener('click',()=>{

@@ -96,3 +96,15 @@ authorized drawing/save/season filtering and served asset hashes. Schema
 rollback drops the new drawings, so preserve them privately before reversing;
 legacy classifications remain. Only the targeted additive schema migration ran during this release; no
 account, seed, parcel-boundary or operational-record changes ran.
+
+
+## October 9 empty-draft correction
+
+A newly created Google Maps polygon with `paths: []` can have no first ring,
+so `getPath()` is undefined. The editor now calls `setPath(new MVCArray())`
+before reading or adding draft corners. This preserves the drawing workflow,
+containment checks, stored boundaries and save payload. Three editor regressions
+model the provider's missing-ring behavior and cover start, finish, serialization,
+undo, outside-point refusal, cancellation/restart, unfinished-submit refusal and
+the fifty-corner limit. All 25 focused JavaScript tests and syntax/whitespace
+checks pass. No migration or record conversion is needed.
