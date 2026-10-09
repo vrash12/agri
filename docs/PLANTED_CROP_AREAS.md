@@ -112,3 +112,112 @@ checks pass. No migration or record conversion is needed.
 Correction deployed on Hostinger in runtime `437b645` on October 9, 2026.
 Existing records, including crop drawings, and environment were preserved;
 the versioned live editor script matches both public copies. No migration ran.
+
+
+## October 9 workspace design follow-up — local
+
+The season page uses a three-part flow: choose season, mark planted areas, save.
+A larger map sits beside crop controls on desktop; phone layouts put crop controls
+before the map and recorded areas after it. Drawing actions appear only during a
+draft; edit controls identify the selected area. Optional area names/varieties,
+keyboard guidance, season notes and earlier records use native disclosures.
+Validation errors reveal their record fields, period pagination keeps history
+open, and parent-version conflicts provide a reload link. A sticky Save season
+bar reports draft/unsaved state. Crop summaries follow completed sections.
+
+The existing routes, policies, CSRF, scope/version tokens, stored parcel boundaries
+and exact server containment validation are unchanged. New stylesheet:
+`public/css/planted-area-editor.css`; changed seasonal page/editor partial and
+`public/js/planted-area-editor.js` must deploy together. Mirror the stylesheet and
+script to both Hostinger public directories and refresh Blade views. No migration
+or production data change is required. This design follow-up remains local.
+
+Verification: 18 seasonal crop PHP tests / 143 assertions, four editor JavaScript
+regressions (including contextual actions and automatic crop summaries), the prior
+22 layer/map tests, syntax, Pint, Blade compilation and whitespace checks. Synthetic
+browser checks passed independent corn/rice drawings, serialization, outside-point
+refusal, cancel/removal and desktop/390px layout without editor overflow. Google
+satellite rendering and real-user interaction have not been repeated.
+
+
+## Illustrated crop badges and selection motion — local
+
+`public/js/crop-area-badges.js` supplies code-native, colored SVG crop stickers
+for rice, corn, vegetables, roots, fruit, legumes, mixed and other crops. Known
+crop codes select static paths; labels use text nodes. No external illustration
+service, new package, credentials or public farmer data is used.
+
+A bounded scan of at most 50 corners chooses an interior geographic anchor for
+concave polygons rather than assuming the centroid is inside. Editor badges use
+Google Maps OverlayView, move after boundary edits, select the area by button or
+keyboard, and hide during drawing or when the projected area is too small.
+Selection runs two gentle bounce cycles and the existing boundary highlight;
+reduced-motion skips both. Repeated selection cancels the previous badge animation.
+No idle animation loop or camera-driven geometry recomputation is introduced.
+
+The selected-owner 3D workspace uses the existing SVG template marker mechanism
+for passive crop labels, at most one per section. It reuses markers with polygons,
+obeys crop filters, edit/visibility state and clears on selection changes. Labels
+are hidden beyond 6,000 meters camera range and use optional collision handling.
+Select the colored boundary for its crop/variety and brief highlight. Badges mark
+recorded crop areas, not live growth or officially surveyed boundaries.
+
+All 31 focused JavaScript tests pass, including anchor containment, unsafe input,
+SVG/text safety, relocation/cleanup, reduced motion, finite animation, marker
+reuse, filters and range visibility. Synthetic desktop/390px browser checks confirm
+corn/rice icons inside their areas, drawing, serialization, removal and no overflow.
+Real Google Maps marker rendering remains an integration check. Install the new
+helper in both public directories and load it before editor/workspace scripts;
+include the pending workspace stylesheet and view changes. No migration or record
+change is required. This follow-up is local, not pushed or deployed.
+
+References: [Google Maps custom overlays](https://developers.google.com/maps/documentation/javascript/customoverlays)
+and [3D marker graphics](https://developers.google.com/maps/documentation/javascript/3d/marker-graphics).
+
+
+## Numbered draft corners and connected lines — local
+
+`public/js/map-drawing-guide.js` makes the first corner immediately visible as a
+numbered green dot. A blue open line connects the second and later clicks, with a
+numbered dot at every crop-area corner. The editor reuses dot overlays as points
+change; undo, finish and cancel remove the corresponding dots/line. Guide marks
+are display-only and are never added to saved geometry. The crop area limit,
+containment/non-overlap checks and minimum of three corners remain unchanged.
+
+The main parcel tool uses the same numbered SVG dot artwork. New parcel creation
+now accepts consecutive map clicks beyond the fourth corner until staff save or
+cancel. Existing-parcel edits continue to insert points through edges or move a
+selected corner; overlap checks remain intact. The first dot is green, other dots
+blue and a selected parcel corner yellow. Existing dot/line cleanup is preserved.
+Load the new guide before both map scripts and mirror it to both public directories
+when deploying the pending interface release. No migration or production data
+operation is required; this follow-up is local.
+
+Focused tests cover immediate first-dot feedback, second-click line creation,
+numbering, overlay reuse, undo/cancel cleanup, Maps LatLng inputs, unchanged source
+coordinates, a fifth parcel click and existing edit-mode behavior. Synthetic browser
+screenshots verify the first two crop corners and guide cleanup after finishing.
+
+
+## Saved icons on the main map — local
+
+Saved crop-area outlines and icons now load automatically for the selected
+farmer, independently of the optional parcel-classification recoloring layer.
+The same bounded authenticated endpoint, selected-owner cache, retry/error states,
+visibility/edit controls and zoom/collision limits remain. Clearing the selected
+farmer hides cached crop icons immediately; no global crop geometry is requested.
+Year/season controls apply to these records even when saved parcel colors are used.
+
+Back to parcel map carries the editor's municipality, farmer, year and season.
+The map validates its `map_farmer`, `crop_year` and `crop_season` query context,
+then opens that farmer through the existing authorized detail workflow after
+parcel loading. Scope checks remain server-side; URL values do not grant access.
+Each crop icon comes from a persisted crop-area record for that period. Unknown
+or unrecorded areas do not gain an invented crop icon.
+
+Verification: 19 PHP season tests / 151 assertions, including save/reopen/return
+context and the selected-period geometry response, and 37 JavaScript tests,
+including automatic loading with recoloring off, owner-only selection, clearing
+cached labels, period validation and overlay reuse. No migration or data conversion.
+The updated editor view, crop controls, badge helper and main map script are part
+of the pending local interface release and must deploy together. Not deployed.

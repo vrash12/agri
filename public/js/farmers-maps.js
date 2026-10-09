@@ -1347,7 +1347,12 @@ var PopoverElement = maps3d.PopoverElement;
         refreshPlantedAreas(false);
       }
     }) : null;
-    var cropSettings = { enabled: false, year: new Date().getFullYear(), season: 'dry', filter: 'all' };
+    var currentCropYear = new Date().getFullYear();
+    var initialCropContext = window.CropAreaBadges?.mapContext(window.location.search, currentCropYear) || {year:currentCropYear,season:'dry',farmerId:null};
+    var cropSettings = { enabled: false, year: initialCropContext.year, season: initialCropContext.season, filter: 'all' };
+    var cropYearInput = document.getElementById('parcelCropYear'), cropSeasonInput = document.getElementById('parcelCropSeason');
+    if (cropYearInput) cropYearInput.value = cropSettings.year;
+    if (cropSeasonInput) cropSeasonInput.value = cropSettings.season;
     function loadCropLayer(force) {
       if (!cropLayer) return;
       return cropLayer.load(cropSettings, savedPlotOverlays.map(function (overlay) { return overlay.plotId; }), !!force);
@@ -1383,7 +1388,8 @@ var PopoverElement = maps3d.PopoverElement;
       if (!plantedAreaLayer) return;
       var ids = savedPlotOverlays.filter(function (overlay) { return String(overlay.farmerId) === String(selectedFarmerId); }).map(function (overlay) { return overlay.plotId; });
       if (focusedCropPlotId && ids.some(function (id) { return String(id) === String(focusedCropPlotId); })) ids = [focusedCropPlotId];
-      return plantedAreaLayer.load(cropSettings, ids, !!force);
+      // Saved icons belong to the selected farmer; parcel recoloring is optional.
+      return plantedAreaLayer.load({enabled:true,year:cropSettings.year,season:cropSettings.season}, ids, !!force);
     }
     function renderPlantedAreas(state) {
       var status = document.getElementById('plantedAreaLayerStatus');
@@ -1391,15 +1397,15 @@ var PopoverElement = maps3d.PopoverElement;
       if (retry) retry.hidden = state.status !== 'error';
       if (status) status.textContent = state.status === 'error' ? state.error
         : state.status === 'loading' ? 'Loading planted sections for the selected farmer…'
-        : state.status === 'off' ? 'Select a farmer and enable Crops by season to see planted-area boundaries.'
+        : state.status === 'off' ? 'Select a farmer to see saved crop icons and planted-area boundaries.'
         : (state.records.some(function (row) { return row.needs_review; }) ? 'Some sections need office review after a parcel boundary change. ' : '')
           + (state.partial ? 'Showing sections for the first 20 plots. Use Focus on another plot to see its sections. ' : '')
-          + 'Colored section boundaries show recorded crops. Select a section to highlight its crop and variety.';
+          + cropSettings.year + ' · ' + (cropSettings.season === 'dry' ? 'Dry season' : 'Wet season') + '. Crop icons show saved planted areas. Select a boundary to highlight its crop and variety.';
       var key = state.status;
       if (key !== plantedAreaKey || state.records !== plantedAreaRecords) {
         plantedAreaKey = key;
         plantedAreaRecords = state.records;
-        plantedAreaOverlays.forEach(function (item) { setOverlayVisible(item.poly, false); });
+        plantedAreaOverlays.forEach(function (item) { setOverlayVisible(item.poly, false); if (item.badge) setOverlayVisible(item.badge, false); });
         plantedAreaOverlays = [];
         if (state.status === 'ready' && Polygon3DInteractiveElement) state.records.forEach(function (record) {
           record.areas.forEach(function (area) {
@@ -1414,13 +1420,25 @@ var PopoverElement = maps3d.PopoverElement;
                 setTimeout(function () { poly.strokeWidth = 2; }, 700);
               }
             });
-            plantedAreaOverlays.push({plotId: record.plot_id, crop: area.crop, poly: poly});
+            var badge = null;
+            if (window.CropAreaBadges && typeof Marker3DElement !== 'undefined' && Marker3DElement) {
+              var anchor = window.CropAreaBadges.position(area.polygon);
+              if (anchor) {
+                badge = new Marker3DElement({position: anchor, altitudeMode: AltitudeMode.CLAMP_TO_GROUND,
+                  sizePreserved: true, drawsWhenOccluded: false,
+                  collisionBehavior: google.maps.CollisionBehavior.OPTIONAL_AND_HIDES_LOWER_PRIORITY, zIndex: 18});
+                badge.replaceChildren(window.CropAreaBadges.template(document, area.crop));
+              }
+            }
+            plantedAreaOverlays.push({plotId: record.plot_id, crop: area.crop, poly: poly, badge: badge});
           });
         });
       }
       plantedAreaOverlays.forEach(function (area) {
         var parent = savedPlotOverlays.find(function (overlay) { return String(overlay.plotId) === String(area.plotId); });
-        setOverlayVisible(area.poly, !!parent && shouldShowSavedPlot(parent) && (cropSettings.filter === 'all' || cropSettings.filter === area.crop));
+        var visible = !!parent && String(parent.farmerId) === String(selectedFarmerId) && shouldShowSavedPlot(parent) && (!cropSettings.enabled || cropSettings.filter === 'all' || cropSettings.filter === area.crop);
+        setOverlayVisible(area.poly, visible);
+        if (area.badge) setOverlayVisible(area.badge, visible && Number(map3d.range) <= 6000);
       });
     }
     var plantedRetry = document.getElementById('plantedAreaRetry');
@@ -3984,7 +4002,7 @@ var h = colorHexInput ? colorHexInput.value : (colorInput ? colorInput.value : '
         } else if (plotVertices.length < 4) {
           setStatus('Plot mode', 'Point ' + plotVertices.length + ' added. Click point ' + (plotVertices.length + 1) + '.');
         } else {
-          setStatus('Draft ready', 'Click a blue edge to add more points, or click a corner to move it.');
+          setStatus('Draft ready', editingPlotId ? 'Click an edge to add a corner, or select a numbered dot to move it.' : 'Click the map to add the next corner, or save when your boundary is complete.');
         }
       }
     }
@@ -4092,7 +4110,7 @@ for (var i19 = 0; i19 < plotVertices.length; i19++) {
       drawsWhenOccluded: true
     });
 
-    dot.replaceChildren(buildCornerHandleTemplate(idx === selectedVertexIndex));
+    dot.replaceChildren(window.MapDrawingGuide ? window.MapDrawingGuide.dotTemplate(document, idx, idx === selectedVertexIndex) : buildCornerHandleTemplate(idx === selectedVertexIndex));
 
     dot.addEventListener("click", function (ev) {
       if (ev && ev.stopPropagation) ev.stopPropagation();
@@ -4276,7 +4294,7 @@ function addDraftVertex(lat, lng) {
   if (plotVertices.length < 4) {
     toast("Point " + plotVertices.length + " added.", "ok");
   } else {
-    setStatus("Draft ready", "Use an edge to add more points or click a corner to move it.");
+    setStatus("Draft ready", "Click the map to add the next corner, or save when your boundary is complete.");
   }
 }
 
@@ -4326,8 +4344,8 @@ function nudgeSelectedVertex(latStep, lngStep) {
   var plots = findSelectedFarmerPlots();
   syncSuggestedPlotName(plots, true);
 
-  setStatus("Plot mode", "Click the map to place point 1 of 4.");
-  toast("Plot mode enabled. Click 4 points on the map.", "ok");
+  setStatus("Plot mode", "Click the first corner. Each next click adds a numbered dot and connects the boundary.");
+  toast("Click at least 3 corners around the land, then save the boundary.", "ok");
 }
 
     var moduleEl = document.getElementById('farmersMapModule');
@@ -4554,7 +4572,7 @@ if (selectedVertexIndex < 0) return;
       }
     });
 
-  map3d.addEventListener("gmp-click", function (ev) {
+  function handleParcelMapClick(ev) {
   if (plotMode) {
     var pos = ev.position;
     if (!pos) return;
@@ -4567,7 +4585,7 @@ if (selectedVertexIndex < 0) return;
     }
 
     // only allow direct point adding during new plot creation
-    if (!editingPlotId && plotVertices.length < 4) {
+    if (!editingPlotId) {
       addDraftVertex(ll.lat, ll.lng);
       return;
     }
@@ -4578,7 +4596,8 @@ if (selectedVertexIndex < 0) return;
   }
 
   popover.open = false;
-});
+  }
+  map3d.addEventListener("gmp-click", handleParcelMapClick);
 
 window.__openFarmer3d = function (id, opts) {
   opts = opts || {};
@@ -4667,6 +4686,7 @@ if (mapGeocodedPillEl) {
 try {
   await loadAllMunicipalPlots();
   zoomToAllLoadedPlots();
+  if (initialCropContext.farmerId) await window.__openFarmer3d(initialCropContext.farmerId, {focusParcels:true});
 } catch (err) {
   console.error(err);
   setStatus('Plot loading failed.', '');

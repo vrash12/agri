@@ -1,5 +1,5 @@
 <details class="parcel-tool-group parcel-crop-controls" id="parcelCropControls">
-  <summary class="parcel-tool-label">Crops by season <span>Recorded parcel crops</span></summary>
+  <summary class="parcel-tool-label">Crop icons &amp; season <span>Saved crops on the map</span></summary>
   <div class="parcel-crop-fields">
     <label for="parcelCropMode">Map layer<select id="parcelCropMode"><option value="saved">Saved parcel colors</option><option value="crops">Crops by season</option></select></label>
     <label for="parcelCropYear">Year<input id="parcelCropYear" type="number" min="1990" max="{{ \App\Support\LocalTime::now()->year + 1 }}" value="{{ \App\Support\LocalTime::now()->year }}" required></label>
@@ -10,9 +10,9 @@
   </div>
   <p id="parcelCropStatus" role="status">Waiting for the parcel map to load. Saved parcel colors are shown first.</p>
   <div id="parcelCropLegend" class="parcel-crop-legend" aria-label="Seasonal crop legend"></div>
-  <p id="plantedAreaLayerStatus" role="status">Select a farmer and enable Crops by season to see planted-area boundaries.</p>
+  <p id="plantedAreaLayerStatus" role="status">Select a farmer to see saved crop icons and planted-area boundaries.</p>
   <button type="button" class="btn btn-soft btn-sm" id="plantedAreaRetry" hidden>Retry crop boundaries</button>
-  <p class="parcel-crop-help">Choose a farmer, then use Crop areas / season beside a parcel to draw its planted sections. Click Focus to highlight a parcel and its crop sections. Colors describe the selected season; they do not confirm current growth. Mapped hectares are approximate. Unmarked land stays unclassified. Gray means Not recorded, not fallow.</p>
+  <p class="parcel-crop-help">Crop icons appear automatically for the selected farmer's saved crop areas. Use Crop areas / season beside a parcel to record them. Choose the year and season, then apply to view another period; parcel recoloring is optional. Click Focus to highlight a parcel and its crop sections. These records do not confirm current growth. Mapped hectares are approximate. Unmarked land stays unclassified. Gray means Not recorded, not fallow.</p>
 </details>
 <style>
   #farmersMapModule .parcel-tool-group.parcel-crop-controls { grid-column:1 / -1; min-width:0; border-right:0; border-top:1px solid var(--ui-border); }

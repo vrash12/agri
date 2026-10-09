@@ -94,3 +94,20 @@ test('draft point limit and three-corner finish guard work with a real empty rin
   assert.equal(e.polygons.at(-1).getPath().getLength(), 50);
   assert.match(e.byId('plantedMapStatus').textContent, /50 corners/);
 });
+
+test('controls follow drawing state and the whole-parcel crop follows finished sections', () => {
+  const e = editor();
+  assert.equal(e.byId('plantedDraftActions').hidden, true);
+  e.click('plantedStart');
+  assert.equal(e.byId('plantedIdleActions').hidden, true);
+  assert.equal(e.byId('plantedCrop').disabled, true);
+  assert.match(e.byId('plantedSaveState').textContent, /Finish or cancel/);
+  e.point(15.6, 120.47); e.point(15.6, 120.4705); e.point(15.6005, 120.47);
+  e.click('plantedFinish');
+  assert.equal(e.byId('plantedDraftActions').hidden, true);
+  assert.equal(e.byId('plantedUpdate').hidden, false);
+  assert.equal(e.byId('plantedCrop').disabled, false);
+  assert.equal(e.byId('crop').value, 'corn');
+  assert.equal(e.byId('plantedAreaCount').textContent, '1/8');
+  assert.match(e.byId('plantedSaveState').textContent, /Unsaved changes/);
+});

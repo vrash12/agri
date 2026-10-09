@@ -1,0 +1,63 @@
+.seasonal-crop-page{max-width:1400px;margin:0 auto}
+.seasonal-crop-page .module-header{align-items:center}
+.seasonal-crop-page .module-header h1{font-size:clamp(24px,2.4vw,30px)}
+.seasonal-crop-page .crop-context{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.seasonal-crop-page .crop-context span{font-size:13px;padding:5px 9px;background:var(--ui-surface-subtle);border:1px solid var(--ui-border);border-radius:6px}
+.seasonal-crop-page .crop-period-panel{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:16px 20px}
+.seasonal-crop-page .crop-period-label,.seasonal-crop-page .crop-section-heading{display:flex;align-items:center;gap:12px}
+.seasonal-crop-page .crop-period-label h2{font-size:16px;margin:0}
+.seasonal-crop-page .crop-period-label p,.seasonal-crop-page .crop-save-bar p{margin:4px 0 0;color:var(--ui-text-muted);font-size:13px}
+.seasonal-crop-page .crop-step{display:flex;align-items:center;justify-content:center;width:30px;height:30px;flex:none;border:1px solid var(--ui-primary);border-radius:50%;background:var(--ui-accent-soft);color:var(--ui-text);font-size:14px;font-weight:700}
+.seasonal-crop-page .crop-period-actions{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.seasonal-crop-page .crop-period-actions .module-form-field{width:150px}
+.seasonal-crop-page .crop-period-actions .module-button{margin-bottom:0}
+.seasonal-crop-page .planted-workspace{display:grid;grid-template-columns:minmax(0,1fr) 320px}
+.seasonal-crop-page .planted-map-panel{min-width:0;padding:16px}
+.seasonal-crop-page .planted-map-heading{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding-bottom:12px;font-size:14px}
+.seasonal-crop-page .planted-map-heading span{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ui-text-muted)}
+.seasonal-crop-page .planted-outline-key{width:18px;height:12px;background:var(--ui-text);border:3px solid white;outline:1px solid var(--ui-control-border);border-radius:2px}
+.seasonal-crop-page .planted-area-map{position:relative;overflow:hidden;height:clamp(380px,52vh,620px);width:100%;border:1px solid var(--ui-control-border);border-radius:8px;background:var(--ui-surface-subtle)}
+.seasonal-crop-page #plantedMapStatus{margin:12px 0 0;padding:10px 12px;background:var(--ui-primary-soft);border-left:3px solid var(--ui-primary);border-radius:4px;color:var(--ui-text);font-size:14px;line-height:1.5;min-height:44px}
+.seasonal-crop-page .planted-control-panel{min-width:0;border-left:1px solid var(--ui-border);background:var(--ui-surface)}
+.seasonal-crop-page .planted-section-form,.seasonal-crop-page .planted-sections{padding:20px}
+.seasonal-crop-page .planted-section-form{border-bottom:1px solid var(--ui-border)}
+.seasonal-crop-page .planted-control-panel h3{margin:0;font-size:16px}
+.seasonal-crop-page .planted-section-form>.module-hint{margin:6px 0 16px}
+.seasonal-crop-page .planted-list-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.seasonal-crop-page #plantedAreaCount{padding:3px 7px;background:var(--ui-surface-subtle);border-radius:4px;font-size:12px}
+.seasonal-crop-page #plantedAreaSummary{margin:8px 0 14px}
+.seasonal-crop-page .planted-area-list{display:grid;gap:10px;font-size:14px;line-height:1.5}
+.seasonal-crop-page .planted-area-item{display:grid;grid-template-columns:16px minmax(0,1fr);align-items:start;gap:8px;padding:12px;border:1px solid var(--ui-border);border-radius:8px}
+.seasonal-crop-page .planted-area-item.is-selected{border-color:var(--ui-primary);background:var(--ui-primary-soft)}
+.seasonal-crop-page .planted-area-item p{margin:0;overflow-wrap:anywhere}
+.seasonal-crop-page .planted-area-actions{grid-column:2;display:flex;gap:8px;flex-wrap:wrap}.seasonal-crop-page .planted-area-item button{min-height:44px;font-size:13px;padding:8px 12px}
+.seasonal-crop-page .planted-area-swatch{width:14px;height:14px;margin-top:4px;border:1px solid var(--ui-text);border-radius:3px}
+.seasonal-crop-page .planted-idle-actions,.seasonal-crop-page .planted-draft-actions{display:grid;gap:10px;margin-top:16px}
+.seasonal-crop-page .planted-secondary-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.seasonal-crop-page [hidden]{display:none!important}
+.seasonal-crop-page .planted-help,.seasonal-crop-page .planted-section-details,.seasonal-crop-page .planted-keyboard{margin-top:12px;font-size:13px;color:var(--ui-text-muted)}
+.seasonal-crop-page summary{cursor:pointer;min-height:44px;padding:12px 0;color:var(--ui-text);line-height:1.4}
+.seasonal-crop-page summary:focus-visible{outline:2px solid var(--ui-focus);outline-offset:3px;border-radius:4px}
+.seasonal-crop-page .planted-help div{line-height:1.6}
+.seasonal-crop-page .planted-help ol{padding-left:20px;margin-top:4px}
+.seasonal-crop-page .planted-section-details summary span{font-size:12px;color:var(--ui-text-muted);margin-left:4px}
+.seasonal-crop-page .planted-section-details .module-form-field{margin-bottom:12px}
+.seasonal-crop-page .planted-keyboard .module-button{width:100%;white-space:normal}
+.seasonal-crop-page .crop-record-details{border-top:1px solid var(--ui-border)}
+.seasonal-crop-page .crop-record-details>summary{padding:16px 20px;font-size:14px;font-weight:600}
+.seasonal-crop-page .crop-save-bar{position:sticky;bottom:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 20px;border-top:1px solid var(--ui-border);background:var(--ui-surface);border-radius:0 0 10px 10px}
+.seasonal-crop-page .crop-save-bar .module-button{min-width:150px}
+.seasonal-crop-page .crop-history>summary{padding:16px 20px;font-weight:600}
+.seasonal-crop-page .crop-history>summary span{font-weight:400;font-size:13px;color:var(--ui-text-muted);margin-left:10px}
+.seasonal-crop-page .crop-record-note{font-size:13px;color:var(--ui-text-muted);line-height:1.6}
+.seasonal-crop-page .crop-footnote{margin:0 4px}
+.seasonal-crop-page .crop-readonly-note{border-top:1px solid var(--ui-border);font-size:14px}
+@media(max-width:1050px){.seasonal-crop-page .planted-workspace{grid-template-columns:minmax(0,1fr) 280px}.seasonal-crop-page .planted-section-form,.seasonal-crop-page .planted-sections{padding:16px}.seasonal-crop-page .crop-period-panel{align-items:flex-start;flex-direction:column;gap:14px}.seasonal-crop-page .crop-period-actions{width:100%}.seasonal-crop-page .crop-period-actions .module-form-field{flex:1}}
+@media(max-width:760px){.seasonal-crop-page .planted-workspace{grid-template-columns:minmax(0,1fr)}.seasonal-crop-page .planted-control-panel{border-left:0;border-top:1px solid var(--ui-border)}.seasonal-crop-page .planted-area-map{position:relative;overflow:hidden;height:350px}.seasonal-crop-page .planted-map-panel{padding:12px}.seasonal-crop-page .crop-period-actions .module-form-field{flex:1 1 110px;min-width:0}.seasonal-crop-page .crop-period-actions .module-button{width:100%}.seasonal-crop-page .module-header{align-items:flex-start}.seasonal-crop-page .crop-save-bar{padding:12px;align-items:flex-start;flex-wrap:wrap}.seasonal-crop-page .crop-save-bar .module-button{flex:1 1 120px}.seasonal-crop-page .crop-save-bar .crop-section-heading{flex:1 1 180px}.seasonal-crop-page .crop-save-bar p{max-width:260px}.seasonal-crop-page .crop-step{width:26px;height:26px}}
+@media(max-width:760px){.seasonal-crop-page .planted-workspace{display:flex;flex-direction:column}.seasonal-crop-page .planted-control-panel{display:contents}.seasonal-crop-page .planted-section-form{order:-1}.seasonal-crop-page .planted-map-panel{order:0;border-top:1px solid var(--ui-border)}.seasonal-crop-page .planted-sections{order:1;border-top:1px solid var(--ui-border)}}
+/* Geographic badge coordinates stay on the outer button; animate only on selection. */
+.seasonal-crop-page .crop-map-badge{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px;max-width:150px;padding:7px 10px;border:2px solid var(--ui-text);border-radius:12px;background:var(--ui-surface);color:var(--ui-text);font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.18)}
+.seasonal-crop-page .crop-map-badge svg{flex:none}
+.seasonal-crop-page .crop-map-badge.is-selected{border-color:var(--ui-primary);background:var(--ui-accent-soft)}
+.seasonal-crop-page .crop-map-badge:focus-visible{outline:3px solid var(--ui-focus);outline-offset:3px}
+.seasonal-crop-page .crop-map-badge:disabled{cursor:default}

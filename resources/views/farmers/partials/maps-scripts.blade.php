@@ -8,6 +8,8 @@ window.__parcelCropEditUrl = @json(route('farm-plots.seasonal-crops.edit', ['plo
 </script>
 <script src="{{ asset('js/parcel-crop-layer.js') }}?v={{ @filemtime(public_path('js/parcel-crop-layer.js')) ?: 1 }}"></script>
 <script src="{{ asset('js/planted-area-layer.js') }}?v={{ @filemtime(public_path('js/planted-area-layer.js')) ?: 1 }}"></script>
+<script src="{{ asset('js/crop-area-badges.js') }}?v={{ @filemtime(public_path('js/crop-area-badges.js')) ?: 1 }}"></script>
+<script src="{{ asset('js/map-drawing-guide.js') }}?v={{ @filemtime(public_path('js/map-drawing-guide.js')) ?: 1 }}"></script>
 @php($parcelDisplayScriptVersion = @filemtime(public_path('js/parcel-display-geometry.js')) ?: 1)
 <script src="{{ asset('js/parcel-display-geometry.js') }}?v={{ $parcelDisplayScriptVersion }}"></script>
 {{-- KMZ import unzips in the browser, so JSZip is fetched only when a KMZ is

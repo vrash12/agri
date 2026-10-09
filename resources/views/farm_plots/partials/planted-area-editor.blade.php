@@ -4,43 +4,51 @@
   if (!is_array($areaDraft)) $areaDraft = [];
   $areaDraft = array_slice(array_values($areaDraft), 0, 8);
 @endphp
-<div class="module-form-body planted-area-editor" id="plantedAreaEditor">
-  <h3>{{ $canDraw ? 'Draw the planted areas' : 'Recorded planted areas' }}</h3>
-  <p>Keep the parcel outline as the outside boundary. Draw a smaller boundary for each planted section, such as Corn and Rice. Areas may touch but cannot overlap. These are recorded planning areas, not proof of current growth.</p>
+<div class="planted-area-editor" id="plantedAreaEditor">
   @if($canDraw)
     <input type="hidden" name="_plot_version" value="{{ old('_plot_version', $plotVersion) }}">
     <input type="hidden" name="planted_areas" id="plantedAreasInput" value="{{ json_encode($areaDraft) }}">
-    <div class="module-form-grid">
-      <div class="module-form-field"><label for="plantedCrop">Crop in this section</label><select class="module-input" id="plantedCrop">@foreach($cropChoices as $code => $label) @if($code !== 'not_recorded')<option value="{{ $code }}">{{ $label }}</option>@endif @endforeach</select></div>
-      <div class="module-form-field"><label for="plantedName">Section name <span class="module-hint">Optional</span></label><input class="module-input" id="plantedName" maxlength="80" placeholder="e.g. Corn beside the road"></div>
-      <div class="module-form-field"><label for="plantedVariety">Seed / crop variety <span class="module-hint">Optional</span></label><input class="module-input" id="plantedVariety" maxlength="80" placeholder="Enter the recorded variety"></div>
-    </div>
-    <div class="module-actions planted-draw-actions">
-      <button type="button" class="module-button module-button-primary" id="plantedStart" disabled>Draw this crop area</button>
-      <button type="button" class="module-button" id="plantedFinish" disabled>Finish boundary</button>
-      <button type="button" class="module-button" id="plantedUndo" disabled>Undo last point</button>
-      <button type="button" class="module-button" id="plantedCenter" disabled>Add map center as corner</button>
-      <button type="button" class="module-button" id="plantedCancel" disabled>Cancel drawing</button>
-      <button type="button" class="module-button" id="plantedUpdate" disabled>Update selected section</button>
-    </div>
   @endif
-  <p id="plantedMapStatus" role="status" aria-live="polite">Loading the parcel map…</p>
-  <div id="plantedAreaMap" class="planted-area-map" aria-label="Parcel and planted crop boundaries"></div>
-  <p class="module-hint">Click or tap to add corners, then finish the boundary. For keyboard entry, move the map with its arrow controls and add the map center as a corner. Choose a saved section to adjust its points. Up to 8 areas, 50 corners per area. Unmarked land remains unclassified. Mapped hectares are approximate and are calculated when saved.</p>
-  <div id="plantedAreaList" class="planted-area-list" aria-label="Planted crop areas"></div>
-  <p id="plantedAreaSummary" role="status"></p>
-  @if($canDraw)<noscript><p>Drawing requires JavaScript. Existing saved boundaries are retained when you save the crop summary.</p></noscript>@endif
+  <div class="planted-workspace">
+    <div class="planted-map-panel">
+      <div class="planted-map-heading"><strong>Your parcel</strong><span><i class="planted-outline-key" aria-hidden="true"></i> White line = parcel boundary</span></div>
+      <div id="plantedAreaMap" class="planted-area-map" aria-label="Parcel and planted crop boundaries" aria-describedby="plantedMapStatus"></div>
+      <p id="plantedMapStatus" role="status" aria-live="polite">Loading the parcel map…</p>
+      <details class="planted-help"><summary>How to mark an area</summary><div><ol><li>Choose the crop and click Start drawing.</li><li>Click at least three corners inside the white outline.</li><li>Finish the boundary, then save the season.</li></ol><p>Separate crops need separate areas. Boundaries may touch, but cannot overlap. Choose Edit area to move existing corners.</p><p>For keyboard drawing, move the map with its arrow controls, then use Add corner at map center. Up to 8 areas, with 50 corners each.</p></div></details>
+    </div>
+    <aside class="planted-control-panel" aria-label="Crop area controls">
+      @if($canDraw)
+        <div class="planted-section-form">
+          <h3 id="plantedControlHeading">Add a crop area</h3>
+          <p class="module-hint" id="plantedControlHint">Which crop is planted here?</p>
+          <div class="module-form-field"><label for="plantedCrop">Crop</label><select class="module-input" id="plantedCrop">@foreach($cropChoices as $code => $label) @if($code !== 'not_recorded')<option value="{{ $code }}">{{ $label }}</option>@endif @endforeach</select></div>
+          <details class="planted-section-details" id="plantedSectionDetails"><summary>Area name and variety <span>Optional</span></summary><div>
+            <div class="module-form-field"><label for="plantedName">Area name</label><input class="module-input" id="plantedName" maxlength="80" placeholder="e.g. Beside the road"></div>
+            <div class="module-form-field"><label for="plantedVariety">Seed / crop variety</label><input class="module-input" id="plantedVariety" maxlength="80" placeholder="e.g. Recorded corn variety"></div>
+          </div></details>
+          <div class="planted-idle-actions" id="plantedIdleActions">
+            <button type="button" class="module-button module-button-primary" id="plantedUpdate" disabled hidden>Apply area details</button>
+            <button type="button" class="module-button module-button-primary" id="plantedStart" disabled>Start drawing</button>
+          </div>
+          <div class="planted-draft-actions" id="plantedDraftActions" hidden>
+            <button type="button" class="module-button module-button-primary" id="plantedFinish" disabled>Finish boundary</button>
+            <div class="planted-secondary-actions"><button type="button" class="module-button" id="plantedUndo" disabled>Undo corner</button><button type="button" class="module-button" id="plantedCancel" disabled>Cancel</button></div>
+            <details class="planted-keyboard"><summary>Draw with the keyboard</summary><button type="button" class="module-button" id="plantedCenter" disabled>Add corner at map center</button></details>
+            <p class="module-hint">Finish this boundary before saving.</p>
+          </div>
+        </div>
+      @endif
+      <section class="planted-sections" aria-labelledby="plantedListHeading"><div class="planted-list-heading"><h3 id="plantedListHeading">Crop areas</h3><span id="plantedAreaCount">{{ count($areaDraft) }}/8</span></div>
+        <p id="plantedAreaSummary" class="module-hint" role="status"></p>
+        <div id="plantedAreaList" class="planted-area-list" aria-label="Planted crop areas"></div>
+      </section>
+    </aside>
+  </div>
+  @if($canDraw)<noscript><p class="module-form-body">Drawing requires JavaScript. Existing saved boundaries are retained when you save the crop summary.</p></noscript>@endif
 </div>
-@push('styles')
-<style>
-  .planted-area-editor .planted-area-map{height:440px;width:100%;margin:14px 0;border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-panel);background:var(--ui-surface-subtle)}
-  .planted-area-editor p{line-height:1.5}.planted-area-editor .planted-draw-actions{margin-top:12px;gap:8px;flex-wrap:wrap}
-  .planted-area-editor .planted-area-list{display:grid;gap:10px}.planted-area-editor .planted-area-item{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:12px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-panel)}
-  .planted-area-editor .planted-area-item p{margin:0;flex:1 1 180px}.planted-area-editor .planted-area-item button{min-height:44px}.planted-area-editor .planted-area-swatch{width:18px;height:18px;flex:none;border:1px solid var(--ui-text);border-radius:3px}
-  @media(max-width:600px){.planted-area-editor .planted-area-map{height:350px}.planted-area-editor .module-actions button{flex:1 1 140px}}
-</style>
-@endpush
 @push('scripts')
 <script id="plantedAreaConfig" type="application/json">{!! json_encode(['polygon' => $plot->polygon_json, 'areas' => $areaDraft, 'crops' => $cropChoices, 'colors' => \App\Models\ParcelCropSeason::COLORS, 'canDraw' => $canDraw, 'key' => config('services.google_maps.key')], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
+<script src="{{ asset('js/map-drawing-guide.js') }}?v={{ @filemtime(public_path('js/map-drawing-guide.js')) ?: 1 }}" defer></script>
+<script src="{{ asset('js/crop-area-badges.js') }}?v={{ @filemtime(public_path('js/crop-area-badges.js')) ?: 1 }}" defer></script>
 <script src="{{ asset('js/planted-area-editor.js') }}?v={{ @filemtime(public_path('js/planted-area-editor.js')) ?: 1 }}" defer></script>
 @endpush

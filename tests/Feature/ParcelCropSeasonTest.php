@@ -37,7 +37,7 @@ class ParcelCropSeasonTest extends TestCase
         $this->assertSame('corn', $record->fresh()->crop);
         $this->assertDatabaseHas('audit_logs', ['module' => 'Seasonal parcel crops', 'event' => 'created', 'municipality_id' => 1]);
         $this->assertDatabaseHas('audit_logs', ['module' => 'Seasonal parcel crops', 'event' => 'updated', 'municipality_id' => 1]);
-        $this->get($this->editUrl().'?year=2026&season=dry')->assertOk()->assertSee('Corn')->assertSee('Save seasonal crop');
+        $this->get($this->editUrl().'?year=2026&season=dry')->assertOk()->assertSee('Corn')->assertSee('Save season');
     }
 
     public function test_stale_first_entry_and_stale_update_are_rejected(): void
@@ -72,7 +72,7 @@ class ParcelCropSeasonTest extends TestCase
     public function test_oversight_can_view_crops_but_cannot_write_and_vets_cannot_access(): void
     {
         foreach ([3, 4] as $id) {
-            $this->actingAs(User::find($id))->get($this->editUrl())->assertOk()->assertDontSee('Save seasonal crop')->assertSee('read-only oversight');
+            $this->actingAs(User::find($id))->get($this->editUrl())->assertOk()->assertDontSee('Save season')->assertSee('Your account can view it.');
             $this->postJson($this->editUrl(), $this->payload())->assertForbidden();
         }
         $this->actingAs(User::find(5))->getJson($this->layerUrl([1]))->assertForbidden();
@@ -169,12 +169,26 @@ class ParcelCropSeasonTest extends TestCase
         $this->getJson(route('farm-plots.planted-area-layer', ['year' => 2026, 'season' => 'dry', 'plot_ids' => [1, 2]]))
             ->assertOk()->assertJsonCount(1, 'records')->assertJsonCount(2, 'records.0.areas')->assertJsonPath('records.0.areas.0.crop', 'corn');
         $this->getJson($this->layerUrl([1]))->assertJsonPath('records.0.has_planted_areas', true)->assertJsonPath('records.0.area_crops', ['corn', 'rice']);
-        $this->get($this->editUrl().'?year=2026&season=dry')->assertOk()->assertSee('Draw the planted areas')->assertSee('Corn section');
+        $this->get($this->editUrl().'?year=2026&season=dry')->assertOk()->assertSee('Mark each planted area')->assertSee('Corn section');
         $audit = DB::table('audit_logs')->where('module', 'Seasonal parcel crops')->first();
         $values = json_decode($audit->new_values, true);
         $this->assertSame(2, $values['planted_area_summary']['count']);
         $this->assertArrayNotHasKey('planted_areas', $values);
         $this->assertStringNotContainsString('120.47', $audit->new_values);
+    }
+
+    public function test_saved_map_link_restores_the_farmer_and_crop_period(): void
+    {
+        $this->prepareParcel();
+        $payload = $this->drawnPayload();
+        $payload['crop_year'] = 2025;
+        $payload['season'] = 'wet';
+        $this->actingAs(User::findOrFail(1))->postJson($this->editUrl(), $payload)->assertRedirect();
+        $mapUrl = route('farmers.index', ['municipality_id' => 1, 'map_farmer' => 1, 'crop_year' => 2025, 'crop_season' => 'wet']).'#farmersMapModule';
+        $this->get($this->editUrl().'?year=2025&season=wet')->assertOk()->assertSee($mapUrl);
+        $this->getJson(route('farm-plots.planted-area-layer', ['year' => 2025, 'season' => 'wet', 'plot_ids' => [1]]))
+            ->assertOk()->assertJsonPath('year', 2025)->assertJsonPath('season', 'wet')
+            ->assertJsonPath('records.0.areas.0.crop', 'corn')->assertJsonCount(2, 'records.0.areas');
     }
 
     public function test_outside_overlapping_and_self_crossing_crop_areas_are_rejected(): void

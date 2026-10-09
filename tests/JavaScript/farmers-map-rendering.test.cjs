@@ -243,22 +243,73 @@ test('planted section overlays reuse GPU objects, follow visibility and respect 
   const status={textContent:''};
   context.document.getElementById=id=>id==='togglePlots'?toggle:id==='plantedAreaLayerStatus'?status:null;
   context.window.matchMedia=()=>({matches:true});
+  let badgeCount=0;
+  context.Marker3DElement=class {constructor(options){Object.assign(this,options);badgeCount++;}replaceChildren(value){this.content=value;}};
+  context.google={maps:{CollisionBehavior:{OPTIONAL_AND_HIDES_LOWER_PRIORITY:'optional'}}};
+  context.window.CropAreaBadges={position:require('../../public/js/crop-area-badges.js').position,template:(_,crop)=>crop};
+  context.map3d.range=3000;
+  context.selectedFarmerId=1;
   context.plantedAreaOverlays=[];context.plantedAreaKey='';context.plantedAreaRecords=null;
-  context.cropSettings={filter:'all'};context.plotMode=false;
+  context.cropSettings={enabled:true,year:2026,season:'dry',filter:'all'};context.plotMode=false;
   vm.runInContext(declaration('renderPlantedAreas'),context);
   const parcel={id:1,farmer_id:1,color:'#123456',polygon_json:ring()};
   context.renderPlotsForFarmer('1',[parcel]);
-  const state={status:'ready',partial:false,records:[{plot_id:1,areas:[{crop:'corn',crop_label:'Corn',name:'Section A',variety:'Recorded variety',color:'#D4A017',area_ha:.4,polygon:ring().slice(0,3)}]}]};
+  const state={status:'ready',partial:false,records:[{plot_id:1,areas:[{crop:'corn',crop_label:'Corn',name:'Section A',variety:'Recorded variety',color:'#D4A017',area_ha:.4,polygon:ring().filter((_,index)=>index%10===0)}]}]};
   context.renderPlantedAreas(state);
   const polygon=context.plantedAreaOverlays[0].poly;
+  const badge=context.plantedAreaOverlays[0].badge;
   context.renderPlantedAreas(state);
   assert.equal(metrics.constructed,2,'One parent and one section; camera refresh must not recreate geometry');
   assert.equal(polygon.isConnected,true);
+  assert.equal(badge.isConnected,true);assert.equal(badge.content,'corn');assert.equal(badgeCount,1,'Camera refresh reuses crop badges');
   toggle.checked=false;context.renderPlantedAreas(state);assert.equal(polygon.isConnected,false);
+  assert.equal(badge.isConnected,false);
   toggle.checked=true;context.cropSettings.filter='rice';context.renderPlantedAreas(state);assert.equal(polygon.isConnected,false);
   context.cropSettings.filter='corn';context.renderPlantedAreas(state);assert.equal(polygon.isConnected,true);
+  assert.equal(badge.isConnected,true);
+  context.cropSettings.enabled=false;context.cropSettings.filter='rice';context.renderPlantedAreas(state);assert.equal(badge.isConnected,true,'Saved icons remain visible when optional parcel recoloring is off');
+  context.selectedFarmerId=null;context.renderPlantedAreas(state);assert.equal(badge.isConnected,false,'Clearing farmer selection hides cached icons immediately');
+  context.selectedFarmerId=1;context.renderPlantedAreas(state);assert.equal(badge.isConnected,true);
+  context.map3d.range=10000;context.renderPlantedAreas(state);assert.equal(badge.isConnected,false,'Zoomed-out labels stay uncluttered');
   polygon.events['gmp-click']({stopPropagation(){}});
   assert.match(status.textContent,/Corn.*Recorded variety.*0\.4000/);
   assert.equal(polygon.strokeWidth,2,'Reduced motion keeps a steady boundary');
   context.renderPlantedAreas({status:'off',records:[]});assert.equal(polygon.isConnected,false);
+  assert.equal(badge.isConnected,false);
+});
+
+test('saved crop areas load automatically for the selected farmer with recoloring off', () => {
+  const {context}=harness();let request;
+  context.selectedFarmerId=1;context.focusedCropPlotId=null;
+  context.savedPlotOverlays=[{farmerId:1,plotId:10},{farmerId:2,plotId:20}];
+  context.cropSettings={enabled:false,year:2025,season:'wet',filter:'all'};
+  context.plantedAreaLayer={load:(settings,ids,force)=>{request={settings,ids,force};}};
+  vm.runInContext(declaration('refreshPlantedAreas'),context);
+  context.refreshPlantedAreas(false);
+  assert.equal(request.settings.enabled,true);assert.equal(request.settings.year,2025);assert.equal(request.settings.season,'wet');
+  assert.deepEqual(Array.from(request.ids),[10]);
+  context.selectedFarmerId=null;context.refreshPlantedAreas(false);assert.deepEqual(Array.from(request.ids),[],'No global crop geometry is requested');
+});
+
+test('parcel clicks show the first dot, connect each next corner and continue past four points', () => {
+  const {context} = harness();
+  class DraftElement {
+    constructor(options) {Object.assign(this,options);}
+    addEventListener() {}
+    replaceChildren(content) {this.content=content;}
+  }
+  Object.assign(context,{
+    Polyline3DInteractiveElement:DraftElement,Polygon3DElement:DraftElement,Marker3DElement:DraftElement,
+    plotMode:true,editingPlotId:null,selectedVertexIndex:-1,plotVertices:[],draftDots:[],draftEdgeHandles:[],draftLine:null,draftPoly:null,
+    canUseDraftVertices:()=>true,getPlotColor:()=>'#2864B4',updateDeleteCornerButtonState:()=>{},estimateAreaHa:()=>0,
+    midpointLatLng:()=>({lat:15,lng:120}),
+  });
+  context.window.MapDrawingGuide={dotTemplate:(_,index,selected)=>({number:index+1,selected})};
+  vm.runInContext(['clearDraftDots','renderDraftEdgeHandles','updateDraftStats','refreshDraftDots','addDraftVertex','handleParcelMapClick'].map(declaration).join('\n'),context);
+  const points=[{lat:15,lng:120},{lat:15,lng:120.1},{lat:15.1,lng:120.1},{lat:15.2,lng:120.05},{lat:15.1,lng:120}];
+  context.handleParcelMapClick({position:points[0]});assert.equal(context.draftDots.length,1);assert.equal(context.draftDots[0].content.number,1);assert.equal(context.draftLine,null);
+  context.handleParcelMapClick({position:points[1]});assert.equal(context.draftDots.length,2);assert.equal(context.draftLine.path.length,2);
+  points.slice(2).forEach(position=>context.handleParcelMapClick({position}));assert.equal(context.plotVertices.length,5);assert.equal(context.draftDots[4].content.number,5);
+  context.editingPlotId=1;context.handleParcelMapClick({position:{lat:15.3,lng:120}});assert.equal(context.plotVertices.length,5,'Existing parcel edits retain edge insertion instead of appending stray corners');
+  context.clearDraftDots();assert.equal(context.draftDots.length,0);assert.equal(context.draftLine,null);
 });
