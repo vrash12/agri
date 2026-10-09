@@ -1,0 +1,50 @@
+.parcel-crop-modal {
+  box-sizing: border-box;
+  width: min(96vw, 1280px);
+  max-width: 1280px;
+  height: min(94vh, 900px);
+  height: min(94dvh, 900px);
+  max-height: none;
+  padding: 0;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius-panel, 12px);
+  overflow: hidden;
+  background: var(--ui-bg, #f7faf8);
+  color: var(--ui-text, #17211b);
+  box-shadow: 0 24px 80px rgba(20, 40, 27, .3);
+}
+.parcel-crop-modal::backdrop { background: rgba(7, 26, 16, .66); backdrop-filter: blur(3px); }
+.parcel-crop-modal[open] { display: flex; flex-direction: column; }
+.parcel-crop-modal-shell { display: flex; flex-direction: column; min-height: 0; height: 100%; }
+.parcel-crop-modal-header {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 18px;
+  padding: 18px 22px; border-bottom: 3px solid var(--ui-accent, #f4c51c);
+  background: var(--ui-primary, #145c3b); color: #fff;
+}
+.parcel-crop-modal-kicker { font-size: 11px; font-weight: 700; letter-spacing: .12em; opacity: .84; }
+.parcel-crop-modal-header h2 { margin: 4px 0 3px; color: inherit; font-size: clamp(19px, 2.2vw, 26px); line-height: 1.25; }
+.parcel-crop-modal-header p { margin: 0; color: rgba(255,255,255,.86); font-size: 13px; }
+.parcel-crop-modal-close { min-height: 44px; padding: 8px 14px; border: 1px solid rgba(255,255,255,.7); border-radius: 8px; background: transparent; color: #fff; font: inherit; cursor: pointer; }
+.parcel-crop-modal-close:hover { background: rgba(255,255,255,.12); }
+.parcel-crop-modal-close:focus-visible { outline: 3px solid var(--ui-focus-inverse, #fff); outline-offset: 3px; }
+.parcel-crop-modal-status { flex: 0 0 auto; margin: 0; padding: 10px 22px; border-bottom: 1px solid var(--ui-border); background: var(--ui-surface, #fff); color: var(--ui-text-muted); font-size: 13px; }
+.parcel-crop-modal-status.is-success { color: #17643a; background: #eef8f0; }
+.parcel-crop-modal-status.is-error { color: #9b2c2c; background: #fff4f2; }
+.parcel-crop-modal-body { flex: 1; min-height: 0; overflow: auto; padding: 16px; }
+.parcel-crop-modal-body > .crop-modal-content { max-width: 1240px; margin: 0 auto; }
+.parcel-crop-modal .crop-modal-context { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+.parcel-crop-modal .crop-modal-context span { padding: 5px 9px; border: 1px solid var(--ui-border); border-radius: 6px; background: var(--ui-surface-subtle); color: var(--ui-text-muted); font-size: 12px; }
+.parcel-crop-modal .planted-area-editor { margin: 0; }
+.parcel-crop-modal .planted-area-map { min-height: 360px; height: min(52vh, 560px); }
+.parcel-crop-modal .planted-workspace { min-height: 0; }
+.parcel-crop-modal .crop-modal-save-bar { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 20px; border-top: 1px solid var(--ui-border); background: var(--ui-surface, #fff); }
+.parcel-crop-modal .crop-modal-save-bar p { margin: 0; color: var(--ui-text-muted); font-size: 13px; }
+.parcel-crop-modal [hidden] { display: none !important; }
+@media (max-width: 760px) {
+  .parcel-crop-modal { width: 100%; height: 100%; height: 100dvh; max-width: none; border: 0; border-radius: 0; margin: 0; }
+  .parcel-crop-modal-header { padding: 14px 16px; }
+  .parcel-crop-modal-body { padding: 10px; }
+  .parcel-crop-modal .planted-area-map { height: 350px; }
+  .parcel-crop-modal .crop-modal-save-bar { align-items: flex-start; flex-direction: column; }
+  .parcel-crop-modal .crop-modal-save-bar .module-button { width: 100%; }
+}

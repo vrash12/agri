@@ -2,7 +2,10 @@
 
 ## Staff workflow
 
-In Farmers, open a saved plot's **Crop areas / season** action. Choose the year
+In Farmers, open a saved plot's **Crop areas / season** action. The editor opens
+inside an accessible dialog over the map, so the selected parcel stays visible.
+The standalone seasonal-crop page remains available when the dialog cannot load.
+Choose the year
 and dry/wet season, select Corn or another crop, and draw corners inside the
 white parcel outline. Finish the boundary and repeat for other planted sections.
 Optional section names and seed/crop varieties describe the entered record;

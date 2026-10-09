@@ -12,7 +12,7 @@
   <div id="parcelCropLegend" class="parcel-crop-legend" aria-label="Seasonal crop legend"></div>
   <p id="plantedAreaLayerStatus" role="status">Select a farmer to see saved crop icons and planted-area boundaries.</p>
   <button type="button" class="btn btn-soft btn-sm" id="plantedAreaRetry" hidden>Retry crop boundaries</button>
-  <p class="parcel-crop-help">Crop icons appear automatically for the selected farmer's saved crop areas. Use Crop areas / season beside a parcel to record them. Choose the year and season, then apply to view another period; parcel recoloring is optional. Click Focus to highlight a parcel and its crop sections. These records do not confirm current growth. Mapped hectares are approximate. Unmarked land stays unclassified. Gray means Not recorded, not fallow.</p>
+  <p class="parcel-crop-help">Crop icons appear automatically for the selected farmer's saved crop areas. Use Crop areas / season beside a parcel to open the drawing dialog without leaving the map. Choose the year and season, then apply to view another period; parcel recoloring is optional. Click Focus to highlight a parcel and its crop sections. These records do not confirm current growth. Mapped hectares are approximate. Unmarked land stays unclassified. Gray means Not recorded, not fallow.</p>
 </details>
 <style>
   #farmersMapModule .parcel-tool-group.parcel-crop-controls { grid-column:1 / -1; min-width:0; border-right:0; border-top:1px solid var(--ui-border); }

@@ -18,6 +18,8 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/parcel-satellite-modal.css') }}?v={{ @filemtime(public_path('css/parcel-satellite-modal.css')) ?: 1 }}">
+<link rel="stylesheet" href="{{ asset('css/parcel-crop-modal.css') }}?v={{ @filemtime(public_path('css/parcel-crop-modal.css')) ?: 1 }}">
+<link rel="stylesheet" href="{{ asset('css/planted-area-editor.css') }}?v={{ @filemtime(public_path('css/planted-area-editor.css')) ?: 1 }}">
 <style>
   /* Adjusted map height: shorter than before */
   #farmersMapModule .farmers-map-main{
@@ -1409,6 +1411,7 @@
 </div>
 
 @include('farm_plots._satellite_dialog')
+@include('farm_plots._crop_modal')
 
 <script>
   window.__municipalityGeofenceData = @json($mapMunicipalityBoundaries->values());

@@ -32,7 +32,19 @@ class ParcelCropSeasonController extends Controller
         $recordVersion = $cropRecord ? ConcurrentWrite::version($cropRecord) : 'new';
         $plotVersion = ConcurrentWrite::version($plot);
         $plantedAreasAvailable = Schema::hasColumn('parcel_crop_seasons', 'planted_areas');
-        $history = $query->orderByDesc('crop_year')->orderBy('season')->paginate(10)->withQueryString();
+        $history = $request->boolean('modal')
+            ? null
+            : $query->orderByDesc('crop_year')->orderBy('season')->paginate(10)->withQueryString();
+
+        if ($request->boolean('modal')) {
+            return response()->view('farm_plots.partials.seasonal-crop-modal-content', compact(
+                'plot', 'year', 'season', 'cropRecord', 'recordVersion', 'plotVersion', 'plantedAreasAvailable', 'history'
+            ) + [
+                'canEdit' => $request->user()->can('update', $plot),
+                'cropChoices' => ParcelCropSeason::CROPS,
+                'seasonChoices' => ParcelCropSeason::SEASONS,
+            ]);
+        }
 
         return view('farm_plots.seasonal_crops', compact('plot', 'year', 'season', 'cropRecord', 'recordVersion', 'history', 'plotVersion', 'plantedAreasAvailable') + [
             'cropChoices' => ParcelCropSeason::CROPS, 'seasonChoices' => ParcelCropSeason::SEASONS,
@@ -42,6 +54,15 @@ class ParcelCropSeasonController extends Controller
     public function store(StoreParcelCropSeasonRequest $request, FarmPlot $plot)
     {
         $record = $this->crops->save($plot, $request->user(), $request->validated());
+
+        if ($request->header('X-AgriGOV-Crop-Modal') === '1') {
+            return response()->json([
+                'message' => 'Seasonal crop saved.',
+                'plot_id' => $plot->id,
+                'year' => $record->crop_year,
+                'season' => $record->season,
+            ]);
+        }
 
         return redirect()->route('farm-plots.seasonal-crops.edit', [
             'plot' => $plot->id, 'year' => $record->crop_year, 'season' => $record->season,

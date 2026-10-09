@@ -1,9 +1,12 @@
 (() => {
   'use strict';
-  const configElement = document.getElementById('plantedAreaConfig');
-  if (!configElement) return;
+
+  function mount(scope) {
+  const root = scope && typeof scope.querySelector === 'function' ? scope : document;
+  const byId = id => root === document ? document.getElementById(id) : root.querySelector('#' + id);
+  const configElement = byId('plantedAreaConfig') || document.getElementById('plantedAreaConfig');
+  if (!configElement) return null;
   const config = JSON.parse(configElement.textContent);
-  const byId = id => document.getElementById(id);
   let areas = (config.areas || []).filter(a => a && Array.isArray(a.polygon));
   let map, outline, draft = null, draftGuide = null, drawing = false, selected = -1, shapes = [], badges = [], dirty = false;
   const status = text => { byId('plantedMapStatus').textContent = text; };
@@ -155,4 +158,24 @@
     const previous=window.gm_authFailure;window.gm_authFailure=()=>{failure();previous?.();};
     const script=document.createElement('script');script.src='https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(config.key)+'&v=weekly&loading=async&callback=initPlantedAreaMap';script.async=true;script.onerror=()=>{clearTimeout(timer);failure();};document.head.append(script);
   }
+  return {
+    isDrawing: () => drawing,
+    sync,
+    destroy: () => {
+      draftGuide?.remove();
+      badges.forEach(badge => badge?.remove());
+      shapes.forEach(shape => shape.setMap(null));
+      draft?.setMap(null);
+      draftGuide = null;
+      badges = [];
+      shapes = [];
+      draft = null;
+      map = null;
+    }
+  };
+  }
+
+  window.PlantedAreaEditor = { mount };
+  const initialRoot = document.getElementById('plantedAreaEditor');
+  if (initialRoot) mount(initialRoot);
 })();

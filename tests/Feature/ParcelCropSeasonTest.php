@@ -73,6 +73,7 @@ class ParcelCropSeasonTest extends TestCase
     {
         foreach ([3, 4] as $id) {
             $this->actingAs(User::find($id))->get($this->editUrl())->assertOk()->assertDontSee('Save season')->assertSee('Your account can view it.');
+            $this->get($this->editUrl().'?modal=1')->assertOk()->assertDontSee('data-crop-modal-form', false)->assertSee('Read-only view');
             $this->postJson($this->editUrl(), $this->payload())->assertForbidden();
         }
         $this->actingAs(User::find(5))->getJson($this->layerUrl([1]))->assertForbidden();
@@ -189,6 +190,24 @@ class ParcelCropSeasonTest extends TestCase
         $this->getJson(route('farm-plots.planted-area-layer', ['year' => 2025, 'season' => 'wet', 'plot_ids' => [1]]))
             ->assertOk()->assertJsonPath('year', 2025)->assertJsonPath('season', 'wet')
             ->assertJsonPath('records.0.areas.0.crop', 'corn')->assertJsonCount(2, 'records.0.areas');
+    }
+
+    public function test_crop_editor_can_load_and_save_inside_the_map_modal(): void
+    {
+        $this->actingAs(User::findOrFail(1));
+
+        $this->get($this->editUrl().'?year=2026&season=dry&modal=1')
+            ->assertOk()
+            ->assertSee('data-crop-modal-content', false)
+            ->assertSee('Start drawing');
+
+        $this->withHeaders([
+            'Accept' => 'application/json',
+            'X-AgriGOV-Crop-Modal' => '1',
+        ])->post($this->editUrl(), $this->payload())
+            ->assertOk()
+            ->assertJsonPath('message', 'Seasonal crop saved.')
+            ->assertJsonPath('plot_id', 1);
     }
 
     public function test_outside_overlapping_and_self_crossing_crop_areas_are_rejected(): void

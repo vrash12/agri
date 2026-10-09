@@ -1391,6 +1391,98 @@ var PopoverElement = maps3d.PopoverElement;
       // Saved icons belong to the selected farmer; parcel recoloring is optional.
       return plantedAreaLayer.load({enabled:true,year:cropSettings.year,season:cropSettings.season}, ids, !!force);
     }
+    window.__refreshPlantedAreas = refreshPlantedAreas;
+
+    var cropModalEditor = null;
+    var cropModalRequest = null;
+    function cropModalMessage(text, kind) {
+      var status = document.getElementById('parcelCropModalStatus');
+      if (!status) return;
+      status.textContent = text || '';
+      status.className = 'parcel-crop-modal-status' + (kind ? ' is-' + kind : '');
+    }
+    function closeCropModal() {
+      var modal = document.getElementById('parcelCropModal');
+      if (!modal) return;
+      if (cropModalRequest) cropModalRequest.abort();
+      cropModalRequest = null;
+      cropModalEditor?.destroy?.();
+      cropModalEditor = null;
+      var body = document.getElementById('parcelCropModalBody');
+      if (body) body.replaceChildren();
+      if (modal.open) modal.close();
+      cropModalMessage('Loading the crop workspace…');
+    }
+    function cropModalUrl(plotId) {
+      var template = window.__parcelCropModalUrl || window.__parcelCropEditUrl || '';
+      var url = template.replace('__ID__', encodeURIComponent(plotId));
+      var params = new URLSearchParams({year: String(cropSettings.year), season: cropSettings.season, modal: '1'});
+      return url + (url.indexOf('?') === -1 ? '?' : '&') + params.toString();
+    }
+    function submitCropModal(form) {
+      var save = form.querySelector('[data-crop-modal-save]');
+      if (save) save.disabled = true;
+      cropModalMessage('Saving this season…');
+      fetch(form.action, {
+        method: 'POST',
+        credentials: 'same-origin',
+        body: new FormData(form),
+        headers: {'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-AgriGOV-Crop-Modal': '1', 'X-CSRF-TOKEN': window.__csrfToken || ''}
+      }).then(async function (response) {
+        var data = {};
+        try { data = await response.json(); } catch (error) {}
+        if (!response.ok) {
+          var messages = data.errors ? Object.values(data.errors).flat() : [];
+          throw new Error(messages.join(' ') || data.message || 'The crop season could not be saved.');
+        }
+        cropModalMessage(data.message || 'Season saved. Updating the map…', 'success');
+        loadCropLayer(true);
+        refreshPlantedAreas(true);
+        window.setTimeout(closeCropModal, 450);
+      }).catch(function (error) {
+        if (error.name === 'AbortError') return;
+        cropModalMessage(error.message || 'The crop season could not be saved. Check the form and try again.', 'error');
+        if (save) save.disabled = false;
+      });
+    }
+    function openCropModal(plotId) {
+      var modal = document.getElementById('parcelCropModal');
+      var body = document.getElementById('parcelCropModalBody');
+      if (!modal || !body || !plotId) return false;
+      if (cropModalRequest) cropModalRequest.abort();
+      cropModalEditor?.destroy?.();
+      cropModalEditor = null;
+      body.replaceChildren();
+      cropModalMessage('Loading the crop workspace…');
+      if (!modal.open) modal.showModal();
+      cropModalRequest = new AbortController();
+      fetch(cropModalUrl(plotId), {credentials: 'same-origin', signal: cropModalRequest.signal, headers: {'Accept': 'text/html', 'X-Requested-With': 'XMLHttpRequest'}})
+        .then(function (response) { if (!response.ok) throw new Error(response.status === 401 || response.status === 403 ? 'You do not have access to edit this parcel.' : 'The crop workspace could not load.'); return response.text(); })
+        .then(function (html) {
+          body.innerHTML = html;
+          cropModalMessage('Draw each crop area inside the parcel, then save the season.');
+          var root = body.querySelector('#plantedAreaEditor');
+          cropModalEditor = window.PlantedAreaEditor?.mount?.(root || body) || null;
+          var form = body.querySelector('[data-crop-modal-form]');
+          if (form) form.addEventListener('submit', function (event) {
+            if (event.defaultPrevented) return;
+            event.preventDefault();
+            submitCropModal(form);
+          });
+        })
+        .catch(function (error) {
+          if (error.name === 'AbortError') return;
+          body.innerHTML = '<div class="module-alert module-alert-error" role="alert"><strong>Crop workspace unavailable.</strong><p>' + escapeHtml(error.message || 'Try again.') + '</p><button type="button" class="module-button" data-crop-modal-retry>Try again</button></div>';
+          body.querySelector('[data-crop-modal-retry]')?.addEventListener('click', function () { openCropModal(plotId); });
+          cropModalMessage('');
+        });
+      return true;
+    }
+    document.getElementById('parcelCropModal')?.addEventListener('click', function (event) {
+      if (event.target === this || event.target.closest('[data-crop-modal-close]')) closeCropModal();
+    });
+    document.getElementById('parcelCropModal')?.addEventListener('cancel', function (event) { event.preventDefault(); closeCropModal(); });
+    window.__openParcelCropModal = openCropModal;
     function renderPlantedAreas(state) {
       var status = document.getElementById('plantedAreaLayerStatus');
       var retry = document.getElementById('plantedAreaRetry');
@@ -3635,7 +3727,7 @@ window.__handleDownloadAllPlots = handleDownloadAllPlots;
         '<div class="map-plot-actions">' +
           '<button type="button" class="btn btn-soft btn-sm" data-action="focusPlot" data-plot-id="' + escapeHtml(pl.id) + '">Focus</button>' +
           (window.__parcelSatelliteUrl ? '<a class="btn btn-soft btn-sm" data-action="openSatellite" data-plot-id="' + escapeHtml(pl.id) + '" aria-haspopup="dialog" aria-controls="parcelSatelliteModal" href="' + escapeHtml(window.__parcelSatelliteUrl.replace('__ID__', encodeURIComponent(pl.id))) + '">Satellite field check</a>' : '') +
-          '<a class="btn btn-soft btn-sm" data-plot-crop-id="' + escapeHtml(pl.id) + '" href="' + escapeHtml((window.__parcelCropEditUrl || '').replace('__ID__', encodeURIComponent(pl.id)) + '?year=' + cropSettings.year + '&season=' + cropSettings.season) + '">Crop areas / season</a>' +
+          '<a class="btn btn-soft btn-sm" data-action="openCropModal" data-plot-crop-id="' + escapeHtml(pl.id) + '" aria-haspopup="dialog" aria-controls="parcelCropModal" href="' + escapeHtml((window.__parcelCropEditUrl || '').replace('__ID__', encodeURIComponent(pl.id)) + '?year=' + cropSettings.year + '&season=' + cropSettings.season) + '">Crop areas / season</a>' +
           (window.__canManageOperationalData ? '<button type="button" class="btn btn-soft btn-sm" data-action="editPlot" data-plot-id="' + escapeHtml(pl.id) + '">Edit</button>' : '') +
           '<button type="button" class="btn btn-soft btn-sm" data-action="downloadPlot" data-plot-id="' + escapeHtml(pl.id) + '">Download</button>' +
           '<button type="button" class="btn btn-soft btn-sm" data-action="printPlot" data-plot-id="' + escapeHtml(pl.id) + '">Print</button>' +
@@ -3661,6 +3753,18 @@ window.__handleDownloadAllPlots = handleDownloadAllPlots;
       var pid = this.getAttribute('data-plot-id');
       if (!pid) return;
       if (typeof window.__openParcelSatelliteModal === 'function' && window.__openParcelSatelliteModal(pid, this)) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    });
+  }
+
+  var btnsCrop = list.querySelectorAll('[data-action="openCropModal"]');
+  for (var c4 = 0; c4 < btnsCrop.length; c4++) {
+    btnsCrop[c4].addEventListener('click', function (event) {
+      var pid = this.getAttribute('data-plot-crop-id');
+      if (!pid) return;
+      if (typeof window.__openParcelCropModal === 'function' && window.__openParcelCropModal(pid)) {
         event.preventDefault();
         event.stopPropagation();
       }
