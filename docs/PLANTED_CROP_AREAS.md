@@ -114,7 +114,7 @@ Existing records, including crop drawings, and environment were preserved;
 the versioned live editor script matches both public copies. No migration ran.
 
 
-## October 9 workspace design follow-up — local
+## October 9 workspace design follow-up — deployed
 
 The season page uses a three-part flow: choose season, mark planted areas, save.
 A larger map sits beside crop controls on desktop; phone layouts put crop controls
@@ -130,7 +130,7 @@ and exact server containment validation are unchanged. New stylesheet:
 `public/css/planted-area-editor.css`; changed seasonal page/editor partial and
 `public/js/planted-area-editor.js` must deploy together. Mirror the stylesheet and
 script to both Hostinger public directories and refresh Blade views. No migration
-or production data change is required. This design follow-up remains local.
+or production data change is required. This design follow-up deployed October 9 in runtime `b2bc46b`.
 
 Verification: 18 seasonal crop PHP tests / 143 assertions, four editor JavaScript
 regressions (including contextual actions and automatic crop summaries), the prior
@@ -140,7 +140,7 @@ refusal, cancel/removal and desktop/390px layout without editor overflow. Google
 satellite rendering and real-user interaction have not been repeated.
 
 
-## Illustrated crop badges and selection motion — local
+## Illustrated crop badges and selection motion — deployed
 
 `public/js/crop-area-badges.js` supplies code-native, colored SVG crop stickers
 for rice, corn, vegetables, roots, fruit, legumes, mixed and other crops. Known
@@ -169,13 +169,13 @@ corn/rice icons inside their areas, drawing, serialization, removal and no overf
 Real Google Maps marker rendering remains an integration check. Install the new
 helper in both public directories and load it before editor/workspace scripts;
 include the pending workspace stylesheet and view changes. No migration or record
-change is required. This follow-up is local, not pushed or deployed.
+change is required. This follow-up deployed October 9 in runtime `b2bc46b`.
 
 References: [Google Maps custom overlays](https://developers.google.com/maps/documentation/javascript/customoverlays)
 and [3D marker graphics](https://developers.google.com/maps/documentation/javascript/3d/marker-graphics).
 
 
-## Numbered draft corners and connected lines — local
+## Numbered draft corners and connected lines — deployed
 
 `public/js/map-drawing-guide.js` makes the first corner immediately visible as a
 numbered green dot. A blue open line connects the second and later clicks, with a
@@ -191,7 +191,7 @@ selected corner; overlap checks remain intact. The first dot is green, other dot
 blue and a selected parcel corner yellow. Existing dot/line cleanup is preserved.
 Load the new guide before both map scripts and mirror it to both public directories
 when deploying the pending interface release. No migration or production data
-operation is required; this follow-up is local.
+operation is required; this follow-up deployed October 9 in runtime `b2bc46b`.
 
 Focused tests cover immediate first-dot feedback, second-click line creation,
 numbering, overlay reuse, undo/cancel cleanup, Maps LatLng inputs, unchanged source
@@ -199,7 +199,7 @@ coordinates, a fifth parcel click and existing edit-mode behavior. Synthetic bro
 screenshots verify the first two crop corners and guide cleanup after finishing.
 
 
-## Saved icons on the main map — local
+## Saved icons on the main map — deployed
 
 Saved crop-area outlines and icons now load automatically for the selected
 farmer, independently of the optional parcel-classification recoloring layer.
@@ -219,5 +219,6 @@ Verification: 19 PHP season tests / 151 assertions, including save/reopen/return
 context and the selected-period geometry response, and 37 JavaScript tests,
 including automatic loading with recoloring off, owner-only selection, clearing
 cached labels, period validation and overlay reuse. No migration or data conversion.
-The updated editor view, crop controls, badge helper and main map script are part
-of the pending local interface release and must deploy together. Not deployed.
+The editor view, crop controls, badge/guide helpers, stylesheet and map scripts
+deployed together in runtime `b2bc46b`. See `GITHUB_DEPLOYMENT.md` for the verified
+backup, asset hashes, preserved records and integration limits.
