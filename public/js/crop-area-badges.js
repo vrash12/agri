@@ -56,6 +56,10 @@
   function template(document, code) {
     const node=document.createElement('template');node.content.appendChild(svg(document,code,true));return node;
   }
+  function markerContent(document, code) {
+    const node = template(document, code);
+    return node.content ? node.content.cloneNode(true) : node;
+  }
   // A bounded horizontal scan finds an interior anchor even for concave areas.
   // A bounding-box center or arithmetic centroid can sit outside such boundaries.
   function position(polygon) {
@@ -116,5 +120,5 @@
       update:points=>{polygon=points;const point=position(points);if(point){Object.assign(anchor,point);marker.draw();}else badge.hidden=true;}
     };
   }
-  return {descriptor,mapContext,svg,template,position,overlay};
+  return {descriptor,mapContext,svg,template,markerContent,position,overlay};
 });

@@ -34,6 +34,16 @@ test('SVG crop stickers use static safe paths and expose a text label',()=>{
   assert.equal(a.button.attrs['aria-label'],'Select Corn crop area');
   assert.equal(a.elements.some(el=>el.name==='script'||el.name==='img'),false);
 });
+test('3D marker content clones the SVG instead of leaving it inside an inert template',()=>{
+  const document={
+    createElementNS:()=>({setAttribute(){},appendChild(){}}),
+    createElement:tag=>tag==='template'?{
+      content:{children:[],appendChild(node){this.children.push(node);},cloneNode(){return {children:this.children.slice()};}}
+    }:null
+  };
+  const content=badges.markerContent(document,'corn');
+  assert.equal(content.children.length,1);
+});
 test('badge follows edited geometry, selects the area and cleans up when removed',()=>{
   const a=adapter();assert.equal(a.button.style.left,'200px');
   a.button.events.click({stopPropagation(){}});assert.equal(a.selected,1);

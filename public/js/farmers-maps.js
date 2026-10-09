@@ -1519,7 +1519,9 @@ var PopoverElement = maps3d.PopoverElement;
                 badge = new Marker3DElement({position: anchor, altitudeMode: AltitudeMode.CLAMP_TO_GROUND,
                   sizePreserved: true, drawsWhenOccluded: false,
                   collisionBehavior: google.maps.CollisionBehavior.OPTIONAL_AND_HIDES_LOWER_PRIORITY, zIndex: 18});
-                badge.replaceChildren(window.CropAreaBadges.template(document, area.crop));
+                badge.replaceChildren(window.CropAreaBadges.markerContent
+                  ? window.CropAreaBadges.markerContent(document, area.crop)
+                  : window.CropAreaBadges.template(document, area.crop));
               }
             }
             plantedAreaOverlays.push({plotId: record.plot_id, crop: area.crop, poly: poly, badge: badge});
