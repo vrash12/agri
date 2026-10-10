@@ -1,5 +1,58 @@
 # GitHub-to-Hostinger deployment
 
+## Verified Hostinger release — October 11, 2026 — Laravel 12 and RAG Assistant
+
+Runtime `7d36fff421040cccbc667f71c61fac887f4721e6` was committed and pushed to
+GitHub main, then installed with Hostinger `git pull --ff-only origin main` from
+clean tracked baseline `5b43b35`. The locked production dependencies were
+prepared privately and installed with `composer install --no-dev --prefer-dist
+--optimize-autoloader --no-interaction`. CLI and web PHP are **8.3.35**; Laravel is
+**12.69.3**, Sanctum **4.3.3** and Laravel AI SDK **1.2.0**. The application is live.
+
+- Verified private database backup: **21 tables / 9,366 rows**, **3,374,906
+  compressed bytes**, SHA-256
+  `e9f74c39a33f49c383b2a22a92dc09dbcbb1b73eee606c0e5746ba52a79327cf`.
+  Prior tracked runtime, vendor, bootstrap caches, served assets and environment
+  were preserved outside the document root with private permissions.
+- Every existing row and schema fingerprint passed verification. No migration,
+  seeder, account change or operational-data write ran. The only environment
+  changes were nine approved AI settings, including enabling the Assistant and
+  private provider configuration. All other environment content, application key,
+  session/cache/Redis namespaces and NDVI budget counters were preserved. The
+  general cache was never cleared.
+- The single conversation, reviewed local workflow RAG, structured source
+  checks, safe guide fallback and versioned general-help cache are enabled for
+  permitted office users. Records remain fresh local queries. Visitors,
+  evaluators and farmer sessions stay excluded; veterinary access is Animal
+  Health-only. No raw chat, farmer records or visible thread goes to OpenAI.
+- Read-only live CLI checks passed seven office-role policies, one existing
+  excluded account, ten knowledge topics, three veterinary topics, six local
+  reports, dashboard/Farmers renders and an existing farmer-card render. Actual
+  canonical OpenAI crop help succeeded: **834 input / 173 output tokens**, two
+  sources; a repeated reply hit the cache with **zero new provider tokens**.
+  These checks do not claim interactive sign-in or every browser workflow was
+  repeated on production.
+- Both Assistant public assets match between source, served directories and
+  live HTTPS responses, with 0644 permissions. Homepage, office sign-in, farmer
+  sign-in, CSS and JavaScript return HTTP 200. Guest dashboard access redirects
+  to sign-in. Configuration, routes and compiled views were refreshed; maintenance
+  ended and tracked server files are clean.
+- Local release verification passed **289 PHP regression tests / 2,072
+  assertions**, **11 framework/security tests / 42 assertions**, **146 legacy
+  integration tests / 974 assertions** on disposable MariaDB 10.4.32, and all
+  **197 JavaScript tests**. Synthetic backup/restore passed for 20 tables / three
+  rows. Pint, syntax, Composer/platform/audit checks passed with zero advisories.
+  Counts overlap with earlier focused receipts and should not be added to them.
+- Pending farmer-card landscape/seal/controller/artwork changes remain local and
+  excluded. Existing slash-separated addresses, ink signatures and identifiers
+  are preserved. No local sample database or private helper was uploaded to the
+  application/public tree.
+
+The earlier pending/local sections below record preparation and are superseded
+by this release. See [OFFICE_ASSISTANT.md](OFFICE_ASSISTANT.md),
+[ASSISTANT_RAG.md](ASSISTANT_RAG.md) and
+[LARAVEL_12_AI_UPGRADE.md](LARAVEL_12_AI_UPGRADE.md) for the architecture and limits.
+
 ## Pending local Assistant RAG follow-up — October 11, 2026
 
 The unified help path now uses manifest-approved Markdown retrieval, structured

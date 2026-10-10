@@ -1,9 +1,11 @@
 # Office Assistant
 
-Status: unified conversation implemented and verified locally on October 11,
-2026. Not committed, pushed or deployed. Production remains on recorded runtime
-`c322a5e`. This feature depends on the pending Laravel 12 / PHP 8.3+ upgrade.
-No production account, record, environment or schema operation ran.
+Status: deployed on Hostinger on October 11, 2026 in runtime `7d36fff`, together
+with the Laravel 12 / PHP 8.3+ dependency upgrade and RAG follow-up. GitHub push,
+Hostinger fast-forward pull and locked Composer install completed. Existing
+schema, operational records and accounts were preserved; nine approved AI
+environment settings were provisioned privately. See the
+[deployment receipt](GITHUB_DEPLOYMENT.md).
 
 The subsequent [RAG follow-up](ASSISTANT_RAG.md) adds reviewed role/topic-filtered
 workflow retrieval, strict structured source checks, ten-minute general-help
@@ -141,7 +143,7 @@ A delayed reply cannot recreate
 a concurrently destroyed session or overwrite another request's auth/CSRF/flash.
 JSON validation never flashes chat, and chat services do not mutate session state.
 
-## Unified verification
+## Historical local unified verification
 
 - **55 focused PHP tests / 426 assertions** and a **40-case synthetic resolver
   corpus / 109 assertions** passed on PHP 8.3.35. Coverage includes normal sign-in
@@ -179,14 +181,36 @@ the models probe returned 200 and an actual canonical help reply then succeeded.
 No application TLS setting was weakened. Keys remain private and absent from
 source, fixtures, screenshots and this receipt.
 
-These checks do not establish live deployment or multi-user/load readiness. The
-remaining legacy-schema dependency integration in
-[LARAVEL_12_AI_UPGRADE.md](LARAVEL_12_AI_UPGRADE.md) still applies.
+These local checks are distinct from the subsequent live acceptance below and
+do not establish multi-user/load readiness. The additional legacy-schema
+dependency integration passed **146 tests / 974 assertions** on a disposable
+synthetic MariaDB database; see
+[LARAVEL_12_AI_UPGRADE.md](LARAVEL_12_AI_UPGRADE.md).
+
+## October 11 live acceptance
+
+Runtime `7d36fff` runs on verified CLI/web PHP 8.3.35, Laravel 12.69.3 and AI SDK
+1.2.0. A verified private backup covered **21 tables / 9,366 rows**. Schema and
+pre-existing row hashes, application key, session/cache/Redis namespaces and
+NDVI counters were preserved. Only nine approved AI environment settings were
+provisioned; no migration, seeder, account change or general cache clear ran.
+Pending farmer-card changes remain local.
+
+Read-only live CLI checks passed seven office-role policies, one excluded
+account, ten general-help topics, three veterinary-help topics, six report
+paths, two page renders and one card render. A real canonical crop-help reply
+used **834 input / 173 output tokens** and returned two sources; the accepted
+cache hit used zero new provider tokens. Five public HTTPS checks returned 200.
+Assistant CSS/JavaScript matched source in both public directories with 0644
+permissions. These are server/public-HTTP smoke checks, not a load test or
+interactive sign-in verification for every account. See
+[GITHUB_DEPLOYMENT.md](GITHUB_DEPLOYMENT.md).
 
 ## Configuration and deployment
 
-The example remains disabled. Enable on the intended environment only after
-its reviewed PHP 8.3+/Laravel 12 dependency installation and acceptance:
+The example remains disabled; the authorized Hostinger environment is now
+enabled after its reviewed dependency installation and acceptance. For another
+environment, enable only after the same checks:
 
 ```dotenv
 ASSISTANT_ENABLED=true
@@ -197,7 +221,7 @@ ASSISTANT_USER_DAILY_REQUESTS=20
 OPENAI_STORE=false
 ```
 
-On explicit release instruction, use [GITHUB_DEPLOYMENT.md](GITHUB_DEPLOYMENT.md):
+For an authorized release, use [GITHUB_DEPLOYMENT.md](GITHUB_DEPLOYMENT.md):
 push reviewed scope, Hostinger fast-forward pull, then install the exact Composer
 lockfile. Release conversation/context/resolver, request/controller, provider/
 agent, policies/config, audit/veterinary middleware, session/CSRF middleware/kernel,

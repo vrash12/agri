@@ -36,9 +36,9 @@ integration and synthetic verification are recorded there; production is unchang
 
 - AgriLGU is a government agriculture operations system with real office users
   and municipality-owned records. Preserve existing records and account scopes.
-- Local Laravel 12 / PHP 8.3+, MySQL/MariaDB, Blade and JavaScript. Composer's
-  PHP platform is pinned to 8.3.0. Production remains on Laravel 9 until the
-  dependency upgrade is explicitly deployed. Laravel AI SDK powers a local
+- Laravel 12 / PHP 8.3+, MySQL/MariaDB, Blade and JavaScript. Composer's
+  PHP platform is pinned to 8.3.0. Runtime `7d36fff` deployed Laravel 12.69.3
+  and the RAG Assistant to Hostinger on October 11. Laravel AI SDK powers the
   Office Assistant with one conversation: canonical help when configured and
   authorized aggregates/farmer summaries locally. Raw messages, record data and
   the visible thread never enter provider prompts/history. Neither path modifies
@@ -187,11 +187,12 @@ substitute for numeric ownership IDs.
   servers need shared atomic coordination and verified shared file storage.
 - Record before/after measurements; shorter code alone is not a speed result.
 
-## AI Assistant engineering rules — implemented locally
+## AI Assistant engineering rules — deployed October 11, 2026
 
-The unified Assistant is implemented locally inside authenticated office pages,
+The unified Assistant is deployed inside authenticated office pages,
 with no mode/year forms or report sections. Tests and normal office/MySQL browser
-verification are recorded in `docs/OFFICE_ASSISTANT.md`; production is unchanged.
+verification and the live release are recorded in `docs/OFFICE_ASSISTANT.md`
+and `docs/GITHUB_DEPLOYMENT.md`. All existing operational rows are preserved.
 Preserve these boundaries when extending the feature.
 
 - Reuse small server orchestration for allowlisted local intents, year resolution,

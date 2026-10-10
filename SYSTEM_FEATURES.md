@@ -1,15 +1,16 @@
 # AgriLGU — Complete Feature Catalog
 
-The local RAG follow-up adds documented sources to Assistant workflow answers.
+The deployed RAG follow-up adds documented sources to Assistant workflow answers.
 It retrieves relevant reviewed guidance, checks returned source references and
 reuses accepted general answers for ten minutes. Failed AI replies fall back to
 saved guidance; missing evidence is stated honestly. Farmer records and totals
 remain fresh, permission-scoped local reads. No private records or conversation
 go to OpenAI. Natural English/Filipino workflow phrasing is improved and separate
-tasks prompt a clarification. This is local, not deployed; see
+tasks prompt a clarification. Hostinger installed runtime `7d36fff` on October 11;
+all 21 tables / 9,366 existing rows and their schemas were preserved. See
 [ASSISTANT_RAG.md](docs/ASSISTANT_RAG.md).
 
-Local update, October 11, 2026: **Assistant** is now one conversation inside the
+Deployed update, October 11, 2026: **Assistant** is now one conversation inside the
 signed-in office system. Ask for help, permitted farmer information and reports
 without choosing modes, sections or a year form. It resolves years/farmer choices
 and clarifications in messages, with current scope and source shown. Reports stay
@@ -17,8 +18,9 @@ inside AgriLGU; AI receives only canonical static help topics, never raw questio
 or record history. Existing permissions apply, excluded private fields remain
 excluded, and veterinary users receive Animal Health only. Visitors/evaluators/
 farmer sessions are denied. Records remain read-only. The application and MySQL
-integration were verified with synthetic data; this Laravel 12/PHP 8.3+ feature
-is local and not deployed. See [OFFICE_ASSISTANT.md](docs/OFFICE_ASSISTANT.md) and
+integration were verified with synthetic data; Laravel 12/PHP 8.3+ and the
+Assistant are now deployed with verified live role/report/provider checks.
+See [OFFICE_ASSISTANT.md](docs/OFFICE_ASSISTANT.md) and
 [AI_ASSISTANT_IMPLEMENTATION_PLAN.md](docs/AI_ASSISTANT_IMPLEMENTATION_PLAN.md).
 AgriLGU corn branding, the in-page seasonal crop editor, saved crop icons and the System Owner/Super Admin satellite/map usage panel are deployed in runtime `c322a5e` on October 10, 2026. Existing records and farmer IDs are unchanged. Usage shows local NDVI reservations and outgoing Google Static Maps attempts, not complete provider billing or interactive map loads. Linking harvest records to planted crop sections is not implemented in this release.
 

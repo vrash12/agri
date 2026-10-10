@@ -345,7 +345,7 @@ Define `$record` as the edited record or `null` in the form partial, as existing
 - Use `aria-live="polite"` or `role="status"` for asynchronous progress. Reserve urgent announcements for relevant errors.
 - Offer retry only when the operation can be retried safely; after an uncertain save, verify the result before creating a duplicate.
 
-### Office Assistant conversation — implemented locally
+### Office Assistant conversation — deployed October 11, 2026
 
 The October 11 implementation uses one continuous chat within the
 signed-in office workspace. Keep the small launcher and accessible dialog,

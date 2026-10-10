@@ -5,12 +5,13 @@ local workflow retrieval, strict structured replies, source validation, a
 versioned general-help cache and saved-guide fallbacks. See
 [ASSISTANT_RAG.md](ASSISTANT_RAG.md) for the current retrieval contract. Records
 stay local and uncached; raw chat never becomes a provider query. The initial
-verification stage below predates that follow-up. Deployment remains pending.
+verification stage below predates that follow-up. Hostinger deployed runtime
+`7d36fff` on October 11; see [GITHUB_DEPLOYMENT.md](GITHUB_DEPLOYMENT.md).
 
-Status: unified conversation **implemented and verified locally on October 11,
-2026** under the owner's subsequent implementation request. Not committed,
-pushed or deployed. The earlier documentation-only plan is now the architecture
-contract; production-release and remaining integration requirements still apply.
+Status: unified conversation **deployed and verified on October 11, 2026** under
+the owner's release request, through GitHub push and Hostinger fast-forward pull.
+The earlier documentation-only plan is now the architecture contract for future
+changes. Current runtime and preservation evidence are in the deployment receipt.
 
 The Assistant now uses the signed-in office layout and authenticated endpoint
 with one conversation and no help/report or year controls. Normal sign-in, CSRF
@@ -295,7 +296,8 @@ reverse-proxy integration before enabling it.
 
 Stages 1–7 have local implementation and focused/synthetic evidence in
 `OFFICE_ASSISTANT.md`; they do not establish all production/staging integration
-requirements. Stage 8 remains pending explicit release instruction. The sequence
+requirements. Stage 8 completed on explicit release instruction in runtime `7d36fff`.
+The sequence
 below records responsibilities for this change and later extensions.
 
 1. Revalidate the working tree and existing tests. Trace routing/provider disclosure

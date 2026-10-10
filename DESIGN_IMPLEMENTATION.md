@@ -1,15 +1,16 @@
 # Design and UX implementation record
 
-## Assistant documented sources — October 11, 2026 (local)
+## Assistant documented sources — deployed October 11, 2026
 
 RAG help replies add a compact “Based on” line inside the same conversation.
 Source titles are application-owned bounded plain text, with no new panels,
 mode controls or document-upload UI. Saved-guide fallbacks identify documented
 guidance. The 20 JavaScript tests cover source rendering and the existing
 keyboard/retry/session behavior. See [docs/ASSISTANT_RAG.md](docs/ASSISTANT_RAG.md).
-Local only, not deployed.
+Hostinger installed runtime `7d36fff`; both Assistant assets match their served
+copies and live HTTPS hashes. See `docs/GITHUB_DEPLOYMENT.md`.
 
-## Unified Assistant conversation — October 11, 2026 (local)
+## Unified Assistant conversation — deployed October 11, 2026
 
 Implemented one stream/composer in signed-in office pages, with New chat/Close,
 no mode/module tabs or year form. Farmer/year disambiguation stays in messages;
@@ -20,7 +21,7 @@ only. Normal office authentication/CSRF/MySQL browser checks used synthetic data
 The 55 focused PHP tests / 426 assertions, 40 resolver cases / 109 assertions,
 194 combined PHP tests / 1,486 assertions (overlapping), and 19 JS tests passed.
 See [OFFICE_ASSISTANT.md](docs/OFFICE_ASSISTANT.md) for evidence and limitations.
-Local only, not deployed; the earlier two-mode stages below are historical.
+Deployed in runtime `7d36fff`; the earlier two-mode stages below are historical.
 
 ## Earlier two-mode Office Assistant — October 11, 2026 (superseded local stage)
 

@@ -1,15 +1,17 @@
 # Laravel 12 and AI SDK upgrade
 
-The subsequent local [RAG follow-up](ASSISTANT_RAG.md) uses this same installed
+The [RAG follow-up](ASSISTANT_RAG.md) uses this same installed
 SDK and dependency lockfile. Reviewed local workflow retrieval, strict response
 schema/source checks and a versioned help cache add no dependency or schema.
-Provider context still excludes raw chat and records. Deployment remains pending
-with the framework staging requirements below.
+Provider context still excludes raw chat and records. The dependency upgrade,
+unified Assistant and RAG were deployed together.
 
-Status: completed locally on October 11, 2026; not committed, pushed or deployed.
-Production remains on the Laravel 9 runtime in `c322a5e`. Pending digital-ID
-changes are preserved. No production account, record, environment or schema
-operation ran.
+Status: deployed on Hostinger on October 11, 2026 in runtime `7d36fff`, after a
+GitHub push, fast-forward pull and locked Composer install. CLI and web PHP are
+8.3.35; Laravel is 12.69.3 and Laravel AI SDK is 1.2.0. Pending digital-ID changes
+remain local. Existing schema, operational records and accounts were preserved;
+nine approved AI environment settings were provisioned privately. See the
+[deployment receipt](GITHUB_DEPLOYMENT.md).
 
 The Office Assistant follow-up now uses this foundation for one conversation
 inside normal authenticated office pages, canonical AI help and local policy-
@@ -19,13 +21,13 @@ The current checkout has 144 routes. The configuration-only statements and
 Assistant. See [OFFICE_ASSISTANT.md](OFFICE_ASSISTANT.md) for the 194-test combined
 regression, actual normal-login/MySQL checks and remaining limitations.
 
-The unified feature is implemented locally, not deployed. It adds bounded
+The deployed unified feature adds bounded
 reference encryption, Assistant-only concurrency and pre-work session commit
 without late session or CSRF-cookie overwrites. No conversation table, vector database,
 streaming or worker is required. The previously outstanding 19 legacy-schema
-classes now pass against a disposable synthetic MariaDB database. Live Hostinger
-runtime/schema preflight, backups and release smoke checks below still precede
-the authorized dependency/Assistant release. See
+classes now pass against a disposable synthetic MariaDB database. Hostinger
+runtime/schema preflight, backups and release smoke checks also passed for this
+release, as recorded below. See
 [AI_ASSISTANT_IMPLEMENTATION_PLAN.md](AI_ASSISTANT_IMPLEMENTATION_PLAN.md).
 
 ## Implementation plan
@@ -92,9 +94,10 @@ updated. Composer dependencies are reproducible from the reviewed lockfile.
 `config/ai.php` is published, with `AI_PROVIDER` and `AI_CACHE_STORE` environment
 settings. Embedding caching remains off and defaults to the existing file cache
 if enabled later, rather than requiring an uninstalled database-cache table.
-The supplied OpenAI key is stored only in the ignored local `.env`, with access
-restricted to the local owner, administrators and SYSTEM. It is absent from
-source, examples, test fixtures and this receipt. Never display or commit it.
+The authorized OpenAI key is kept only in private environment configuration,
+including the ignored local `.env` and Hostinger environment. Local access is
+restricted to the owner, administrators and SYSTEM. It is absent from source,
+examples, test fixtures and this receipt. Never display or commit it.
 
 During the foundation stage, the read-only OpenAI models endpoint returned HTTP 200. No inference request,
 farmer identity, assistance record or parcel coordinate was sent. OpenAI response
@@ -108,6 +111,8 @@ approved context, limits, timeouts, usage accounting and a useful failure state.
 Do not forward raw operational records to a model by default.
 
 ## Verification
+
+### Historical local upgrade checks
 
 - On official Windows PHP 8.3.35, matching the reported Hostinger PHP version:
   **514 isolated PHP tests / 8,047 assertions passed**. These include SDK fakes,
@@ -146,8 +151,8 @@ integration database; **no source rows were copied**. One synthetic province
 exercised backup INSERT escaping. The application backup/create/verify/restore
 check also passed for **20 tables / 3 synthetic rows**, with exact table-definition
 and row-count matches. No runtime fix, office-data operation or migration was
-needed. These checks clear the local legacy-schema gate; they do not replace
-the Hostinger runtime/schema preflight and live release checks.
+needed. These checks cleared the local legacy-schema gate before the separate
+Hostinger runtime/schema preflight and live release checks.
 
 The verified legacy classes were:
 `DataQualityRulesTest`, `DatabaseBackupTest`, `DuplicateClaimCheckTest`,
@@ -169,13 +174,36 @@ views before verification after a framework change; old compiled artifacts cause
 empty test renders until refreshed. Do not use a cached production configuration
 for tests or remove the database isolation to make legacy tests run.
 
+### October 11 live release acceptance
+
+Runtime `7d36fff` was installed through GitHub main, Hostinger fast-forward pull
+and `composer install` from the reviewed lockfile. CLI/web PHP 8.3.35, Laravel
+12.69.3 and AI SDK 1.2.0 were verified. The private pre-release database backup
+was verified for **21 tables / 9,366 rows**. Schema and pre-existing row hashes,
+application key, session/cache/Redis namespaces and existing NDVI counters were
+preserved. Only nine approved AI environment settings were provisioned; the
+whole environment is not claimed unchanged. No migration, seeder, account change
+or general cache clear ran. Pending card changes were excluded.
+
+Read-only live CLI checks passed for seven office-role policies, one excluded
+account, ten general-help topics, three veterinary-help topics, six report
+paths, two page renders and one card render. Five public HTTPS checks returned
+200; Assistant CSS/JavaScript matched the source in both public directories with
+0644 permissions. A canonical crop-help generation succeeded with two sources
+and **834 input / 173 output tokens**; its accepted cache hit used zero new
+provider tokens. These are server/public-HTTP smoke checks, not a load test or
+an interactive sign-in test for every account. Details and rollback evidence are
+in [GITHUB_DEPLOYMENT.md](GITHUB_DEPLOYMENT.md).
+
 ## Deployment and rollback requirements
+
+The completed release followed these controls. Retain them for future releases.
 
 1. Verify the Hostinger CLI and web runtime are PHP 8.3+ with required extensions,
    and confirm live schema/runtime compatibility. The disposable synthetic
    MariaDB integration and backup/restore prerequisite above is complete.
-   Do not point automated tests at production. Live preflight and release smoke
-   checks remain required before completing the authorized production release.
+   Do not point automated tests at production. Repeat live preflight and release
+   smoke checks for each subsequent production release.
 2. On explicit release authorization, take verified private database,
    environment, served-asset and existing-vendor backups. Preserve session cookie,
    cache/Redis prefixes, budget values and file paths. Record the old runtime.

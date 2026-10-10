@@ -1,9 +1,12 @@
 # Assistant retrieval and grounded help
 
-Status: October 11, 2026 local follow-up to the unified Assistant. Implemented
-under the owner's request for RAG and more efficient, useful AI. Not committed,
-pushed or deployed. No production operation, schema change, extra dependency,
-vector service, uploaded-document ingestion or account change is required.
+Status: deployed on Hostinger on October 11, 2026 in runtime `7d36fff`, following
+the owner's request for RAG and more efficient, useful AI. The unified Assistant,
+reviewed knowledge and required dependency upgrade were installed through GitHub
+push, Hostinger fast-forward pull and locked Composer install. Existing schema,
+operational records and accounts were preserved; nine approved AI environment
+settings were provisioned privately. No vector service or uploaded-document
+ingestion was added. See the [deployment receipt](GITHUB_DEPLOYMENT.md).
 
 ## What changed
 
@@ -110,7 +113,7 @@ the curation index; the allowlisted passages are runtime evidence.
 
 Deploy the retrieval/grounding/provider/orchestration/resolver classes, the
 complete knowledge directory, updated JavaScript and documentation together with
-the pending dependency/Assistant release. Mirror public JavaScript in both served
+the dependency/Assistant release. Mirror public JavaScript in both served
 Hostinger public directories with 0644 permissions. Verify source labels, fresh
 records, a generation miss and a cache hit using synthetic data. Keep existing
 session/cache namespaces and provider budgets; never clear the general cache.
@@ -127,7 +130,7 @@ and regression evaluations follows the
 Those sources do not establish this application's accuracy or performance;
 local evidence below does.
 
-## Verification
+## Historical local verification
 
 - **190 focused PHP tests / 1,121 assertions** passed after the final audit-count
   fix. This includes 35 RAG feature cases / 246 assertions, 34 retrieval cases /
@@ -159,6 +162,27 @@ local evidence below does.
   and cold-process latency; characters are not tokens or guaranteed cost savings.
 
 Provider fakes establish disclosure/format/cache boundaries, not semantic model
-accuracy or live deployment. Two real help workflows are a smoke check, not an
-accuracy benchmark across all questions. Remaining framework legacy-schema
-staging and true mobile-keyboard/200% browser-zoom checks are unchanged.
+accuracy. The two local real-help workflows are smoke checks, not an accuracy
+benchmark across all questions. The additional framework legacy-schema gate
+subsequently passed **146 tests / 974 assertions** against a disposable synthetic
+MariaDB database. True mobile-keyboard/200% browser-zoom checks remain untested.
+
+## October 11 live acceptance
+
+The deployed runtime `7d36fff` was verified on CLI/web PHP 8.3.35, Laravel 12.69.3
+and AI SDK 1.2.0. The private verified backup covered **21 tables / 9,366 rows**;
+schema, pre-existing row hashes, application key, session/cache/Redis namespaces
+and existing NDVI counters were preserved. Only nine approved AI environment
+settings were provisioned. No migration, seeder, account change or general cache
+clear ran; pending farmer-card changes remain local.
+
+Read-only live CLI checks passed ten general-help topics, three veterinary-help
+topics, seven office-role policies, one excluded account, six report paths,
+two page renders and one card render. Actual canonical crop-help generation
+returned two sources with **834 input / 173 output tokens**. Its accepted cache
+hit used **zero new provider tokens**. Five public HTTPS checks returned 200,
+and Assistant CSS/JavaScript matched source in both public directories with
+0644 permissions. These checks establish the deployed help/cache path, not a
+load test, semantic accuracy benchmark or interactive sign-in test for every
+account. Full release and rollback evidence is in
+[GITHUB_DEPLOYMENT.md](GITHUB_DEPLOYMENT.md).
