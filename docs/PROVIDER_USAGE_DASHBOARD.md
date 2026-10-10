@@ -34,4 +34,6 @@ Verified locally on October 10, 2026:
 - Laravel Pint passed for changed PHP files. Blade compilation, PHP syntax checks, dashboard route verification and `git diff --check` passed.
 - A browser preview using synthetic counts was visually inspected at desktop and narrow mobile widths (376 CSS pixels). Cards stack, labels remain readable and document width equals viewport width; no horizontal overflow was observed. The preview uses the actual panel partial and dashboard styles and makes no provider requests.
 
-The local machine runs PHP 8.4 and emits pre-existing test-runner deprecation notices; the supported production range remains PHP 8.1–8.3. Live provider billing integration and production deployment have not been tested or performed.
+The local machine runs PHP 8.4 and emits pre-existing test-runner deprecation notices; the supported production range remains PHP 8.1–8.3. Provider-wide billing integration is not configured.
+
+Deployed on Hostinger on October 10, 2026 in runtime `c322a5e`. Read-only live checks confirmed owner access, staff exclusion and panel rendering. Existing NDVI budget values and cache namespaces were preserved; no general cache clearing or provider requests were performed. See `GITHUB_DEPLOYMENT.md` for the verified release receipt.

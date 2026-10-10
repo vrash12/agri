@@ -38,3 +38,5 @@ Verify public welcome/sign-in and logo responses, office navigation/dashboard an
 - The card's canvas-rendered front and back loaded at 1011 × 638. The back PNG was visually inspected for the corn wordmark, clear QR panel, cardholder/office signature lines and disclaimer. The HTML card retained the same signatures and artwork sources. Physical printing and live deployment were not performed.
 
 The developer machine runs PHP 8.4 and emits pre-existing test-runner deprecation notices; the supported production PHP range remains 8.1–8.3.
+
+Deployed on Hostinger on October 10, 2026 in runtime `c322a5e`, including both corn assets and the private application-name update with existing session/cache/Redis namespaces retained. All existing database rows and NDVI budget values passed preservation checks. Live public welcome and both sign-ins returned HTTP 200 with current branding; all 13 changed public assets returned HTTP 200. See `GITHUB_DEPLOYMENT.md` for the release receipt. Physical printing and live authenticated card export were not repeated during deployment.
