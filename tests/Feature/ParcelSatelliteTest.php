@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\FarmPlot;
 use App\Models\User;
+use App\Support\ProviderUsage;
 use App\Support\SentinelParcel;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Client\ConnectionException;
@@ -175,6 +176,23 @@ class ParcelSatelliteTest extends TestCase
         config(['sentinel.daily_requests' => 100, 'sentinel.monthly_requests' => 1]);
         $this->getJson($this->imageUrl())->assertStatus(429);
         Http::assertSentCount(2);
+        $usage = app(ProviderUsage::class)->forUser(User::find(4));
+        $this->assertSame(1, $usage['satellite']['periods']['day']['used']);
+        $this->assertSame(0, $usage['satellite']['periods']['month']['remaining']);
+    }
+
+    public function test_static_parcel_requests_are_counted_once_and_denied_requests_are_not_counted(): void
+    {
+        config(['services.google_maps.static_key' => 'synthetic-static-key']);
+        Http::fake(['maps.googleapis.com/*' => Http::response('PNG', 200, ['Content-Type' => 'image/png'])]);
+        $url = route('farm-plots.static-map', 1);
+        $this->actingAs(User::find(1))->get($url)->assertOk();
+        $this->get($url)->assertOk();
+        $this->actingAs(User::find(2))->get($url)->assertForbidden();
+        Http::assertSentCount(1);
+        $usage = app(ProviderUsage::class)->forUser(User::find(4));
+        $this->assertSame(1, $usage['google']['periods']['day']['used']);
+        $this->assertSame(1, $usage['google']['periods']['month']['used']);
     }
 
     public function test_expired_oauth_tokens_are_refreshed_before_a_different_request(): void

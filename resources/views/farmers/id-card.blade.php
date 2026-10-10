@@ -117,7 +117,7 @@
 
           <div class="farmer-card-front-details">
             <div class="farmer-card-field farmer-card-field-name"><span>Full name</span><strong>{{ strtoupper($fullName ?: 'NAME NOT RECORDED') }}</strong></div>
-            <div class="farmer-card-field"><span>AgriGOV ID <em>System-generated</em></span><strong class="farmer-card-code">{{ $farmer->agri_gov_id }}</strong></div>
+            <div class="farmer-card-field"><span>AgriLGU ID <em>System-generated</em></span><strong class="farmer-card-code">{{ $farmer->agri_gov_id }}</strong></div>
             <div class="farmer-card-two-fields">
               <div class="farmer-card-field"><span>RSBSA number</span><strong>{{ $farmer->rsbsa_no ?: 'Not recorded' }}</strong></div>
               <div class="farmer-card-field"><span>FFRS number</span><strong>{{ $farmer->ffrs ?: 'Not recorded' }}</strong></div>
@@ -126,7 +126,7 @@
           </div>
 
           <div class="farmer-card-front-footer">
-            <span class="farmer-card-footer-brand"><span aria-hidden="true"><x-brand compact /></span><span>AgriGOV <i>AGRICULTURE INFORMATION SYSTEM</i></span></span>
+            <span class="farmer-card-footer-brand"><span aria-hidden="true"><x-brand compact /></span><span>AgriLGU <i>LGU AGRICULTURE INFORMATION SYSTEM</i></span></span>
             <b>{!! $cardIcon('shield') !!}REGISTERED FARMER</b>
             <strong>{{ $farmer->created_at ? $farmer->created_at->format('Y') : now()->format('Y') }}</strong>
           </div>
@@ -280,8 +280,8 @@
       background: @json(asset('images/branding/farmer-card-background.svg')),
       frontArt: @json(asset('images/branding/farmer-card-front-art.svg')),
       backArt: @json(asset('images/branding/farmer-card-back-art.svg')),
-      agrigovLogo: @json(asset('images/branding/agrigov-wordmark-v2.png')),
-      agrigovMark: @json(asset('images/branding/agrigov-mark-v1.png')),
+      brandWordmark: @json(asset('images/branding/agrilgu-wordmark-v1.png')),
+      brandMark: @json(asset('images/branding/agrilgu-mark-v1.png')),
       icons: @json($cardIcons),
       signatory: @json($cardSignatory ? ['name' => mb_strtoupper($cardSignatory['name']), 'title' => $cardSignatory['title']] : null),
       holderName: @json($fullName ? mb_strtoupper($fullName) : null),
@@ -428,11 +428,11 @@
     window.addEventListener('beforeprint', fitPrintedAddress);
 
     async function renderFront() {
-      const [photo, daLogo, republicLogo, background, frontArt, agrigovMark] = await Promise.all([
+      const [photo, daLogo, republicLogo, background, frontArt, brandMark] = await Promise.all([
         loadImage(cardData.photoUrl), loadImage(cardData.daLogo), loadImage(cardData.republicLogo), loadImage(cardData.background),
-        loadImage(cardData.frontArt), loadImage(cardData.agrigovMark)
+        loadImage(cardData.frontArt), loadImage(cardData.brandMark)
       ]);
-      if (!daLogo || !republicLogo || !background || !frontArt || !agrigovMark) throw new Error('The card artwork could not load. Reload this page before downloading the ID.');
+      if (!daLogo || !republicLogo || !background || !frontArt || !brandMark) throw new Error('The card artwork could not load. Reload this page before downloading the ID.');
       const canvas = document.createElement('canvas');
       canvas.width = 1011; canvas.height = 638;
       const ctx = canvas.getContext('2d');
@@ -459,7 +459,7 @@
         ctx.restore();
       }
       field(ctx, 'FULL NAME', cardData.fullName, 340, 205, 610, 38);
-      label(ctx, 'AGRIGOV ID · SYSTEM-GENERATED', 340, 285);
+      label(ctx, 'AGRILGU ID · SYSTEM-GENERATED', 340, 285);
       ctx.font = '800 35px monospace';
       roundRect(ctx, 333, 290, Math.min(ctx.measureText(cardData.farmerId).width, 610) + 15, 42, 9, 'rgba(20,116,63,.08)', 'rgba(20,116,63,.3)');
       fittedText(ctx, cardData.farmerId, 340, 320, 610, 35, 800, '#132018', 'monospace');
@@ -467,8 +467,8 @@
       field(ctx, 'FFRS NUMBER', cardData.ffrs, 650, 365, 300, 27);
       field(ctx, 'REGISTRY MUNICIPALITY', cardData.municipality, 340, 445, 490, 26);
       roundRect(ctx, 48, 567, 58, 58, 10, '#ffffff');
-      ctx.drawImage(agrigovMark, 52, 571, 50, 50);
-      ctx.fillStyle='#fff'; ctx.font='800 27px Arial'; ctx.fillText('AgriGOV',120,592); ctx.fillStyle='#e2f1e6'; ctx.font='13px Arial'; ctx.fillText('AGRICULTURE INFORMATION SYSTEM',120,614);
+      ctx.drawImage(brandMark, 52, 571, 50, 50);
+      ctx.fillStyle='#fff'; ctx.font='800 27px Arial'; ctx.fillText('AgriLGU',120,592); ctx.fillStyle='#e2f1e6'; ctx.font='13px Arial'; ctx.fillText('LGU AGRICULTURE INFORMATION SYSTEM',120,614);
       ctx.textAlign='right'; ctx.fillStyle='#fff'; ctx.font='800 19px Arial'; ctx.fillText('REGISTERED FARMER',860,602);
       drawIcon(ctx, 'shield', 860 - ctx.measureText('REGISTERED FARMER').width - 32, 582, 24, '#eac64d', 2.2);
       ctx.font='800 22px Arial'; ctx.fillText(cardData.year,963,602); ctx.textAlign='left';
@@ -476,10 +476,10 @@
     }
 
     async function renderBack() {
-      const [agrigovLogo, qrImage, background, backArt] = await Promise.all([
-        loadImage(cardData.agrigovLogo), loadImage(cardData.qrDataUri), loadImage(cardData.background), loadImage(cardData.backArt)
+      const [brandWordmark, qrImage, background, backArt] = await Promise.all([
+        loadImage(cardData.brandWordmark), loadImage(cardData.qrDataUri), loadImage(cardData.background), loadImage(cardData.backArt)
       ]);
-      if (!agrigovLogo || !qrImage || !background || !backArt) throw new Error('The card artwork or QR code could not load. Reload this page before downloading the ID.');
+      if (!brandWordmark || !qrImage || !background || !backArt) throw new Error('The card artwork or QR code could not load. Reload this page before downloading the ID.');
       const canvas = document.createElement('canvas');
       canvas.width = 1011; canvas.height = 638;
       const ctx = canvas.getContext('2d');
@@ -487,7 +487,7 @@
       // Patterned header band with rice sprigs, plus the faint rosette.
       ctx.drawImage(backArt, 0, 0, 1011, 638);
       roundRect(ctx,366,8,279,98,8,'#ffffff');
-      ctx.drawImage(agrigovLogo,390,13,230,230 * agrigovLogo.height / agrigovLogo.width);
+      ctx.drawImage(brandWordmark,390,13,230,230 * brandWordmark.height / brandWordmark.width);
       field(ctx,'CONTACT NUMBER',cardData.contact,52,162,420,28,false,'phone');
       label(ctx,'FARM LOCATION · PARCEL ADDRESS',52,237,'pin');
       addressText(ctx,cardData.farmLocation,52,270,440,100);

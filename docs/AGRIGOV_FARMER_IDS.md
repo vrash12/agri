@@ -1,5 +1,7 @@
 # AgriGOV farmer IDs
 
+Current local branding is **AgriLGU**. Screen, print, digital ID and PNG exports use the matching corn emblem/wordmark and AgriLGU labels. Actual `AGRI-F-######` numbers, portal logins and `agri_gov_id` compatibility fields are unchanged; the dated releases below used the former name. This branding follow-up is not pushed or deployed. See [AgriLGU branding](AGRILGU_BRANDING.md).
+
 The October 7 artwork and signature-line changes deployed on Hostinger on October 8, 2026 in runtime `18cf956`. Both SVG overlays and the stylesheet were mirrored to the served public directory and verified over HTTP; new public SVG files require 0644 permissions. The authorized server render confirms Ramos office and cardholder lines without altering account or farmer records. See `docs/GITHUB_DEPLOYMENT.md` for backup, verification and live print/PNG limitations.
 
 ## ID-style design details — October 7, 2026

@@ -217,6 +217,10 @@
       </section></aside>
   </div>
 
+  @if(($providerUsage ?? null) && ! $user->isVisitor() && ($user->isSystemOwner() || $user->isSuperAdmin()))
+    @include('dashboard.partials.provider-usage')
+  @endif
+
   <details class="ops-reports" id="dashboardReports" @if(request()->has('report_year')) open @endif>
     <summary><span><strong>Reports and office details</strong><small>Monthly figures, program totals, recent services, and parcel work</small></span></summary>
     <div class="ops-reports-content">

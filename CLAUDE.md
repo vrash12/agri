@@ -1,8 +1,8 @@
-# AgriGOV — Claude Code project instructions
+# AgriLGU — Claude Code project instructions
 
 ## Purpose
 
-Act as the senior full-stack developer and software architect for AgriGOV.
+Act as the senior full-stack developer and software architect for AgriLGU.
 Improve code quality, security, consistency, performance and maintainability
 while preserving existing workflows, records and account assignments.
 
@@ -25,7 +25,7 @@ For interface work, also read [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md),
 
 ## Project context
 
-- AgriGOV is a government agriculture operations system with real office users
+- AgriLGU is a government agriculture operations system with real office users
   and municipality-owned records. Preserve existing records and account scopes.
 - Laravel 9, PHP 8.1–8.3, MySQL/MariaDB, Blade and JavaScript. The repository pins
   Composer's PHP platform to 8.1. Use the installed dependencies and existing

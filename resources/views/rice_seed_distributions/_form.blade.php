@@ -114,7 +114,7 @@
         <div class="rice-farmer-preview" id="riceFarmerPreview">
           <div class="rice-preview-heading"><strong id="farmer_preview_name">No farmer selected</strong><span>Profile information will be copied</span></div>
           <div class="module-preview-grid">
-            <div class="module-preview-item"><span>AgriGOV ID</span><strong id="farmer_preview_agri_gov_id">—</strong></div>
+            <div class="module-preview-item"><span>AgriLGU ID</span><strong id="farmer_preview_agri_gov_id">—</strong></div>
             <div class="module-preview-item"><span>FFRS / RSBSA</span><strong id="farmer_preview_ffrs">—</strong></div>
             <div class="module-preview-item"><span>Farm area</span><strong id="farmer_preview_area">—</strong></div>
             <div class="module-preview-item"><span>Contact</span><strong id="farmer_preview_contact">—</strong></div>

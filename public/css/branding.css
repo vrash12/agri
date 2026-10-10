@@ -1,5 +1,5 @@
 /* Shared application identity. Agency seals remain separate on official records. */
-img.agrigov-logo {
+img.agrilgu-logo {
     display: block;
     width: 180px;
     max-width: 100%;
@@ -11,59 +11,59 @@ img.agrigov-logo {
     background: transparent;
 }
 
-.brand.agrigov-sidebar {
+.brand.agrilgu-sidebar {
     flex-direction: column;
     align-items: flex-start;
     gap: 0;
 }
 
-.agrigov-sidebar .brand-sub {
+.agrilgu-sidebar .brand-sub {
     margin: 0 0 4px 8px;
     line-height: 1.4;
 }
 
-.rail-brand img.agrigov-logo--mark {
+.rail-brand img.agrilgu-logo--mark {
     width: 38px;
     height: 38px;
 }
 
-.agrigov-login {
+.agrilgu-login {
     display: block;
     width: 96px;
     max-width: 100%;
     margin: 0 auto 12px;
 }
 
-.agrigov-login img.agrigov-logo {
+.agrilgu-login img.agrilgu-logo {
     width: 100%;
 }
 
-.mobilebar img.agrigov-logo {
+.mobilebar img.agrilgu-logo {
     width: 120px;
 }
 
-.welcome-brand img.agrigov-logo {
+.welcome-brand img.agrilgu-logo {
     width: 180px;
     flex-shrink: 0;
 }
 
-.welcome-footer img.agrigov-logo {
+.welcome-footer img.agrilgu-logo {
     width: 180px;
     margin-left: -8px;
 }
 
-.brand.agrigov-public {
+.brand.agrilgu-public {
     flex-direction: column;
     align-items: flex-start;
     gap: 0;
 }
 
-.agrigov-public img.agrigov-logo {
+.agrilgu-public img.agrilgu-logo {
     width: 180px;
     height: auto;
 }
 
-.agrigov-public > span {
+.agrilgu-public > span {
     margin-left: 8px;
 }
 
@@ -72,8 +72,8 @@ img.agrigov-logo {
         display: none;
     }
 
-    .welcome-brand img.agrigov-logo,
-    .agrigov-public img.agrigov-logo {
+    .welcome-brand img.agrilgu-logo,
+    .agrilgu-public img.agrilgu-logo {
         width: 145px;
     }
 }

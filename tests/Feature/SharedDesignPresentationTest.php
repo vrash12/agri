@@ -38,6 +38,10 @@ class SharedDesignPresentationTest extends TestCase
             $this->assertSame($visible, str_contains($html, 'href="'.route($route).'"'), $route);
         }
         $this->assertStringContainsString('Skip to content', $html);
+        $this->assertStringContainsString('alt="AgriLGU"', $html);
+        $this->assertStringContainsString(asset('images/branding/agrilgu-wordmark-v1.png'), $html);
+        $this->assertStringContainsString(asset('images/branding/agrilgu-mark-v1.png'), $html);
+        $this->assertStringNotContainsString('AgriGOV', $html);
         $this->assertStringContainsString('Unsaved changes may be lost', $html);
         $this->assertStringNotContainsString('<span class="nav-description">', $html);
         $this->assertStringContainsString('href="'.route('anti-rabies-vaccinations.index').'"', $html);
@@ -80,6 +84,10 @@ class SharedDesignPresentationTest extends TestCase
         $view = $this->withViewErrors(['email' => 'These credentials do not match our records.'])->view('auth.login');
 
         $view->assertSee('These credentials do not match our records.')
+            ->assertSee('<title>Office sign in | AgriLGU</title>', false)
+            ->assertSee('alt="AgriLGU"', false)
+            ->assertSee(asset('images/branding/agrilgu-mark-v1.png'), false)
+            ->assertDontSee('AgriGOV')
             ->assertSee('autocomplete="current-password"', false)
             ->assertSee('autocomplete="email"', false)
             ->assertSee('aria-controls="password"', false)

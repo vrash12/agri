@@ -941,7 +941,7 @@
 
   function toggleMapLabels() {
     // Satellite imagery has no Google place or road labels and works with map IDs.
-    // Keep AgriGOV overlays and the current camera independent of this choice.
+    // Keep AgriLGU overlays and the current camera independent of this choice.
     state.map.setMapTypeId(state.map.getMapTypeId() === 'satellite' ? state.labeledMapType : 'satellite');
   }
 

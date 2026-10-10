@@ -58,7 +58,7 @@
     }
 
     if (term.length < MIN_QUERY) {
-      return 'Type at least ' + MIN_QUERY + ' characters of an AgriGOV ID, name, FFRS or RSBSA number.';
+      return 'Type at least ' + MIN_QUERY + ' characters of an AgriLGU ID, name, FFRS or RSBSA number.';
     }
 
     if (state.loading) {
@@ -189,7 +189,7 @@
       create: false,
       maxOptions: RESULT_LIMIT,
       allowEmptyOption: true,
-      placeholder: select.dataset.placeholder || 'Type an AgriGOV ID, name, FFRS or RSBSA number',
+      placeholder: select.dataset.placeholder || 'Type an AgriLGU ID, name, FFRS or RSBSA number',
       // Searching happens in the database, so the widget must not also filter what
       // comes back — a server match on a middle name would otherwise be hidden
       // because the typed text is not in the visible label.

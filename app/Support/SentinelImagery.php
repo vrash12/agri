@@ -21,7 +21,7 @@ final class SentinelImagery
 
     private const CRS = 'http://www.opengis.net/def/crs/OGC/1.3/CRS84';
 
-    public function __construct(private SentinelParcel $parcels)
+    public function __construct(private SentinelParcel $parcels, private SatelliteRequestBudget $budget)
     {
     }
 
@@ -169,26 +169,6 @@ final class SentinelImagery
         }
     }
 
-    private function reserveRequest(): void
-    {
-        try {
-            Cache::lock('sentinel:budget:lock', 10)->block(2, function (): void {
-                $keys = ['day' => 'sentinel:requests:'.now()->utc()->format('Y-m-d'), 'month' => 'sentinel:requests:'.now()->utc()->format('Y-m')];
-                $limits = ['day' => max(0, (int) config('sentinel.daily_requests', 100)), 'month' => max(0, (int) config('sentinel.monthly_requests', 2000))];
-                foreach ($keys as $period => $key) {
-                    if ((int) Cache::get($key, 0) >= $limits[$period]) {
-                        throw new SatelliteUnavailable('The local satellite request allowance has been reached. Ask the administrator to review usage.', 429);
-                    }
-                }
-                foreach ($keys as $period => $key) {
-                    Cache::put($key, (int) Cache::get($key, 0) + 1, $period === 'day' ? now()->utc()->endOfDay() : now()->utc()->endOfMonth());
-                }
-            });
-        } catch (LockTimeoutException $exception) {
-            throw new SatelliteUnavailable('Satellite processing is busy. Retry shortly.');
-        }
-    }
-
     private function token(): string
     {
         $key = 'sentinel:oauth:'.$this->credentialKey();
@@ -226,7 +206,7 @@ final class SentinelImagery
     private function post(string $url, array $payload, string $accept = 'application/json'): Response
     {
         $token = $this->token();
-        $this->reserveRequest();
+        $this->budget->reserve();
         try {
             $response = Http::withToken($token)->accept($accept)->connectTimeout(5)->timeout(25)
                 ->withOptions(['allow_redirects' => false, 'on_headers' => static function ($response): void {

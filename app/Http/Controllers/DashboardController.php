@@ -16,6 +16,7 @@ use App\Support\DashboardCoverage;
 use App\Support\DashboardMetrics;
 use App\Support\FarmerDataQuality;
 use App\Support\MunicipalityAccess;
+use App\Support\ProviderUsage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 
@@ -24,7 +25,8 @@ class DashboardController extends Controller
     public function __construct(
         private MunicipalityAccess $municipalityAccess,
         private DashboardMetrics $metrics,
-        private DashboardCoverage $coverage
+        private DashboardCoverage $coverage,
+        private ProviderUsage $providerUsage
     ) {
         $this->middleware('auth');
     }
@@ -468,7 +470,10 @@ class DashboardController extends Controller
             'geofences' => $this->coverage->geofences($user),
         ];
 
+        $providerUsage = $this->providerUsage->forUser($user);
+
         return view('dashboard', compact(
+            'providerUsage',
             'stats',
             'charts',
             'dashboardMetrics',

@@ -149,7 +149,10 @@ class FarmerIdentifierWorkflowTest extends TestCase
         }
         $this->getJson(route('farmers.map-card', $farmer))->assertOk()
             ->assertJsonPath('id', $farmer->id)->assertJsonPath('agri_gov_id', $farmer->agri_gov_id);
-        $this->get(route('farmers.id-card', $farmer))->assertOk()->assertSee($farmer->agri_gov_id);
+        $this->get(route('farmers.id-card', $farmer))->assertOk()
+            ->assertSee($farmer->agri_gov_id)
+            ->assertSee('AgriLGU ID')
+            ->assertDontSee('AgriGOV');
     }
 
     private function farmer(int $municipalityId, string $firstName): Farmer

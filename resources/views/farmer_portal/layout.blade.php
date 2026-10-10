@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="robots" content="noindex, nofollow">
-    <title>@yield('title', 'Farmer portal') | AgriGOV</title>
+    <title>@yield('title', 'Farmer portal') | AgriLGU</title>
     @include('partials.branding-head')
     @include('partials.operations-ui-styles')
     <link rel="stylesheet" href="{{ asset('css/farmer-portal.css') }}?v={{ filemtime(public_path('css/farmer-portal.css')) }}">
@@ -17,7 +17,7 @@
     <a class="fp-skip" href="#main-content">Skip to content</a>
     <header class="fp-header">
         <div class="fp-header-inner">
-            <a class="fp-brand" href="{{ isset($account) ? route('farmer-portal.home') : route('welcome') }}" aria-label="AgriGOV {{ isset($account) ? 'farmer home' : 'welcome page' }}"><x-brand /></a>
+            <a class="fp-brand" href="{{ isset($account) ? route('farmer-portal.home') : route('welcome') }}" aria-label="AgriLGU {{ isset($account) ? 'farmer home' : 'welcome page' }}"><x-brand /></a>
             <span class="fp-header-label">Farmer portal</span>
             @if(isset($account))
                 <form method="POST" action="{{ route('farmer-portal.logout') }}" data-portal-submit data-portal-logout>@csrf<button class="module-button" type="submit">Sign out</button></form>
@@ -42,7 +42,7 @@
         @endif
         @yield('content')
     </main>
-    <footer class="fp-footer"><span>AgriGOV · Farmer portal</span><span>Need help? Contact your city or municipal agriculture office.</span></footer>
+    <footer class="fp-footer"><span>AgriLGU · Farmer portal</span><span>Need help? Contact your city or municipal agriculture office.</span></footer>
     @include('partials.form-feedback')
     @if(isset($account))<span hidden data-portal-heartbeat="{{ route('farmer-portal.heartbeat') }}" data-idle-seconds="{{ \App\Http\Middleware\EnforceIdleSession::timeoutMinutes() * 60 }}" data-login-url="{{ route('farmer-portal.login') }}"></span>@endif
     <script src="{{ asset('js/farmer-portal.js') }}?v={{ filemtime(public_path('js/farmer-portal.js')) }}" defer></script>

@@ -52,7 +52,7 @@
 
 <div class="member-modal-backdrop" id="memberModalBackdrop"></div>
 <section class="member-modal" id="memberModal" role="dialog" aria-modal="true" aria-labelledby="memberModalTitle">
-  <div class="member-modal-head"><div><h2 id="memberModalTitle">Select cooperative farmers</h2><p>Search and select any registered farmer available to this municipality.</p></div><div class="module-search-wrap member-modal-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg><input class="module-input" id="memberSearch" type="search" placeholder="Search AgriGOV ID, name, FFRS, or location" aria-label="Search available farmers"></div></div>
+  <div class="member-modal-head"><div><h2 id="memberModalTitle">Select cooperative farmers</h2><p>Search and select any registered farmer available to this municipality.</p></div><div class="module-search-wrap member-modal-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg><input class="module-input" id="memberSearch" type="search" placeholder="Search AgriLGU ID, name, FFRS, or location" aria-label="Search available farmers"></div></div>
   <div class="member-modal-body">
     <table class="module-table member-modal-table" id="memberPickerTable">
       <thead><tr><th>Select</th><th>Farmer</th><th>FFRS</th><th>Gender</th><th>Farm location</th><th class="module-numeric">Farm area</th></tr></thead>

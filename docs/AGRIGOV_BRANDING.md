@@ -1,5 +1,7 @@
 # AgriGOV identity
 
+Historical release reference. The current local identity is AgriLGU with a corn-and-leaf emblem; see [AgriLGU branding](AGRILGU_BRANDING.md) for current assets, compatibility and deployment requirements. The October 10 rebrand has not been pushed or deployed.
+
 The application wordmark reads **AgriGOV** with the leaf-and-field emblem replacing its first letter A. Use `x-brand` for the wordmark and `x-brand compact` for the square mark. Accessible alternative text is AgriGOV. Shared sizing lives in `public/css/branding.css`; each standalone document includes `partials.branding-head` for the stylesheet and browser icons.
 
 The identity appears on the welcome page, office login, shared desktop/mobile navigation, collapsed navigation, public QR parcel page, and browser titles/icons. Farmer card attribution names AgriGOV in both HTML and PNG exports. Actual agency seals and registry identifiers remain unchanged.

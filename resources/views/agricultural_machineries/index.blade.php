@@ -137,7 +137,7 @@
       <div class="machinery-primary-filter {{ ($canChooseMunicipality ?? false) ? '' : 'no-municipality' }}">
         <div class="module-field">
           <label for="machinerySearch">Search inventory</label>
-          <div class="module-search-wrap"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg><input class="module-input" id="machinerySearch" type="search" name="q" value="{{ $filters['q'] ?? '' }}" placeholder="AgriGOV ID, asset code, machine, holder, serial, or location"></div>
+          <div class="module-search-wrap"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg><input class="module-input" id="machinerySearch" type="search" name="q" value="{{ $filters['q'] ?? '' }}" placeholder="AgriLGU ID, asset code, machine, holder, serial, or location"></div>
         </div>
         @if($canChooseMunicipality ?? false)
           <div class="module-field">

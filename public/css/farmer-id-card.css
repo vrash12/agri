@@ -31,7 +31,7 @@
 .farmer-card-front-footer b{display:flex;align-items:center;gap:.9cqw;margin-left:auto;font-size:1.8cqw;letter-spacing:.04em}
 .farmer-card-front-footer b .farmer-card-icon{width:2.4cqw;height:2.4cqw;color:#eac64d}
 .farmer-card-footer-brand{display:flex;align-items:center;gap:1.4cqw}
-.farmer-card-footer-brand .agrigov-logo{display:block;flex:none;width:5.75cqw;height:5.75cqw;padding:.4cqw;box-sizing:border-box;border-radius:1cqw;background:#fff;object-fit:contain}
+.farmer-card-footer-brand .agrilgu-logo{display:block;flex:none;width:5.75cqw;height:5.75cqw;padding:.4cqw;box-sizing:border-box;border-radius:1cqw;background:#fff;object-fit:contain}
 .farmer-card-front-footer strong{font-size:2.2cqw}
 .farmer-id-card-back>header{height:18.65%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;padding:.6cqw 4cqw 1.1cqw}
 .farmer-id-card-back>header img{display:block;flex:none;width:23cqw;height:auto;max-width:none;padding:.5cqw 2.45cqw;box-sizing:content-box;object-fit:contain;border-radius:.8cqw;background:#fff}

@@ -13,7 +13,7 @@
     content="{{ csrf_token() }}"
   >
 
-  <title>{{ $farmerSignIn ? 'Farmer sign in' : 'Office sign in' }} | AgriGOV</title>
+  <title>{{ $farmerSignIn ? 'Farmer sign in' : 'Office sign in' }} | AgriLGU</title>
   <meta name="robots" content="noindex, nofollow">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -545,7 +545,7 @@
         aria-labelledby="login-title"
       >
         <header class="login-header">
-          <a class="agrigov-login" href="{{ route('welcome') }}" aria-label="AgriGOV home">
+          <a class="agrilgu-login" href="{{ route('welcome') }}" aria-label="AgriLGU home">
             <x-brand compact />
           </a>
 
@@ -618,7 +618,7 @@
               class="field-label"
               for="{{ $farmerSignIn ? 'login_id' : 'email' }}"
             >
-              {{ $farmerSignIn ? 'AgriGOV ID or RSBSA number' : 'Email address' }}
+              {{ $farmerSignIn ? 'AgriLGU ID or RSBSA number' : 'Email address' }}
             </label>
 
             <div class="input-wrap">
@@ -730,7 +730,7 @@
         <aside class="login-confidentiality" aria-labelledby="login-confidentiality-title">
           <h2 id="login-confidentiality-title">Confidentiality &amp; testing notice</h2>
           <p>Access is provided to authorized participants solely for testing and validation. Keep nonpublic system information, records, credentials and materials confidential.</p>
-          <p>Do not share screenshots or confidential materials, or use confidential code, designs or documentation to copy or reproduce AgriGOV, without the system owner's prior written permission. Access grants no permission to reuse these materials.</p>
+          <p>Do not share screenshots or confidential materials, or use confidential code, designs or documentation to copy or reproduce AgriLGU, without the system owner's prior written permission. Access grants no permission to reuse these materials.</p>
           <div class="field login-confidentiality-confirmation">
             <label class="login-confidentiality-ack" for="confidentiality_acknowledged">
               <input
@@ -757,8 +757,8 @@
 
         <footer class="login-footer">
           © {{ date('Y') }}
-          <strong>AgriGOV</strong><br>
-          Agriculture Information System<br>
+          <strong>AgriLGU</strong><br>
+          LGU Agriculture Information and GIS Management System<br>
           <a href="{{ asset('photo-credits.html') }}">Image sources</a>
         </footer>
       </section>

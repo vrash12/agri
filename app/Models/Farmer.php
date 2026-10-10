@@ -126,7 +126,7 @@ class Farmer extends Model
         return $this->hasMany(AgriculturalMachinery::class);
     }
 
-    /** Every saved farmer has an AgriGOV ID, independently of portal activation. */
+    /** Every saved farmer has an AgriLGU ID, independently of portal activation. */
     public function getAgriGovIdAttribute(): ?string
     {
         return $this->getKey() === null ? null : FarmerIdentifier::format((int) $this->getKey());

@@ -28,7 +28,7 @@ function finder() {
   return context;
 }
 
-test('the AgriGOV ID identifies a farmer even when no external registry number exists', () => {
+test('the AgriLGU ID identifies a farmer even when no external registry number exists', () => {
   const { describe } = finder();
 
   assert.equal(

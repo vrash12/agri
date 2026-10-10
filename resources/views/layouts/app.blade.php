@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>@yield('title', 'Agriculture Information System') | AgriGOV</title>
+  <title>@yield('title', 'LGU Agriculture Information and GIS Management System') | AgriLGU</title>
   @auth
     <script src="{{ asset('js/session-history.js') }}?v={{ filemtime(public_path('js/session-history.js')) }}"></script>
   @endauth
@@ -1272,7 +1272,7 @@
         <div class="sidebar-topbar">
           @auth
             <button class="nav-mobile-close" type="button" onclick="closeSidebar()" aria-label="Close menu">Close</button>
-            <div class="brand agrigov-sidebar">
+            <div class="brand agrilgu-sidebar">
               <x-brand />
               <div class="brand-text">
                 <div class="brand-sub">{{ $officeLabel }}</div>

@@ -70,5 +70,5 @@
         </ul>
     </section>
 </div>
-<section class="fp-guidance" aria-labelledby="help-title"><h2 id="help-title">Something missing or incorrect?</h2><p>Contact your city or municipal agriculture office and give them your AgriGOV ID. Staff can check your record and make corrections.</p><p class="fp-small">These are recorded transactions and planning maps. They do not establish land ownership or eligibility for future assistance.</p></section>
+<section class="fp-guidance" aria-labelledby="help-title"><h2 id="help-title">Something missing or incorrect?</h2><p>Contact your city or municipal agriculture office and give them your AgriLGU ID. Staff can check your record and make corrections.</p><p class="fp-small">These are recorded transactions and planning maps. They do not establish land ownership or eligibility for future assistance.</p></section>
 @endsection

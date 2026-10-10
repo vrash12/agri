@@ -70,13 +70,13 @@
     }
     if (json.truncated) {
       return 'Showing ' + Number(json.returned).toLocaleString() + ' of ' +
-        Number(json.total).toLocaleString() + ' matches. Enter more of the AgriGOV ID, name or FFRS.';
+        Number(json.total).toLocaleString() + ' matches. Enter more of the AgriLGU ID, name or FFRS.';
     }
     if (entries.length === 1) {
       return 'Ready to locate ' + entries[0].name + '.';
     }
 
-    return entries.length.toLocaleString() + ' matches. Enter more of the AgriGOV ID, name or FFRS.';
+    return entries.length.toLocaleString() + ' matches. Enter more of the AgriLGU ID, name or FFRS.';
   }
 
   function start() {

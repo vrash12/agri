@@ -14,6 +14,7 @@ use App\Support\ConcurrentWrite;
 use App\Support\GeoGeometry;
 use App\Support\MunicipalityAccess;
 use App\Support\MunicipalityBoundaryImporter;
+use App\Support\ProviderUsage;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Client\ConnectionException;
@@ -31,7 +32,8 @@ class MunicipalityBoundaryController extends Controller
         private MunicipalityAccess $municipalityAccess,
         private ConcurrentWrite $concurrentWrite,
         private GeoGeometry $geometry,
-        private MunicipalityBoundaryImporter $importer
+        private MunicipalityBoundaryImporter $importer,
+        private ProviderUsage $providerUsage
     ) {
         $this->middleware('auth');
     }
@@ -308,10 +310,11 @@ class MunicipalityBoundaryController extends Controller
                             return $cached;
                         }
 
+                        $this->providerUsage->recordGoogleStaticRequest();
                         $response = Http::withHeaders([
                             'Accept' => 'image/png,image/*;q=0.9',
                             'Referer' => rtrim((string) config('app.url'), '/').'/',
-                            'User-Agent' => 'AgriMS-Tarlac/1.0',
+                            'User-Agent' => 'AgriLGU/1.0',
                         ])->connectTimeout(5)->timeout(20)->get(
                             'https://maps.googleapis.com/maps/api/staticmap',
                             [

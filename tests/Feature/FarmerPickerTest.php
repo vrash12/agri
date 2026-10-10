@@ -244,7 +244,7 @@ class FarmerPickerTest extends TestCase
             'farm_location' => 'Barangay Uno',
         ]);
 
-        // AgriGOV identifies even farmers without an FFRS or RSBSA reference.
+        // AgriLGU identifies even farmers without an FFRS or RSBSA reference.
         $this->assertStringContainsString('Nameless, Juan', $picker->option($noIdentifier)['label']);
         $this->assertStringContainsString($noIdentifier->agri_gov_id, $picker->option($noIdentifier)['label']);
         $this->assertSame('Not assigned', $picker->option($noIdentifier)['dataset']['ffrs']);

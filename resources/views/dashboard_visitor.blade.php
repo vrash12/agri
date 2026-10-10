@@ -4,7 +4,7 @@
 <main class="ops-page" aria-labelledby="visitor-dashboard-title">
   <section class="ops-page-header">
     <div>
-      <p class="ops-eyebrow">AgriGOV system overview</p>
+      <p class="ops-eyebrow">AgriLGU system overview</p>
       <h1 id="visitor-dashboard-title">Welcome, visitor</h1>
       <p class="ops-page-subtitle">This read-only overview shows system coverage without farmer records or personal information.</p>
     </div>

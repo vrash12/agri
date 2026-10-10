@@ -42,7 +42,7 @@
         data-endpoint="{{ route('farmers.picker') }}"
         @if($withProfile) data-profile="1" @endif
         @if($municipalitySelect) data-municipality-select="{{ $municipalitySelect }}" @endif
-        data-placeholder="Type an AgriGOV ID, name, FFRS or RSBSA number"
+        data-placeholder="Type an AgriLGU ID, name, FFRS or RSBSA number"
         aria-describedby="{{ $fieldId }}_picker_help {{ $fieldId }}_error"
     >
         @unless($required)
@@ -63,7 +63,7 @@
         @if($browsingAll)
             Showing the whole registry.
         @else
-            Type at least {{ \App\Support\FarmerPicker::MINIMUM_TERM }} characters of an AgriGOV ID, name, FFRS or RSBSA number.
+            Type at least {{ \App\Support\FarmerPicker::MINIMUM_TERM }} characters of an AgriLGU ID, name, FFRS or RSBSA number.
         @endif
     </div>
 
@@ -87,6 +87,6 @@
 
 @once
     @push('scripts')
-        <script src="{{ asset('js/farmer-picker.js') }}" defer></script>
+        <script src="{{ asset('js/farmer-picker.js') }}?v={{ @filemtime(public_path('js/farmer-picker.js')) ?: 1 }}" defer></script>
     @endpush
 @endonce

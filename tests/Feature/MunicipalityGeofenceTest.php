@@ -9,6 +9,7 @@ use App\Models\MunicipalityBoundary;
 use App\Models\Province;
 use App\Models\User;
 use App\Support\ConcurrentWrite;
+use App\Support\ProviderUsage;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
@@ -542,6 +543,8 @@ class MunicipalityGeofenceTest extends TestCase
         $this->actingAs($this->municipal)
             ->get(route('municipality-boundaries.snapshot-base', $boundary))
             ->assertForbidden();
+        $usage = app(ProviderUsage::class)->forUser($this->superAdmin);
+        $this->assertSame(0, $usage['google']['periods']['day']['used']);
     }
 
     public function test_snapshot_base_requires_an_active_boundary_and_static_maps_key(): void
@@ -617,6 +620,9 @@ class MunicipalityGeofenceTest extends TestCase
         $this->get($url)->assertOk()->assertContent('PNG-CONTENT');
 
         Http::assertSentCount(2);
+        $usage = app(ProviderUsage::class)->forUser($this->superAdmin);
+        $this->assertSame(2, $usage['google']['periods']['day']['used']);
+        $this->assertSame(2, $usage['google']['periods']['month']['used']);
         Log::shouldHaveReceived('warning')->once()
             ->with('Municipality satellite snapshot provider failure.', ['upstream_status' => 429]);
     }

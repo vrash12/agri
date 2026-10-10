@@ -10,6 +10,7 @@ use App\Support\ConcurrentWrite;
 use App\Support\FarmerWorkspace;
 use App\Support\MunicipalityAccess;
 use App\Support\MunicipalityBoundaryGuard;
+use App\Support\ProviderUsage;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -23,7 +24,8 @@ class FarmPlotController extends Controller
     public function __construct(
         private MunicipalityAccess $municipalityAccess,
         private ConcurrentWrite $concurrentWrite,
-        private MunicipalityBoundaryGuard $boundaryGuard
+        private MunicipalityBoundaryGuard $boundaryGuard,
+        private ProviderUsage $providerUsage
     ) {
         $this->middleware('auth');
     }
@@ -147,10 +149,11 @@ class FarmPlotController extends Controller
                         return $cached;
                     }
 
+                    $this->providerUsage->recordGoogleStaticRequest();
                     $response = Http::withHeaders([
                         'Accept' => 'image/png,image/*;q=0.9',
                         'Referer' => rtrim((string) config('app.url'), '/').'/',
-                        'User-Agent' => 'AgriMS-Tarlac/1.0',
+                        'User-Agent' => 'AgriLGU/1.0',
                     ])->timeout(20)->get(
                         'https://maps.googleapis.com/maps/api/staticmap',
                         [

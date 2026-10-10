@@ -151,7 +151,7 @@ test('changing the farmer clears stale preview identity and leaves numeric selec
   assert.equal(select.dataset.endpoint, '/farmers/picker', 'Resetting a selection keeps picker configuration');
 });
 
-test('the native select fallback shows the selected AgriGOV ID while submitting the numeric foreign key', () => {
+test('the native select fallback shows the selected AgriLGU ID while submitting the numeric foreign key', () => {
   const select = {
     id: 'farmer_id',
     value: '123',
@@ -170,7 +170,7 @@ test('the native select fallback shows the selected AgriGOV ID while submitting 
   assert.equal(select.value, '123');
   assert.equal(select.dataset.agriGovId, 'AGRI-F-000123');
   assert.equal(select.dataset.name, 'Juan Cruz');
-  assert.match(help.textContent, /AgriGOV ID/);
+  assert.match(help.textContent, /AgriLGU ID/);
 });
 
 test('whitespace in a typed term is collapsed rather than searched for', () => {
