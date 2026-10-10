@@ -1,5 +1,15 @@
 # GitHub-to-Hostinger deployment
 
+## Verified Hostinger release — October 10, 2026 — AgriLGU branding, crop modal and usage
+
+Runtime `c322a5e009480bcb64853d6e494932c109f46f77` was pushed to GitHub main and installed with Hostinger `git pull --ff-only origin main` from clean tracked baseline `79e2adb`, on PHP 8.3.35. This includes the preceding crop-modal and saved-icon commits `7fc3c6f` and `340c350`.
+
+- Verified private database backup: 21 tables / 9,359 rows, 3,374,822 compressed bytes, SHA-256 `cfd38e1d63ff3d953fd104871c01715d6a24f9250de8cf64a858d29332df90d7`. Prior tracked runtime, affected served assets and the environment were preserved outside the document root. All existing row fingerprints matched. No migration, dependency installation, account operation or operational data change ran.
+- The private `APP_NAME` was changed to AgriLGU, preserving the effective session cookie, cache and Redis prefixes explicitly. The expected environment checksum, effective namespaces and existing UTC NDVI budget values passed verification. Configuration, route and Blade caches rebuilt; the general application cache was not cleared.
+- All 13 changed public assets were mirrored with 0644 permissions and matched between both public directories. All 13 returned HTTP 200; welcome, office sign-in and farmer sign-in returned HTTP 200 with AgriLGU branding. Guest dashboard access redirects to sign-in. The site is online.
+- Read-only live checks passed owner/staff usage visibility, usage panel rendering, the existing planted-area schema, crop modal rendering and owner read-only/staff edit permissions, and corn branding. Local verification includes 86 focused branding/portal/provider tests, 74 further crop/satellite/geofence tests, 26 branding JavaScript checks, 16 crop JavaScript checks and seven badge checks; Pint, syntax, Blade and whitespace checks passed. Test groups overlap and are not a unique combined total.
+- Local synthetic browser checks covered desktop/mobile branding, card canvas exports and crop interactions. Real production map drawing/saving, physical printing and provider-wide billing integration were not repeated. Existing farmer identifiers and QR destinations remain compatible. Crop-to-harvest linkage remains a proposal and is excluded.
+
 ## Verified Hostinger release — October 9, 2026 — crop workspace, icons and drawing guides
 
 Runtime `b2bc46b` was pushed to GitHub main and installed through Hostinger `git pull --ff-only origin main` from `926a24b`, on PHP 8.3.35. The crop page now groups season selection, map drawing and saving; illustrated crop stickers and numbered draft dots make saved crops and unfinished boundaries clearer. Saved crop icons load for the selected farmer independently of optional parcel recoloring, and the editor return link restores the same farmer/year/season. New parcel drawing accepts consecutive map clicks beyond four corners.
@@ -175,13 +185,3 @@ Runtime commit `aabace9e5d957cd6b41bbb1010d7db70e2eb2439` was pushed to GitHub m
 ## Pending release — restricted visitor access
 
 The visitor release adds the `visitor_mode` column and a dedicated `visitor:create` command. Run the migration before provisioning an account, then create the active unassigned identity through the command's hidden password prompt. The visitor role remains `super_admin` for compatibility, but server middleware and scoped controllers expose only the aggregate overview and active municipality boundaries. Do not place visitor credentials in GitHub, deployment notes, logs, or support messages.
-## Verified Hostinger release — October 10, 2026 — AgriLGU branding, crop modal and usage
-
-Runtime `c322a5e009480bcb64853d6e494932c109f46f77` was pushed to GitHub main and installed with Hostinger `git pull --ff-only origin main` from clean tracked baseline `79e2adb`, on PHP 8.3.35. This includes the preceding crop-modal and saved-icon commits `7fc3c6f` and `340c350`.
-
-- Verified private database backup: 21 tables / 9,359 rows, 3,374,822 compressed bytes, SHA-256 `cfd38e1d63ff3d953fd104871c01715d6a24f9250de8cf64a858d29332df90d7`. Prior tracked runtime, affected served assets and the environment were preserved outside the document root. All existing row fingerprints matched. No migration, dependency installation, account operation or operational data change ran.
-- The private `APP_NAME` was changed to AgriLGU, preserving the effective session cookie, cache and Redis prefixes explicitly. The expected environment checksum, effective namespaces and existing UTC NDVI budget values passed verification. Configuration, route and Blade caches rebuilt; the general application cache was not cleared.
-- All 13 changed public assets were mirrored with 0644 permissions and matched between both public directories. All 13 returned HTTP 200; welcome, office sign-in and farmer sign-in returned HTTP 200 with AgriLGU branding. Guest dashboard access redirects to sign-in. The site is online.
-- Read-only live checks passed owner/staff usage visibility, usage panel rendering, the existing planted-area schema, crop modal rendering and owner read-only/staff edit permissions, and corn branding. Local verification includes 86 focused branding/portal/provider tests, 74 further crop/satellite/geofence tests, 26 branding JavaScript checks, 16 crop JavaScript checks and seven badge checks; Pint, syntax, Blade and whitespace checks passed. Test groups overlap and are not a unique combined total.
-- Local synthetic browser checks covered desktop/mobile branding, card canvas exports and crop interactions. Real production map drawing/saving, physical printing and provider-wide billing integration were not repeated. Existing farmer identifiers and QR destinations remain compatible. Crop-to-harvest linkage remains a proposal and is excluded.
-
