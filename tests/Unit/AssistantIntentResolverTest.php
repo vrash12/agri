@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Support\AssistantIntentResolver;
+use App\Support\OfficeAssistant;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -20,7 +21,7 @@ final class AssistantIntentResolverTest extends TestCase
             $this->assertArrayNotHasKey('search', $actual);
             $this->assertArrayNotHasKey('message', $actual);
             $this->assertArrayNotHasKey('farmer_id', $actual);
-            $this->assertContains($actual['topic'], ['crop-drawing', 'parcel-drawing', 'seed-import', 'ndvi', 'animals', 'access', 'farmer-login', 'farmer-id', 'harvest-entry', 'help']);
+            $this->assertArrayHasKey($actual['topic'], OfficeAssistant::TOPICS);
         }
     }
 
@@ -130,6 +131,183 @@ final class AssistantIntentResolverTest extends TestCase
             'harvest year clarification' => ['Show harvests for 2024 and 2025', [], 'harvests', null],
             'selected farmer harvest clarification' => ['Show his harvests for 2024 and 2025', ['task' => 'farmer', 'year' => 2026, 'farmer_id' => 17], 'farmer-harvests', 17],
             'report comparison can select one year' => ['Compare harvests with last year', [], 'harvests', null],
+        ];
+    }
+
+    #[DataProvider('identityCases')]
+    public function test_application_identity_and_social_questions_are_local(string $message, string $kind, string $language): void
+    {
+        $actual = (new AssistantIntentResolver)->resolve($message, ['task' => 'farmer', 'year' => 2025, 'farmer_id' => 17], 'dashboard', 2026);
+        $this->assertSame(['task' => 'identity', 'kind' => $kind, 'year' => 2025, 'language' => $language], $actual);
+        $this->assertArrayNotHasKey('search', $actual);
+        $this->assertArrayNotHasKey('topic', $actual);
+        $this->assertArrayNotHasKey('farmer_id', $actual);
+    }
+
+    public static function identityCases(): array
+    {
+        return [
+            'who are you' => ['Who are you?', 'identity', 'en'],
+            'who is this AI' => ['Who is this AI?', 'identity', 'en'],
+            'what are you' => ['What are you?', 'identity', 'en'],
+            'who am I talking to' => ['Who am I talking to?', 'identity', 'en'],
+            'introduction' => ['Please introduce yourself.', 'identity', 'en'],
+            'Filipino identity' => ['Sino ka po?', 'identity', 'fil'],
+            'Filipino AI identity' => ['Sino ang AI?', 'identity', 'fil'],
+            'Filipino name' => ['Ano ang pangalan mo?', 'identity', 'fil'],
+            'AI used' => ['What AI are you using?', 'technology', 'en'],
+            'model used' => ['Which model do you use?', 'technology', 'en'],
+            'ChatGPT question' => ['Are you ChatGPT?', 'technology', 'en'],
+            'Filipino model' => ['Anong model gamit mo?', 'technology', 'fil'],
+            'greeting' => ['Hello!', 'greeting', 'en'],
+            'casual greeting' => ['How are you?', 'greeting', 'en'],
+            'office greeting' => ['Good morning.', 'greeting', 'en'],
+            'Filipino greeting' => ['Kumusta ka?', 'greeting', 'fil'],
+            'Filipino alternate greeting' => ['Kamusta!', 'greeting', 'fil'],
+            'thanks' => ['Thank you so much!', 'thanks', 'en'],
+            'Filipino thanks' => ['Maraming salamat po.', 'thanks', 'fil'],
+            'capabilities' => ['What can you do?', 'capabilities', 'en'],
+            'help introduction' => ['Help', 'capabilities', 'en'],
+            'Filipino capabilities' => ['Ano kaya mong gawin?', 'capabilities', 'fil'],
+        ];
+    }
+
+    #[DataProvider('helpFollowUps')]
+    public function test_help_follow_up_reuses_only_the_approved_help_topic(string $message, string $style, string $language): void
+    {
+        $context = ['task' => 'help', 'year' => 2026, 'help_topic' => 'crop-drawing', 'help_style' => 'plain', 'farmer_id' => 17];
+        $actual = (new AssistantIntentResolver)->resolve($message, $context, 'farmers', 2026);
+        $this->assertSame(['task' => 'help', 'topic' => 'crop-drawing', 'style' => $style, 'year' => 2026, 'language' => $language], $actual);
+        $this->assertArrayNotHasKey('farmer_id', $actual);
+        $this->assertArrayNotHasKey('search', $actual);
+    }
+
+    public static function helpFollowUps(): array
+    {
+        return [
+            'more' => ['Explain more', 'more', 'en'],
+            'more politely' => ['Please tell me more.', 'more', 'en'],
+            'Filipino more' => ['Ipaliwanag pa', 'more', 'fil'],
+            'brief' => ['Make it shorter', 'brief', 'en'],
+            'Filipino brief' => ['Paikliin ito', 'brief', 'fil'],
+            'example' => ['Give me an example', 'example', 'en'],
+            'Filipino example' => ['Magbigay ng halimbawa', 'example', 'fil'],
+            'steps' => ['Step by step', 'steps', 'en'],
+            'steps with prefix' => ['Show me the step-by-step', 'steps', 'en'],
+            'ordinary steps' => ['Show me the steps', 'steps', 'en'],
+            'Filipino steps' => ['Isa-isahin ang hakbang', 'steps', 'fil'],
+            'plain' => ['Explain in simple terms', 'plain', 'en'],
+            'Filipino plain' => ['Gawing simple', 'plain', 'fil'],
+        ];
+    }
+
+    public function test_vague_follow_up_never_converts_records_or_an_invalid_topic_to_help(): void
+    {
+        $resolver = new AssistantIntentResolver;
+        foreach ([[], ['task' => 'farmer', 'year' => 2026, 'farmer_id' => 17],
+            ['task' => 'assistance', 'year' => 2026, 'help_topic' => 'seed-import'],
+            ['task' => 'help', 'year' => 2026], ['task' => 'help', 'help_topic' => 'private-records'], ['task' => 'help', 'help_topic' => ['crop-drawing']]] as $context) {
+            foreach (['Explain more', 'Make it shorter', 'Give me an example', 'Step by step'] as $message) {
+                $actual = $resolver->resolve($message, $context, 'crops', 2026);
+                $this->assertSame('clarification', $actual['task']);
+                $this->assertArrayNotHasKey('topic', $actual);
+                $this->assertArrayNotHasKey('farmer_id', $actual);
+            }
+        }
+    }
+
+    public function test_identity_context_cannot_be_reused_as_a_reporting_task(): void
+    {
+        $actual = (new AssistantIntentResolver)->resolve('What about 2025?', ['task' => 'identity', 'year' => 2026], 'dashboard', 2026);
+        $this->assertSame('clarification', $actual['task']);
+    }
+
+    public function test_identity_follow_up_explains_capabilities_locally(): void
+    {
+        $actual = (new AssistantIntentResolver)->resolve('Tell me more', ['task' => 'identity', 'year' => 2026], 'dashboard', 2026);
+        $this->assertSame(['task' => 'identity', 'kind' => 'capabilities', 'year' => 2026, 'language' => 'en'], $actual);
+    }
+
+    public function test_page_hint_is_used_only_for_an_explicit_page_question(): void
+    {
+        $resolver = new AssistantIntentResolver;
+        $this->assertSame('crop-drawing', $resolver->resolve('How do I use this page?', [], 'crops', 2026)['topic']);
+        $this->assertSame('animals', $resolver->resolve('Explain this page', [], 'animal-health', 2026)['topic']);
+        $this->assertSame('clarification', $resolver->resolve('Explain unknown confidential addresses', [], 'animal-health', 2026)['task']);
+        $this->assertSame('clarification', $resolver->resolve('Explain this page and show our farmers', [], 'crops', 2026)['task']);
+        $this->assertNotSame('identity', $resolver->resolve('Who are you and show our farmers?', [], 'dashboard', 2026)['task']);
+    }
+
+    #[DataProvider('expandedHelpCases')]
+    public function test_reviewed_modules_and_privacy_questions_route_to_canonical_topics(string $message, string $topic): void
+    {
+        $actual = (new AssistantIntentResolver)->resolve($message, ['task' => 'farmer', 'year' => 2026, 'farmer_id' => 17], 'dashboard', 2026);
+        $this->assertSame('help', $actual['task']);
+        $this->assertSame($topic, $actual['topic']);
+        $this->assertArrayHasKey($topic, OfficeAssistant::TOPICS);
+        $this->assertArrayNotHasKey('farmer_id', $actual);
+        $this->assertArrayNotHasKey('search', $actual);
+    }
+
+    public static function expandedHelpCases(): array
+    {
+        return [
+            'dashboard reading' => ['How do I read dashboard figures?', 'dashboard-overview'],
+            'dashboard definition' => ['What does the dashboard show?', 'dashboard-overview'],
+            'weather guidance' => ['Where can I check municipality weather?', 'weather'],
+            'cooperative membership' => ['How do I add members to a cooperative?', 'cooperatives'],
+            'machinery maintenance' => ['Explain equipment maintenance', 'machinery'],
+            'backup uploads' => ['How do I upload a backup file?', 'backups'],
+            'audit history' => ['How can I review the audit trail?', 'audit'],
+            'geofence references' => ['Tell me about municipality boundaries', 'geofences'],
+            'system overview' => ['What is AgriLGU?', 'system-overview'],
+            'AI retrieval' => ['Explain RAG', 'ai-technology'],
+            'AI provider boundary' => ['Do you send farmer records to OpenAI?', 'assistant-privacy'],
+            'AI data boundary' => ['Are farmer records shared with OpenAI?', 'assistant-privacy'],
+            'privacy workflow' => ['Explain privacy protections', 'assistant-privacy'],
+            'data review' => ['How do I review duplicate farmer profiles?', 'data-quality'],
+            'registry import' => ['How do I import a farmer registry workbook?', 'farmer-registry'],
+            'registry profile' => ['How can I register a farmer profile?', 'farmer-registry'],
+            'generic release entry' => ['How do I record fertilizer releases?', 'assistance-management'],
+            'fisheries entry' => ['How do I record tilapia fingerlings?', 'assistance-management'],
+            'sheet workflow' => ['Explain rice distribution sheets', 'assistance-management'],
+            'release coverage' => ['Explain assistance coverage map', 'assistance-coverage'],
+            'import remains specific' => ['How do I import NRP releases?', 'seed-import'],
+            'natural description' => ['Can you describe machinery maintenance?', 'machinery'],
+            'availability question' => ['Does AgriLGU support cooperatives?', 'cooperatives'],
+            'named feature' => ['Audit trail', 'audit'],
+            'harvest definition' => ['What is harvest?', 'harvest-entry'],
+            'assistance definition' => ['What is assistance?', 'assistance-management'],
+            'animal definition' => ['What is Animal Health?', 'animals'],
+        ];
+    }
+
+    public function test_new_help_topics_remain_distinct_in_mixed_requests(): void
+    {
+        $resolver = new AssistantIntentResolver;
+        foreach (['Explain dashboard and weather', 'How do I read the dashboard and check weather?',
+            'Explain RAG and privacy', 'How do I draw crops and add a farmer profile?'] as $message) {
+            $this->assertSame('clarification', $resolver->resolve($message, [], 'dashboard', 2026)['task'], $message);
+        }
+    }
+
+    #[DataProvider('pageModules')]
+    public function test_explicit_page_question_uses_the_reviewed_module_hint(string $module, string $topic): void
+    {
+        $actual = (new AssistantIntentResolver)->resolve('Explain this page', [], $module, 2026);
+        $this->assertSame('help', $actual['task']);
+        $this->assertSame($topic, $actual['topic']);
+        $this->assertArrayHasKey($topic, OfficeAssistant::TOPICS);
+    }
+
+    public static function pageModules(): array
+    {
+        return [
+            ['dashboard', 'dashboard-overview'], ['farmers', 'farmer-registry'], ['crops', 'crop-drawing'],
+            ['assistance', 'assistance-management'], ['harvests', 'harvest-entry'], ['animal-health', 'animals'],
+            ['accounts', 'access'], ['cooperatives', 'cooperatives'], ['machinery', 'machinery'],
+            ['geofences', 'geofences'], ['backups', 'backups'], ['audit', 'audit'], ['other', 'help'],
+            ['satellite', 'ndvi'], ['coverage', 'assistance-coverage'],
         ];
     }
 }

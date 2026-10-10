@@ -1,6 +1,11 @@
 # Assistant retrieval and grounded help
 
-Status: deployed on Hostinger on October 11, 2026 in runtime `7d36fff`, following
+Current follow-up status: the October 11 context-aware, AgriLGU-only extension is
+local and not yet deployed. Its 31 reviewed passages, 24 canonical topics, local
+identity replies and topic/style follow-ups passed the local integrated checks below.
+Historical tests and live acceptance below describe the earlier ten-topic release.
+
+Deployed baseline: Hostinger installed runtime `7d36fff` on October 11, following
 the owner's request for RAG and more efficient, useful AI. The unified Assistant,
 reviewed knowledge and required dependency upgrade were installed through GitHub
 push, Hostinger fast-forward pull and locked Composer install. Existing schema,
@@ -16,6 +21,15 @@ conversation also accepts more English/Filipino workflow phrasing and clarifies
 separate actionable tasks. Farmer questions and reports continue to use fresh,
 authorized database queries inside AgriLGU, without an AI call or cached totals.
 
+The local follow-up adds documented help for dashboard, municipality weather,
+cooperatives, machinery, backups, audit, geofences, system overview, AI/privacy,
+registry/data quality and assistance management/coverage. English/Filipino
+identity, greetings, thanks, capabilities and short technology replies are
+application-owned local text, with no inference, allowance or operational query.
+The owner's scope is all documented AgriLGU features, not unrelated generic AI.
+After help, only an approved topic and format survive for “more”, “shorter”,
+“steps” or “example”; a mixed conversation never becomes provider history.
+
 ```text
 Office authentication / policy / scope / CSRF / throttle
   -> local intent and canonical help question
@@ -28,12 +42,20 @@ Office authentication / policy / scope / CSRF / throttle
 
 ## Retrieval boundary
 
-`AssistantKnowledge` uses an explicit code manifest of 17 curated Markdown
+`AssistantKnowledge` uses an explicit code manifest of 31 curated Markdown
 passages under `resources/assistant/knowledge`. It never scans `AGENTS.md`, private
 deployment receipts, environment files, uploads or farmer records. The manifest
 defines each source's stable ID, title, topics, primary workflow and audience.
 Veterinary help/access sources are separate from agriculture-office sources.
 Role/topic eligibility is applied before ranking and its term statistics.
+The 24 topics use reviewed application-owned questions. Veterinary users retain
+Animal Health operational limits while identity and AI/privacy explanations are
+allowed; no new operational module permission follows from a help passage.
+
+Approved evidence is curated from implemented behavior and loaded only through
+the manifest. This is not runtime repository or code-directory ingestion. No
+autonomous filesystem access, browsing, uploaded-document processing or general
+AI mode is introduced. Unrecognized AgriLGU tasks clarify locally.
 
 The query is an exact application-owned canonical topic, not arbitrary user text.
 Raw messages, selected farmers, context tokens, office identities and transcripts
@@ -41,6 +63,17 @@ remain absent from provider context. No embeddings, network lookup, external
 classifier, arbitrary SQL or autonomous tools are introduced. BM25 and primary
 topic metadata suit this small, deliberately reviewed workflow corpus; this is
 lexical RAG, not semantic vector search or farmer-data RAG.
+
+The unchanged version-1 encrypted context allows optional `help_topic` and
+`help_style` fields: a manifest-backed canonical topic and `plain`, `brief`,
+`steps`, `example` or `more`. It remains at most 4 KiB, user/session/scope-bound
+and expires after 15 minutes. Old tokens without a help topic remain valid and
+require a fresh help answer before a generic follow-up. The controlled style
+changes application-owned prompt instructions; the previous answer or typed
+follow-up never enters the new generation request. An explicit “this page”
+question can use a page-module relevance hint. Existing assistance-page generic
+Excel/upload aliases retain seed-import disambiguation, with explicit topics
+taking precedence. Neither use grants authorization.
 
 At most three whole passages / 7,000 text characters are selected. Each passage
 is at most 2,400 characters; the complete corpus is bounded at 80 KiB and 32
@@ -59,6 +92,10 @@ citation items are restricted to the retrieved IDs. Its 600-output-token limit,
 pinned model, official endpoint, private key and response-storage-off setting
 remain. Temperature is zero to reduce variation, without promising deterministic
 or correct answers. Evidence is reference data, not instructions or permission to use tools.
+Plain, brief, step-by-step, illustrative-example and fuller-detail formats are
+controlled instructions within that same supported topic. Examples must stay
+hypothetical and source-supported; asking for more detail does not authorize
+invented workflow steps or external record analysis.
 
 `AssistantGroundedAnswer` independently checks types, exact keys, answer length,
 nonempty unique source membership and unsupported responses. HTML, URLs, common
@@ -83,6 +120,8 @@ An uncertain provider attempt retains its allowance reservation.
 
 Accepted help is cached for ten minutes by exact role, topic, language, model,
 current corpus digest, canonical question and complete prompt/schema identity.
+The controlled answer style is part of that identity. A brief reply cannot be
+reused for a steps/example request merely because the topic matches.
 No user identifier, scope name, chat or operational data enters that value.
 Every request authorizes first, retrieves current eligible evidence and
 revalidates a hit. Hits report zero new provider tokens and reserve no allowance;
@@ -113,12 +152,27 @@ the curation index; the allowlisted passages are runtime evidence.
 
 Deploy the retrieval/grounding/provider/orchestration/resolver classes, the
 complete knowledge directory, updated JavaScript and documentation together with
-the dependency/Assistant release. Mirror public JavaScript in both served
+the Assistant follow-up. The Laravel 12/AI SDK foundation is already deployed;
+this extension adds no dependency requirement. Mirror public JavaScript in both served
 Hostinger public directories with 0644 permissions. Verify source labels, fresh
 records, a generation miss and a cache hit using synthetic data. Keep existing
 session/cache namespaces and provider budgets; never clear the general cache.
 See [OFFICE_ASSISTANT.md](OFFICE_ASSISTANT.md) and
 [GITHUB_DEPLOYMENT.md](GITHUB_DEPLOYMENT.md) for the full release boundary.
+This later follow-up requires no migration, new dependency, environment setting
+or account operation. Include local identity, optional context metadata,
+resolver/orchestration/provider/agent changes and all 31 passages together.
+
+## Local follow-up verification — October 11, 2026
+
+The integrated Assistant suite passed 386 PHP tests / 2,493 assertions and all
+198 JavaScript tests passed. Coverage includes 24 approved topics, English/
+Filipino identity, styles, page hints, old token compatibility, veterinary
+exclusions, report-to-help privacy and generation/cache/fallback behavior. Pint,
+syntax, Blade compilation, route and whitespace checks passed. Actual local
+Laravel/MySQL browser verification used normal synthetic sign-in/CSRF: local
+introduction, real-provider dashboard guidance and a shorter same-topic reply
+worked. These checks do not replace live deployment acceptance or load testing.
 
 ## References
 

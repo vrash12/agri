@@ -1,5 +1,14 @@
 # AgriLGU Assistant — unified chat implementation plan
 
+Current follow-up: the October 11 context-aware, AgriLGU-only extension is local
+and not yet deployed; local integrated verification has passed. It adds local
+identity/social/technology/capability replies, 31 reviewed passages for 24
+canonical topics and controlled topic-only explanation follow-ups. The owner
+clarified that the scope is all documented AgriLGU features, not unrelated
+generic AI or autonomous browsing/filesystem tools. No migration, new dependency,
+environment setting or account operation is required. The historical deployed
+baseline remains `7d36fff` until a separately verified release installs this work.
+
 The owner's subsequent RAG request extends this implemented plan with reviewed
 local workflow retrieval, strict structured replies, source validation, a
 versioned general-help cache and saved-guide fallbacks. See
@@ -8,7 +17,7 @@ stay local and uncached; raw chat never becomes a provider query. The initial
 verification stage below predates that follow-up. Hostinger deployed runtime
 `7d36fff` on October 11; see [GITHUB_DEPLOYMENT.md](GITHUB_DEPLOYMENT.md).
 
-Status: unified conversation **deployed and verified on October 11, 2026** under
+Baseline status: unified conversation **deployed and verified on October 11, 2026** under
 the owner's release request, through GitHub push and Hostinger fast-forward pull.
 The earlier documentation-only plan is now the architecture contract for future
 changes. Current runtime and preservation evidence are in the deployment receipt.
@@ -32,6 +41,15 @@ bounded farmer lookup and summaries, yearly assistance/harvest reports, and
 Animal Health summaries. Preserve the existing role and geographic permissions.
 This is read-only assistance: no record edits, account issuance, file uploads,
 automated exports, diagnoses, prescriptions or official decisions.
+
+The local follow-up extends reviewed feature guidance across dashboard, weather,
+cooperatives, machinery, backups, audit, geofences, system overview, farmer
+registry/data quality, AI/privacy and assistance management/coverage, preserving
+the original ten topics. `AssistantIdentity` handles English/Filipino greetings,
+thanks, identity, capabilities and technology from local application text without
+a provider call, budget reservation or operational query. Feature explanations
+do not imply live data access to every module. Veterinary identity/AI/privacy
+help leaves operational access limited to Animal Health.
 
 A continuous conversation does not grant unrestricted database access or consent
 to disclose records to an external model. Operational answers must still be
@@ -176,6 +194,13 @@ and effective scope. It contains no names, totals, record text or provider histo
 Use a 15-minute expiry, bounded token size (initial cap 4 KiB), and short-lived
 choice tokens. Do not expose session identifiers or the application encryption key.
 
+The local follow-up retains version 1 and the 4 KiB bound. Optional `help_topic`
+and `help_style` carry only a canonical topic and `plain`, `brief`, `steps`,
+`example` or `more`. Existing tokens stay valid but cannot resolve a generic help
+follow-up until a fresh help turn supplies an approved topic. Unknown metadata
+never becomes provider history. A request such as “Explain more” after a records
+reply clarifies; it does not submit that reply or farmer text to a model.
+
 Tokens are reference hints, never authorization. On every turn verify the binding
 and expiry, reload active account scope, authorize the task/selected farmer and
 apply scope before querying. Scope changes, tampering and expired context yield
@@ -186,9 +211,9 @@ cannot be established, ask the user to restate the reference instead of weakenin
 the context boundary.
 
 The first unified release must not forward raw user text or mixed transcript to
-OpenAI. Resolve an allowlisted general-help topic locally and build a canonical
+OpenAI. Resolve an allowlisted AgriLGU-help topic locally and build a canonical
 question from application-owned topic text plus approved retrieved passages/module/role
-labels. Use no record-derived text or free-form prior messages. An unknown topic
+labels and controlled language/style instructions. Use no record-derived text or free-form prior messages. An unknown topic
 receives local help/clarification. This makes the privacy boundary enforceable
 without claiming that pattern matching anonymizes names or personal information.
 
@@ -204,6 +229,12 @@ coordinates. Foreign and nonexistent farmer references must fail identically.
 Veterinary accounts receive only Animal Health help/reports; visitors, GIS
 evaluators, guests and farmer sessions remain denied. All register links enforce
 their existing policies independently.
+The later local extension also permits veterinary local identity and AI/privacy
+explanations. This is help about the Assistant, not access to another operational
+module. Explicit “this page” requests may use an allowlisted module relevance
+hint. Existing assistance-page generic Excel/upload aliases retain their reviewed
+seed-import disambiguation, with explicit topic words taking precedence. Hints
+never grant permissions or silently choose a record.
 
 Render answers as escaped text using the existing safe DOM approach. Generate
 links from allowlisted named routes, never provider output. No rich-HTML or remote
@@ -333,6 +364,11 @@ assets. `AssistantConversation`, `AssistantConversationContext` and
 resolution. `AssistantKnowledge` and `AssistantGroundedAnswer` now provide bounded
 RAG and source checks; `resources/assistant/knowledge` is reviewed runtime evidence.
 The office guide is its curation index. Keep the passages accurate to the system.
+`AssistantIdentity` and the optional help-topic/style references add local
+conversation continuity. The 31-passage/24-topic corpus remains explicit and
+curated; there is no runtime code-directory, repository, upload or private-file
+ingestion. Controlled style/corpus identity stays in the help cache, without
+resetting general-cache budgets.
 
 No migration or account/data change is expected for the memory-only conversation
 design. Any later schema/index need requires an explicit reversible plan against
@@ -369,12 +405,23 @@ and 19 JavaScript tests passed. Earlier two-mode counts are historical. These
 checks cover context, canonical prompts, conversation, dedicated concurrency and
 session races; they are not a full legacy-schema, Hostinger or load-test pass.
 
+The later context-aware follow-up passed 386 PHP tests / 2,493 assertions and all
+198 JavaScript tests. They cover local identity/no-provider behavior, all reviewed
+topics and five styles, page hints, legacy-token compatibility, veterinary
+identity/privacy scope and record-to-help provider separation. Normal synthetic
+Laravel/MySQL browser sign-in/CSRF also verified introduction, actual-provider
+dashboard guidance and a shorter same-topic follow-up. Keep these results
+distinct from historical counts and the live release receipt; this is not a
+production load test.
+
 ## 10. Release and rollback boundaries
 
 Follow [LARAVEL_12_AI_UPGRADE.md](LARAVEL_12_AI_UPGRADE.md) and
 [GITHUB_DEPLOYMENT.md](GITHUB_DEPLOYMENT.md). A Git pull alone cannot install the
-pending framework/SDK upgrade. Verify PHP CLI/web compatibility and disposable
-legacy-schema integration, private backups and approved provider configuration.
+dependencies for a framework/SDK upgrade. That foundation is already deployed in
+`7d36fff`; this context-aware follow-up adds no dependency requirement. Preserve
+verified PHP CLI/web compatibility, private backups and approved provider
+configuration, and repeat disposable integration gates if dependencies change.
 Keep the example disabled until verification completes. Deploy backend, request
 contract, layout, static help and versioned CSS/JavaScript as one reviewed release;
 mirror public assets to both Hostinger public directories with 0644 permissions.

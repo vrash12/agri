@@ -29,8 +29,10 @@ For interface work, also read [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md),
 For Assistant work, read
 [docs/AI_ASSISTANT_IMPLEMENTATION_PLAN.md](docs/AI_ASSISTANT_IMPLEMENTATION_PLAN.md)
 and [docs/OFFICE_ASSISTANT.md](docs/OFFICE_ASSISTANT.md). The October 11 unified-chat
-direction is now implemented locally under the subsequent request. Normal office
-integration and synthetic verification are recorded there; production is unchanged.
+and original RAG release deployed in runtime `7d36fff`; normal office integration,
+synthetic checks and live preservation evidence are recorded there. The later
+context-aware, AgriLGU-only identity/topic-follow-up extension remains local and
+not yet deployed. Keep that pending stage distinct from the deployed baseline.
 
 ## Project context
 
@@ -195,6 +197,27 @@ verification and the live release are recorded in `docs/OFFICE_ASSISTANT.md`
 and `docs/GITHUB_DEPLOYMENT.md`. All existing operational rows are preserved.
 Preserve these boundaries when extending the feature.
 
+The later October 11 follow-up passed local integrated checks and awaits release. It adds
+local English/Filipino identity, greetings, thanks, capabilities and technology
+answers, plus 31 reviewed passages / 24 canonical topics spanning all documented
+AgriLGU features. Identity replies use no provider, allowance or operational
+query. Keep the owner's AgriLGU-only scope: no unrelated generic AI conversation,
+autonomous browsing/filesystem/execution tools or automatic repository ingestion.
+Only explicitly manifested reviewed runtime help is retrieval evidence.
+
+The existing version-1 encrypted reference remains at most 4 KiB and bound to
+user/session/scope for 15 minutes. Optional `help_topic` and `help_style` retain
+an approved topic and `plain`, `brief`, `steps`, `example` or `more`. Old tokens
+remain valid but cannot supply a new help topic without a fresh help turn. A
+follow-up generates from that topic, reviewed passages and controlled format,
+not prior chat or record text. Page hints support explicit “this page” requests
+and the existing assistance-page generic Excel/upload aliases; message-led
+topics take precedence and the hints never authorize access. Veterinary
+identity/AI/privacy help does not broaden Animal
+Health operational permissions. Preserve the style/corpus-aware answer cache,
+all request/session controls and general-cache budgets. No new migration,
+dependency, environment setting or account operation is required.
+
 - Reuse small server orchestration for allowlisted local intents, year resolution,
   farmer selection and follow-ups. Reuse scoped domain queries and policies;
   never use arbitrary model-generated SQL or let client mode decide disclosure.
@@ -315,20 +338,20 @@ across 11 packages** in the existing lockfile. These are feed entries, not 41
 independently confirmed exploits; some entries describe the same issue. Rerun
 the audit because advisories and available patches change.
 
-These are historical findings from the older lockfile. The October 11 local
-framework/SDK upgrade has a verified locked audit with no reported advisories;
-production still uses the older runtime. See
-[docs/LARAVEL_12_AI_UPGRADE.md](docs/LARAVEL_12_AI_UPGRADE.md) for the actual local
-versions, tests and remaining staging/release work. Revalidate the candidate
-lockfile before release rather than treating the earlier count as current.
+These are historical findings from the older lockfile. Runtime `7d36fff` deployed
+the October 11 framework/SDK upgrade and its verified lockfile to Hostinger; the
+release audit reported no advisories. See
+[docs/LARAVEL_12_AI_UPGRADE.md](docs/LARAVEL_12_AI_UPGRADE.md) for deployed versions,
+tests and limitations. Revalidate the candidate lockfile before another release
+rather than treating any historical advisory count as current.
 
 - Review compatible Guzzle/PSR-7, CommonMark and Symfony updates and their
   dependencies. Test authentication, HTTP handling, uploads, exports, maps and
   external-provider failures against the resulting lockfile.
-- Complete the pending local framework upgrade's legacy-schema/staging checks
-  before an authorized release. Verify PHP, Sanctum, validation, middleware and
-  dependencies together; supporting-library patches alone are not a framework
-  upgrade or evidence that the deployed runtime has changed.
+- Preserve the verified framework upgrade's PHP, Sanctum, validation, middleware
+  and dependency compatibility. Repeat the relevant disposable integration gates
+  for future dependency changes; supporting-library patches alone do not establish
+  a safe framework release.
 - Review the maintainer's [email validation advisory](https://github.com/laravel/framework/security/advisories/GHSA-5vg9-5847-vvmq),
   [temporary signed URL advisory](https://github.com/laravel/framework/security/advisories/GHSA-crmm-hgp2-wgrp)
   and [wildcard file validation advisory](https://github.com/laravel/framework/security/advisories/GHSA-78fx-h6xr-vch4).

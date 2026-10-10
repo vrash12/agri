@@ -1,0 +1,9 @@
+Agriculture and fisheries releases and rice sheets
+
+Open Agriculture & Fisheries and choose Record release to enter assistance actually handed out. Authorized operational staff select a registered beneficiary in the owning municipality, assistance category/item, quantity, unit and receipt date. Municipal accounts remain in their municipality; provincial agriculture staff choose an authorized municipality. Oversight accounts review releases without routine edits, and veterinary accounts cannot use this module.
+
+The register supports rice/corn/vegetable seed, fertilizer and other farm inputs, plus fish fingerlings, feed, fishing gear and other fisheries inputs. Fingerlings must be recorded by piece. Keep kilograms, sacks, pieces and other units separate. Review validation and possible duplicate-release warnings in the original form; the Assistant cannot approve an entitlement or confirm delivery.
+
+Use Rice seed sheets to group existing rice releases under one program/reference and planting season/year. Create the sheet first, then attach permitted kilogram-based rice releases from the same municipality. A release can remain without a sheet. Seed bags multiplied by seed-bag weight derive released kilograms; seed-bag weight and harvest-bag weight are different fields. Record any harvest season/year explicitly rather than guessing it from planting or receipt dates. Consent stays Not recorded when never asked, instead of being assumed Yes.
+
+Sheets can be reviewed on screen, printed or exported as the supported Excel workbook, with recipient signatures completed on paper. A sheet containing releases must be emptied before deletion. Stale edits require reviewing the latest record. An assistance release is not automatically planted area or harvested production, and individual planted-section linkage is not implemented. The Assistant explains these forms and supported local reports; it cannot create releases, sheets or exports.

@@ -1,5 +1,33 @@
 # Agriculture Information System — Developer Guide
 
+The subsequent October 11 context-aware Assistant follow-up is local and not yet
+deployed; Hostinger still runs the previously verified `7d36fff` release.
+`AssistantIdentity` answers introductions, greetings, thanks, capabilities and
+technology questions in English/Filipino locally, without provider inference,
+allowance reservation or operational queries. The reviewed RAG manifest now has
+31 passages and 24 canonical AgriLGU topics, covering the existing ten topics plus
+dashboard, weather, cooperatives, machinery, backups, audit, geofences, system
+overview, registry/data quality, AI/privacy and assistance management/coverage.
+An explicit “this page” question may use the allowlisted page hint for relevance;
+the existing assistance-page Excel/upload aliases also retain their reviewed
+seed-import disambiguation. Message-led topics take precedence, and hints never
+grant authority. Version-1 encrypted context remains bounded at 4 KiB,
+expires after 15 minutes and binds to user/session/scope. Its optional
+`help_topic`/`help_style` fields retain only an approved topic and one of `plain`,
+`brief`, `steps`, `example`, `more`; old tokens remain valid but need a fresh help
+turn before a topic follow-up. Each help follow-up generates from the canonical
+topic and reviewed passages, never raw messages, the mixed thread or record text.
+Veterinary users can receive local identity and AI/privacy explanations while
+operational access stays Animal Health-only. The owner's scope is all documented
+AgriLGU features, not unrelated general AI chat. No autonomous browsing,
+filesystem/execution tools, repository scanning or private-document ingestion is
+introduced. Answer-cache identity includes prompt style and corpus; never clear
+the general cache. Deploy the identity/resolver/context/orchestration/provider/
+agent/knowledge changes together after final integrated checks. This follow-up
+requires no migration, dependency, environment setting or account change. See
+[docs/OFFICE_ASSISTANT.md](docs/OFFICE_ASSISTANT.md) and
+[docs/ASSISTANT_RAG.md](docs/ASSISTANT_RAG.md).
+
 The October 11 RAG follow-up deployed on Hostinger in runtime `7d36fff`. General help now retrieves
 role/topic-filtered reviewed passages from an explicit manifest in
 `AssistantKnowledge`, with local BM25 ranking and bounded evidence. Canonical
@@ -80,6 +108,11 @@ Generic operational synchronization still protects writes. Only Assistant uses a
 separate request lock and a pre-work session commit without late session/cookie
 persistence, preventing logout/flash races during provider waits. The provider
 reviewed knowledge passages describe implemented controls; never add imagined workflows.
+
+The later local context-aware extension adds social/identity replies and
+approved help-topic/style references without changing this deployed release's
+record, session or disclosure boundaries. Final follow-up verification remains
+pending and must not be inferred from the earlier live acceptance.
 
 ## Senior developer mandate
 

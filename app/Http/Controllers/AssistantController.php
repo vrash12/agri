@@ -24,7 +24,7 @@ final class AssistantController extends Controller
 
             return response()->json($result)->header('Cache-Control', 'private, no-store');
         } catch (AssistantUnavailable $exception) {
-            return response()->json(['message' => $exception->getMessage()], $exception->status);
+            return response()->json(['message' => $exception->getMessage()], $exception->status)->header('Cache-Control', 'private, no-store');
         }
     }
 }

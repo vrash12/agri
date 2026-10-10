@@ -44,6 +44,20 @@ final class AssistantKnowledge
         'harvest-records' => ['title' => 'Entering harvest records', 'topics' => ['harvest-entry'], 'primary' => ['harvest-entry'], 'audience' => 'office'],
         'office-assistant-help' => ['title' => 'Supported Assistant questions', 'topics' => ['help'], 'primary' => ['help'], 'audience' => 'office'],
         'veterinary-assistant-help' => ['title' => 'Assistant help for Animal Health', 'topics' => ['help'], 'primary' => ['help'], 'audience' => 'veterinary'],
+        'dashboard-overview' => ['title' => 'Reading dashboard figures and reports', 'topics' => ['dashboard-overview'], 'primary' => ['dashboard-overview'], 'audience' => 'office'],
+        'municipality-weather' => ['title' => 'Municipality weather and official bulletins', 'topics' => ['weather'], 'primary' => ['weather'], 'audience' => 'office'],
+        'cooperative-membership' => ['title' => 'Cooperative profiles and member lists', 'topics' => ['cooperatives'], 'primary' => ['cooperatives'], 'audience' => 'office'],
+        'machinery-inventory' => ['title' => 'Equipment assignment and maintenance', 'topics' => ['machinery'], 'primary' => ['machinery'], 'audience' => 'office'],
+        'backup-folder' => ['title' => 'Protected Backup Folder files', 'topics' => ['backups'], 'primary' => ['backups'], 'audience' => 'office'],
+        'audit-trail' => ['title' => 'Scoped audit history and exports', 'topics' => ['audit'], 'primary' => ['audit'], 'audience' => 'office'],
+        'municipality-geofences' => ['title' => 'Municipality geofence references', 'topics' => ['geofences'], 'primary' => ['geofences'], 'audience' => 'office'],
+        'system-overview' => ['title' => 'AgriLGU system overview', 'topics' => ['system-overview'], 'primary' => ['system-overview'], 'audience' => 'office'],
+        'assistant-ai-technology' => ['title' => 'Assistant AI technology and retrieval', 'topics' => ['ai-technology'], 'primary' => ['ai-technology'], 'audience' => 'all'],
+        'assistant-identity-privacy' => ['title' => 'Assistant identity and privacy boundaries', 'topics' => ['assistant-privacy', 'ai-technology'], 'primary' => ['assistant-privacy'], 'audience' => 'all'],
+        'farmer-data-quality' => ['title' => 'Missing information and duplicate review', 'topics' => ['data-quality'], 'primary' => ['data-quality'], 'audience' => 'office'],
+        'farmer-registry' => ['title' => 'Farmer profiles and workbook imports', 'topics' => ['farmer-registry'], 'primary' => ['farmer-registry'], 'audience' => 'office'],
+        'assistance-management' => ['title' => 'Agriculture and fisheries releases and rice sheets', 'topics' => ['assistance-management'], 'primary' => ['assistance-management'], 'audience' => 'office'],
+        'assistance-coverage' => ['title' => 'Recorded assistance coverage by municipality', 'topics' => ['assistance-coverage'], 'primary' => ['assistance-coverage'], 'audience' => 'office'],
     ];
 
     private const OFFICE_ROLES = [
@@ -70,7 +84,7 @@ final class AssistantKnowledge
         if (! $user->isActive() || $user->isVisitor() || $user->isGisEvaluator()
             || (! $veterinary && ! in_array($user->role, self::OFFICE_ROLES, true))
             || ! isset(OfficeAssistant::TOPICS[$topic])
-            || ($veterinary && ! in_array($topic, ['animals', 'access', 'help'], true))) {
+            || ($veterinary && ! in_array($topic, OfficeAssistant::VETERINARY_TOPICS, true))) {
             throw $this->unavailable();
         }
         $canonical = OfficeAssistant::TOPICS[$topic]['question'];

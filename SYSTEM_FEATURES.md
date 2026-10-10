@@ -1,5 +1,27 @@
 # AgriLGU — Complete Feature Catalog
 
+Local follow-up, October 11, 2026 — not yet deployed: the Assistant can introduce
+itself, answer greetings or thanks, explain its technology and describe what it
+can do in English or Filipino without calling AI or reading office records.
+Its reviewed help now covers all documented AgriLGU features through 24 topics
+and 31 guide passages: the dashboard, weather, cooperatives, machinery, protected
+files, auditing, geofences, farmer registry/data review, assistance management
+and coverage, plus the existing parcel/crop, seed-import, harvest, Animal Health,
+sign-in and ID-card guidance. It remains an AgriLGU helper rather than an unrelated
+general chatbot or a tool that browses files or changes records.
+
+After a help answer, ask “Explain more”, “Make it shorter”, “Give an example” or
+“Step by step”. The Assistant remembers only the approved help topic and format
+for up to 15 minutes in a protected reference. “Explain this page” uses the
+current page as a relevance hint. Permissions still apply.
+Generic workbook-upload help on the assistance page keeps its seed-import
+guidance; the page does not grant access to any records. Veterinary accounts
+keep Animal Health-only operational access and can also ask who the Assistant is
+or how its AI/privacy works. Private records and the conversation stay inside
+AgriLGU. This follow-up needs no account, database or environment change; final
+checks and deployment remain pending. The existing live version is `7d36fff`.
+See [Office Assistant](docs/OFFICE_ASSISTANT.md).
+
 The deployed RAG follow-up adds documented sources to Assistant workflow answers.
 It retrieves relevant reviewed guidance, checks returned source references and
 reuses accepted general answers for ten minutes. Failed AI replies fall back to

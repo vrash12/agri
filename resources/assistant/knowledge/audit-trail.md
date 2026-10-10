@@ -1,0 +1,7 @@
+Scoped audit history and exports
+
+Authorized oversight users open Audit Trail to review activity, security alerts and supported before/after changes. System Owner access covers all configured scopes. Regional Heads see events assigned to provinces in their active region; Super Admins see their assigned province. Municipal staff, provincial agriculture staff and veterinary users do not receive audit access. Global or unknown-scope events remain visible only to the System Owner.
+
+Use the event, module, municipality, actor and local-date filters to investigate a specific period or action. Open a permitted event for its recorded detail. Audit ownership is saved with the event and does not follow a later user reassignment. Timestamps are stored in UTC and displayed in the configured local time. Security alerts describe recorded failed/blocked logins, deletion and related events; an alert is not proof of misconduct.
+
+An authorized filtered CSV export captures a stable maximum audit ID so the export is consistent while newer events arrive. Passwords, secrets and protected tokens are excluded from audit values. Assistant events keep safe topic/count/latency information rather than chat text or answers. The Assistant explains these controls but cannot expose audit details through AI, export the trail, erase events or decide an investigation's outcome. Use the original permitted Audit Trail page for actual evidence.

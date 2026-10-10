@@ -1,0 +1,9 @@
+Recorded assistance coverage by municipality
+
+Open Agriculture & Fisheries and choose Assistance coverage map. Select an authorized province or separate city scope, then use municipality, assistance-type, exact program/sheet reference, planting year and dry/wet season filters. Municipal users remain within their own permitted office area. The report is read-only; veterinary, visitor and evaluator accounts cannot access operational assistance data.
+
+Planting-period filters use the year and season recorded on a valid same-municipality rice distribution sheet. Other or legacy releases without that link remain under All seasons / All years or Not recorded. A season is never guessed from the receipt date. This coverage planting period differs from the Assistant's local yearly assistance summary, which uses receipt dates; do not assume those reports have identical totals.
+
+Read release transactions separately from distinct valid linked farmer records. Keep quantities separated by recorded unit. Missing farmer links or incomplete/unsupported quantities are disclosed: a row can count as a release without being a linked beneficiary or contributing to quantity totals. Missing information is not an invented zero. Exact program references are matched as stored, not automatically combined across differently named sheets.
+
+The municipality table is available immediately; Show map loads boundary shapes on demand. Colors represent matching release counts, not hectares, production or eligibility/population coverage. Gray means no matching recorded releases, not proof that an area received no assistance elsewhere. Areas without a single usable active boundary stay in the table. Individual farm parcels are not colored because releases have no explicit parcel link. Filters do not extend account permissions, and the Assistant cannot load or change these records through an AI provider.

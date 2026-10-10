@@ -221,7 +221,7 @@
         return;
       }
       if (typeof data.answer !== 'string' || !data.answer.trim() || data.answer.length > 6000
-        || !['records', 'help', 'clarification'].includes(data.source)
+        || !['records', 'help', 'clarification', 'conversation'].includes(data.source)
         || (data.context !== null && !validToken(data.context))) {
         retryReply(reply, 'The reply could not be verified. Try again or start a new chat.', outgoing);
         return;

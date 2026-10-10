@@ -1,5 +1,30 @@
 # GitHub-to-Hostinger deployment
 
+## Pending context-aware Assistant follow-up — October 11, 2026
+
+The local follow-up adds provider-free introductions/greetings/capabilities and
+AI-technology answers, 31 reviewed passages / 24 canonical workflow topics,
+page-aware help and encrypted topic/style follow-ups. It remains focused on
+AgriLGU features; raw chat, record replies and server files never become provider
+history. Veterinary accounts retain Animal Health operational limits and can
+ask about the Assistant's identity, technology and privacy.
+
+Deploy the identity/resolver/context/conversation/knowledge/provider classes,
+all approved knowledge files, curation index, shared dialog and versioned chat
+script together through GitHub push then Hostinger fast-forward pull. Existing
+dependencies and configuration remain unchanged. Mirror Assistant JavaScript
+and CSS to both public directories with 0644 permissions, refresh only config,
+route and view caches, and preserve session/cache/Redis and NDVI/AI counters.
+Never clear the general cache. No migration, seeder or account change is needed.
+Keep pending farmer-card artwork/seal changes excluded. Retain private backups
+and verify schema/rows/environment plus local identity, all topics, role limits,
+normal workspace rendering and generated help/cache behavior before finishing.
+
+Local acceptance passed 386 PHP tests / 2,493 assertions and 198 JavaScript
+tests, Pint, syntax, Blade compilation, route and whitespace checks. Actual
+synthetic Laravel/MySQL browser sign-in/CSRF verified introduction, dashboard
+guidance and a shorter same-topic follow-up using the real configured provider.
+
 ## Verified Hostinger release — October 11, 2026 — Laravel 12 and RAG Assistant
 
 Runtime `7d36fff421040cccbc667f71c61fac887f4721e6` was committed and pushed to

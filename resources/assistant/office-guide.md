@@ -4,11 +4,17 @@ The runtime help path retrieves reviewed passages from `knowledge/*.md` through
 the explicit `AssistantKnowledge` manifest. This index is not provider context.
 The previous whole-guide prompt was replaced by local RAG on October 11, 2026.
 
-The knowledge covers parcel boundaries and their planning-reference limits;
-planted crop sections and saving rules; rice release imports and quantity units;
-satellite field checks and interpretation limits; multiple-animal recording;
-role access; farmer portal access; registry cards; and harvest entry. Veterinary
-access/help use separate passages and only eligible Animal Health references.
+The explicit manifest contains 31 reviewed passages for 24 supported help topics.
+Coverage includes farmer profiles/workbook imports and incomplete-data review;
+parcel boundaries and planning-reference limits; planted crop sections and saving
+rules; agriculture/fisheries release entry, rice distribution sheets, assistance
+coverage and rice workbook imports; harvest entry; satellite field checks and
+interpretation limits; multiple-animal recording; office/account access; farmer
+portal access and registry cards; dashboard figures/provider usage; municipality
+weather/PAGASA links; cooperatives; machinery; protected Backup Folder files;
+audits; municipality geofences; system overview; and AI technology/privacy.
+Veterinary operational help uses separate Animal Health passages. Shared
+Assistant identity/technology guidance does not expose other operational modules.
 
 Keep each passage complete, concise and verified against the current application.
 Preserve exact control labels, role limits, maximums and useful failure guidance.
@@ -20,6 +26,9 @@ entry and retrieval/permission tests; changing the content changes its digest.
 `OfficeAssistant` supplies only canonical help questions and approved passages.
 Raw chat and records never enter model context. Operational summaries are fresh,
 authorized reads through `AssistantRecords`, not generated or cached answers.
+Identity/greetings can be answered locally. Current-page questions and bounded
+follow-ups reuse a reviewed topic or an independently authorized record reference,
+never the full visible thread. Unrelated general chat is outside this scope.
 The Assistant cannot mutate data, issue credentials, import files, diagnose crops
 or animals, prescribe treatment or make official decisions.
 

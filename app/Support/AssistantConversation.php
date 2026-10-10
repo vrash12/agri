@@ -6,7 +6,7 @@ use App\Exceptions\AssistantUnavailable;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 
-/** Orchestrates one bounded read without disclosing operational text to AI. */
+/** Routes local conversation, scoped records and reviewed application guidance. */
 final class AssistantConversation
 {
     public function __construct(
@@ -14,6 +14,7 @@ final class AssistantConversation
         private AssistantConversationContext $contexts,
         private AssistantRecords $records,
         private OfficeAssistant $assistant,
+        private AssistantIdentity $identity,
     ) {}
 
     public function answer(User $user, string $message, string $module, string $sessionId, ?string $contextToken = null, ?string $choiceToken = null): array
@@ -39,6 +40,21 @@ final class AssistantConversation
         }
         $intent = $choice ? ['task' => 'farmer', 'year' => $choice['year'], 'farmer_id' => $choice['farmer_id']]
             : $this->resolver->resolve($message, $context, $module, LocalTime::now()->year);
+        if ($intent['task'] === 'identity') {
+            // Polite interludes should not discard a validated report/help
+            // reference. They still carry no prior reply text into inference.
+            $replyContext = in_array($intent['kind'], ['greeting', 'thanks'], true) && $context !== []
+                ? $contextToken
+                : $this->token($user, $sessionId, ['task' => 'identity', 'year' => $intent['year'], 'farmer_id' => $context['farmer_id'] ?? null]);
+
+            return [
+                'answer' => $this->identity->answer($user, $intent['kind'], $intent['language'] ?? 'en'),
+                'source' => 'conversation', 'report' => 'identity', 'year' => null,
+                'scope' => $this->scope($user), 'actions' => [], 'links' => [],
+                'context' => $replyContext,
+                '_audit' => ['source' => 'conversation', 'topic' => $intent['kind']],
+            ];
+        }
         if ($intent['task'] === 'clarification') {
             if ($intent['reset_context'] ?? false) {
                 $contextToken = null;
@@ -55,11 +71,12 @@ final class AssistantConversation
             return $this->clarification($user, $intent['clarification'], $contextToken);
         }
         if ($intent['task'] === 'help') {
-            if ($user->isProvincialVeterinaryOffice() && ! in_array($intent['topic'], ['animals', 'access', 'help'], true)) {
+            if ($user->isProvincialVeterinaryOffice() && ! in_array($intent['topic'], OfficeAssistant::VETERINARY_TOPICS, true)) {
                 return $this->clarification($user, 'Your veterinary account can use Animal Health help and reports. Ask about recording animal services or your Animal Health summary.', $contextToken);
             }
-            $result = $this->assistant->answerTopic($user, $intent['topic'], $intent['language'] ?? 'en');
-            $references = ['task' => 'help', 'year' => $intent['year'], 'farmer_id' => $context['farmer_id'] ?? null];
+            $result = $this->assistant->answerTopic($user, $intent['topic'], $intent['language'] ?? 'en', $intent['style'] ?? 'plain');
+            $references = ['task' => 'help', 'year' => $intent['year'], 'farmer_id' => $context['farmer_id'] ?? null,
+                'help_topic' => $intent['topic'], 'help_style' => $intent['style'] ?? 'plain'];
 
             return [
                 'answer' => $result['answer'], 'source' => 'help', 'report' => $intent['topic'], 'year' => null,

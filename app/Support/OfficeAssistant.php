@@ -15,7 +15,7 @@ use Throwable;
 
 final class OfficeAssistant
 {
-    public const MODULES = ['dashboard', 'farmers', 'crops', 'assistance', 'harvests', 'animal-health', 'cooperatives', 'machinery', 'accounts', 'geofences', 'backups', 'audit', 'other'];
+    public const MODULES = ['dashboard', 'farmers', 'crops', 'satellite', 'assistance', 'coverage', 'harvests', 'animal-health', 'cooperatives', 'machinery', 'accounts', 'geofences', 'backups', 'audit', 'other'];
 
     /** Provider questions are application-owned; the visible chat never becomes a prompt. */
     public const TOPICS = [
@@ -29,7 +29,25 @@ final class OfficeAssistant
         'farmer-id' => ['module' => 'farmers', 'question' => 'How do authorized office staff open, print and export a farmer registry card, including its signature lines?'],
         'harvest-entry' => ['module' => 'harvests', 'question' => 'How do authorized office staff enter a harvest record, and how does a seed release differ from a planted crop section?'],
         'help' => ['module' => 'other', 'question' => 'What documented tasks can the AgriLGU Assistant explain for this office role?'],
+        'dashboard-overview' => ['module' => 'dashboard', 'question' => 'How do authorized office users read the dashboard and its current and selected-year agriculture summaries?'],
+        'weather' => ['module' => 'farmers', 'question' => 'How do authorized office users read municipality weather guidance and find official PAGASA bulletins?'],
+        'cooperatives' => ['module' => 'cooperatives', 'question' => 'How do authorized office staff manage cooperative records and membership?'],
+        'machinery' => ['module' => 'machinery', 'question' => 'How do authorized office staff track machinery inventory, status and maintenance?'],
+        'backups' => ['module' => 'backups', 'question' => 'How do authorized office staff use the Backup Folder and private file previews or downloads?'],
+        'audit' => ['module' => 'audit', 'question' => 'How do authorized oversight users filter and export the audit trail, and what are its scope limits?'],
+        'geofences' => ['module' => 'geofences', 'question' => 'How do authorized users view or manage municipality geofence planning references and their map appearance?'],
+        'system-overview' => ['module' => 'other', 'question' => 'What is AgriLGU and what implemented office and farmer workflows does it support?'],
+        'ai-technology' => ['module' => 'other', 'question' => 'What AI technology powers the AgriLGU Assistant, and how do its reviewed retrieval and local record answers work?'],
+        'assistant-privacy' => ['module' => 'other', 'question' => 'Who is the AgriLGU Assistant, what can it answer, and what information stays private or is sent to OpenAI?'],
+        'data-quality' => ['module' => 'farmers', 'question' => 'How do authorized staff review incomplete farmer references, duplicate claims and import validation errors without inventing missing information?'],
+        'farmer-registry' => ['module' => 'farmers', 'question' => 'How do authorized office staff create or update farmer registry records and import approved farmer workbooks?'],
+        'assistance-management' => ['module' => 'assistance', 'question' => 'How do authorized office staff record agriculture and fisheries releases, quantities and rice distribution sheets?'],
+        'assistance-coverage' => ['module' => 'assistance', 'question' => 'How do authorized office users read the assistance coverage report and map with its program, period and unit limits?'],
     ];
+
+    public const VETERINARY_TOPICS = ['animals', 'access', 'help', 'ai-technology', 'assistant-privacy'];
+
+    public const STYLES = ['plain', 'brief', 'steps', 'example', 'more'];
 
     public function __construct(
         private AssistantRequestBudget $budget,
@@ -44,18 +62,18 @@ final class OfficeAssistant
             && config('ai.providers.openai.url') === 'https://api.openai.com/v1';
     }
 
-    public function answerTopic(User $user, string $topic, string $language = 'en'): array
+    public function answerTopic(User $user, string $topic, string $language = 'en', string $style = 'plain'): array
     {
         Gate::forUser($user)->authorize('use', self::class);
-        abort_unless(isset(self::TOPICS[$topic]) && in_array($language, ['en', 'fil'], true), 422, 'Choose a supported help question.');
+        abort_unless(isset(self::TOPICS[$topic]) && in_array($language, ['en', 'fil'], true) && in_array($style, self::STYLES, true), 422, 'Choose a supported help question.');
         if ($user->isProvincialVeterinaryOffice()) {
-            abort_unless(in_array($topic, ['animals', 'access', 'help'], true), 403, 'Your veterinary account can use Animal Health help only.');
+            abort_unless(in_array($topic, self::VETERINARY_TOPICS, true), 403, 'Your veterinary account can use Animal Health and Assistant information only.');
         }
         if (! $this->configured()) {
             throw new AssistantUnavailable('The Assistant is not available yet. Ask your administrator to enable it.');
         }
         $approved = self::TOPICS[$topic];
-        if ($user->isProvincialVeterinaryOffice() && $topic !== 'animals') {
+        if ($user->isProvincialVeterinaryOffice() && in_array($topic, ['access', 'help'], true)) {
             $approved = ['module' => 'animal-health', 'question' => AssistantKnowledge::VETERINARY_QUESTION];
         }
         try {
@@ -68,7 +86,7 @@ final class OfficeAssistant
         if (! $evidence['passages']) {
             return $this->fallback($evidence, $language);
         }
-        $agent = new OfficeHelpAgent($user->role, $approved['module'], $evidence['passages'], $language);
+        $agent = new OfficeHelpAgent($user->role, $approved['module'], $evidence['passages'], $language, $style);
         // No account identity or operational content enters this shared cache.
         // Exact role and current filtered evidence prevent cross-role reuse.
         $key = 'assistant:help:v1:'.hash('sha256', json_encode([

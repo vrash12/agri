@@ -347,6 +347,13 @@ Define `$record` as the edited record or `null` in the form partial, as existing
 
 ### Office Assistant conversation — deployed October 11, 2026
 
+The subsequent context-aware follow-up retains this conversation layout. Offer
+familiar prompts such as "Who are you?" and "How do I use this page?". Local
+introductions use the Assistant label; documented guides retain their sources.
+Brief or step-by-step follow-ups must reuse the approved help topic without
+forwarding prior record replies. Do not suggest unrelated general chat or live
+filesystem access: this Assistant covers AgriLGU features only.
+
 The October 11 implementation uses one continuous chat within the
 signed-in office workspace. Keep the small launcher and accessible dialog,
 compact name/New chat/Close header, a scrollable message stream and one composer.

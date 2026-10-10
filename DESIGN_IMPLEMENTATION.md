@@ -1,5 +1,16 @@
 # Design and UX implementation record
 
+## Context-aware Assistant — local follow-up, October 11, 2026
+
+The existing conversation now recognizes introductions, greetings, capabilities
+and AI-technology questions in English/Filipino without inference or record
+queries. Suggested questions include identity, the current page and local
+registry totals. Explicit page questions select reviewed module guidance; system
+help supports brief, detailed, step-by-step, plain and example follow-ups through
+encrypted topic/style references. The visible chat remains one conversation.
+Operational replies never become AI history. This follow-up targets AgriLGU
+features only and has no runtime file-reading tools. See `docs/OFFICE_ASSISTANT.md`.
+
 ## Assistant documented sources — deployed October 11, 2026
 
 RAG help replies add a compact “Based on” line inside the same conversation.

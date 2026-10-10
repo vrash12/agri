@@ -1,0 +1,7 @@
+Equipment assignment and maintenance
+
+Open Machinery Inventory to search equipment and use the available, in-use, repair, unassigned or Needs attention views. Review condition separately from availability. Needs attention flags repairs, unserviceable equipment, maintenance status, overdue service and service due within 30 days. These flags reflect recorded status and dates, not a physical inspection or a completed repair.
+
+Authorized operational staff use the inventory form to enter the owning municipality, asset code, machinery name/category, condition, availability and a farmer or cooperative holder. The holder must belong to that municipality. Asset codes are unique within the municipality. Optional acquisition, location, service-hour, maintenance-date and notes fields retain the recorded information. The next maintenance date cannot precede the last maintenance date.
+
+Review the live form summary and validation messages before saving. If another person edits the asset, reload and review the newer record before resubmitting. Search/filter controls and maintenance sorting help prioritize follow-up; the authorized CSV export uses the current filters. Oversight roles remain read-only for operational inventory. The Assistant explains inventory and maintenance controls but cannot assign an asset, schedule service, perform a repair or generate live inventory totals beyond its supported local report tasks.

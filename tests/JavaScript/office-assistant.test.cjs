@@ -68,6 +68,17 @@ function payload(ui, index = -1) { return JSON.parse(ui.requests.at(index).optio
 function content(ui, index = -1) { return ui.messages.children.at(index).children[1].textContent; }
 function controls(ui, index = -1) { return ui.messages.children.at(index).children.at(-1).children; }
 
+test('application-owned conversational replies display and retain only an opaque reference', async () => {
+  const ui = setup(async () => reply('I am the AgriLGU Assistant.', { source: 'conversation', context: 'identity-reference' }));
+  ui.input.value = 'Who are you?'; await ui.form.fire('submit');
+  assert.equal(content(ui), 'I am the AgriLGU Assistant.');
+  assert.equal(ui.messages.children.at(-1).children[0].textContent, 'Assistant');
+  assert.equal(ui.input.value, '');
+  ui.input.value = 'Tell me more'; await ui.form.fire('submit');
+  assert.deepEqual(payload(ui), { message: 'Tell me more', module: 'crops', context: 'identity-reference' });
+  assert.doesNotMatch(ui.requests.at(-1).options.body, /history|general_context|I am the/);
+});
+
 test('retrieved source titles are bounded plain text and never rendered as HTML or navigation', async () => {
   const ui = setup(async () => reply('Use Seasonal crops.', { sources: [
     { id: 'crop-sections', title: '<img src=x onerror=alert(1)>' },

@@ -2,7 +2,9 @@
   $assistantRoute = request()->route()?->getName() ?? '';
   $assistantModule = match(true) {
     str_starts_with($assistantRoute, 'farmers.') => 'farmers',
+    str_starts_with($assistantRoute, 'farm-plots.satellite.') => 'satellite',
     str_starts_with($assistantRoute, 'farm-plots.') => 'crops',
+    str_starts_with($assistantRoute, 'assistance-coverage.') => 'coverage',
     str_starts_with($assistantRoute, 'rice-') => 'assistance',
     str_starts_with($assistantRoute, 'harvest') => 'harvests',
     str_starts_with($assistantRoute, 'anti-rabies') => 'animal-health',
@@ -18,7 +20,7 @@
   $assistantVeterinary = auth()->user()->isProvincialVeterinaryOffice();
   $assistantSuggestions = $assistantVeterinary
     ? ['Summarize Animal Health services', 'How do I record multiple animals for one owner?', 'What can my veterinary account access?']
-    : ['How many farmers do we have?', 'Summarize assistance for this year', 'How do I draw a planted crop area?'];
+    : ['Who are you?', 'How do I use this page?', 'How many farmers do we have?'];
 @endphp
 <div class="office-assistant" data-office-assistant data-endpoint="{{ route('assistant.message') }}" data-module="{{ $assistantModule }}">
   <button class="assistant-launcher" type="button" data-assistant-open aria-haspopup="dialog" aria-controls="officeAssistantDialog" aria-expanded="false" hidden>
@@ -35,7 +37,7 @@
     <div class="assistant-body" data-assistant-body tabindex="0" role="region" aria-label="Conversation messages">
       <div class="assistant-welcome" data-assistant-welcome>
         <h3>How can I help?</h3>
-        <p>Ask about your office records or how to use AgriLGU. You can ask a follow-up in the same conversation.</p>
+        <p>Ask about AgriLGU features or your permitted office records. Continue with “Explain more” or “Show me the steps” after a system guide.</p>
         <div class="assistant-suggestions" aria-label="Suggested questions">
           @foreach($assistantSuggestions as $suggestion)
             <button type="button" data-assistant-suggestion>{{ $suggestion }}<span aria-hidden="true">→</span></button>

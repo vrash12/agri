@@ -9,12 +9,22 @@ use Throwable;
 /** Encrypted references are hints. Every record is independently authorized. */
 final class AssistantConversationContext
 {
-    private const TASKS = ['farmers', 'assistance', 'harvests', 'animal-health', 'summary', 'farmer-search', 'farmer', 'farmer-parcels', 'farmer-assistance', 'farmer-harvests', 'help'];
+    private const TASKS = ['farmers', 'assistance', 'harvests', 'animal-health', 'summary', 'farmer-search', 'farmer', 'farmer-parcels', 'farmer-assistance', 'farmer-harvests', 'help', 'identity'];
 
-    /** @param array{task?:string,year?:int,farmer_id?:int|null,choices?:list<int>} $references */
+    public const HELP_STYLES = ['plain', 'brief', 'steps', 'example', 'more'];
+
+    /** @param array{task?:string,year?:int,farmer_id?:int|null,choices?:list<int>,help_topic?:string,help_style?:string} $references */
     public function issue(User $user, string $sessionId, array $references, string $type = 'context'): string
     {
         $now = now('UTC')->timestamp;
+
+        $help = [];
+        if (($references['task'] ?? 'help') === 'help' && is_string($references['help_topic'] ?? null) && isset(OfficeAssistant::TOPICS[$references['help_topic']])) {
+            $help['help_topic'] = $references['help_topic'];
+            if (in_array($references['help_style'] ?? null, self::HELP_STYLES, true)) {
+                $help['help_style'] = $references['help_style'];
+            }
+        }
 
         return Crypt::encryptString(json_encode([
             'version' => 1, 'type' => $type, 'user' => (int) $user->id,
@@ -23,10 +33,10 @@ final class AssistantConversationContext
             'task' => $references['task'] ?? 'help', 'year' => $references['year'] ?? LocalTime::now()->year,
             'farmer_id' => $references['farmer_id'] ?? null,
             'choices' => array_slice($references['choices'] ?? [], 0, 6),
-        ], JSON_THROW_ON_ERROR));
+        ] + $help, JSON_THROW_ON_ERROR));
     }
 
-    /** @return array{task:string,year:int,farmer_id:int|null,choices:list<int>}|null */
+    /** @return array{task:string,year:int,farmer_id:int|null,choices:list<int>,help_topic?:string,help_style?:string}|null */
     public function read(User $user, string $sessionId, string $token, string $type = 'context'): ?array
     {
         if ($sessionId === '' || strlen($token) > 4096) {
@@ -44,7 +54,9 @@ final class AssistantConversationContext
                 || ! in_array($value['task'] ?? null, self::TASKS, true)
                 || ! is_int($value['year'] ?? null) || $value['year'] < 1900 || $value['year'] > 2100
                 || (! is_null($value['farmer_id'] ?? null) && (! is_int($value['farmer_id']) || $value['farmer_id'] < 1))
-                || ! is_array($value['choices'] ?? null) || ! array_is_list($value['choices']) || count($value['choices']) > 6) {
+                || ! is_array($value['choices'] ?? null) || ! array_is_list($value['choices']) || count($value['choices']) > 6
+                || (array_key_exists('help_topic', $value) && ($value['task'] !== 'help' || ! is_string($value['help_topic']) || ! isset(OfficeAssistant::TOPICS[$value['help_topic']])))
+                || (array_key_exists('help_style', $value) && (! isset($value['help_topic']) || ! in_array($value['help_style'], self::HELP_STYLES, true)))) {
                 return null;
             }
             foreach ($value['choices'] as $id) {
@@ -53,7 +65,7 @@ final class AssistantConversationContext
                 }
             }
 
-            return array_intersect_key($value, array_flip(['task', 'year', 'farmer_id', 'choices']));
+            return array_intersect_key($value, array_flip(['task', 'year', 'farmer_id', 'choices', 'help_topic', 'help_style']));
         } catch (Throwable) {
             // Never log tokens or decryption failures: an invalid hint is reset.
             return null;

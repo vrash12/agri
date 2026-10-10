@@ -1,6 +1,12 @@
 # Office Assistant
 
-Status: deployed on Hostinger on October 11, 2026 in runtime `7d36fff`, together
+Current follow-up status: the October 11 context-aware, AgriLGU-only extension is
+implemented locally and not yet deployed. Local verification passed 386 PHP
+tests / 2,493 assertions and 198 JavaScript tests; historical counts and live
+checks below describe earlier stages.
+No migration, dependency, environment setting or account change is required.
+
+Deployed baseline: Hostinger installed runtime `7d36fff` on October 11, together
 with the Laravel 12 / PHP 8.3+ dependency upgrade and RAG follow-up. GitHub push,
 Hostinger fast-forward pull and locked Composer install completed. Existing
 schema, operational records and accounts were preserved; nine approved AI
@@ -12,6 +18,56 @@ workflow retrieval, strict structured source checks, ten-minute general-help
 caching and saved-guide fallbacks. The verification section below records the
 earlier unified stage; current RAG checks are in that companion receipt. Record
 reports remain fresh local queries; the one-conversation interface is unchanged.
+
+## October 11 local context-aware follow-up
+
+The owner's clarified scope is help with **all documented AgriLGU features**,
+not unrelated generic conversation. `AssistantIdentity` handles who the
+Assistant is, greetings, thanks, capabilities and technology questions in
+English/Filipino using application-owned text. Those replies need no provider
+call, budget reservation or operational query. They describe a software helper,
+not an official decision-maker, and do not advertise autonomous tools.
+
+The curated manifest now contains 31 reviewed passages for 24 canonical topics.
+Alongside the original crop/parcel drawing, seed import, NDVI, Animal Health,
+access, farmer sign-in/ID, harvest and Assistant help, it covers dashboard,
+weather, cooperatives, machinery, backups, audit, geofences, system overview,
+AI technology/privacy, farmer data quality/registry and assistance
+management/coverage. Help describes implemented workflows; it does not add live
+queries to those modules or grant their permissions. Veterinary users can ask
+local identity and AI/privacy questions, while operational access remains
+Animal Health-only.
+
+After a supported help answer, “Explain more”, “Make it shorter”, “Step by step”,
+“Give an example” or “Explain simply” retains the approved help topic and chooses
+one controlled style. The new provider request still contains only that
+canonical topic, eligible reviewed passages and application-owned role/language/
+style instructions. It never contains the earlier answer, typed follow-up,
+farmer text or mixed thread. A vague explanation after a record answer clarifies
+locally rather than converting records into AI context. “Explain this page” may
+use the allowlisted page module for relevance. The existing assistance-page
+generic Excel/upload aliases also resolve to seed-import help; explicit topic
+words take precedence. Hints never supply authority or select protected records.
+
+Satellite/NDVI and Assistance coverage pages have distinct safe page hints.
+Greeting/thanks interludes preserve the previous validated report/help reference
+so an example request or reporting-year follow-up can still resume it.
+
+No general AI mode, uploaded-document processing, live browsing, filesystem or
+execution tool is introduced. Runtime evidence is limited to the explicit
+reviewed manifest under `resources/assistant/knowledge`; code directories,
+private files and the wider repository are not scanned or ingested.
+
+The focused integrated suite passed 386 PHP tests / 2,493 assertions, including
+local identity, all approved topics, permission/isolation, encrypted follow-ups,
+legacy tokens, canonical disclosure, cache/fallback and existing local reports.
+All 198 JavaScript tests passed, including plain-text conversational replies and
+opaque-reference-only requests. Pint, syntax, Blade compilation, route checks
+and whitespace checks passed. The actual local Laravel/MySQL application used
+normal sign-in/CSRF against a synthetic database: introduction, dashboard page
+guidance and a shorter same-topic follow-up succeeded with the configured real
+provider. No live farmer data was used for that browser check. Live acceptance
+belongs to the deployment receipt; these counts are not a production load test.
 
 ## One conversation in the signed-in application
 
@@ -31,6 +87,9 @@ The shared theme, 44px controls and mobile/short-screen behavior are retained.
 | Find farmer Juan | Up to six permitted matches with opaque reply choices |
 | Show his parcels / his assistance / his harvests | Reauthorizes the selected farmer and reads the applicable bounded summary |
 | How do I draw a corn area? | Canonical general crop-editor help through the AI SDK |
+| Who are you? / Sino ka? | Local identity reply with scope and read-only limits; no AI call |
+| Explain this page | Uses that page's allowlisted topic as a relevance hint, with normal authorization |
+| Make it shorter / Give an example | Reuses only the approved prior help topic with a controlled format |
 | Show assistance for 2025 and 2026 | Asks for one year; a bare year reply resumes the pending report |
 
 Explicit year, prior unambiguous report year, then `LocalTime::now()->year`
@@ -46,8 +105,9 @@ the selected target.
 
 `POST /assistant/message` retains office authentication, idle expiry, active scope,
 CSRF, restricted-role middleware, role policy and five requests per minute. The
-seven scoped office roles can use it; veterinary accounts receive Animal Health
-help/reports only. Visitors, GIS evaluators, guests and farmer-guard sessions are
+seven scoped office roles can use it. The local follow-up permits veterinary
+identity and AI/privacy explanations plus Animal Health help/reports; it does not
+grant other operational access. Visitors, GIS evaluators, guests and farmer-guard sessions are
 denied. All operational access remains read-only.
 
 The request accepts `message` (800 characters), an allowlisted page `module` hint,
@@ -66,7 +126,12 @@ scope. They contain no names, results, totals, geometry or transcript. Tampered,
 expired and changed-scope references reset; cross-account/session replay returns
 no data. A token is only a hint: every follow-up checks current permissions and
 record ownership. Pending year clarification keeps only a known task/year/farmer
-reference. It never retains the original question.
+reference. It never retains the original question. Version 1 remains compatible
+with existing tokens. The local follow-up adds optional `help_topic` and
+`help_style`: an allowlisted topic and one of `plain`, `brief`, `steps`, `example`,
+`more`. Old tokens without those fields remain valid but need a fresh help turn
+before a generic topic follow-up can resolve. No new transcript or answer field
+is accepted, and the 4 KiB/15-minute/user-session-scope limits are unchanged.
 
 Replies carry application-owned source/scope/period, bounded choices and links
 to protected named routes. Render with `textContent`, not HTML. The browser
@@ -92,11 +157,12 @@ conversion, yield or unimplemented crop-to-harvest link is inferred. Multiple
 aggregate queries read changing records, not a guaranteed transactional snapshot.
 
 `OfficeAssistant::answerTopic` accepts only application-owned `TOPICS`. The model
-receives a canonical general question and static guide/module/role/language.
+receives a canonical system question and reviewed passages/module/role/language/
+controlled style.
 Help now retrieves at most three reviewed passages rather than the entire static
 guide. Strict structured output and server validation check returned citation IDs;
 compact application-owned source titles appear in the conversation. Accepted
-general help is cached by current evidence/prompt/model/role/topic/language for
+system help is cached by current evidence/prompt/style/model/role/topic/language for
 ten minutes. Cached replies consume no new allowance and report zero new tokens.
 Generation failures/rejected replies use the complete saved primary passage.
 These checks aid grounding, but do not prove factual entailment.
@@ -228,6 +294,12 @@ agent, policies/config, audit/veterinary middleware, session/CSRF middleware/ker
 route-specific concurrency, reviewed knowledge/retrieval/grounding, layout/dialog and both public assets
 together. Mirror CSS/JavaScript to both public directories with 0644 permissions.
 Stale clients must receive reload guidance instead of the retired raw-help path.
+For this follow-up, include `AssistantIdentity`, updated resolver/context/
+conversation/provider/agent, all curated knowledge and relevant tests/docs as one
+reviewed change. The deployed Laravel 12/AI SDK foundation is unchanged; no new
+Composer requirement or environment variable is introduced. Final follow-up
+verification and any new live acceptance must be recorded separately from
+`7d36fff`'s earlier checks.
 
 Refresh configuration/route/compiled-view caches only. No migration, seeder,
 conversation table, account or operational-data change is required. Do not run

@@ -28,6 +28,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Testing\TestResponse;
 use Laravel\Ai\Prompts\AgentPrompt;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\ProvinceScopeSchema;
 use Tests\TestCase;
 
@@ -124,6 +125,265 @@ class AssistantConversationTest extends TestCase
             ->assertOk()->assertJsonPath('source', 'records')->assertJsonPath('year', 2025)->assertSee('200.000')->assertDontSee('400.000');
         OfficeHelpAgent::assertNeverPrompted();
         Http::assertNothingSent();
+        $this->assertNull(Cache::get('assistant:requests:day:'.now('UTC')->format('Ymd')));
+    }
+
+    #[DataProvider('localIntroductionCases')]
+    public function test_introductions_greetings_and_technology_are_local_without_provider_or_record_reads(string $question, string $expected): void
+    {
+        config(['ai.providers.openai.key' => '']);
+        DB::enableQueryLog();
+        $response = $this->ask($question)->assertOk()->assertJsonPath('source', 'conversation')->assertJsonPath('report', 'identity')->assertSee($expected, false);
+        $this->assertSame(0, $this->operationalQueries());
+        $this->assertNull(Cache::get('assistant:requests:day:'.now('UTC')->format('Ymd')));
+        $this->assertLessThanOrEqual(4096, strlen($response->json('context')));
+        OfficeHelpAgent::assertNeverPrompted();
+        Http::assertNothingSent();
+        $audit = AuditLog::where('module', 'Office Assistant')->sole();
+        $this->assertSame('conversation', $audit->metadata['source']);
+        $this->assertStringNotContainsString($question, json_encode($audit->metadata));
+    }
+
+    public static function localIntroductionCases(): array
+    {
+        return [
+            ['Who are you?', 'AgriLGU Assistant'], ['Hello!', 'How can I help with AgriLGU?'],
+            ['What can you do?', 'AgriLGU features only'], ['What AI are you using?', 'Laravel AI SDK'],
+            ['Are you ChatGPT?', 'OpenAI'], ['Sino ka?', 'Ako ang AgriLGU Assistant'],
+            ['Kumusta!', 'Kumusta!'], ['Salamat!', 'Walang anuman!'],
+        ];
+    }
+
+    public function test_local_technology_does_not_echo_unreviewed_model_configuration(): void
+    {
+        config(['assistant.model' => 'private-model-fixture@example.test']);
+        $this->ask('What model do you use?')->assertOk()->assertJsonPath('source', 'conversation')
+            ->assertSee('OpenAI')->assertDontSee('private-model-fixture@example.test');
+        OfficeHelpAgent::assertNeverPrompted();
+        $this->assertNull(Cache::get('assistant:requests:day:'.now('UTC')->format('Ymd')));
+    }
+
+    public function test_local_introduction_followup_explains_capabilities_without_provider_context(): void
+    {
+        $greeting = $this->ask('Hello!')->assertOk()->assertJsonPath('source', 'conversation');
+        DB::enableQueryLog();
+        $this->ask('Explain more.', ['context' => $greeting->json('context')])->assertOk()->assertJsonPath('source', 'conversation')
+            ->assertSee('AgriLGU features only')->assertSee('no live browsing');
+        $this->assertSame(0, $this->operationalQueries());
+        $this->assertNull(Cache::get('assistant:requests:day:'.now('UTC')->format('Ymd')));
+        OfficeHelpAgent::assertNeverPrompted();
+    }
+
+    public function test_thanks_preserves_the_help_topic_without_forwarding_the_interlude(): void
+    {
+        $guide = $this->ask('How do I draw crops?')->assertOk();
+        $thanks = $this->ask('Thanks!', ['context' => $guide->json('context')])->assertOk()->assertJsonPath('source', 'conversation');
+        $this->assertSame($guide->json('context'), $thanks->json('context'));
+        $this->ask('Give me an example', ['context' => $thanks->json('context')])->assertOk()->assertJsonPath('report', 'crop-drawing');
+        OfficeHelpAgent::assertPrompted(fn (AgentPrompt $prompt) => $prompt->prompt === OfficeAssistant::TOPICS['crop-drawing']['question']
+            && empty($prompt->messages) && ! str_contains($prompt->agent->instructions(), 'Thanks!'));
+        OfficeHelpAgent::assertPromptedTimes(2);
+    }
+
+    public function test_greeting_preserves_report_period_and_selection_without_inference(): void
+    {
+        $report = $this->ask('Show assistance for 2026')->assertOk()->assertJsonPath('year', 2026);
+        $greeting = $this->ask('Hello!', ['context' => $report->json('context')])->assertOk()->assertJsonPath('source', 'conversation');
+        $this->assertSame($report->json('context'), $greeting->json('context'));
+        $this->ask('2025', ['context' => $greeting->json('context')])->assertOk()->assertJsonPath('source', 'records')->assertJsonPath('year', 2025);
+        OfficeHelpAgent::assertNeverPrompted();
+    }
+
+    public function test_coverage_and_satellite_pages_render_distinct_safe_page_hints(): void
+    {
+        foreach (['assistance-coverage.index' => 'coverage', 'farm-plots.satellite.show' => 'satellite'] as $routeName => $module) {
+            $request = Request::create('/synthetic-page');
+            $route = (new Route('GET', '/synthetic-page', fn () => ''))->name($routeName);
+            $request->setRouteResolver(fn () => $route);
+            $this->app->instance('request', $request);
+            $this->view('partials.office-assistant')->assertSee('data-module="'.$module.'"', false);
+        }
+        OfficeHelpAgent::assertNeverPrompted();
+    }
+
+    public function test_help_followups_reuse_only_encrypted_topic_and_approved_style(): void
+    {
+        $response = $this->ask('How do I import rice seeds?')->assertOk()->assertJsonPath('report', 'seed-import');
+        $first = app(AssistantConversationContext::class)->read($this->staff, session()->getId(), $response->json('context'));
+        $this->assertSame('seed-import', $first['help_topic']);
+        $this->assertSame('plain', $first['help_style']);
+        foreach (['Make it shorter.' => 'brief', 'Give an example.' => 'example', 'Step by step.' => 'steps', 'Explain more.' => 'more'] as $question => $style) {
+            $response = $this->ask($question, ['context' => $response->json('context')])->assertOk()->assertJsonPath('source', 'help')->assertJsonPath('report', 'seed-import');
+            $hint = app(AssistantConversationContext::class)->read($this->staff, session()->getId(), $response->json('context'));
+            $this->assertSame('seed-import', $hint['help_topic']);
+            $this->assertSame($style, $hint['help_style']);
+            $plainHint = Crypt::decryptString($response->json('context'));
+            $this->assertStringNotContainsString($question, $plainHint);
+            $this->assertStringNotContainsString('Open the documented workspace', $plainHint);
+        }
+        OfficeHelpAgent::assertPrompted(function (AgentPrompt $prompt): bool {
+            $this->assertSame(OfficeAssistant::TOPICS['seed-import']['question'], $prompt->prompt);
+            $this->assertEmpty($prompt->messages);
+            foreach (['Make it shorter', 'Give an example', 'Step by step', 'Explain more'] as $raw) {
+                $this->assertStringNotContainsString($raw, $prompt->prompt.$prompt->agent->instructions());
+            }
+
+            return str_contains($prompt->agent->instructions(), 'documented constraints and reasons in more detail');
+        });
+        OfficeHelpAgent::assertPrompted(fn (AgentPrompt $prompt) => str_contains($prompt->agent->instructions(), 'at most 70 words'));
+        OfficeHelpAgent::assertPromptedTimes(5);
+        $audit = AuditLog::where('module', 'Office Assistant')->get()->toJson();
+        $this->assertStringNotContainsString('Make it shorter', $audit);
+        $this->assertStringNotContainsString('Open the documented workspace', $audit);
+    }
+
+    #[DataProvider('pageHelpCases')]
+    public function test_this_page_uses_allowlisted_module_relevance_without_reading_records(string $module, string $topic): void
+    {
+        DB::enableQueryLog();
+        $this->ask('How do I use this page?', ['module' => $module])->assertOk()->assertJsonPath('source', 'help')->assertJsonPath('report', $topic);
+        $this->assertSame(0, $this->operationalQueries());
+        OfficeHelpAgent::assertPrompted(fn (AgentPrompt $prompt) => $prompt->prompt === OfficeAssistant::TOPICS[$topic]['question'] && empty($prompt->messages));
+    }
+
+    public static function pageHelpCases(): array
+    {
+        return [
+            ['dashboard', 'dashboard-overview'], ['farmers', 'farmer-registry'], ['crops', 'crop-drawing'],
+            ['assistance', 'assistance-management'], ['harvests', 'harvest-entry'], ['animal-health', 'animals'],
+            ['satellite', 'ndvi'], ['coverage', 'assistance-coverage'],
+            ['cooperatives', 'cooperatives'], ['machinery', 'machinery'], ['accounts', 'access'],
+            ['geofences', 'geofences'], ['backups', 'backups'], ['audit', 'audit'], ['other', 'help'],
+        ];
+    }
+
+    #[DataProvider('expandedHelpCases')]
+    public function test_additional_feature_questions_use_reviewed_canonical_guidance(string $question, string $topic): void
+    {
+        DB::enableQueryLog();
+        $this->ask($question)->assertOk()->assertJsonPath('source', 'help')->assertJsonPath('report', $topic);
+        $this->assertSame(0, $this->operationalQueries());
+        OfficeHelpAgent::assertPrompted(function (AgentPrompt $prompt) use ($question, $topic): bool {
+            $this->assertSame(OfficeAssistant::TOPICS[$topic]['question'], $prompt->prompt);
+            $this->assertEmpty($prompt->messages);
+            $this->assertStringNotContainsString($question, $prompt->agent->instructions());
+
+            return true;
+        });
+    }
+
+    public static function expandedHelpCases(): array
+    {
+        return [
+            ['How do I read weather guidance?', 'weather'], ['Explain data quality checks.', 'data-quality'],
+            ['What is AgriLGU?', 'system-overview'], ['Explain RAG.', 'ai-technology'],
+            ['Do you send farmer records to OpenAI?', 'assistant-privacy'],
+            ['How do I record fertilizer releases?', 'assistance-management'],
+            ['How do I record fingerlings?', 'assistance-management'],
+            ['Explain assistance coverage.', 'assistance-coverage'],
+        ];
+    }
+
+    public function test_unrelated_general_questions_remain_local_without_raw_provider_prompts(): void
+    {
+        DB::enableQueryLog();
+        foreach (['Explain photosynthesis.', 'Write a generic speech about bicycles.'] as $message) {
+            $this->ask($message)->assertOk()->assertJsonPath('source', 'clarification');
+        }
+        $this->assertSame(0, $this->operationalQueries());
+        $this->assertNull(Cache::get('assistant:requests:day:'.now('UTC')->format('Ymd')));
+        OfficeHelpAgent::assertNeverPrompted();
+    }
+
+    public function test_a_record_summary_cannot_become_provider_history_through_style_followups(): void
+    {
+        $summary = $this->ask('Show assistance for 2025')->assertOk()->assertJsonPath('source', 'records');
+        DB::enableQueryLog();
+        DB::flushQueryLog();
+        foreach (['Make it shorter.', 'Explain more.', 'Give an example.'] as $question) {
+            $this->ask($question, ['context' => $summary->json('context')])->assertOk()->assertJsonPath('source', 'clarification')
+                ->assertDontSee('15.000 kg')->assertDontSee('Juan Fixture');
+        }
+        $this->assertSame(0, $this->operationalQueries());
+        $this->assertNull(Cache::get('assistant:requests:day:'.now('UTC')->format('Ymd')));
+        OfficeHelpAgent::assertNeverPrompted();
+    }
+
+    public function test_selected_farmer_survives_help_references_without_entering_provider_or_audit_text(): void
+    {
+        $selected = $this->ask('Find farmer '.$this->farmer->agri_gov_id)->assertOk();
+        DB::enableQueryLog();
+        DB::flushQueryLog();
+        $help = $this->ask('How do I draw a crop area for Juan Fixture?', ['context' => $selected->json('context')])->assertOk();
+        $follow = $this->ask('Give an example.', ['context' => $help->json('context')])->assertOk()->assertJsonPath('report', 'crop-drawing');
+        $hint = app(AssistantConversationContext::class)->read($this->staff, session()->getId(), $follow->json('context'));
+        $this->assertSame($this->farmer->id, $hint['farmer_id']);
+        $this->assertSame('crop-drawing', $hint['help_topic']);
+        OfficeHelpAgent::assertPrompted(function (AgentPrompt $prompt): bool {
+            $providerText = $prompt->prompt.$prompt->agent->instructions().json_encode($prompt->messages);
+            foreach (['Juan', 'Fixture', $this->farmer->agri_gov_id, 'Secret plot name', '15.000', '400.000', 'private-contact-fixture'] as $private) {
+                $this->assertStringNotContainsString($private, $providerText);
+            }
+
+            return $prompt->prompt === OfficeAssistant::TOPICS['crop-drawing']['question'] && empty($prompt->messages)
+                && str_contains($prompt->agent->instructions(), 'clearly hypothetical');
+        });
+        $this->assertSame(0, $this->operationalQueries());
+        $this->ask('Show his parcels.', ['context' => $follow->json('context')])->assertOk()->assertJsonPath('source', 'records')->assertSee('Saved parcels: 1');
+        $audit = AuditLog::where('module', 'Office Assistant')->get()->toJson();
+        foreach (['Juan', $this->farmer->agri_gov_id, 'Give an example', 'Secret plot name'] as $private) {
+            $this->assertStringNotContainsString($private, $audit);
+        }
+        OfficeHelpAgent::assertPromptedTimes(2);
+    }
+
+    public function test_veterinary_identity_and_assistant_docs_preserve_animal_health_boundary(): void
+    {
+        $vet = User::withoutEvents(fn () => User::create(['name' => 'Synthetic veterinary officer', 'email' => 'synthetic-vet@example.test',
+            'password' => 'non-login-fixture', 'is_active' => true, 'role' => User::ROLE_PROVINCIAL_VET, 'province_id' => $this->own->province_id]));
+        $this->actingAs($vet);
+        DB::enableQueryLog();
+        $this->ask('Who are you?')->assertOk()->assertJsonPath('source', 'conversation')->assertSee('limited to Animal Health');
+        $this->ask('Do you send farmer data to OpenAI?')->assertOk()->assertJsonPath('source', 'help')->assertJsonPath('report', 'assistant-privacy');
+        $this->ask('Explain Laravel AI SDK.')->assertOk()->assertJsonPath('source', 'help')->assertJsonPath('report', 'ai-technology');
+        $this->ask('How do I draw a crop area?')->assertOk()->assertJsonPath('source', 'clarification');
+        $this->ask('How do I use cooperatives?')->assertOk()->assertJsonPath('source', 'clarification');
+        OfficeHelpAgent::assertPrompted(function (AgentPrompt $prompt): bool {
+            $this->assertStringContainsString('Animal Health only for operational workflows', $prompt->agent->instructions());
+            $this->assertStringNotContainsString('"id":"crop-sections"', $prompt->agent->instructions());
+            $this->assertStringNotContainsString('"id":"farmer-registry"', $prompt->agent->instructions());
+
+            return in_array($prompt->prompt, [OfficeAssistant::TOPICS['assistant-privacy']['question'], OfficeAssistant::TOPICS['ai-technology']['question']], true)
+                && empty($prompt->messages);
+        });
+        OfficeHelpAgent::assertPromptedTimes(2);
+        $this->assertSame(0, $this->operationalQueries());
+    }
+
+    public function test_legacy_help_and_report_tokens_remain_readable_without_inventing_help_context(): void
+    {
+        $contexts = app(AssistantConversationContext::class);
+        $legacyHelp = $contexts->issue($this->staff, session()->getId(), ['task' => 'help', 'year' => 2025]);
+        $this->assertNotNull($contexts->read($this->staff, session()->getId(), $legacyHelp));
+        $this->ask('Make it shorter.', ['context' => $legacyHelp])->assertOk()->assertJsonPath('source', 'clarification');
+        $legacyReport = $contexts->issue($this->staff, session()->getId(), ['task' => 'assistance', 'year' => 2025]);
+        $this->ask('What about harvests for the same year?', ['context' => $legacyReport])->assertOk()->assertJsonPath('source', 'records')
+            ->assertJsonPath('year', 2025)->assertSee('200.000');
+        OfficeHelpAgent::assertNeverPrompted();
+    }
+
+    public function test_invalid_encrypted_help_topic_or_style_resets_before_provider_or_record_queries(): void
+    {
+        $token = app(AssistantConversationContext::class)->issue($this->staff, session()->getId(), ['task' => 'help', 'year' => 2026, 'help_topic' => 'crop-drawing', 'help_style' => 'plain']);
+        $payload = json_decode(Crypt::decryptString($token), true, flags: JSON_THROW_ON_ERROR);
+        DB::enableQueryLog();
+        foreach (['help_topic' => 'private-unreviewed-topic', 'help_style' => 'raw-history'] as $field => $bad) {
+            $modified = array_replace($payload, [$field => $bad]);
+            $this->ask('Explain more.', ['context' => Crypt::encryptString(json_encode($modified, JSON_THROW_ON_ERROR))])
+                ->assertOk()->assertJsonPath('source', 'clarification')->assertJsonPath('context', null);
+        }
+        $this->assertSame(0, $this->operationalQueries());
+        OfficeHelpAgent::assertNeverPrompted();
         $this->assertNull(Cache::get('assistant:requests:day:'.now('UTC')->format('Ymd')));
     }
 

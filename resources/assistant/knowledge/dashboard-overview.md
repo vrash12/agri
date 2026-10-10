@@ -1,0 +1,9 @@
+Reading dashboard figures and reports
+
+Open Dashboard to see the current office scope, key figures, attention items and recent activity. Open Reports and office details or View graphs and reports for the detailed charts and figures. Attention shortcuts lead to records needing missing-reference, missing-location, parcel-mapping or machinery follow-up. A chart's figures remain available when its chart library fails.
+
+Read the period and unit next to each figure. Registered farmers and mapping coverage describe current records, not historical snapshots. Mapping coverage counts farmers with saved parcels; it does not count unknown unmapped parcels. Releases are assistance handed out, not harvest production. Beneficiaries and release transactions are separate measures. Kilograms, pieces and sacks must not be added into one total.
+
+The reporting-year selector affects the reports identified as yearly, including animal services, fingerlings and recorded production comparisons. Other figures keep their stated periods. Missing harvest measurements are not recorded zero production. Municipality comparisons follow the account's permitted area and never grant access to another office. Oversight accounts review operational figures rather than entering routine records. The Assistant can explain these figures or return its supported local summaries; it cannot certify records or invent missing data.
+
+Only System Owner and Super Admin accounts receive the provider-usage panel. It shows shared application-level NDVI request reservations and outgoing Google Static Maps attempts, not complete interactive-map usage or billing. Cached images/readings do not consume a new outgoing attempt/reservation. Failed attempts can still count. Google charges and quotas belong to Google Cloud reports; Copernicus processing units are not estimated here. These local counters are safeguards and activity measurements, not invoices.
