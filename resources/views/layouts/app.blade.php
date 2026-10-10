@@ -1,4 +1,7 @@
 {{-- resources/views/layouts/app.blade.php --}}
+@php
+  $showOfficeAssistant = config('assistant.enabled') && auth()->check() && auth()->user()->can('use', \App\Support\OfficeAssistant::class);
+@endphp
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1029,6 +1032,9 @@
   </style>
   @stack('styles')
   @include('partials.branding-head')
+  @if($showOfficeAssistant)
+    <link rel="stylesheet" href="{{ asset('css/office-assistant.css') }}?v={{ filemtime(public_path('css/office-assistant.css')) }}">
+  @endif
 </head>
 
 <body>
@@ -1771,5 +1777,9 @@
 
   @stack('scripts')
   @include('partials.form-feedback')
+  @if($showOfficeAssistant)
+    @include('partials.office-assistant')
+    <script src="{{ asset('js/office-assistant.js') }}?v={{ filemtime(public_path('js/office-assistant.js')) }}" defer></script>
+  @endif
 </body>
 </html>

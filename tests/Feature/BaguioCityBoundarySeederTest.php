@@ -12,6 +12,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\Support\ReferenceProvinceSchema;
 use Tests\TestCase;
@@ -97,7 +98,7 @@ class BaguioCityBoundarySeederTest extends TestCase
         $this->assertFalse(Cache::has('municipality-boundary:active:v1:'.$municipality->id));
     }
 
-    /** @dataProvider existingWorkspaceIdentities */
+    #[DataProvider('existingWorkspaceIdentities')]
     public function test_import_reuses_existing_city_identity_without_changing_its_name_or_code(string $name, string $code): void
     {
         $municipality = $this->municipality($name, $code);

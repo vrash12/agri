@@ -81,7 +81,7 @@ class AuditTrail
                     ? mb_substr((string) $request->userAgent(), 0, 500)
                     : null,
                 'request_method' => $request?->method(),
-                'request_url' => $request?->routeIs('farmer-portal.*', 'farmers.portal-account.*')
+                'request_url' => $request?->routeIs('farmer-portal.*', 'farmers.portal-account.*', 'assistant.*')
                     ? $request->url() : $request?->fullUrl(),
             ];
 

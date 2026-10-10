@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Support\CsvExport;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -11,7 +12,7 @@ use PHPUnit\Framework\TestCase;
  */
 class CsvExportTest extends TestCase
 {
-    /** @dataProvider formulaStarters */
+    #[DataProvider('formulaStarters')]
     public function test_a_value_a_spreadsheet_would_execute_is_neutralised(string $value): void
     {
         $this->assertSame("'".$value, CsvExport::value($value));
@@ -32,7 +33,7 @@ class CsvExportTest extends TestCase
         ];
     }
 
-    /** @dataProvider ordinaryValues */
+    #[DataProvider('ordinaryValues')]
     public function test_ordinary_values_are_left_exactly_as_they_are(mixed $value, string $expected): void
     {
         $this->assertSame($expected, CsvExport::value($value));

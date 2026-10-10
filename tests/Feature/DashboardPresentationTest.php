@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Municipality;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\PresentationProvinceSchema;
 use Tests\TestCase;
 
@@ -22,7 +23,7 @@ class DashboardPresentationTest extends TestCase
         $this->createPresentationScope();
     }
 
-    /** @dataProvider dashboardRoles */
+    #[DataProvider('dashboardRoles')]
     public function test_dashboard_preserves_role_specific_actions(string $role, bool $canWrite, bool $canManageStaff): void
     {
         $this->signInForView($role);
@@ -98,7 +99,7 @@ class DashboardPresentationTest extends TestCase
     {
         $this->signInForView(User::ROLE_MUNICIPAL_STAFF);
         $html = (string) $this->view('dashboard');
-        $document = new \DOMDocument();
+        $document = new \DOMDocument;
         @$document->loadHTML($html);
         $xpath = new \DOMXPath($document);
 
@@ -122,7 +123,7 @@ class DashboardPresentationTest extends TestCase
                 'machinery_condition_by_type' => $metric, 'machinery_availability_by_type' => $metric,
                 'animal_health_by_month' => $metric, 'fingerlings_by_municipality' => $metric,
             ]]);
-        $document = new \DOMDocument();
+        $document = new \DOMDocument;
         @$document->loadHTML($html);
         $xpath = new \DOMXPath($document);
         foreach (['chartMachineryCondition', 'chartMachineryAvailability', 'chartAnimalHealthMonthly', 'chartFingerlingsByMunicipality', 'chartProductionByCommodity'] as $id) {
@@ -147,7 +148,7 @@ class DashboardPresentationTest extends TestCase
             'municipality_comparison' => $metric, 'farmers_by_municipality' => $metric,
             'assistance_by_municipality' => $metric, 'fingerlings_by_municipality' => $metric,
         ]]);
-        $document = new \DOMDocument();
+        $document = new \DOMDocument;
         @$document->loadHTML($html);
         $xpath = new \DOMXPath($document);
 

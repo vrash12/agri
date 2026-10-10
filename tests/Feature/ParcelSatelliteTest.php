@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class ParcelSatelliteTest extends TestCase
@@ -239,7 +240,7 @@ class ParcelSatelliteTest extends TestCase
         Http::assertSentCount(1);
     }
 
-    /** @dataProvider invalidStatistics */
+    #[DataProvider('invalidStatistics')]
     public function test_malformed_provider_values_are_rejected(array $change): void
     {
         $entry = $this->entry('2026-08-01', 0.6);

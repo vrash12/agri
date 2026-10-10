@@ -1,6 +1,29 @@
 # Agriculture Information System — Developer Guide
 
+The October 11 RAG follow-up is local and not deployed. General help now retrieves
+role/topic-filtered reviewed passages from an explicit manifest in
+`AssistantKnowledge`, with local BM25 ranking and bounded evidence. Canonical
+questions still exclude raw chat and records from OpenAI. Strict structured
+generation and `AssistantGroundedAnswer` validate source IDs; citations are a
+grounding aid, not proof of factual entailment. Only accepted general help is
+cached by role/topic/language/model/corpus/prompt for ten minutes, with a separate
+generation lock and no new allowance on a hit. Rejected/failed generation uses
+complete saved guidance; unavailable evidence uses no provider call. Reports
+remain fresh local queries. Deploy all knowledge files, retrieval/grounding/
+provider/resolver/orchestration and the updated chat script together; no schema
+or account change. See [docs/ASSISTANT_RAG.md](docs/ASSISTANT_RAG.md).
+
+The October 11, 2026 framework follow-up is local and not deployed: Laravel 12.69.3, Sanctum 4.3.3 and Laravel AI SDK 1.2.0 are installed with a PHP 8.3.0 Composer platform. The existing bootstrap, HTTP kernels, policies, guards and storage paths remain in use. Redis/Memcached/DynamoDB retain the Laravel 9 cache-key separator through per-store configuration; file-cache counters remain readable. Automatic login password rehashing stays off to preserve explicit account updates. OpenAI credentials remain in an ignored private environment, response storage defaults off, and tests force an empty API key. See `docs/LARAVEL_12_AI_UPGRADE.md` for verification, legacy-test limits and deployment requirements.
+
+The October 11 local Office Assistant is now one conversation inside normal signed-in office pages. It has no help/report mode or year controls. `POST /assistant/message` uses authentication, idle/account scope, CSRF, policy and a five-per-minute throttle. `AssistantConversation` resolves supported tasks and bounded encrypted follow-up references locally; policies and `MunicipalityAccess` govern farmer/report reads. `OfficeAssistant::answerTopic` sends only canonical application-owned help plus static guide/role/module/language to OpenAI, never raw questions, record data or the visible thread. Visitors, evaluators and farmer sessions are denied; veterinary accounts remain Animal Health-only. Reports are read-only and exclude contacts, birth/eligibility details, credentials, notes and coordinates. Context expires after 15 minutes and binds to user/session/scope; every record is independently reauthorized. `SynchronizeAssistantRequests` isolates chat from normal write locks; `StartApplicationSession` commits activity before slow work and suppresses late session/CSRF-cookie saves only for acquired chat requests. Other writes and sessions retain normal behavior. Chat stays in browser memory; audit stores safe counts/topic/year/latency/tokens only. Atomic UTC provider limits fail closed and are not billing. Never clear the general cache. Deploy all backend/session/route/static-help/layout and both public assets together after the dependency upgrade; no migration or account operation is required. This is local, verified and not deployed. See `docs/OFFICE_ASSISTANT.md`.
+
 The October 10, 2026 release installed runtime `c322a5e` through GitHub main and Hostinger fast-forward pull. It deploys AgriLGU corn branding, the in-page crop editor, saved crop icons and scoped provider usage. All 21 tables / 9,359 existing rows were preserved without migrations or account changes. The private application name now reads AgriLGU while session, cache and Redis namespaces and NDVI budget counters remain unchanged. Never clear the general cache for this release. Crop-to-harvest linkage remains a proposal. See `docs/GITHUB_DEPLOYMENT.md`.
+
+The subsequent October 10 farmer-ID field artwork is local and not deployed. Shared 1011 × 638 SVG artwork now shows a rice-field landscape, with pale reading panels and an opaque QR quiet area; the back retains a clear ink-signature strip. Both CSS and canvas use the same versioned artwork paths. Classification chips fit all six supported values without moving the printed QR panel into the signature space; front labels/ID chip have bounded spacing. Names, initials and office locations use multibyte-safe capitalization. See `docs/AGRIGOV_FARMER_IDS.md` for verification and deployment steps.
+
+`FarmerCardEmblem` now selects the user-supplied `public/images/branding/ramos-municipality-seal.jpg` only for an active Ramos municipality under its active supervising Tarlac province. Ramos cards read Municipal Agriculture Office / Ramos, Tarlac; other cards retain the Philippine emblem, provincial heading and attribution. HTML and canvas share the resolved seal and preserve its square proportions. The uploaded JPEG is unchanged, 405 × 405 with no EXIF tags. This follow-up is local and not deployed; deploy the resolver/controller/view, stylesheet and new seal together with the pending field artwork.
+
+The front-footer corn mark uses its existing transparent PNG without a white tile in both CSS and canvas. Keep the back wordmark and QR white panels intact.
 
 The farmer registry card uses `public/css/farmer-id-card.css`, `public/images/branding/farmer-card-background.svg`, the `farmer-card-front-art.svg` / `farmer-card-back-art.svg` overlays above it, `public/images/branding/philippines-coat-of-arms.png`, and the shared AgriLGU wordmark and mark for its green/gold DA-aligned visual treatment. The front carries farmer identity details; the back uses the wordmark without duplicating that header. Decorative artwork stays off the white QR panel, and label icons share one path list between the printed card and the canvas export. Every card's back prints a cardholder signature line over the farmer's printed name. It prints an office signature line beside it only for municipalities listed in `config/farmer_card.php`; `App\Support\FarmerCardSignatory` matches the farmer's municipality by name and active supervising province (currently Ramos, Tarlac: Engr. Dennish C. Pascua, Head Agriculturist). Other offices keep the unsigned footer. Cards are signed in ink after printing; no signature image is stored. Update that entry when an office's head changes. Keep the Philippine emblem attribution in the card view and preserve the disclaimer that the card is not a national government ID. Screen, print and canvas PNG exports must use the same source artwork and must fail safely if artwork cannot load; farmer data, QR destination, role scope and parcel-address safeguards must not change. See [docs/AGRIGOV_FARMER_IDS.md](docs/AGRIGOV_FARMER_IDS.md).
 
@@ -36,11 +59,30 @@ The Farmers map Land Plots list uses native `details`/`summary` cards: name, dat
 
 Farmer registry cards use `FarmerCardLocations` to join distinct non-delisted, same-municipality imported `PARCEL ADDRESS 1–3` values with ` / `. Residence fields and mapped-plot names are never substituted for parcel addresses. Missing addresses are explicitly labeled. The front shows the registry municipality separately; the back and PNG/digital rendering wrap parcel addresses. The full address list is also printed on the sheet; oversized card text explicitly refers to that list, and oversized digital/PNG backs fail with guidance instead of dropping addresses. No new parcel-address geocoding or database mutation is performed. See `docs/FARMER_CARD_PARCEL_ADDRESSES.md` for checks and deployment status.
 
-AgriLGU is the application identity, with a golden corn ear and green husk leaves forming its A emblem. Use `<x-brand />` for the integrated wordmark and `<x-brand compact />` for the square emblem. Standalone pages include `partials.branding-head`; the shared layout handles authenticated modules. Keep agency seals and registry identifiers distinct from application branding. Current assets and deployment requirements are recorded in `docs/AGRILGU_BRANDING.md`. The October 10 rebrand is local and not deployed; earlier release notes retain the former AgriGOV name. Keep `AGRI-F-######`, stored portal IDs, `agri_gov_id`/`agriGovId` compatibility fields and `X-AgriGOV-Crop-Modal` unchanged. Preserve effective session/cache prefixes before changing live `APP_NAME`, so sessions and NDVI budgets retain their namespaces.
+AgriLGU is the application identity, with a golden corn ear and green husk leaves forming its A emblem. Use `<x-brand />` for the integrated wordmark and `<x-brand compact />` for the square emblem. Standalone pages include `partials.branding-head`; the shared layout handles authenticated modules. Keep agency seals and registry identifiers distinct from application branding. Current assets and deployment requirements are recorded in `docs/AGRILGU_BRANDING.md`. The October 10 rebrand deployed in runtime `c322a5e`; earlier release notes retain the former AgriGOV name. Keep `AGRI-F-######`, stored portal IDs, `agri_gov_id`/`agriGovId` compatibility fields and `X-AgriGOV-Crop-Modal` unchanged. Preserve effective session/cache prefixes before changing live `APP_NAME`, so sessions and NDVI budgets retain their namespaces.
+
+## Unified Assistant — implemented locally, October 11, 2026
+
+The owner's subsequent implementation request replaced the earlier two-mode UI
+with one conversation in the signed-in office system. Farmer choices, years and
+clarifications now occur in messages. The old preview adapter is not the runtime
+integration path. Normal office sign-in/CSRF/MySQL checks used only an isolated
+synthetic database; no production changes ran. The detailed architecture and
+acceptance record are in [docs/AI_ASSISTANT_IMPLEMENTATION_PLAN.md](docs/AI_ASSISTANT_IMPLEMENTATION_PLAN.md)
+and [docs/OFFICE_ASSISTANT.md](docs/OFFICE_ASSISTANT.md).
+
+Keep records local, provider prompts canonical and context ephemeral. A visible
+mixed conversation is never AI history, and encrypted references are not access
+rights. Reauthorize each turn and preserve veterinary-only access. Unknown,
+mixed, year-comparison and geographic-subset requests clarify instead of guessing.
+Generic operational synchronization still protects writes. Only Assistant uses a
+separate request lock and a pre-work session commit without late session/cookie
+persistence, preventing logout/flash races during provider waits. The provider
+reviewed knowledge passages describe implemented controls; never add imagined workflows.
 
 ## Senior developer mandate
 
-Act as the senior full-stack developer and software architect responsible for helping the project owner build, improve, secure, test, document, and deploy this system. Treat the application as a real government operations platform with multiple simultaneous users and municipality-owned data, not as a prototype or generated demo.
+Act as the senior full-stack developer and software architect responsible for helping the project owner build, improve, secure, test, document, and deploy this system. Treat the application as a real government operations platform with multiple simultaneous users and municipality-owned data, not as a prototype or generated demo. For AI work, also own safe provider context, authorized data retrieval, conversational correctness, measurable efficiency, concurrency, infrastructure compatibility and synthetic evaluation. Application code enforces access and disclosure; model instructions never replace those controls. Use the concrete boundaries in `docs/AI_ASSISTANT_IMPLEMENTATION_PLAN.md` within the owner's requested scope.
 
 ### How to work with the project owner
 
@@ -206,12 +248,14 @@ The application is multi-municipality. Operational records belong to one `munici
 
 ## 2. Technology and important dependencies
 
-- PHP `^8.1` (raised from `^8.0.2` on 2026-09-19: the patched PhpSpreadsheet requires
-  8.1. `composer.json` pins `config.platform.php` to `8.1.0` so the lock resolves for
-  the oldest supported server rather than whatever the developer machine runs.
-  `nette/schema` caps the set at 8.3, so the supported range is **PHP 8.1 – 8.3**;
-  confirm the server before deploying with `php -v`.)
-- Laravel `^9.19`
+- PHP `^8.3`; Composer pins `config.platform.php` to `8.3.0` to resolve for the
+  deployment runtime rather than the newer developer executable. PHP 8.1/8.2
+  cannot run this local upgrade. Confirm CLI and web PHP before deployment.
+- Laravel `^12.62` (locked 12.69.3 locally; production remains on Laravel 9 until
+  a separately authorized, verified dependency release).
+- Laravel AI SDK `^1.0` (locked 1.2.0), used by Office Assistant System help
+  with OpenAI. Its separate record reports run locally. Other AI actions require their own authorization,
+  reviewed data disclosure, private credentials and usage controls.
 - MySQL/MariaDB
 - Blade views with server-rendered forms
 - Laravel session authentication and Sanctum's default `/api/user` endpoint
@@ -244,6 +288,8 @@ The supported office roles are constants in `App\Models\User`. Farmer portal ide
 | `municipal_staff` | Assigned municipality only | Yes | No | Assigned municipality only | No |
 
 All accounts must be active. Regional Heads require an active region with no province/municipality assignment; provincial roles require an existing active province; municipal roles require an existing active municipality and supervising province. Only the System Owner assigns Regional Heads. `EnsureAccountScope` checks authenticated application requests, and the Sanctum user endpoint uses the same check. Login independently validates scope. UI visibility is not security: controllers must still call policies for every protected action.
+
+The local Office Assistant permits the seven scoped office roles above. For `provincial_vet`, its shared endpoint forces Animal Health help and permits only Animal Health reports; it does not grant access to any other operational module. Visitors and evaluators remain excluded.
 
 External GIS Evaluators require no operational office assignment. `RestrictGisEvaluatorAccess` confines them to the read-only municipality-geofence page and its boundary and barangay JSON endpoints. The geofence controller returns active boundaries only and deliberately skips every farmer, parcel, snapshot, export, draft, account, audit and write query for this role. Evaluator accounts are provisioned directly by the System Owner outside the general account-management form and should be disabled when an evaluation ends.
 
@@ -639,7 +685,7 @@ Functions:
 - filter by municipality, service type, species, owner/animal/product/diagnosis text, barangay, and optional year;
 - report total services, animals served, owners, animal profiles/groups, service mix, species coverage, latest service, monthly/year activity, barangays, breeds, and owner-age charts.
 
-The owner lookup uses write-scope resolution because it populates an entry form; province-wide agriculture and veterinary users must select a municipality before using it. `provincial_vet` accounts can list, create, update, and delete Animal Health records across municipalities in their assigned province but cannot open any other authenticated module. All records retain the same municipality policies, optimistic record-version checks, and mutation locks as the original anti-rabies module.
+The owner lookup uses write-scope resolution because it populates an entry form; province-wide agriculture and veterinary users must select a municipality before using it. `provincial_vet` accounts can list, create, update, and delete Animal Health records across municipalities in their assigned province but cannot open any other operational module. The local shared Assistant endpoint permits Animal Health workflow help and local service reports only. All records retain the same municipality policies, optimistic record-version checks, and mutation locks as the original anti-rabies module.
 
 ### 5.7 Farmers' cooperatives
 
@@ -836,23 +882,15 @@ The appearance-only `PATCH /municipality-boundaries/{boundary}/style` route uses
 
 ## 6. Route inventory
 
-As of 2026-09-17, `php artisan route:list --json` reports 96 routes protected by Laravel authentication, including the Sanctum endpoint:
+As of October 11, 2026, the local `php artisan route:list --json` reports 144 routes with no duplicate names:
 
-| Area | Authenticated routes |
+| Protection | Routes |
 | --- | ---: |
-| Farmers | 14 |
-| Farmers' cooperatives | 9 |
-| Seed and farm-input distribution | 9 |
-| Rice seed distribution sheets | 8 |
-| Machinery inventory | 8 |
-| Animal health | 7 |
-| Backup Folder | 7 |
-| User management | 6 |
-| Farm plots | 6 |
-| Audit trail | 3 |
-| Weather and agricultural advisories | 4 |
-| Municipality geofences | 9 |
-| Dashboard/logout/session/API | 6 |
+| Office authentication, including Sanctum and `assistant.message` | 122 |
+| Separate farmer-portal session middleware | 9 |
+| Guest/public/framework routes | 13 |
+
+The Assistant is `POST /assistant/message`, with a single conversation, server-resolved canonical help and local read-only records. These counts describe the pending local checkout; production remains at the recorded deployed runtime.
 
 Regenerate the inventory instead of preserving this number if routes change:
 
@@ -1128,7 +1166,7 @@ Production/Hostinger requirements:
 - build frontend assets locally or on the server with `npm run build`;
 - make `storage` and `bootstrap/cache` writable by PHP;
 - run only reviewed pending migrations after taking a backup;
-- run `php artisan optimize:clear`, then cache configuration/routes/views after configuration is correct;
+- refresh configuration, route and compiled-view caches after configuration is correct; never run `optimize:clear` or `cache:clear`, which would reset provider allowances;
 - verify login, every role, municipality isolation, uploads/downloads, maps, imports, exports, and the public QR route over HTTPS.
 
 ### Database backup and restore
@@ -1175,7 +1213,7 @@ Important feature suites include:
 - `RiceSeedDistributionSheetTest`
 - `ConcurrentWriteTest` (uses its own in-memory SQLite connection)
 
-The current `phpunit.xml` does not configure a separate test database, and feature tests use `DatabaseTransactions`. Never run the suite while `.env` points to production. Configure a dedicated disposable test database first. Add a regression test whenever changing permissions, municipality scoping, route-model binding, public-map privacy, imports, exports, file access, or audit redaction.
+The current PHPUnit 11 configuration forces the testing environment and in-memory SQLite, and hides the real OpenAI key from tests. Fixtures receive a fresh random encryption key. Older `DatabaseTransactions` suites still require a disposable imported legacy schema and cannot pass against an empty database; do not substitute production data or weaken isolation to run them. Never run tests in the production checkout or with a cached production configuration. See `docs/LARAVEL_12_AI_UPGRADE.md` for the tested subset and remaining integration checks. Add a regression test whenever changing permissions, municipality scoping, route-model binding, public-map privacy, imports, exports, file access, or audit redaction.
 
 The UI suites `SharedDesignPresentationTest`, `DashboardPresentationTest`, `FarmerWorkspacePresentationTest`, `OperationsPresentationTest`, and `SupportingWorkflowPresentationTest` use unsaved fixtures and an in-memory SQLite connection. They check rendering, visible role actions, form values, and version tokens; they do not replace database-backed authorization, persistence, or provider integration tests.
 

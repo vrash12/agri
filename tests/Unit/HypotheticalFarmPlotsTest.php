@@ -7,6 +7,7 @@ use App\Support\HypotheticalFarmPlots;
 use Illuminate\Config\Repository;
 use Illuminate\Container\Container;
 use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
@@ -22,10 +23,10 @@ class HypotheticalFarmPlotsTest extends TestCase
     {
         parent::setUp();
         $this->previousContainer = Container::getInstance();
-        $container = new Container();
+        $container = new Container;
         $container->instance('config', new Repository(['geofencing' => ['near_boundary_meters' => 20]]));
         Container::setInstance($container);
-        $this->geometry = new GeoGeometry();
+        $this->geometry = new GeoGeometry;
         $this->plots = new HypotheticalFarmPlots($this->geometry);
     }
 
@@ -90,14 +91,14 @@ class HypotheticalFarmPlotsTest extends TestCase
         }
     }
 
-    /** @dataProvider invalidCounts */
+    #[DataProvider('invalidCounts')]
     public function test_invalid_counts_are_rejected(int $count): void
     {
         $this->expectException(InvalidArgumentException::class);
         $this->plots->generate($this->square(120, 15, .02), $count);
     }
 
-    public function invalidCounts(): array
+    public static function invalidCounts(): array
     {
         return [[0], [-1], [49]];
     }

@@ -6,10 +6,12 @@ use App\Models\AgriculturalMachinery;
 use App\Models\AntiRabiesVaccination;
 use App\Models\BackupFile;
 use App\Models\Farmer;
+use App\Models\FarmerPortalAccount;
 use App\Models\FarmersCooperative;
 use App\Models\FarmPlot;
 use App\Models\HarvestRecord;
 use App\Models\MunicipalityBoundary;
+use App\Models\ParcelCropSeason;
 use App\Models\RiceDistributionBatch;
 use App\Models\RiceSeedDistribution;
 use App\Models\User;
@@ -17,13 +19,17 @@ use App\Policies\AgriculturalMachineryPolicy;
 use App\Policies\AntiRabiesVaccinationPolicy;
 use App\Policies\BackupFilePolicy;
 use App\Policies\FarmerPolicy;
+use App\Policies\FarmerPortalAccountPolicy;
 use App\Policies\FarmersCooperativePolicy;
 use App\Policies\FarmPlotPolicy;
 use App\Policies\HarvestRecordPolicy;
 use App\Policies\MunicipalityBoundaryPolicy;
+use App\Policies\OfficeAssistantPolicy;
+use App\Policies\ParcelCropSeasonPolicy;
 use App\Policies\RiceDistributionBatchPolicy;
 use App\Policies\RiceSeedDistributionPolicy;
 use App\Policies\UserPolicy;
+use App\Support\OfficeAssistant;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
 class AuthServiceProvider extends ServiceProvider
@@ -34,8 +40,9 @@ class AuthServiceProvider extends ServiceProvider
      * @var array<class-string, class-string>
      */
     protected $policies = [
-        \App\Models\FarmerPortalAccount::class => \App\Policies\FarmerPortalAccountPolicy::class,
-        \App\Models\ParcelCropSeason::class => \App\Policies\ParcelCropSeasonPolicy::class,
+        OfficeAssistant::class => OfficeAssistantPolicy::class,
+        FarmerPortalAccount::class => FarmerPortalAccountPolicy::class,
+        ParcelCropSeason::class => ParcelCropSeasonPolicy::class,
         AgriculturalMachinery::class => AgriculturalMachineryPolicy::class,
         Farmer::class => FarmerPolicy::class,
         FarmPlot::class => FarmPlotPolicy::class,

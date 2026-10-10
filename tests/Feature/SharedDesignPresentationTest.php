@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Municipality;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\PresentationProvinceSchema;
 use Tests\TestCase;
 
@@ -21,7 +22,7 @@ class SharedDesignPresentationTest extends TestCase
         $this->createPresentationScope();
     }
 
-    /** @dataProvider navigationRoles */
+    #[DataProvider('navigationRoles')]
     public function test_simplified_navigation_preserves_role_destinations(string $role, bool $backups, bool $accounts, bool $audit): void
     {
         $user = new User([

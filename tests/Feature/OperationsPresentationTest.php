@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\OperationsViewFixtures;
 use Tests\Support\PresentationProvinceSchema;
 use Tests\TestCase;
@@ -22,7 +23,7 @@ class OperationsPresentationTest extends TestCase
         $this->actingAs(OperationsViewFixtures::user());
     }
 
-    /** @dataProvider views */
+    #[DataProvider('views')]
     public function test_views_preserve_forms_and_render_without_database_access(string $view): void
     {
         $html = (string) $this->view($view, OperationsViewFixtures::data($view));

@@ -4,11 +4,12 @@ namespace Tests\Feature;
 
 use App\Support\RiceSeedImportValidation;
 use Illuminate\Validation\ValidationException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class RiceSeedImportValidationTest extends TestCase
 {
-    /** @dataProvider textLimits */
+    #[DataProvider('textLimits')]
     public function test_snapshot_text_limits_reject_overflow_without_disclosing_values(string $field, string $label, int $limit): void
     {
         $validation = new RiceSeedImportValidation;

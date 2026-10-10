@@ -22,6 +22,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use PHPUnit\Framework\Attributes\DataProvider;
 use ReflectionClass;
 use RuntimeException;
 use Tests\Support\ReferenceProvinceSchema;
@@ -175,7 +176,7 @@ class RemainingCarBoundarySeederTest extends TestCase
         }
     }
 
-    /** @dataProvider provinceSeeders */
+    #[DataProvider('provinceSeeders')]
     public function test_a_late_psgc_match_in_another_province_rolls_back_the_whole_import(string $province, string $seeder): void
     {
         [, $identity] = $this->lastIdentity($seeder);
@@ -188,7 +189,7 @@ class RemainingCarBoundarySeederTest extends TestCase
         $this->assertFalse(Province::query()->where('name', $province)->exists());
     }
 
-    /** @dataProvider provinceSeeders */
+    #[DataProvider('provinceSeeders')]
     public function test_an_inactive_late_workspace_is_preserved_and_earlier_inserts_are_rolled_back(string $province, string $seeder): void
     {
         Province::query()->create(['name' => $province, 'is_active' => true]);
@@ -201,7 +202,7 @@ class RemainingCarBoundarySeederTest extends TestCase
         $this->assertSame($before, $this->databaseState());
     }
 
-    /** @dataProvider provinceSeeders */
+    #[DataProvider('provinceSeeders')]
     public function test_an_existing_overlapping_boundary_is_preserved_and_the_province_is_rolled_back(string $province, string $seeder): void
     {
         [$name] = $this->lastIdentity($seeder);
@@ -215,7 +216,7 @@ class RemainingCarBoundarySeederTest extends TestCase
         $this->assertFalse(Province::query()->where('name', $province)->exists());
     }
 
-    /** @dataProvider provinceSeeders */
+    #[DataProvider('provinceSeeders')]
     public function test_an_edited_reference_is_never_overwritten(string $province, string $seeder): void
     {
         app($seeder)->run();
@@ -228,7 +229,7 @@ class RemainingCarBoundarySeederTest extends TestCase
         $this->assertSame($before, $this->databaseState());
     }
 
-    /** @dataProvider provinceSeeders */
+    #[DataProvider('provinceSeeders')]
     public function test_a_foreign_provincial_administrator_cannot_run_the_import(string $province, string $seeder): void
     {
         $this->actor->forceFill([

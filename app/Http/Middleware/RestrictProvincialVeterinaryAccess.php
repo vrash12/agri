@@ -27,10 +27,10 @@ class RestrictProvincialVeterinaryAccess
 
         if (
             is_string($routeName)
-            && str_starts_with(
+            && ($routeName === 'assistant.message' || str_starts_with(
                 $routeName,
                 'anti-rabies-vaccinations.'
-            )
+            ))
         ) {
             return $next($request);
         }

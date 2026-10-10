@@ -17,6 +17,10 @@ return [
 
     'driver' => 'bcrypt',
 
+    // Preserve the existing explicit password-update workflow during the upgrade.
+    // Automatic login rehashing would introduce otherwise unaudited account writes.
+    'rehash_on_login' => false,
+
     /*
     |--------------------------------------------------------------------------
     | Bcrypt Options

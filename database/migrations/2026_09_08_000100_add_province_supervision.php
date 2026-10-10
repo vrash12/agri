@@ -57,17 +57,8 @@ return new class extends Migration
 
     public function down(): void
     {
-        if (DB::getDriverName() === 'sqlite') {
-            // SQLite cannot add/drop foreign keys on existing tables through Laravel 9.
-            Schema::table('audit_logs', fn (Blueprint $table) => $table->dropIndex(['province_id', 'created_at']));
-            Schema::table('users', fn (Blueprint $table) => $table->dropIndex(['province_id', 'role', 'is_active']));
-            foreach (['audit_logs', 'users', 'municipalities'] as $name) {
-                Schema::table($name, fn (Blueprint $table) => $table->dropColumn('province_id'));
-            }
-            Schema::dropIfExists('provinces');
-
-            return;
-        }
+        // Laravel 12 supports SQLite foreign-key removal by column. Remove the
+        // constraint first so native DROP COLUMN cannot leave an invalid table.
         Schema::table('audit_logs', function (Blueprint $table): void {
             $table->dropIndex(['province_id', 'created_at']);
             $table->dropConstrainedForeignId('province_id');

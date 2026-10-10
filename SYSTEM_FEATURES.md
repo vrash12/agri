@@ -1,6 +1,32 @@
 # AgriLGU — Complete Feature Catalog
 
+The local RAG follow-up adds documented sources to Assistant workflow answers.
+It retrieves relevant reviewed guidance, checks returned source references and
+reuses accepted general answers for ten minutes. Failed AI replies fall back to
+saved guidance; missing evidence is stated honestly. Farmer records and totals
+remain fresh, permission-scoped local reads. No private records or conversation
+go to OpenAI. Natural English/Filipino workflow phrasing is improved and separate
+tasks prompt a clarification. This is local, not deployed; see
+[ASSISTANT_RAG.md](docs/ASSISTANT_RAG.md).
+
+Local update, October 11, 2026: **Assistant** is now one conversation inside the
+signed-in office system. Ask for help, permitted farmer information and reports
+without choosing modes, sections or a year form. It resolves years/farmer choices
+and clarifications in messages, with current scope and source shown. Reports stay
+inside AgriLGU; AI receives only canonical static help topics, never raw questions
+or record history. Existing permissions apply, excluded private fields remain
+excluded, and veterinary users receive Animal Health only. Visitors/evaluators/
+farmer sessions are denied. Records remain read-only. The application and MySQL
+integration were verified with synthetic data; this Laravel 12/PHP 8.3+ feature
+is local and not deployed. See [OFFICE_ASSISTANT.md](docs/OFFICE_ASSISTANT.md) and
+[AI_ASSISTANT_IMPLEMENTATION_PLAN.md](docs/AI_ASSISTANT_IMPLEMENTATION_PLAN.md).
 AgriLGU corn branding, the in-page seasonal crop editor, saved crop icons and the System Owner/Super Admin satellite/map usage panel are deployed in runtime `c322a5e` on October 10, 2026. Existing records and farmer IDs are unchanged. Usage shows local NDVI reservations and outgoing Google Static Maps attempts, not complete provider billing or interactive map loads. Linking harvest records to planted crop sections is not implemented in this release.
+
+The October 10 field-background ID enhancement is local and not deployed. Front and back now show an illustrated rice-field landscape with clear reading panels, a plain white QR area, aligned signature space and green/gold borders. All six classification labels fit beside the QR; accented names and initials display correctly. Digital controls have 44px touch targets. Screen, print and PNG use the same artwork, and existing identifiers, slash-separated parcel addresses and access rules are preserved.
+
+The pending Ramos-specific ID update replaces the front Philippine emblem with the supplied Municipality of Ramos seal and labels the issuing office Municipal Agriculture Office, Ramos, Tarlac. It applies only to farmers registered under active Ramos, Tarlac. Other municipalities retain their existing emblem and heading. The AgriLGU identity, DA logo, back signatures and QR workflow remain in place.
+
+The front-footer AgriLGU corn mark now has a transparent background in screen, print and PNG rendering. This is part of the pending local card update.
 
 The farmer digital/printable ID now uses a DA green-and-gold gradient card design with the Republic of the Philippines coat of arms, Department of Agriculture logo, AgriLGU identity, and a QR panel for the read-only parcel map. The front carries the identity details; the back uses the AgriLGU wordmark without repeating the front header text. The same artwork is used by on-screen, print, and PNG export views. Farmer fields, parcel-address safeguards, role-scoped access, and the statement that the card is not a national government ID remain unchanged. This card redesign is deployed in runtime `d796071`. See [AGRIGOV_FARMER_IDS.md](docs/AGRIGOV_FARMER_IDS.md).
 
@@ -657,6 +683,7 @@ The Backup Folder is a protected document repository. It is not an automatic dat
 
 ## 21. External services and integrations
 
+- OpenAI through Laravel AI SDK for canonical software help in the single Office Assistant conversation. Scoped operational summaries/search/follow-ups run locally; no raw question, record or mixed thread goes to OpenAI. Chat has in-message choices/links/loading/retry and New chat, with no mode/year forms. Context is encrypted and ephemeral. Reports preserve unit/year/missing-data distinctions. Response storage is off; this is not a universal provider zero-retention claim.
 - Google Maps JavaScript API for authenticated maps and the public QR map.
 - Google Map ID support.
 - Google Maps Static API for satellite PNG exports.

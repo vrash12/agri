@@ -21,6 +21,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\TestCase;
 use Throwable;
@@ -244,7 +245,7 @@ class RegionOneSampleDataTest extends TestCase
         $this->assertRejectedWithoutWrites();
     }
 
-    /** @dataProvider invalidScopeProvider */
+    #[DataProvider('invalidScopeProvider')]
     public function test_inactive_or_wrong_region_scopes_fail_without_writes(string $case): void
     {
         match ($case) {
@@ -280,7 +281,7 @@ class RegionOneSampleDataTest extends TestCase
         $this->assertRejectedWithoutWrites([$ids[0], $ids[1], $ids[1]]);
     }
 
-    /** @dataProvider invalidOwnerProvider */
+    #[DataProvider('invalidOwnerProvider')]
     public function test_owner_authority_is_rechecked_from_the_database(string $case): void
     {
         $change = $case === 'inactive' ? ['is_active' => false] : ['role' => User::ROLE_PROVINCIAL_STAFF];

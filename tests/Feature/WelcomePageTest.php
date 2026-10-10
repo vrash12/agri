@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class WelcomePageTest extends TestCase
@@ -81,7 +82,7 @@ class WelcomePageTest extends TestCase
         );
     }
 
-    /** @dataProvider authenticatedDestinations */
+    #[DataProvider('authenticatedDestinations')]
     public function test_signed_in_users_keep_their_role_destination(string $role, string $destination): void
     {
         $user = new User(['role' => $role, 'is_active' => true]);

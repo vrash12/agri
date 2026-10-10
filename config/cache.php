@@ -2,6 +2,11 @@
 
 use Illuminate\Support\Str;
 
+$cachePrefix = env('CACHE_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_cache_');
+// Laravel 9 appended this separator in these three stores. Keep existing keys,
+// provider budgets and locks reachable without changing other cache backends.
+$legacyProviderPrefix = ! empty($cachePrefix) ? $cachePrefix.':' : '';
+
 return [
 
     /*
@@ -56,6 +61,7 @@ return [
 
         'memcached' => [
             'driver' => 'memcached',
+            'prefix' => $legacyProviderPrefix,
             'persistent_id' => env('MEMCACHED_PERSISTENT_ID'),
             'sasl' => [
                 env('MEMCACHED_USERNAME'),
@@ -75,12 +81,14 @@ return [
 
         'redis' => [
             'driver' => 'redis',
+            'prefix' => $legacyProviderPrefix,
             'connection' => 'cache',
             'lock_connection' => 'default',
         ],
 
         'dynamodb' => [
             'driver' => 'dynamodb',
+            'prefix' => $legacyProviderPrefix,
             'key' => env('AWS_ACCESS_KEY_ID'),
             'secret' => env('AWS_SECRET_ACCESS_KEY'),
             'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
@@ -105,6 +113,6 @@ return [
     |
     */
 
-    'prefix' => env('CACHE_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_cache_'),
+    'prefix' => $cachePrefix,
 
 ];

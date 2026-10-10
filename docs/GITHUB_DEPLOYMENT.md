@@ -1,5 +1,57 @@
 # GitHub-to-Hostinger deployment
 
+## Pending local Assistant RAG follow-up — October 11, 2026
+
+The unified help path now uses manifest-approved Markdown retrieval, structured
+source validation and a ten-minute versioned help cache. Include
+`AssistantKnowledge`, `AssistantGroundedAnswer`, the changed provider/agent/
+conversation/resolver, the complete `resources/assistant/knowledge` directory,
+curation index and chat JavaScript in the same dependency/Assistant release.
+Verify a generated reply, eligible sources and a cache hit, with unchanged fresh
+local reports. No migration, embeddings, vector service or new account is needed.
+Cache namespaces/budgets stay intact; do not clear the general cache. This is
+local only. See [ASSISTANT_RAG.md](ASSISTANT_RAG.md) for boundaries and evidence.
+
+## Pending unified Assistant — implemented locally, October 11, 2026
+
+The single conversation is implemented in normal signed-in office pages: no
+mode/year forms, local authorized reports, encrypted follow-ups and canonical
+provider help without record/transcript disclosure. Normal auth/CSRF/MySQL browser
+checks used an isolated synthetic schema; production remains unchanged. See
+[OFFICE_ASSISTANT.md](OFFICE_ASSISTANT.md) and
+[AI_ASSISTANT_IMPLEMENTATION_PLAN.md](AI_ASSISTANT_IMPLEMENTATION_PLAN.md).
+
+A future authorized release must install the reviewed PHP 8.3+/Laravel 12 lockfile
+and deploy the conversation/context/resolver, request/controller, provider/agent,
+policy/config/audit/veterinary changes, session/CSRF middleware and kernel,
+exact-route `SynchronizeAssistantRequests`, static help, layout/dialog and both
+versioned public assets together. The exact chat route excludes general mutation
+locks; other writes remain synchronized. Early chat session commit and no late
+save/session-or-CSRF-cookie refresh protect concurrent logout/flash updates. Verify normal office
+sessions and stale-client reload responses on the intended host. Mirror both
+assets to both public directories with 0644 permissions. No schema/account/data
+change is needed. Preserve session/cache namespaces and NDVI/Assistant counters;
+refresh config/route/view caches only. Keep disabled until acceptance and retain
+compatible runtime/dependency/assets rollback. No push or deploy was performed.
+
+## Pending local dependency upgrade — October 11, 2026
+
+Laravel 12.69.3, Sanctum 4.3.3 and Laravel AI SDK 1.2.0 are installed locally,
+requiring PHP 8.3+. This is not included in the live `c322a5e` release. Deployment
+must install the reviewed `composer.lock` with production dependencies and
+verify against a private staging copy of the legacy MySQL/MariaDB schema first.
+No new migration or AI conversation table is required. Never use a blanket
+`migrate`, rollback, general cache clear or Composer update on Hostinger for this
+upgrade. Preserve session/cache namespaces, budget counters, private files and
+all existing rows. The pending digital-card changes remain preserved locally.
+See [LARAVEL_12_AI_UPGRADE.md](LARAVEL_12_AI_UPGRADE.md) for checks and rollback.
+
+The unified Office Assistant is also pending deployment. The preceding section
+defines its complete release scope; local reports need no provider key, while
+AI help needs private OpenAI configuration and approved allowances. No migration
+or account operation is required. Do not deploy only the CSS/JavaScript or only
+the backend because the retired client contract and privacy boundary changed.
+
 ## Verified Hostinger release — October 10, 2026 — AgriLGU branding, crop modal and usage
 
 Runtime `c322a5e009480bcb64853d6e494932c109f46f77` was pushed to GitHub main and installed with Hostinger `git pull --ff-only origin main` from clean tracked baseline `79e2adb`, on PHP 8.3.35. This includes the preceding crop-modal and saved-icon commits `7fc3c6f` and `340c350`.

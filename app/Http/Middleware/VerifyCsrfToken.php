@@ -14,4 +14,16 @@ class VerifyCsrfToken extends Middleware
     protected $except = [
         //
     ];
+
+    protected function addCookieToResponse($request, $response)
+    {
+        // Verification still ran before chat. A delayed read-only reply must
+        // not replace the CSRF cookie created by a concurrent logout/login.
+        if ($request->routeIs('assistant.message')
+            && $request->attributes->get('assistant_session_committed') === true) {
+            return $response;
+        }
+
+        return parent::addCookieToResponse($request, $response);
+    }
 }

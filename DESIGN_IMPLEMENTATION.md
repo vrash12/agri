@@ -1,5 +1,47 @@
 # Design and UX implementation record
 
+## Assistant documented sources — October 11, 2026 (local)
+
+RAG help replies add a compact “Based on” line inside the same conversation.
+Source titles are application-owned bounded plain text, with no new panels,
+mode controls or document-upload UI. Saved-guide fallbacks identify documented
+guidance. The 20 JavaScript tests cover source rendering and the existing
+keyboard/retry/session behavior. See [docs/ASSISTANT_RAG.md](docs/ASSISTANT_RAG.md).
+Local only, not deployed.
+
+## Unified Assistant conversation — October 11, 2026 (local)
+
+Implemented one stream/composer in signed-in office pages, with New chat/Close,
+no mode/module tabs or year form. Farmer/year disambiguation stays in messages;
+source/scope/year and protected links accompany relevant replies. Enter/ShiftEnter/
+IME, focus return, cancellation/retry, session clearing and reading-position
+protection have automated coverage. Reports stay local; AI uses canonical help
+only. Normal office authentication/CSRF/MySQL browser checks used synthetic data.
+The 55 focused PHP tests / 426 assertions, 40 resolver cases / 109 assertions,
+194 combined PHP tests / 1,486 assertions (overlapping), and 19 JS tests passed.
+See [OFFICE_ASSISTANT.md](docs/OFFICE_ASSISTANT.md) for evidence and limitations.
+Local only, not deployed; the earlier two-mode stages below are historical.
+
+## Earlier two-mode Office Assistant — October 11, 2026 (superseded local stage)
+
+The records follow-up adds an explicit System help / Records & reports selector,
+a reporting-year control, local farmer/assistance/harvest/animal summaries and
+bounded farmer-selection buttons with links to existing registers. Privacy copy
+changes with the mode, and changing mode cancels pending replies and clears chat.
+Record results never become AI history. Farmer details remain in AgriLGU under
+existing policies and scope. This follow-up is also local and not deployed.
+Verification passed 28 focused PHP tests / 175 assertions, 127 broader PHP
+tests / 1,126 assertions (overlapping), and ten JavaScript tests. Synthetic
+controller-backed browser checks confirmed report replies and farmer choices.
+The short-screen layout was tightened to keep Send inside a 389 × 417 viewport;
+phone controls and filters remain visible without horizontal overflow.
+
+Signed-in office pages have a small green Assistant button and a compact dialog using shared tokens and AgriLGU branding. It offers familiar suggested questions, plain-text replies, visible loading/errors, a question counter, New chat and a clear disclosure that questions go to OpenAI. Native dialog behavior restores focus on close and supports Escape; controls use 44px targets. Desktop, 389px phone and 389px short-screen checks passed without horizontal overflow, including input focus, send/reply and reset. Reduced motion and print hiding are supported. Login, farmer portal, visitor and evaluator interfaces do not show it. Fifteen focused PHP tests, six JavaScript tests and a synthetic real-provider reply passed; this feature is not deployed. See `docs/OFFICE_ASSISTANT.md`.
+
+## Farmer ID with field artwork — October 10, 2026 (local)
+
+The card now uses an original vector rice-field landscape with separate reading panels, green/gold perimeter details and clear signature space. The QR panel remains white. Artwork and coordinates are shared with canvas exports, and asset versioning refreshes the old pattern. Front-field spacing and single-row classification chips were checked against the printed preview to keep municipality text inside its panel and QR content clear of signatures. Multibyte-safe capitalization handles accented names and initials. The close/side controls meet 44px targets. Synthetic desktop/narrow-mobile layouts, three parcel addresses, all six sectors, missing-photo initials and actual front/back downloads were reviewed; QR decoding passed five export sizes and light blur. Fourteen focused PHP and three address JavaScript checks passed, along with formatting, Blade, syntax and whitespace checks. Local only; physical print and live export remain untested. See `docs/AGRIGOV_FARMER_IDS.md`.
+
 ## Crop-area workspace — October 9, 2026 (deployed)
 
 The seasonal page now presents choose season → mark crop areas → save. A larger map and compact crop panel replace the long form; drawing controls appear only while drawing, selected-area actions are explicit, and a sticky Save season bar reports unsaved state. Native disclosures keep optional fields, guidance and history available without crowding the task. Phone layouts place crop controls before the map and area records afterward. Shared theme tokens, role permissions and version/CSRF fields are preserved. The Farmers map now loads the same server-authorized editor in an in-page dialog, with a modal-only JSON save and map-layer refresh; the standalone page remains a fallback. Desktop/390px synthetic browser checks and focused crop/editor tests pass. New `planted-area-editor.css`, `parcel-crop-modal.css`, updated editor/workspace script and both views must deploy together. Illustrated crop stickers now anchor inside sections, move with edited boundaries and briefly bounce on editor selection, with text labels and reduced-motion support. The 3D workspace reuses passive crop badge markers, applies filters and hides distant labels. All 37 JavaScript tests plus desktop/390px synthetic browser checks pass. New helper `crop-area-badges.js` must load before both editor/map scripts. The drawing guide adds a visible numbered green first dot, a line from the second click, and numbered subsequent corners. It reuses crop draft dot overlays, clears on undo/finish/cancel and updates main parcel drawing to accept further consecutive clicks. Existing edits and saved geometry are preserved. Load `map-drawing-guide.js` before both map scripts. Saved crop icons now appear automatically for the selected farmer independently of parcel recoloring, and the editor return link restores the same farmer/year/season through the existing authorized map workflow. Selection clearing hides cached icons. Save/reopen and automatic display tests pass; the modal follow-up is currently local until explicitly deployed. See `docs/PLANTED_CROP_AREAS.md`.

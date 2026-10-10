@@ -259,7 +259,7 @@ class ProvinceReportingScopeTest extends TestCase
             ];
         });
         $this->actingAs($staff)->get(route('farmers.records', $ownFarmer))->assertOk()
-            ->assertSee('No distribution records found')->assertSee('Locked to your assigned municipality');
+            ->assertSee('No distribution records found')->assertSee('Showing '.$this->own->name);
         $this->get(route('farmers.records', $foreignFarmer))->assertForbidden();
     }
 

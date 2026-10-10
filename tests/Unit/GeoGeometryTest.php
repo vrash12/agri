@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Support\GeoGeometry;
 use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class GeoGeometryTest extends TestCase
@@ -210,7 +211,7 @@ class GeoGeometryTest extends TestCase
         }
     }
 
-    /** @dataProvider invalidMultipolygonParts */
+    #[DataProvider('invalidMultipolygonParts')]
     public function test_multipolygon_parts_still_reject_shared_lines_and_overlapping_interiors(array $second): void
     {
         $this->expectException(InvalidArgumentException::class);

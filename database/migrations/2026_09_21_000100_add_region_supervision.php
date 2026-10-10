@@ -30,18 +30,12 @@ return new class extends Migration
     {
         // Old application versions must not retain usable identities for an unknown role.
         DB::table('users')->where('role', 'regional_head')->update(['is_active' => false]);
-        if (DB::getDriverName() === 'sqlite') {
-            Schema::table('users', fn (Blueprint $table) => $table->dropIndex(['region_id', 'role', 'is_active']));
-            foreach (['users', 'provinces'] as $name) {
-                Schema::table($name, fn (Blueprint $table) => $table->dropColumn('region_id'));
-            }
-        } else {
-            Schema::table('users', function (Blueprint $table): void {
-                $table->dropIndex(['region_id', 'role', 'is_active']);
-                $table->dropConstrainedForeignId('region_id');
-            });
-            Schema::table('provinces', fn (Blueprint $table) => $table->dropConstrainedForeignId('region_id'));
-        }
+        // Supported by Laravel 12 for SQLite as well as MySQL/MariaDB.
+        Schema::table('users', function (Blueprint $table): void {
+            $table->dropIndex(['region_id', 'role', 'is_active']);
+            $table->dropConstrainedForeignId('region_id');
+        });
+        Schema::table('provinces', fn (Blueprint $table) => $table->dropConstrainedForeignId('region_id'));
         Schema::dropIfExists('regions');
     }
 };

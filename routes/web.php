@@ -3,18 +3,29 @@
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AgriculturalMachineryController;
 use App\Http\Controllers\AntiRabiesVaccinationController;
+use App\Http\Controllers\AssistanceCoverageController;
+use App\Http\Controllers\AssistantController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BackupController;
+use App\Http\Controllers\BarangayBoundaryController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EvaluatorPasswordController;
 use App\Http\Controllers\FarmerController;
+use App\Http\Controllers\FarmerPortalAccountController;
+use App\Http\Controllers\FarmerPortalAuthController;
+use App\Http\Controllers\FarmerPortalController;
 use App\Http\Controllers\FarmersCooperativeController;
 use App\Http\Controllers\FarmPlotController;
 use App\Http\Controllers\HarvestRecordController;
 use App\Http\Controllers\MunicipalityBoundaryController;
+use App\Http\Controllers\ParcelCropSeasonController;
+use App\Http\Controllers\ParcelSatelliteController;
 use App\Http\Controllers\RiceDistributionBatchController;
 use App\Http\Controllers\RiceSeedDistributionController;
 use App\Http\Controllers\WeatherAdvisoryController;
+use App\Http\Middleware\EnsureFarmerPortalSession;
+use App\Http\Middleware\SynchronizeAssistantRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -85,20 +96,20 @@ Route::get('/land/{token}', [FarmerController::class, 'publicLand'])
 
 // Farmer identities use an independent session guard and never enter office routes.
 Route::prefix('farmer-portal')->name('farmer-portal.')->group(function () {
-    Route::get('/login', [\App\Http\Controllers\FarmerPortalAuthController::class, 'showLogin'])->name('login');
-    Route::post('/login', [\App\Http\Controllers\FarmerPortalAuthController::class, 'login'])->middleware('throttle:30,1')->name('login.attempt');
-    Route::get('/activate', [\App\Http\Controllers\FarmerPortalAuthController::class, 'showActivation'])->name('activate');
-    Route::post('/activate', [\App\Http\Controllers\FarmerPortalAuthController::class, 'activate'])->middleware('throttle:20,1')->name('activate.submit');
-    Route::post('/logout', [\App\Http\Controllers\FarmerPortalAuthController::class, 'logout'])->name('logout');
-    Route::middleware(\App\Http\Middleware\EnsureFarmerPortalSession::class)->group(function () {
-        Route::get('/', [\App\Http\Controllers\FarmerPortalController::class, 'home'])->name('home');
-        Route::get('/profile', [\App\Http\Controllers\FarmerPortalController::class, 'profile'])->name('profile');
-        Route::get('/parcels', [\App\Http\Controllers\FarmerPortalController::class, 'parcels'])->name('parcels');
-        Route::get('/parcels/geometry', [\App\Http\Controllers\FarmerPortalController::class, 'mapParcels'])->middleware('throttle:30,1')->name('parcels.geometries');
-        Route::get('/parcels/{plot}', [\App\Http\Controllers\FarmerPortalController::class, 'map'])->whereNumber('plot')->name('parcels.map');
-        Route::get('/parcels/{plot}/geometry', [\App\Http\Controllers\FarmerPortalController::class, 'geometry'])->whereNumber('plot')->middleware('throttle:30,1')->name('parcels.geometry');
-        Route::get('/assistance', [\App\Http\Controllers\FarmerPortalController::class, 'assistance'])->name('assistance');
-        Route::get('/harvests', [\App\Http\Controllers\FarmerPortalController::class, 'harvests'])->name('harvests');
+    Route::get('/login', [FarmerPortalAuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [FarmerPortalAuthController::class, 'login'])->middleware('throttle:30,1')->name('login.attempt');
+    Route::get('/activate', [FarmerPortalAuthController::class, 'showActivation'])->name('activate');
+    Route::post('/activate', [FarmerPortalAuthController::class, 'activate'])->middleware('throttle:20,1')->name('activate.submit');
+    Route::post('/logout', [FarmerPortalAuthController::class, 'logout'])->name('logout');
+    Route::middleware(EnsureFarmerPortalSession::class)->group(function () {
+        Route::get('/', [FarmerPortalController::class, 'home'])->name('home');
+        Route::get('/profile', [FarmerPortalController::class, 'profile'])->name('profile');
+        Route::get('/parcels', [FarmerPortalController::class, 'parcels'])->name('parcels');
+        Route::get('/parcels/geometry', [FarmerPortalController::class, 'mapParcels'])->middleware('throttle:30,1')->name('parcels.geometries');
+        Route::get('/parcels/{plot}', [FarmerPortalController::class, 'map'])->whereNumber('plot')->name('parcels.map');
+        Route::get('/parcels/{plot}/geometry', [FarmerPortalController::class, 'geometry'])->whereNumber('plot')->middleware('throttle:30,1')->name('parcels.geometry');
+        Route::get('/assistance', [FarmerPortalController::class, 'assistance'])->name('assistance');
+        Route::get('/harvests', [FarmerPortalController::class, 'harvests'])->name('harvests');
         Route::post('/heartbeat', fn () => response()->noContent())->middleware('throttle:12,1')->name('heartbeat');
     });
 });
@@ -117,11 +128,14 @@ Route::middleware([
     'visitor-scope',
     'synchronized',
 ])->group(function () {
-    Route::get('/evaluation/password', [\App\Http\Controllers\EvaluatorPasswordController::class, 'edit'])->name('evaluation.password');
-    Route::post('/evaluation/password', [\App\Http\Controllers\EvaluatorPasswordController::class, 'update'])->middleware('throttle:5,1')->name('evaluation.password.update');
-    Route::get('/farmers/{farmer}/portal-account', [\App\Http\Controllers\FarmerPortalAccountController::class, 'show'])->name('farmers.portal-account.show');
-    Route::post('/farmers/{farmer}/portal-account/activation', [\App\Http\Controllers\FarmerPortalAccountController::class, 'issue'])->middleware('throttle:10,1')->name('farmers.portal-account.issue');
-    Route::post('/farmers/{farmer}/portal-account/disable', [\App\Http\Controllers\FarmerPortalAccountController::class, 'disable'])->middleware('throttle:10,1')->name('farmers.portal-account.disable');
+    Route::post('/assistant/message', AssistantController::class)
+        ->withoutMiddleware('synchronized')
+        ->middleware(['throttle:5,1', SynchronizeAssistantRequests::class])->name('assistant.message');
+    Route::get('/evaluation/password', [EvaluatorPasswordController::class, 'edit'])->name('evaluation.password');
+    Route::post('/evaluation/password', [EvaluatorPasswordController::class, 'update'])->middleware('throttle:5,1')->name('evaluation.password.update');
+    Route::get('/farmers/{farmer}/portal-account', [FarmerPortalAccountController::class, 'show'])->name('farmers.portal-account.show');
+    Route::post('/farmers/{farmer}/portal-account/activation', [FarmerPortalAccountController::class, 'issue'])->middleware('throttle:10,1')->name('farmers.portal-account.issue');
+    Route::post('/farmers/{farmer}/portal-account/disable', [FarmerPortalAccountController::class, 'disable'])->middleware('throttle:10,1')->name('farmers.portal-account.disable');
     /*
     |--------------------------------------------------------------------------
     | DASHBOARD
@@ -130,9 +144,9 @@ Route::middleware([
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->name('dashboard');
 
-    Route::get('/assistance-coverage', [\App\Http\Controllers\AssistanceCoverageController::class, 'index'])
+    Route::get('/assistance-coverage', [AssistanceCoverageController::class, 'index'])
         ->name('assistance-coverage.index');
-    Route::get('/assistance-coverage/boundaries', [\App\Http\Controllers\AssistanceCoverageController::class, 'boundaries'])
+    Route::get('/assistance-coverage/boundaries', [AssistanceCoverageController::class, 'boundaries'])
         ->middleware('throttle:60,1')->name('assistance-coverage.boundaries');
 
     Route::get('/municipality-boundaries', [MunicipalityBoundaryController::class, 'index'])
@@ -140,7 +154,7 @@ Route::middleware([
     Route::get('/municipality-boundaries/data', [MunicipalityBoundaryController::class, 'data'])
         ->middleware('throttle:30,1')
         ->name('municipality-boundaries.data');
-    Route::get('/municipality-boundaries/barangays', \App\Http\Controllers\BarangayBoundaryController::class)
+    Route::get('/municipality-boundaries/barangays', BarangayBoundaryController::class)
         ->middleware('throttle:30,1')
         ->name('municipality-boundaries.barangays');
     Route::get('/municipality-boundaries/{boundary}/snapshot-base', [MunicipalityBoundaryController::class, 'snapshotBase'])
@@ -259,19 +273,19 @@ Route::middleware([
         [FarmPlotController::class, 'all']
     )->name('farm-plots.all');
 
-    Route::get('/farm-plots/crop-layer', [\App\Http\Controllers\ParcelCropSeasonController::class, 'layer'])
+    Route::get('/farm-plots/crop-layer', [ParcelCropSeasonController::class, 'layer'])
         ->name('farm-plots.crop-layer');
-    Route::get('/farm-plots/planted-area-layer', [\App\Http\Controllers\ParcelCropSeasonController::class, 'plantedLayer'])
+    Route::get('/farm-plots/planted-area-layer', [ParcelCropSeasonController::class, 'plantedLayer'])
         ->middleware('throttle:30,1')->name('farm-plots.planted-area-layer');
-    Route::get('/farm-plots/{plot}/satellite', [\App\Http\Controllers\ParcelSatelliteController::class, 'show'])
+    Route::get('/farm-plots/{plot}/satellite', [ParcelSatelliteController::class, 'show'])
         ->whereNumber('plot')->name('farm-plots.satellite.show');
-    Route::post('/farm-plots/{plot}/satellite/observations', [\App\Http\Controllers\ParcelSatelliteController::class, 'analyse'])
+    Route::post('/farm-plots/{plot}/satellite/observations', [ParcelSatelliteController::class, 'analyse'])
         ->whereNumber('plot')->middleware('throttle:6,1')->name('farm-plots.satellite.analyse');
-    Route::get('/farm-plots/{plot}/satellite/image', [\App\Http\Controllers\ParcelSatelliteController::class, 'image'])
+    Route::get('/farm-plots/{plot}/satellite/image', [ParcelSatelliteController::class, 'image'])
         ->whereNumber('plot')->middleware('throttle:12,1')->name('farm-plots.satellite.image');
-    Route::get('/farm-plots/{plot}/seasonal-crops', [\App\Http\Controllers\ParcelCropSeasonController::class, 'edit'])
+    Route::get('/farm-plots/{plot}/seasonal-crops', [ParcelCropSeasonController::class, 'edit'])
         ->name('farm-plots.seasonal-crops.edit');
-    Route::post('/farm-plots/{plot}/seasonal-crops', [\App\Http\Controllers\ParcelCropSeasonController::class, 'store'])
+    Route::post('/farm-plots/{plot}/seasonal-crops', [ParcelCropSeasonController::class, 'store'])
         ->name('farm-plots.seasonal-crops.store');
 
     Route::get(

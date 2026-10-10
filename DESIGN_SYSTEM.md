@@ -345,6 +345,31 @@ Define `$record` as the edited record or `null` in the form partial, as existing
 - Use `aria-live="polite"` or `role="status"` for asynchronous progress. Reserve urgent announcements for relevant errors.
 - Offer retry only when the operation can be retried safely; after an uncertain save, verify the result before creating a duplicate.
 
+### Office Assistant conversation — implemented locally
+
+The October 11 implementation uses one continuous chat within the
+signed-in office workspace. Keep the small launcher and accessible dialog,
+compact name/New chat/Close header, a scrollable message stream and one composer.
+Do not add mode selectors, module tabs, reporting sections or a year form to
+this chat. Resolve years and unclear farmer/topic references through ordinary
+messages. Keep limited farmer choices and protected register links inside their
+relevant reply; concise lists/tables are permitted when they improve an answer.
+
+Use the shared tokens and 44px targets. Make keyboard/IME submission predictable,
+preserve focus on close, announce new messages and errors without reading the
+entire thread repeatedly, and avoid forcing scroll while someone reads earlier
+messages. Show truthful loading/cancellation/retry and scope/year/source text.
+Keep the composer usable with a phone keyboard, short screens and 200% zoom.
+This standard is specific to the Assistant; operational forms retain their
+existing section and validation rules.
+
+Server routing and canonical provider context now enforce the single-chat
+boundary. The retired two-mode client receives reload guidance. See
+[docs/AI_ASSISTANT_IMPLEMENTATION_PLAN.md](docs/AI_ASSISTANT_IMPLEMENTATION_PLAN.md)
+and [DESIGN_IMPLEMENTATION.md](DESIGN_IMPLEMENTATION.md) for planned acceptance
+versus actual verification. Never imply that a conversational appearance grants
+new data access, record mutations or permission to send records to OpenAI.
+
 ## 11. Responsive behavior and accessibility
 
 The shared shell currently switches to the mobile drawer at **900px**. Preserve that contract when changing individual pages. Existing modules have additional breakpoints; consolidate them deliberately rather than changing shared navigation from a page partial.

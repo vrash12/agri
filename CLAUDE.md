@@ -2,9 +2,12 @@
 
 ## Purpose
 
-Act as the senior full-stack developer and software architect for AgriLGU.
-Improve code quality, security, consistency, performance and maintainability
-while preserving existing workflows, records and account assignments.
+Act as the senior full-stack developer, AI engineer and software architect for
+AgriLGU. Own code quality, security, consistency, query efficiency, provider
+privacy/cost, concurrency, infrastructure compatibility and reliable evaluation
+while preserving existing workflows, records and account assignments. Treat AI
+as an application capability with enforceable boundaries, not as a source of
+authority over permissions, records or official decisions.
 
 This file contains instructions and a prioritized work plan. It does not mean
 the planned improvements have already been implemented, tested or deployed.
@@ -23,13 +26,25 @@ For interface work, also read [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md),
 [GREEN_YELLOW_THEME.md](GREEN_YELLOW_THEME.md) and
 [DESIGN_IMPLEMENTATION.md](DESIGN_IMPLEMENTATION.md).
 
+For Assistant work, read
+[docs/AI_ASSISTANT_IMPLEMENTATION_PLAN.md](docs/AI_ASSISTANT_IMPLEMENTATION_PLAN.md)
+and [docs/OFFICE_ASSISTANT.md](docs/OFFICE_ASSISTANT.md). The October 11 unified-chat
+direction is now implemented locally under the subsequent request. Normal office
+integration and synthetic verification are recorded there; production is unchanged.
+
 ## Project context
 
 - AgriLGU is a government agriculture operations system with real office users
   and municipality-owned records. Preserve existing records and account scopes.
-- Laravel 9, PHP 8.1–8.3, MySQL/MariaDB, Blade and JavaScript. The repository pins
-  Composer's PHP platform to 8.1. Use the installed dependencies and existing
-  conventions; do not introduce a new framework for a small change.
+- Local Laravel 12 / PHP 8.3+, MySQL/MariaDB, Blade and JavaScript. Composer's
+  PHP platform is pinned to 8.3.0. Production remains on Laravel 9 until the
+  dependency upgrade is explicitly deployed. Laravel AI SDK powers a local
+  Office Assistant with one conversation: canonical help when configured and
+  authorized aggregates/farmer summaries locally. Raw messages, record data and
+  the visible thread never enter provider prompts/history. Neither path modifies
+  operational records. Credentials stay private. See
+  `docs/LARAVEL_12_AI_UPGRADE.md` and `docs/OFFICE_ASSISTANT.md`. Preserve the
+  existing application structure.
 - Vite builds the standard CSS/JS entry points. Many modules also use Blade
   assets and files under `public/`; a Vite build alone does not deploy those.
 - Office authentication uses the `web` guard. Farmer portal accounts use the
@@ -172,14 +187,62 @@ substitute for numeric ownership IDs.
   servers need shared atomic coordination and verified shared file storage.
 - Record before/after measurements; shorter code alone is not a speed result.
 
+## AI Assistant engineering rules — implemented locally
+
+The unified Assistant is implemented locally inside authenticated office pages,
+with no mode/year forms or report sections. Tests and normal office/MySQL browser
+verification are recorded in `docs/OFFICE_ASSISTANT.md`; production is unchanged.
+Preserve these boundaries when extending the feature.
+
+- Reuse small server orchestration for allowlisted local intents, year resolution,
+  farmer selection and follow-ups. Reuse scoped domain queries and policies;
+  never use arbitrary model-generated SQL or let client mode decide disclosure.
+- Keep operational questions/results and the visible thread inside AgriLGU.
+  For the first unified release, build provider questions from canonical static
+  help topics only; no raw message or mixed transcript goes to OpenAI. Unknown,
+  ambiguous and mixed requests clarify locally rather than using a provider
+  classifier. A name/key detector is not an anonymization boundary.
+- Keep the thread in browser memory. Minimal encrypted follow-up context is
+  user/session/scope-bound and expiring; reauthorize every referenced record and
+  current account scope on every turn. Context tokens never grant permission.
+- Review the exact Assistant POST route's mutation locks and replace its
+  coordination with a bounded Assistant-only path. Preserve synchronization for
+  operational writes and all authentication, CSRF, scope, throttle and audit
+  controls; provider waits must not hold account operational-write locks.
+- Preserve read-only behavior, six-match farmer lookup, bounded aggregates,
+  separate units, missing-data notices and veterinary Animal Health restrictions.
+  Use protected named-route links and text-only output. No implicit file upload,
+  saved chat history, new data disclosure, record changes or autonomous tools.
+- Measure query count, payload size, latency and provider usage using synthetic
+  fixtures. Test multi-turn references, ambiguity, prompt injection, scope
+  changes, context tampering, zero record disclosure, concurrency and failures.
+  Fakes prove boundaries; any authorized real-provider evaluation uses only
+  approved non-sensitive context and a bounded budget.
+- Keep the installed Laravel AI SDK and Blade/JavaScript infrastructure. Do not
+  add vector databases, streaming, additional agent frameworks or queues without
+  a concrete requirement and verified Hostinger support. The owner's RAG request
+  is implemented as bounded local BM25 over reviewed workflow passages, strict
+  structured generation/source validation and a versioned general-help cache.
+  Read [docs/ASSISTANT_RAG.md](docs/ASSISTANT_RAG.md); never ingest private files,
+  forward raw chat or cache operational answers. No general cache clear; preserve
+  session namespaces and NDVI/Assistant counters.
+
+The implementation plan is the detailed contract for UX, architecture, query
+semantics, privacy, performance targets, evaluation and release. Keep
+`resources/assistant/knowledge` accurate to implemented controls: these reviewed,
+allowlisted Markdown passages are runtime provider evidence. The office guide
+is the curation index. Citation membership does not prove answer entailment.
+
 ## Validation commands
 
 Run from the repository root with a supported PHP executable and Composer.
 Confirm the actual PHP version; the developer machine may differ from Hostinger.
 
-**Before running tests:** `phpunit.xml` does not currently enforce a separate
-test database. Some suites create SQLite schemas, while older transaction-based
-suites depend on the imported legacy schema. Confirm disposable isolation first.
+**Before running tests:** `phpunit.xml` forces testing and in-memory SQLite;
+fixtures use a random encryption key, and OpenAI's real key is hidden from tests.
+Some suites create SQLite schemas, while older transaction-based suites depend
+on an imported legacy schema and cannot pass against an empty database.
+Confirm disposable isolation and absence of cached production configuration first.
 A transaction is not permission to use an office database. Never run tests in a
 production checkout or reuse production keys/data for fixtures.
 
@@ -251,12 +314,20 @@ across 11 packages** in the existing lockfile. These are feed entries, not 41
 independently confirmed exploits; some entries describe the same issue. Rerun
 the audit because advisories and available patches change.
 
+These are historical findings from the older lockfile. The October 11 local
+framework/SDK upgrade has a verified locked audit with no reported advisories;
+production still uses the older runtime. See
+[docs/LARAVEL_12_AI_UPGRADE.md](docs/LARAVEL_12_AI_UPGRADE.md) for the actual local
+versions, tests and remaining staging/release work. Revalidate the candidate
+lockfile before release rather than treating the earlier count as current.
+
 - Review compatible Guzzle/PSR-7, CommonMark and Symfony updates and their
   dependencies. Test authentication, HTTP handling, uploads, exports, maps and
   external-provider failures against the resulting lockfile.
-- Laravel 9 remains flagged. Plan a supported framework upgrade with PHP,
-  Sanctum, validation, middleware and dependency compatibility checks. Updating
-  supporting libraries alone does not resolve framework advisories.
+- Complete the pending local framework upgrade's legacy-schema/staging checks
+  before an authorized release. Verify PHP, Sanctum, validation, middleware and
+  dependencies together; supporting-library patches alone are not a framework
+  upgrade or evidence that the deployed runtime has changed.
 - Review the maintainer's [email validation advisory](https://github.com/laravel/framework/security/advisories/GHSA-5vg9-5847-vvmq),
   [temporary signed URL advisory](https://github.com/laravel/framework/security/advisories/GHSA-crmm-hgp2-wgrp)
   and [wildcard file validation advisory](https://github.com/laravel/framework/security/advisories/GHSA-78fx-h6xr-vch4).
