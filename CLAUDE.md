@@ -31,8 +31,9 @@ For Assistant work, read
 and [docs/OFFICE_ASSISTANT.md](docs/OFFICE_ASSISTANT.md). The October 11 unified-chat
 and original RAG release deployed in runtime `7d36fff`; normal office integration,
 synthetic checks and live preservation evidence are recorded there. The later
-context-aware, AgriLGU-only identity/topic-follow-up extension remains local and
-not yet deployed. Keep that pending stage distinct from the deployed baseline.
+context-aware, AgriLGU-only identity/topic-follow-up extension deployed in runtime
+`82a24c4` on October 11. Keep its receipt distinct from the earlier baseline and
+preserve pending local farmer-card work.
 
 ## Project context
 
@@ -197,7 +198,8 @@ verification and the live release are recorded in `docs/OFFICE_ASSISTANT.md`
 and `docs/GITHUB_DEPLOYMENT.md`. All existing operational rows are preserved.
 Preserve these boundaries when extending the feature.
 
-The later October 11 follow-up passed local integrated checks and awaits release. It adds
+The later October 11 follow-up deployed in runtime `82a24c4` after 386 PHP tests /
+2,493 assertions and 198 JavaScript tests passed. It adds
 local English/Filipino identity, greetings, thanks, capabilities and technology
 answers, plus 31 reviewed passages / 24 canonical topics spanning all documented
 AgriLGU features. Identity replies use no provider, allowance or operational
@@ -217,6 +219,14 @@ identity/AI/privacy help does not broaden Animal
 Health operational permissions. Preserve the style/corpus-aware answer cache,
 all request/session controls and general-cache budgets. No new migration,
 dependency, environment setting or account operation is required.
+Greeting/thanks turns preserve prior validated references. Satellite/NDVI and
+Assistance coverage have distinct page hints. Live checks passed local identity,
+topic/style follow-ups, 15 page contexts, all 24 topics/five veterinary topics,
+role exclusions, six local reports, workspace/card renders and a real canonical
+dashboard reply followed by a zero-token cache hit. All 21 tables / 9,372 existing
+rows, schemas, environment, key/namespaces and NDVI budgets were preserved.
+No migration, account or environment operation ran; these checks are not a
+production load or semantic-accuracy benchmark.
 
 - Reuse small server orchestration for allowlisted local intents, year resolution,
   farmer selection and follow-ups. Reuse scoped domain queries and policies;

@@ -1,7 +1,8 @@
 # Assistant retrieval and grounded help
 
 Current follow-up status: the October 11 context-aware, AgriLGU-only extension is
-local and not yet deployed. Its 31 reviewed passages, 24 canonical topics, local
+deployed on Hostinger in runtime `82a24c4` through GitHub main push and Hostinger
+fast-forward pull. Its 31 reviewed passages, 24 canonical topics, local
 identity replies and topic/style follow-ups passed the local integrated checks below.
 Historical tests and live acceptance below describe the earlier ten-topic release.
 
@@ -21,7 +22,7 @@ conversation also accepts more English/Filipino workflow phrasing and clarifies
 separate actionable tasks. Farmer questions and reports continue to use fresh,
 authorized database queries inside AgriLGU, without an AI call or cached totals.
 
-The local follow-up adds documented help for dashboard, municipality weather,
+The deployed follow-up adds documented help for dashboard, municipality weather,
 cooperatives, machinery, backups, audit, geofences, system overview, AI/privacy,
 registry/data quality and assistance management/coverage. English/Filipino
 identity, greetings, thanks, capabilities and short technology replies are
@@ -74,6 +75,8 @@ follow-up never enters the new generation request. An explicit “this page”
 question can use a page-module relevance hint. Existing assistance-page generic
 Excel/upload aliases retain seed-import disambiguation, with explicit topics
 taking precedence. Neither use grants authorization.
+Satellite/NDVI and Assistance coverage have distinct page hints. Greetings and
+thanks preserve the prior validated report/help reference for later follow-ups.
 
 At most three whole passages / 7,000 text characters are selected. Each passage
 is at most 2,400 characters; the complete corpus is bounded at 80 KiB and 32
@@ -173,6 +176,20 @@ syntax, Blade compilation, route and whitespace checks passed. Actual local
 Laravel/MySQL browser verification used normal synthetic sign-in/CSRF: local
 introduction, real-provider dashboard guidance and a shorter same-topic reply
 worked. These checks do not replace live deployment acceptance or load testing.
+
+## Context-aware live acceptance — October 11, 2026
+
+Runtime `82a24c4` passed five local identity replies, four help follow-ups,
+15 page contexts, all 24 canonical topics / five veterinary topics, seven scoped
+role policies and one excluded account, six local reports, two workspace renders
+and one existing card render. A real canonical dashboard answer used 784 input /
+157 output tokens and one source; its accepted repeat hit used zero new tokens.
+All 21 tables / 9,372 pre-existing rows and schemas, private environment values,
+application key, session/cache namespaces and NDVI counters were preserved.
+No migration, account or environment operation ran; pending farmer-card changes
+remain local. These are bounded live CLI/provider smoke checks, not a load test
+or semantic-accuracy benchmark. Full release evidence is in
+[GITHUB_DEPLOYMENT.md](GITHUB_DEPLOYMENT.md).
 
 ## References
 

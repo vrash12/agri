@@ -1,7 +1,8 @@
 # Office Assistant
 
 Current follow-up status: the October 11 context-aware, AgriLGU-only extension is
-implemented locally and not yet deployed. Local verification passed 386 PHP
+deployed on Hostinger in runtime `82a24c4` through GitHub main push and Hostinger
+fast-forward pull. Local verification passed 386 PHP
 tests / 2,493 assertions and 198 JavaScript tests; historical counts and live
 checks below describe earlier stages.
 No migration, dependency, environment setting or account change is required.
@@ -19,7 +20,7 @@ caching and saved-guide fallbacks. The verification section below records the
 earlier unified stage; current RAG checks are in that companion receipt. Record
 reports remain fresh local queries; the one-conversation interface is unchanged.
 
-## October 11 local context-aware follow-up
+## October 11 deployed context-aware follow-up
 
 The owner's clarified scope is help with **all documented AgriLGU features**,
 not unrelated generic conversation. `AssistantIdentity` handles who the
@@ -69,6 +70,18 @@ guidance and a shorter same-topic follow-up succeeded with the configured real
 provider. No live farmer data was used for that browser check. Live acceptance
 belongs to the deployment receipt; these counts are not a production load test.
 
+Live runtime `82a24c4` passed five local identity replies, four help follow-ups,
+15 page contexts, all 24 help topics and five veterinary topics, seven office-role
+policies and one excluded account, six local reports, two workspace renders and
+one existing farmer-card render. Canonical dashboard guidance used 784 input /
+157 output tokens and one source; its accepted cache hit used zero new provider
+tokens. All 21 tables / 9,372 pre-existing rows and schemas were unchanged.
+Environment values, application key, session/cache namespaces and NDVI counters
+were preserved; no migration, account or environment operation ran. Pending
+farmer-card changes remain local. These are live CLI/provider smoke checks, not
+a load test or interactive sign-in test for every account. See
+[GITHUB_DEPLOYMENT.md](GITHUB_DEPLOYMENT.md) for the full release receipt.
+
 ## One conversation in the signed-in application
 
 The small **Assistant** launcher opens one conversation in normal office pages.
@@ -105,7 +118,7 @@ the selected target.
 
 `POST /assistant/message` retains office authentication, idle expiry, active scope,
 CSRF, restricted-role middleware, role policy and five requests per minute. The
-seven scoped office roles can use it. The local follow-up permits veterinary
+seven scoped office roles can use it. The deployed follow-up permits veterinary
 identity and AI/privacy explanations plus Animal Health help/reports; it does not
 grant other operational access. Visitors, GIS evaluators, guests and farmer-guard sessions are
 denied. All operational access remains read-only.
@@ -127,7 +140,7 @@ expired and changed-scope references reset; cross-account/session replay returns
 no data. A token is only a hint: every follow-up checks current permissions and
 record ownership. Pending year clarification keeps only a known task/year/farmer
 reference. It never retains the original question. Version 1 remains compatible
-with existing tokens. The local follow-up adds optional `help_topic` and
+with existing tokens. The follow-up adds optional `help_topic` and
 `help_style`: an allowlisted topic and one of `plain`, `brief`, `steps`, `example`,
 `more`. Old tokens without those fields remain valid but need a fresh help turn
 before a generic topic follow-up can resolve. No new transcript or answer field
@@ -297,8 +310,8 @@ Stale clients must receive reload guidance instead of the retired raw-help path.
 For this follow-up, include `AssistantIdentity`, updated resolver/context/
 conversation/provider/agent, all curated knowledge and relevant tests/docs as one
 reviewed change. The deployed Laravel 12/AI SDK foundation is unchanged; no new
-Composer requirement or environment variable is introduced. Final follow-up
-verification and any new live acceptance must be recorded separately from
+Composer requirement or environment variable is introduced. Runtime `82a24c4`'s
+follow-up verification and live acceptance are recorded separately from
 `7d36fff`'s earlier checks.
 
 Refresh configuration/route/compiled-view caches only. No migration, seeder,

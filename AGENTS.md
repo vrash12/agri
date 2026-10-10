@@ -1,7 +1,7 @@
 # Agriculture Information System — Developer Guide
 
-The subsequent October 11 context-aware Assistant follow-up is local and not yet
-deployed; Hostinger still runs the previously verified `7d36fff` release.
+The subsequent October 11 context-aware Assistant follow-up deployed on Hostinger
+in runtime `82a24c4` through GitHub main push and Hostinger fast-forward pull.
 `AssistantIdentity` answers introductions, greetings, thanks, capabilities and
 technology questions in English/Filipino locally, without provider inference,
 allowance reservation or operational queries. The reviewed RAG manifest now has
@@ -17,14 +17,25 @@ expires after 15 minutes and binds to user/session/scope. Its optional
 `brief`, `steps`, `example`, `more`; old tokens remain valid but need a fresh help
 turn before a topic follow-up. Each help follow-up generates from the canonical
 topic and reviewed passages, never raw messages, the mixed thread or record text.
+Greeting/thanks interludes preserve the prior validated report/help reference.
+Satellite/NDVI and Assistance coverage pages have distinct safe page hints.
 Veterinary users can receive local identity and AI/privacy explanations while
 operational access stays Animal Health-only. The owner's scope is all documented
 AgriLGU features, not unrelated general AI chat. No autonomous browsing,
 filesystem/execution tools, repository scanning or private-document ingestion is
 introduced. Answer-cache identity includes prompt style and corpus; never clear
-the general cache. Deploy the identity/resolver/context/orchestration/provider/
-agent/knowledge changes together after final integrated checks. This follow-up
-requires no migration, dependency, environment setting or account change. See
+the general cache. The identity/resolver/context/orchestration/provider/agent/
+knowledge changes deployed together after 386 PHP tests / 2,493 assertions and
+198 JavaScript tests passed, with Pint, syntax, Blade, routes and whitespace
+checks. All 21 tables / 9,372 pre-existing rows, schemas, environment values,
+application key, session/cache namespaces and NDVI counters were preserved.
+No migration, dependency, environment setting or account change ran. Live checks
+covered five identity replies, four help follow-ups, 15 page contexts, all 24
+topics / five veterinary topics, seven role policies and one excluded account,
+six local reports, two workspace renders and one existing card render. Canonical
+dashboard generation used 784 input / 157 output tokens and one source; its
+accepted cache hit used zero new provider tokens. These are smoke checks, not a
+load or semantic-accuracy benchmark. See
 [docs/OFFICE_ASSISTANT.md](docs/OFFICE_ASSISTANT.md) and
 [docs/ASSISTANT_RAG.md](docs/ASSISTANT_RAG.md).
 
@@ -109,10 +120,10 @@ separate request lock and a pre-work session commit without late session/cookie
 persistence, preventing logout/flash races during provider waits. The provider
 reviewed knowledge passages describe implemented controls; never add imagined workflows.
 
-The later local context-aware extension adds social/identity replies and
-approved help-topic/style references without changing this deployed release's
-record, session or disclosure boundaries. Final follow-up verification remains
-pending and must not be inferred from the earlier live acceptance.
+The later context-aware extension deployed in runtime `82a24c4`, adding local
+social/identity replies and approved help-topic/style references without changing
+record, session or disclosure boundaries. Its verification is distinct from the
+earlier `7d36fff` acceptance. Pending farmer-card work remains local.
 
 ## Senior developer mandate
 
@@ -322,7 +333,7 @@ The supported office roles are constants in `App\Models\User`. Farmer portal ide
 
 All accounts must be active. Regional Heads require an active region with no province/municipality assignment; provincial roles require an existing active province; municipal roles require an existing active municipality and supervising province. Only the System Owner assigns Regional Heads. `EnsureAccountScope` checks authenticated application requests, and the Sanctum user endpoint uses the same check. Login independently validates scope. UI visibility is not security: controllers must still call policies for every protected action.
 
-The deployed Office Assistant permits the seven scoped office roles above. For `provincial_vet`, its shared endpoint forces Animal Health help and permits only Animal Health reports; it does not grant access to any other operational module. Visitors and evaluators remain excluded.
+The deployed Office Assistant permits the seven scoped office roles above. For `provincial_vet`, its shared endpoint permits Animal Health reports and workflow help, local identity replies, and Assistant access/AI/privacy explanations; it does not grant access to any other operational module. Visitors and evaluators remain excluded.
 
 External GIS Evaluators require no operational office assignment. `RestrictGisEvaluatorAccess` confines them to the read-only municipality-geofence page and its boundary and barangay JSON endpoints. The geofence controller returns active boundaries only and deliberately skips every farmer, parcel, snapshot, export, draft, account, audit and write query for this role. Evaluator accounts are provisioned directly by the System Owner outside the general account-management form and should be disabled when an evaluation ends.
 

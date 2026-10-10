@@ -1,29 +1,51 @@
 # GitHub-to-Hostinger deployment
 
-## Pending context-aware Assistant follow-up — October 11, 2026
+## Verified context-aware Assistant release — October 11, 2026
 
-The local follow-up adds provider-free introductions/greetings/capabilities and
+Runtime `82a24c44cc873e7c71959229d699ad98b5aa2832` was pushed to GitHub main
+and installed on Hostinger by `git pull --ff-only origin main` from clean tracked
+baseline `535dd4d`. The application is live. This follow-up adds provider-free introductions/greetings/capabilities and
 AI-technology answers, 31 reviewed passages / 24 canonical workflow topics,
 page-aware help and encrypted topic/style follow-ups. It remains focused on
 AgriLGU features; raw chat, record replies and server files never become provider
 history. Veterinary accounts retain Animal Health operational limits and can
 ask about the Assistant's identity, technology and privacy.
 
-Deploy the identity/resolver/context/conversation/knowledge/provider classes,
-all approved knowledge files, curation index, shared dialog and versioned chat
-script together through GitHub push then Hostinger fast-forward pull. Existing
-dependencies and configuration remain unchanged. Mirror Assistant JavaScript
-and CSS to both public directories with 0644 permissions, refresh only config,
-route and view caches, and preserve session/cache/Redis and NDVI/AI counters.
-Never clear the general cache. No migration, seeder or account change is needed.
-Keep pending farmer-card artwork/seal changes excluded. Retain private backups
-and verify schema/rows/environment plus local identity, all topics, role limits,
-normal workspace rendering and generated help/cache behavior before finishing.
+The identity/resolver/context/conversation/knowledge/provider classes, approved
+knowledge, curation index, shared dialog and chat script deployed together.
+Existing dependencies and private configuration remain unchanged. Optimized
+production autoloading was refreshed; Assistant assets were mirrored to both
+public directories with 0644 permissions. Config, route and view caches were
+rebuilt; the general cache was never cleared. No migration, seeder, environment,
+account or operational-data change ran. Pending farmer-card artwork/seal changes
+remain local and excluded.
 
 Local acceptance passed 386 PHP tests / 2,493 assertions and 198 JavaScript
 tests, Pint, syntax, Blade compilation, route and whitespace checks. Actual
 synthetic Laravel/MySQL browser sign-in/CSRF verified introduction, dashboard
 guidance and a shorter same-topic follow-up using the real configured provider.
+
+- Verified private backup: **21 tables / 9,372 rows**, **3,375,096 compressed
+  bytes**, SHA-256
+  `06682f34d0b9e418896735cdc8e0c4318089865c2fe6b036a019c693698eca98`.
+  Previous tracked runtime, bootstrap caches, served assets and environment were
+  preserved outside the document root. Schema and every existing row passed
+  fingerprints after the release, with zero new audit rows during preservation
+  checks. Application key, all environment bytes, session/cache/Redis namespaces
+  and NDVI budgets were preserved. AI limits were not reset.
+- Read-only live checks passed seven office roles, one excluded account, all
+  24 topics, five veterinary topics, five local identity replies, four help
+  follow-up styles, 15 page contexts, six local reports, two workspace renders
+  and an existing farmer-card render. Greeting/thanks preserve prior validated
+  references; coverage and satellite pages use distinct hints.
+- Actual OpenAI dashboard guidance passed with **784 input / 157 output tokens**
+  and one verified source. A repeat returned the same cached answer with zero
+  new provider tokens. No raw chat or farmer records entered that request.
+- Public HTTPS home, office/farmer sign-in, CSS and JavaScript return 200; a guest
+  dashboard request redirects to sign-in. Source/served assets match, and live
+  JavaScript matches the committed Git blob. Maintenance ended; tracked server
+  files are clean. Local browser checks used synthetic data; interactive
+  production sign-in and every office workflow were not repeated.
 
 ## Verified Hostinger release — October 11, 2026 — Laravel 12 and RAG Assistant
 

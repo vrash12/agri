@@ -1,6 +1,6 @@
 # AgriLGU — Complete Feature Catalog
 
-Local follow-up, October 11, 2026 — not yet deployed: the Assistant can introduce
+Deployed follow-up, October 11, 2026 (`82a24c4`): the Assistant can introduce
 itself, answer greetings or thanks, explain its technology and describe what it
 can do in English or Filipino without calling AI or reading office records.
 Its reviewed help now covers all documented AgriLGU features through 24 topics
@@ -14,12 +14,17 @@ After a help answer, ask “Explain more”, “Make it shorter”, “Give an e
 “Step by step”. The Assistant remembers only the approved help topic and format
 for up to 15 minutes in a protected reference. “Explain this page” uses the
 current page as a relevance hint. Permissions still apply.
+Satellite/NDVI and Assistance coverage have their own page guidance. Greetings
+and thanks preserve the earlier help topic or validated report reference.
 Generic workbook-upload help on the assistance page keeps its seed-import
 guidance; the page does not grant access to any records. Veterinary accounts
 keep Animal Health-only operational access and can also ask who the Assistant is
 or how its AI/privacy works. Private records and the conversation stay inside
-AgriLGU. This follow-up needs no account, database or environment change; final
-checks and deployment remain pending. The existing live version is `7d36fff`.
+AgriLGU. The release passed 386 PHP tests / 2,493 assertions and 198 JavaScript
+tests. All 21 tables / 9,372 existing rows, schemas and private configuration
+were preserved; no account, migration or environment change ran. Live identity,
+help/follow-up, page-context, permissions, reports and provider/cache smoke checks
+passed. Runtime `82a24c4` was pushed through GitHub and pulled on Hostinger.
 See [Office Assistant](docs/OFFICE_ASSISTANT.md).
 
 The deployed RAG follow-up adds documented sources to Assistant workflow answers.

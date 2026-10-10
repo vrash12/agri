@@ -1,6 +1,6 @@
 # Design and UX implementation record
 
-## Context-aware Assistant — local follow-up, October 11, 2026
+## Context-aware Assistant — deployed October 11, 2026
 
 The existing conversation now recognizes introductions, greetings, capabilities
 and AI-technology questions in English/Filipino without inference or record
@@ -9,7 +9,10 @@ registry totals. Explicit page questions select reviewed module guidance; system
 help supports brief, detailed, step-by-step, plain and example follow-ups through
 encrypted topic/style references. The visible chat remains one conversation.
 Operational replies never become AI history. This follow-up targets AgriLGU
-features only and has no runtime file-reading tools. See `docs/OFFICE_ASSISTANT.md`.
+features only and has no runtime file-reading tools. Runtime `82a24c4` deployed
+through GitHub and Hostinger pull. Local verification passed 386 PHP tests /
+2,493 assertions and 198 JavaScript tests; live identity/topic/page/role/provider
+checks passed. See `docs/OFFICE_ASSISTANT.md` and `docs/GITHUB_DEPLOYMENT.md`.
 
 ## Assistant documented sources — deployed October 11, 2026
 

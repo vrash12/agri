@@ -1,13 +1,14 @@
 # AgriLGU Assistant — unified chat implementation plan
 
-Current follow-up: the October 11 context-aware, AgriLGU-only extension is local
-and not yet deployed; local integrated verification has passed. It adds local
+Current follow-up: the October 11 context-aware, AgriLGU-only extension deployed
+on Hostinger in runtime `82a24c4` through GitHub main push and fast-forward pull.
+Local integrated verification and live smoke checks passed. It adds local
 identity/social/technology/capability replies, 31 reviewed passages for 24
 canonical topics and controlled topic-only explanation follow-ups. The owner
 clarified that the scope is all documented AgriLGU features, not unrelated
 generic AI or autonomous browsing/filesystem tools. No migration, new dependency,
-environment setting or account operation is required. The historical deployed
-baseline remains `7d36fff` until a separately verified release installs this work.
+environment setting or account operation was required. The earlier `7d36fff`
+baseline receipt remains historical; pending farmer-card work remains local.
 
 The owner's subsequent RAG request extends this implemented plan with reviewed
 local workflow retrieval, strict structured replies, source validation, a
@@ -42,7 +43,7 @@ Animal Health summaries. Preserve the existing role and geographic permissions.
 This is read-only assistance: no record edits, account issuance, file uploads,
 automated exports, diagnoses, prescriptions or official decisions.
 
-The local follow-up extends reviewed feature guidance across dashboard, weather,
+The deployed follow-up extends reviewed feature guidance across dashboard, weather,
 cooperatives, machinery, backups, audit, geofences, system overview, farmer
 registry/data quality, AI/privacy and assistance management/coverage, preserving
 the original ten topics. `AssistantIdentity` handles English/Filipino greetings,
@@ -194,12 +195,15 @@ and effective scope. It contains no names, totals, record text or provider histo
 Use a 15-minute expiry, bounded token size (initial cap 4 KiB), and short-lived
 choice tokens. Do not expose session identifiers or the application encryption key.
 
-The local follow-up retains version 1 and the 4 KiB bound. Optional `help_topic`
+The follow-up retains version 1 and the 4 KiB bound. Optional `help_topic`
 and `help_style` carry only a canonical topic and `plain`, `brief`, `steps`,
 `example` or `more`. Existing tokens stay valid but cannot resolve a generic help
 follow-up until a fresh help turn supplies an approved topic. Unknown metadata
 never becomes provider history. A request such as “Explain more” after a records
 reply clarifies; it does not submit that reply or farmer text to a model.
+Greetings and thanks preserve the previous validated reference. Distinct
+Satellite/NDVI and Assistance coverage page hints support contextual help without
+altering operational access.
 
 Tokens are reference hints, never authorization. On every turn verify the binding
 and expiry, reload active account scope, authorize the task/selected farmer and
@@ -229,7 +233,7 @@ coordinates. Foreign and nonexistent farmer references must fail identically.
 Veterinary accounts receive only Animal Health help/reports; visitors, GIS
 evaluators, guests and farmer sessions remain denied. All register links enforce
 their existing policies independently.
-The later local extension also permits veterinary local identity and AI/privacy
+The deployed extension also permits veterinary local identity and AI/privacy
 explanations. This is help about the Assistant, not access to another operational
 module. Explicit “this page” requests may use an allowlisted module relevance
 hint. Existing assistance-page generic Excel/upload aliases retain their reviewed
@@ -415,6 +419,18 @@ distinct from historical counts and the live release receipt; this is not a
 production load test.
 
 ## 10. Release and rollback boundaries
+
+The context-aware release installed runtime `82a24c4` after 386 PHP tests /
+2,493 assertions, 198 JavaScript tests, Pint, syntax, Blade, route and whitespace
+checks passed. Live checks covered five identity replies, four help follow-ups,
+15 page contexts, all 24 topics / five veterinary topics, seven role policies and
+one excluded account, six local reports, two workspace renders and one existing
+card render. Canonical dashboard generation used 784 input / 157 output tokens
+and one source; its repeat cache hit used zero new tokens. All 21 tables /
+9,372 pre-existing rows and schemas, private environment, key/namespaces and
+NDVI counters were preserved. No migration, account or environment operation ran.
+These checks are smoke verification rather than load or semantic-accuracy proof;
+the complete receipt is in [GITHUB_DEPLOYMENT.md](GITHUB_DEPLOYMENT.md).
 
 Follow [LARAVEL_12_AI_UPGRADE.md](LARAVEL_12_AI_UPGRADE.md) and
 [GITHUB_DEPLOYMENT.md](GITHUB_DEPLOYMENT.md). A Git pull alone cannot install the
