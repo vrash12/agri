@@ -29,8 +29,20 @@ authorized reads through `AssistantRecords`, not generated or cached answers.
 Identity/greetings can be answered locally. Current-page questions and bounded
 follow-ups reuse a reviewed topic or an independently authorized record reference,
 never the full visible thread. Unrelated general chat is outside this scope.
+Help references retain only an approved English/Filipino language and style;
+language switches regenerate canonical help, never translate private replies.
+Recognized unsupported report subsets clarify before queries and clear pending
+references rather than silently returning broader totals. Generic seeds/binhi
+aliases still name the all-category assistance summary, not a seed-only filter.
 The Assistant cannot mutate data, issue credentials, import files, diagnose crops
 or animals, prescribe treatment or make official decisions.
+
+Follow-up chips contain application-owned prompts, never model output or private
+record values. They fill editable drafts for explicit Send and preserve unfinished
+text. Scope/year clarifications retain only an approved pending report reference.
+Selected reads reauthorize ownership; whole-office reports clear farmer selection.
+Veterinary suggestions remain Animal Health-only. No raw conversation is stored
+or added to provider context.
 
 See [the RAG architecture](../../docs/ASSISTANT_RAG.md) and
 [the unified Assistant contract](../../docs/OFFICE_ASSISTANT.md).

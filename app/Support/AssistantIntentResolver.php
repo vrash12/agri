@@ -5,12 +5,23 @@ namespace App\Support;
 /** Bounded task routing. Unknown text is never submitted to an external model. */
 final class AssistantIntentResolver
 {
-    /** @return array{task:string,year:int,farmer_id?:int|null,search?:string,topic?:string,style?:string,kind?:string,language?:string,clarification?:string,reset_context?:bool,references?:array{task:string,year:int,farmer_id:int|null}} */
+    public function __construct(private AssistantReportRequest $reports = new AssistantReportRequest) {}
+
+    /** @return array{task:string,year:int,farmer_id?:int|null,search?:string,topic?:string,style?:string,kind?:string,language?:string,clarification?:string,clarification_kind?:string,reset_context?:bool,references?:array{task:string,year:int,farmer_id:int|null,pending_scope?:string}} */
     public function resolve(string $message, array $context, string $module, int $currentYear): array
     {
         $text = trim($message);
         $year = (int) ($context['year'] ?? $currentYear);
-        $language = preg_match('/\b(paano|saan|gabayan|turuan|ipaliwanag|hakbang|magsasaka|binhi|ayuda|buod|hanapin|hayop|taon|natin|niya|sino|ano|anong|ikaw|gamit|kumusta|kamusta|salamat|magandang|paki|gawing|paikliin|halimbawa|dagdag|tulong)\b/iu', $text) ? 'fil' : 'en';
+        $languageRequest = $this->helpLanguage($text, $context);
+        $language = $languageRequest['language'];
+        $text = $languageRequest['text'];
+        if ($languageRequest['replay']) {
+            if (($context['task'] ?? null) === 'help' && is_string($context['help_topic'] ?? null) && isset(OfficeAssistant::TOPICS[$context['help_topic']])) {
+                return ['task' => 'help', 'topic' => $context['help_topic'], 'style' => in_array($context['help_style'] ?? null, OfficeAssistant::STYLES, true) ? $context['help_style'] : 'plain', 'year' => $year, 'language' => $language];
+            }
+
+            return $this->clarify('I can explain an AgriLGU feature in English or Filipino. Ask about a feature first. Private record replies are not sent to AI for translation.', $year);
+        }
         if ($kind = $this->identityKind($text)) {
             return ['task' => 'identity', 'kind' => $kind, 'year' => $year, 'language' => $language];
         }
@@ -35,10 +46,14 @@ final class AssistantIntentResolver
         if (preg_match('/\b(compare|compared|comparison|versus|vs|trend|trends|ihambing|kumpara|year[\s-]+(?:over|on)[\s-]+year)\b/iu', $text)
             || preg_match('/\b(?:this\s+year|ngayong\s+taon)\b.+\b(?:last\s+year|previous\s+year|nakaraang\s+taon)\b|\b(?:last\s+year|previous\s+year|nakaraang\s+taon)\b.+\b(?:this\s+year|ngayong\s+taon)\b/iu', $text)
             || preg_match('/\b\d{4}\b\s+(?:and|with|at)\s+(?:last\s+year|previous\s+year|nakaraang\s+taon)\b/iu', $text)) {
+            if ($clarification = $this->reportClarification($text, $year)) {
+                return $clarification;
+            }
+
             return $this->yearClarification($text, $context, $year, comparison: true);
         }
         $workflow = (bool) preg_match('/\b(how\s+(?:do|does|can|to|should)|where\s+(?:do|can|is)|can\s+I|I\s+want\s+to|steps|instructions|guide\s+me|walk\s+me\s+through|show\s+me\s+how|paano|saan|gabayan|turuan|ipaliwanag|hakbang|help\s+(?:me\s+)?(?:use|draw|import|with)|tell\s+me\s+about|explain|what\s+can\s+(?:(?:my|our|the)\s+(?:veterinary\s+)?account|I\s+access)|what\s+(?:is|does)\s+(?:ndvi|the\s+assistant))\b/iu', $text)
-            || (bool) preg_match('/^(?:what\s+(?:is|does|are)|how\s+(?:is|are))\s+(?:the\s+)?(?:dashboard|weather|cooperative|cooperatives|machinery|equipment|backup|backups|audit|geofence|geofences|agrilgu|rag|privacy|farmer\s+registry|data\s+quality|harvest|harvests|assistance|animal\s+health|rice\s+releases?|distribution\s+sheets?)\b/iu', $text)
+            || (bool) preg_match('/^(?:what\s+(?:is|does|are)|how\s+(?:is|are))\s+(?:(?:the|a|an)\s+)?(?:dashboard|weather|cooperative|cooperatives|machinery|equipment|backup|backups|audit|geofence|geofences|agrilgu|rag|privacy|farmer\s+(?:registry|id|card|portal)|(?:farm\s+)?(?:parcel|parcels|plot|plots)|seasonal\s+crops?|data\s+quality|harvest|harvests|assistance|animal\s+health|rice\s+releases?|distribution\s+sheets?)\b/iu', $text)
             || (bool) preg_match('/^(?:do\s+you\s+(?:send|share)|is\s+(?:farmer\s+)?data\s+(?:sent|shared)|are\s+farmer\s+records\s+(?:sent|shared))\b.+\b(?:openai|ai|provider)\b/iu', $text)
             || (bool) preg_match('/^(?:please\s+)?(?:describe|can\s+you\s+(?:explain|describe)|help\s+me\s+understand)\b/iu', $text)
             || (bool) preg_match('/^(?:does|do|is|are|can)\b.+\b(?:support|supported|available|implemented|feature|work|allowed)\b/iu', $text)
@@ -55,8 +70,24 @@ final class AssistantIntentResolver
             return $topic ? ['task' => 'help', 'topic' => $topic, 'year' => $year, 'language' => $language]
                 : $this->clarify('Which AgriLGU feature do you need help with? I can explain the dashboard, registry, parcel/crop maps, assistance, harvests, Animal Health, cooperatives, machinery or authorized office tools. Ask about one feature, or say “How do I use this page?”.', $year);
         }
+        if ($languageRequest['explicit'] || preg_match('/^(?:please\s+)?(?:translate|isalin)\b/iu', $text)) {
+            return $this->clarify('I can explain an AgriLGU feature in English or Filipino. Private record replies are not sent to AI for translation. Ask your records question without a translation request, or name a feature you want explained.', $year);
+        }
         if (preg_match('/^(?:please\s+)?(?:delete|remove|update|edit|change|create|reset|issue|approve|assign|send|burahin|baguhin)\b/iu', $text)) {
             return $this->clarify('This chat reads records and explains system steps. It cannot change records, issue accounts, send messages or approve requests. Use the authorized module for that action.', $year);
+        }
+        if (AssistantDataQuality::matches($text)) {
+            if (preg_match('/\b(?:19|20|21)\d{2}\b|\b(?:last|previous|prior|this|current)\s+year\b|\b(?:nakaraang|ngayong)\s+taon\b/iu', $text)) {
+                return $this->clarify('Data-quality review uses current registry records, not a historical reporting year. Ask what needs attention without adding a year, or open the farmer registry review filters.', $year) + ['reset_context' => true];
+            }
+
+            return ['task' => 'data-quality', 'year' => $year, 'farmer_id' => null];
+        }
+        // Literal farmer names are not report qualifiers. Recognized subsets
+        // must reset pending references before location/year parsing, so a bare
+        // follow-up year cannot accidentally return broader office totals.
+        if ($clarification = $this->reportClarification($text, $year)) {
+            return $clarification;
         }
         if ($this->requestsDifferentScope($text)) {
             return $this->clarify('I can summarize your account’s permitted area. A separate province or municipality filter is not available in this chat yet. Use the register’s location filters for that subset, or ask about your current area.', $year) + ['reset_context' => true];
@@ -80,6 +111,21 @@ final class AssistantIntentResolver
         if ($year < 1900 || $year > 2100) {
             return $this->clarify('Choose one reporting year between 1900 and 2100.', $currentYear);
         }
+        $scopeChoice = $this->scopeChoice($text);
+        if (in_array($context['pending_scope'] ?? null, ['assistance', 'harvests'], true) && ! empty($context['farmer_id'])) {
+            if ($scopeChoice === 'farmer') {
+                return ['task' => 'farmer-'.$context['pending_scope'], 'year' => $year, 'farmer_id' => (int) $context['farmer_id']];
+            }
+            if ($scopeChoice === 'office') {
+                return ['task' => $context['pending_scope'], 'year' => $year, 'farmer_id' => null];
+            }
+            if ($this->periodFollowUp($text)) {
+                return $this->scopeClarification($context['pending_scope'], $year, (int) $context['farmer_id']);
+            }
+        }
+        if ($scopeChoice !== null) {
+            return $this->clarify('Which report should I show? Ask for assistance or harvests, and say whether you mean a selected farmer or your office area.', $year);
+        }
         if (preg_match('/\b(?:AGRI-F|PAIS-FRM)-\d{1,16}\b/i', $text, $id)) {
             return ['task' => 'farmer-search', 'search' => $id[0], 'year' => $year];
         }
@@ -92,6 +138,11 @@ final class AssistantIntentResolver
         $personal = $this->personalReference($text);
         $collective = $this->collectiveReference($text);
         if ($personal && $collective) {
+            $tasks = $this->recordTasks($text);
+            if (count($tasks) === 1 && in_array($tasks[0], ['assistance', 'harvests'], true) && ! empty($context['farmer_id'])) {
+                return $this->scopeClarification($tasks[0], $year, (int) $context['farmer_id']);
+            }
+
             return $this->clarify('Do you mean the selected farmer or your whole office area?', $year);
         }
         $tasks = $this->recordTasks($text);
@@ -121,7 +172,7 @@ final class AssistantIntentResolver
         }
         if ($tasks) {
             if (! $collective && ! empty($context['farmer_id']) && in_array($tasks[0], ['assistance', 'harvests'], true)) {
-                return $this->clarify('Do you mean the selected farmer’s records or the report for your whole office area? Say “his assistance” or “our assistance”, for example.', $year);
+                return $this->scopeClarification($tasks[0], $year, (int) $context['farmer_id']);
             }
 
             return ['task' => $tasks[0], 'year' => $year, 'farmer_id' => null];
@@ -140,12 +191,58 @@ final class AssistantIntentResolver
         return $this->clarify('I help with AgriLGU features and permitted office records. Ask “Who are you?”, “How do I use this page?”, “Summarize my farmers” or name a feature you want explained. I cannot inspect server files or answer unrelated general questions.', $year);
     }
 
+    private function reportClarification(string $text, int $year): ?array
+    {
+        $clarification = $this->literalFarmerSearch($text) ? null : $this->reports->clarification($text);
+
+        return $clarification ? $this->clarify($clarification, $year) + ['reset_context' => true] : null;
+    }
+
+    private function literalFarmerSearch(string $text): bool
+    {
+        if (! preg_match('/^(find|search|show|hanapin)\s+(?:ang\s+)?(?:farmer|magsasaka)\s+(.+)$/iu', $text, $match)) {
+            return false;
+        }
+
+        return ! preg_match('/^(?:summary|summaries|report|records|totals)\b/iu', trim($match[2]))
+            && (strcasecmp($match[1], 'show') !== 0 || ! preg_match('/^(?:address(?:es)?|contacts?|birthdays?|birthdates?|birth\s+dates?|dates?\s+of\s+birth|dob|phones?|mobile|telephone|emails?|notes?|passwords?|credentials?|coordinates?|latitude|longitude|eligibility|private\s+keys?|api\s+keys?)\b/iu', trim($match[2])));
+    }
+
+    /** @return array{text:string,language:string,replay:bool,explicit:bool} */
+    private function helpLanguage(string $text, array $context): array
+    {
+        $preferred = in_array($context['help_language'] ?? null, ['en', 'fil'], true) ? $context['help_language'] : 'en';
+        $language = preg_match('/\b(paano|saan|gabayan|turuan|ipaliwanag|hakbang|magsasaka|binhi|ayuda|buod|hanapin|hayop|taon|natin|niya|sino|ano|anong|ikaw|gamit|kumusta|kamusta|salamat|magandang|paki|gawing|paikliin|halimbawa|dagdag|tulong|alam|naiintindihan|nasaan|sarili)\b/iu', $text) ? 'fil' : $preferred;
+        $languageName = '(English|Filipino|Tagalog)';
+        $replay = (bool) preg_match('/^(?:please\s+)?(?:(?:answer|reply|respond|explain|say\s+it|translate\s+it)(?:\s+(?:it|that))?\s+)?(?:in\s+|into\s+)?'.$languageName.'(?:\s+please)?[.!?\s]*$/iu', $text, $match)
+            || (bool) preg_match('/^(?:paki\s+)?(?:sa\s+)?'.$languageName.'(?:\s+(?:po|naman))?[.!?\s]*$/iu', $text, $match);
+        if ($replay) {
+            return ['text' => $text, 'language' => strcasecmp($match[1], 'English') === 0 ? 'en' : 'fil', 'replay' => true, 'explicit' => true];
+        }
+        // Search text is a literal name lookup. Language-like words in a name
+        // must never be removed and replaced with a broader registry report.
+        if (preg_match('/^(?:find|search|show|hanapin)\s+(?:ang\s+)?(?:farmer|magsasaka)\s+/iu', $text)) {
+            return ['text' => $text, 'language' => $language, 'replay' => false, 'explicit' => false];
+        }
+        if (preg_match('/\s+(?:in|sa)\s+'.$languageName.'(?:\s+(?:please|po))?[.!?\s]*$/iu', $text, $match, PREG_OFFSET_CAPTURE)) {
+            $language = strcasecmp($match[1][0], 'English') === 0 ? 'en' : 'fil';
+            $text = trim(substr($text, 0, $match[0][1]));
+
+            return ['text' => $text, 'language' => $language, 'replay' => false, 'explicit' => true];
+        }
+
+        return ['text' => $text, 'language' => $language, 'replay' => false, 'explicit' => false];
+    }
+
     private function identityKind(string $text): ?string
     {
         $text = trim(preg_replace('/\s+/u', ' ', $text), " \t\n\r\0\x0B.!?");
         $text = preg_replace('/^(?:please|paki)\s+|\s+(?:please|po)$/iu', '', $text);
 
         return match (true) {
+            (bool) preg_match('/^(?:are\s+you\s+(?:self[\s-]aware|conscious|aware(?:\s+of\s+(?:yourself|(?:this|the)\s+system|agrilgu))?)|do\s+you\s+(?:think|understand\s+(?:this|the)\s+system|know\s+(?:yourself|(?:this|the)\s+system|agrilgu))|what\s+do\s+you\s+know\s+about\s+(?:yourself|(?:this|the)\s+system|agrilgu)|alam\s+mo\s+ba\s+ang\s+(?:agrilgu|sistema|sarili\s+mo)|naiintindihan\s+mo\s+ba\s+ang\s+sistema)$/iu', $text) => 'awareness',
+            (bool) preg_match('/^(?:who\s+am\s+i|what\s+is\s+my\s+(?:role|(?:office\s+)?scope|assigned\s+area)|what(?:’s|\x27s)\s+my\s+(?:role|scope)|which\s+(?:office|area)\s+(?:am\s+i\s+assigned\s+to|can\s+i\s+access)|ano\s+(?:ang\s+)?(?:role|saklaw)\s+ko|sino\s+ako)$/iu', $text) => 'account',
+            (bool) preg_match('/^(?:what\s+(?:page|screen|module)\s+(?:am\s+i\s+on|is\s+this)|where\s+am\s+i(?:\s+in)?|what\s+am\s+i\s+looking\s+at|anong\s+(?:pahina|screen|module)\s+ito|nasaan\s+ako)$/iu', $text) => 'context',
             (bool) preg_match('/^(?:who\s+(?:are\s+you|am\s+I\s+talking\s+to|is\s+(?:this|the)\s+(?:ai|assistant))|what\s+(?:are\s+you|is\s+your\s+name)|what(?:’s|\x27s)\s+your\s+name|introduce\s+yourself|sino\s+(?:ka|ikaw|ang\s+(?:ai|assistant))|ano(?:ng)?\s+(?:ang\s+)?pangalan\s+mo)$/iu', $text) => 'identity',
             (bool) preg_match('/^(?:(?:what|which)\s+(?:ai|model|technology|framework)(?:\s+model)?\s+(?:are\s+you(?:\s+(?:using|built\s+on))?|do\s+you\s+use|is\s+(?:used|this)|does\s+(?:this|the\s+assistant)\s+use)|are\s+you\s+(?:chatgpt|an?\s+ai)|anong\s+(?:ai|model|technology|framework)\s+(?:ang\s+)?(?:gamit\s+mo|ginagamit\s+mo|ginamit)|ano\s+ang\s+(?:ai|model)\s+(?:na\s+)?gamit\s+mo)$/iu', $text) => 'technology',
             (bool) preg_match('/^(?:hello|hi|hey|how\s+are\s+you|good\s+(?:morning|afternoon|evening)|kumusta(?:\s+ka)?|kamusta(?:\s+ka)?|magandang\s+(?:araw|umaga|hapon|gabi))$/iu', $text) => 'greeting',
@@ -202,7 +299,7 @@ final class AssistantIntentResolver
             (bool) preg_match('/\b(kml|kmz)\b/iu', $text) => 'parcel-drawing',
             (bool) preg_match('/\b(import(?:ing)?|upload(?:ing)?|workbook|spreadsheet|excel)\b/iu', $text) && (bool) preg_match('/\b(seed|seeds|binhi|nrp|release|releases|assistance)\b/iu', $text) => 'seed-import',
             (bool) preg_match('/\b(fisheries|fish|fingerlings|tilapia|hito|catfish|bangus|feed|gear|fertilizer|fertiliser|abono|soil\s+amendment|seed|seeds|binhi|nrp|assistance|release|releases|distribution\s+sheets?)\b/iu', $text) => 'assistance-management',
-            (bool) preg_match('/\b(farmer|farmers|portal|magsasaka)\b/iu', $text) && (bool) preg_match('/\b(login|log\s*in|sign\s*in|password)\b/iu', $text) => 'farmer-login',
+            (bool) preg_match('/\bfarmer\s+portal\b/iu', $text) || ((bool) preg_match('/\b(farmer|farmers|portal|magsasaka)\b/iu', $text) && (bool) preg_match('/\b(login|log\s*in|sign\s*in|password)\b/iu', $text)) => 'farmer-login',
             (bool) preg_match('/\b(card|cards|qr|signature|id)\b/iu', $text) => 'farmer-id',
             (bool) preg_match('/\b(access|permission|permissions|role|roles|account|accounts|login|sign\s*in)\b/iu', $text) => 'access',
             (bool) preg_match('/\b(farmer|farmers|magsasaka)\b/iu', $text) && (bool) preg_match('/\b(registry|profile|profiles|register|registration|import|upload|workbook|spreadsheet|excel)\b/iu', $text) => 'farmer-registry',
@@ -263,12 +360,34 @@ final class AssistantIntentResolver
         }
 
         return $this->clarify($prefix.'Choose one reporting year between 1900 and 2100. Which year should I use?', $year)
-            + ['references' => $references];
+            + ['references' => $references, 'clarification_kind' => 'year'];
+    }
+
+    private function scopeClarification(string $task, int $year, int $farmerId): array
+    {
+        return $this->clarify("For {$year}, should I show {$task} for the selected farmer or your whole office area?", $year)
+            + ['clarification_kind' => 'scope', 'references' => ['task' => 'farmer', 'year' => $year, 'farmer_id' => $farmerId, 'pending_scope' => $task]];
+    }
+
+    private function scopeChoice(string $text): ?string
+    {
+        $text = preg_replace('/\s+(?:(?:for|sa)\s+)?\d{4}(?:\s*(?:and|or|at|,)\s*\d{4})*[.!?\s]*$/u', '', trim($text));
+
+        return match (true) {
+            (bool) preg_match('/^(?:the\s+)?(?:selected\s+farmer|this\s+farmer|that\s+farmer|napiling\s+magsasaka)[.!?\s]*$/iu', $text) => 'farmer',
+            (bool) preg_match('/^(?:the\s+)?(?:whole\s+office|our\s+office|buong\s+opisina)[.!?\s]*$/iu', $text) => 'office',
+            default => null,
+        };
     }
 
     /** Only minimal application-owned references survive a year clarification. */
     private function pendingReport(string $text, array $context, int $year): ?array
     {
+        if (in_array($context['pending_scope'] ?? null, ['assistance', 'harvests'], true) && ! empty($context['farmer_id'])
+            && ($scopeChoice = $this->scopeChoice($text)) !== null) {
+            return ['task' => ($scopeChoice === 'farmer' ? 'farmer-' : '').$context['pending_scope'], 'year' => $year,
+                'farmer_id' => $scopeChoice === 'farmer' ? (int) $context['farmer_id'] : null];
+        }
         $tasks = $this->recordTasks($text);
         $personal = $this->personalReference($text);
         $collective = $this->collectiveReference($text);
@@ -288,6 +407,9 @@ final class AssistantIntentResolver
             return $task ? ['task' => $task, 'year' => $year, 'farmer_id' => (int) $context['farmer_id']] : null;
         }
         if ($tasks) {
+            if (! $collective && ! empty($context['farmer_id']) && in_array($tasks[0], ['assistance', 'harvests'], true)) {
+                return ['task' => 'farmer', 'year' => $year, 'farmer_id' => (int) $context['farmer_id'], 'pending_scope' => $tasks[0]];
+            }
             if (! in_array($tasks[0], ['assistance', 'harvests', 'animal-health'], true)
                 || (! $collective && ! empty($context['farmer_id']) && in_array($tasks[0], ['assistance', 'harvests'], true))) {
                 return null;
@@ -299,6 +421,9 @@ final class AssistantIntentResolver
             return ['task' => 'summary', 'year' => $year, 'farmer_id' => null];
         }
         $task = $context['task'] ?? null;
+        if ($this->periodFollowUp($text) && in_array($context['pending_scope'] ?? null, ['assistance', 'harvests'], true) && ! empty($context['farmer_id'])) {
+            return ['task' => 'farmer', 'year' => $year, 'farmer_id' => (int) $context['farmer_id'], 'pending_scope' => $context['pending_scope']];
+        }
         if ($this->periodFollowUp($text) && in_array($task, ['assistance', 'harvests', 'animal-health', 'summary', 'farmer', 'farmer-parcels', 'farmer-assistance', 'farmer-harvests'], true)) {
             return ['task' => $task, 'year' => $year, 'farmer_id' => $context['farmer_id'] ?? null];
         }

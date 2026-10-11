@@ -189,6 +189,55 @@ class AssistantRecordsTest extends TestCase
             ->assertDontSee('7000')->assertDontSee('8000')->assertDontSee('9000');
     }
 
+    public function test_data_quality_review_is_local_scoped_and_links_existing_queues(): void
+    {
+        Farmer::withoutEvents(fn () => Farmer::create([
+            'municipality_id' => $this->other->id,
+            'first_name' => 'Foreign',
+            'last_name' => 'Incomplete',
+        ]));
+
+        $response = $this->actingAs($this->staff)->postJson(route('assistant.message'), $this->payload('What needs attention in our registry?'))
+            ->assertOk()
+            ->assertJsonPath('source', 'records')
+            ->assertJsonPath('report', 'data-quality')
+            ->assertSee('Registered farmer profiles: 1')
+            ->assertSee('Missing FFRS reference: 1')
+            ->assertSee('Missing farm location: 1')
+            ->assertSee('Farmers without saved parcels: 0')
+            ->assertSee('Saved plots without boundary geometry: 1')
+            ->assertSee('These are review queues, not fraud findings.')
+            ->assertJsonPath('links.0.label', 'Review missing FFRS')
+            ->assertJsonPath('links.1.label', 'Review missing locations');
+
+        $this->assertCount(3, $response->json('links'));
+        OfficeHelpAgent::assertNeverPrompted();
+        Http::assertNothingSent();
+    }
+
+    public function test_data_quality_review_does_not_accept_historical_years(): void
+    {
+        $this->actingAs($this->staff)->postJson(route('assistant.message'), $this->payload('Show data quality for 2025'))
+            ->assertOk()
+            ->assertJsonPath('source', 'clarification')
+            ->assertSee('current registry records')
+            ->assertSee('not a historical reporting year');
+
+        OfficeHelpAgent::assertNeverPrompted();
+        Http::assertNothingSent();
+    }
+
+    public function test_ambiguous_attention_question_does_not_trigger_a_registry_report(): void
+    {
+        $this->actingAs($this->staff)->postJson(route('assistant.message'), $this->payload('What needs attention?'))
+            ->assertOk()
+            ->assertJsonPath('source', 'clarification')
+            ->assertDontSee('Registered farmer profiles:');
+
+        OfficeHelpAgent::assertNeverPrompted();
+        Http::assertNothingSent();
+    }
+
     public function test_report_year_from_question_is_explicit_and_multiple_years_need_clarification(): void
     {
         $this->harvest(['quantity' => 150, 'harvest_year' => 2025]);

@@ -1,5 +1,15 @@
 # Planted crop areas inside a parcel
 
+## October 12 modal correction — local
+
+The in-page dialog mounts the editor inside its own container while the season
+save status is owned by the surrounding form. The editor now searches its
+container first and safely falls back to that form-level control, so opening a
+crop workspace no longer fails with a null `textContent` error. The standalone
+seasonal-crop page remains unchanged. Deploy the updated
+`public/js/planted-area-editor.js` and its regression test together; no schema,
+account or record change is required.
+
 ## Staff workflow
 
 In Farmers, open a saved plot's **Crop areas / season** action. The editor opens

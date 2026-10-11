@@ -10,6 +10,7 @@ use App\Models\MunicipalityBoundary;
 use App\Models\RiceSeedDistribution;
 use App\Models\User;
 use App\Support\ConcurrentWrite;
+use App\Support\FarmerCardEmblem;
 use App\Support\FarmerCardLocations;
 use App\Support\FarmerCardSignatory;
 use App\Support\FarmerDataQuality;
@@ -378,7 +379,7 @@ class FarmerController extends Controller
     /**
      * Display one farmer's printable local registry card.
      */
-    public function idCard(Request $request, Farmer $farmer, FarmerCardLocations $cardLocations, FarmerCardSignatory $cardSignatories)
+    public function idCard(Request $request, Farmer $farmer, FarmerCardLocations $cardLocations, FarmerCardSignatory $cardSignatories, FarmerCardEmblem $cardEmblems)
     {
         $this->authorize('view', $farmer);
         $user = $this->authenticatedUser($request);
@@ -394,19 +395,21 @@ class FarmerController extends Controller
             ['token' => $farmer->public_map_token]
         );
         $qrCode = QrCode::create($scanUrl)
-            ->setErrorCorrectionLevel(new ErrorCorrectionLevelMedium())
+            ->setErrorCorrectionLevel(new ErrorCorrectionLevelMedium)
             ->setSize(280)
             ->setMargin(12);
-        $qrDataUri = (new SvgWriter())->write($qrCode)->getDataUri();
+        $qrDataUri = (new SvgWriter)->write($qrCode)->getDataUri();
 
         $cardFarmLocation = $cardLocations->forFarmer($farmer);
         $cardSignatory = $cardSignatories->forFarmer($farmer);
+        $cardEmblem = $cardEmblems->forFarmer($farmer);
 
         return view('farmers.id-card', compact(
             'farmer',
             'scanUrl',
             'cardFarmLocation',
             'cardSignatory',
+            'cardEmblem',
             'qrDataUri'
         ));
     }
@@ -507,7 +510,7 @@ class FarmerController extends Controller
         $user = $this->authenticatedUser($request);
 
         return view('farmers.create', [
-            'record' => new Farmer(),
+            'record' => new Farmer,
             'municipalities' => $this->municipalityOptionsFor($user),
             'canChooseMunicipality' => $user->isProvincialUser(),
         ]);

@@ -3,7 +3,10 @@
 
   function mount(scope) {
   const root = scope && typeof scope.querySelector === 'function' ? scope : document;
-  const byId = id => root === document ? document.getElementById(id) : root.querySelector('#' + id);
+  // The modal mounts the editor inside #plantedAreaEditor, while its save
+  // status lives in the surrounding form. Prefer the editor scope, then fall
+  // back to the document for those form-level controls.
+  const byId = id => root === document ? document.getElementById(id) : (root.querySelector('#' + id) || document.getElementById(id));
   const configElement = byId('plantedAreaConfig') || document.getElementById('plantedAreaConfig');
   if (!configElement) return null;
   const config = JSON.parse(configElement.textContent);

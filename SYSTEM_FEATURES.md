@@ -1,5 +1,49 @@
 # AgriLGU — Complete Feature Catalog
 
+Local follow-up, October 12, 2026 (not deployed): the Office Assistant is
+context-aware within AgriLGU. It can answer who it is, whether it understands
+the system, what allowlisted workspace page is open, and which authenticated
+role and office scope are active. These answers use application-owned labels
+and account state only; they do not read farmer records or call OpenAI. A page
+hint never exposes unsaved fields, grants access or overrides role policy.
+Veterinary users remain limited to Animal Health operations. See
+[Office Assistant](docs/OFFICE_ASSISTANT.md).
+
+Local follow-up, October 12, 2026 (not deployed): the Office Assistant now
+shows a ChatGPT-style pending bubble while a request is being prepared. It
+announces “Thinking…” to assistive technology, animates a small progress cue
+when motion is allowed, and returns to the verified answer or safe retry state
+without revealing internal model reasoning. The conversation, permissions,
+privacy boundary and browser-only chat retention are unchanged. See
+[Office Assistant](docs/OFFICE_ASSISTANT.md).
+
+Local follow-up, October 12, 2026 (not deployed): the Office Assistant can
+review current registry completeness inside the signed-in user’s permitted
+scope. Ask “What needs attention in our registry?” for counts of missing FFRS
+references, missing farm locations, farmers without saved parcels and plots
+without boundary geometry, with links to the existing farmer review filters.
+It is a read-only local query, does not send farmer records to AI and does not
+pretend to provide historical-year quality totals. See
+[Office Assistant](docs/OFFICE_ASSISTANT.md).
+
+Local workflow follow-up, October 11 (not deployed): replies offer follow-up
+buttons for steps, language, related records and years. Click to fill an editable
+message, review it and press Send; unfinished drafts are preserved. After finding
+a farmer, an assistance/harvest request can ask “Selected farmer” or “Whole
+office” while keeping the requested year. A year-only reply still asks which scope
+to use. Permissions apply again when the report runs; veterinary suggestions stay
+within Animal Health. See [Office Assistant](docs/OFFICE_ASSISTANT.md).
+
+Local follow-up, October 11, 2026 (not deployed): system-help follow-ups keep the
+chosen English/Filipino language. After a guide, ask “In Filipino” or “In English”
+to explain the same topic in that language. Private records are not translated by
+AI. Simple questions about farmer IDs, parcels and seasonal crops open help
+instead of registry totals. Recognized unsupported report filters—such as corn,
+dry season, a month, female farmers or dog vaccinations—clarify and direct staff
+to the relevant register instead of showing broader totals. The chat displays a
+retry countdown after rate limits and improves keyboard focus while preserving
+drafts. See [Office Assistant](docs/OFFICE_ASSISTANT.md).
+
 Deployed follow-up, October 11, 2026 (`82a24c4`): the Assistant can introduce
 itself, answer greetings or thanks, explain its technology and describe what it
 can do in English or Filipino without calling AI or reading office records.
@@ -287,6 +331,7 @@ Implementation status and remaining staff/staging checks are documented in [DESI
 - **Crops by season:** select a year and dry/wet season to color parcels by recorded rice/palay, corn, vegetables, root crops, fruit, legumes, mixed crops, or other crops. A crop filter and labeled legend show the classifications and counts for loaded parcels.
 - Staff record and correct a parcel's seasonal crop from the **Seasonal crops** action beside that parcel. Optional notes can identify crops grown together or the source of the observation; saved seasons remain available for review.
 - Planted-area drawing: the **Crop areas / season** action lets staff draw separate crop sections inside a parcel, with optional names/varieties. Sections may touch but cannot overlap or extend outside the parcel. The Farmers map opens the editor in an in-page dialog so staff keep the parcel map visible while drawing and saving; the standalone seasonal-crop route remains available as a fallback. Draft corners show numbered dots and connecting lines. Illustrated crop icons appear inside saved sections and automatically on the selected farmer's main map, with a brief reduced-motion-aware selection bounce in the editor. Back to parcel map preserves farmer/year/season. Unmarked land remains unclassified and mapped hectares are approximate. Core drawing deployed in `571a408`; the workspace/icons/guides deployed October 9, 2026 in `b2bc46b`; the modal follow-up is currently local until explicitly deployed.
+- Local modal correction, October 12, 2026: the nested editor safely resolves the surrounding form's save status, preventing a null `textContent` error when the crop workspace opens. No schema or record change is involved; deploy the versioned editor script with the existing modal assets.
 - Super Admin and System Owner accounts may inspect seasonal crops but cannot change them. Municipality ownership, audit logging, and stale-edit protection apply to crop records.
 - Missing crop records appear in gray as **Not recorded**. This does not mean fallow. Seasonal classifications do not establish current planting, planted hectares, or production; assistance and harvest records are not automatically assigned to parcels.
 - Switching back to **Saved parcel colors** restores the original display. Crop styling does not alter parcel boundaries, saved colors, or exports. Loading/error states are distinct from missing crop records.

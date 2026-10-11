@@ -1,5 +1,58 @@
 # Design and UX implementation record
 
+## Assistant context awareness — local October 12, 2026
+
+The unified conversation can now answer “Who are you?”, “Do you know
+AgriLGU?”, “What page am I on?”, “What is my role?” and similar bounded
+questions from application-owned identity, an allowlisted module label and the
+authenticated account assignment. It clearly distinguishes a page hint from
+active filters and unsaved fields, preserves role-aware wording and keeps
+veterinary operations restricted to Animal Health. These local replies are
+read-only and provider-free; the follow-up is not deployed.
+
+## Assistant pending state — local October 12, 2026
+
+The single office conversation now presents a compact assistant bubble with a
+“Thinking…” status and animated dots while the request is in flight. The state
+is keyboard and screen-reader friendly, retains `aria-busy`, clears on verified
+reply/error/cancellation, and respects `prefers-reduced-motion`. It is a visual
+progress cue only; it does not expose model reasoning or alter Assistant
+privacy and authorization behavior. Local JavaScript coverage passed 40 tests;
+the follow-up is not deployed.
+
+## Assistant guided follow-ups — local October 11, 2026
+
+Up to three 44px follow-up chips appear below the latest reply in the same chat.
+They fill the editable composer for explicit Send, announce that the draft is
+ready and never overwrite unfinished text. They capture their reply's opaque
+reference; editing releases it. Old chips retire on a new reply while farmer
+choices remain available. Busy/session/cooldown protections remain. Scope/year
+clarifications now offer concrete choices. No modes, sections, automatic network
+submission or stored chat. Not deployed. See [Office Assistant](docs/OFFICE_ASSISTANT.md).
+
+Verification: 216 JavaScript tests passed, including 39 Assistant cases. A
+synthetic local office browser verified search/selection, report scope/year,
+draft preservation and explicit Send. Backend checks passed 552 tests / 3,578
+assertions; no production acceptance or load test ran for this local follow-up.
+
+## Assistant retry and focus follow-up — local October 11, 2026
+
+The same conversation shows a compact countdown after HTTP 429. Retry-After
+seconds or HTTP dates are bounded to 1–300 seconds; missing/invalid headers use
+60 seconds. Send/choices/Retry wait while the draft stays editable. New chat/Close
+do not bypass the current page's cooldown; reload has no persisted client timer
+and server throttling remains authoritative. Start/end announcements avoid
+every-second screen-reader chatter. Send/choice/Retry focus returns to the
+composer only when the initiating control lost it; deliberate movement wins.
+No new mode/section UI or browser storage. Not deployed. See
+[Office Assistant](docs/OFFICE_ASSISTANT.md).
+
+The JavaScript suite passed 206 tests, including 29 Assistant cases covering the
+countdown, retained drafts and focus behavior. A synthetic local office browser
+session verified report clarification and English/Filipino help follow-ups. The
+countdown and focus checks are automated; no production acceptance or load test
+ran for this local follow-up.
+
 ## Context-aware Assistant — deployed October 11, 2026
 
 The existing conversation now recognizes introductions, greetings, capabilities

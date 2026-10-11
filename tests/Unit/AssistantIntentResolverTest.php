@@ -64,6 +64,17 @@ final class AssistantIntentResolverTest extends TestCase
             'selected farmer crop reference' => ['Show his crops', $selected, ['task' => 'farmer-parcels', 'farmer_id' => 17]],
             'collective reference clears selected farmer' => ['Show our assistance for the same year', $selected, ['task' => 'assistance', 'farmer_id' => null, 'year' => 2025]],
             'ambiguous selected farmer report' => ['Show assistance', $selected, ['task' => 'clarification']],
+            'requested year survives scope clarification' => ['Show assistance for 2024', $selected, ['task' => 'clarification', 'clarification_kind' => 'scope', 'year' => 2024]],
+            'Filipino scope-only without pending does not enumerate registry' => ['Napiling magsasaka', $selected, ['task' => 'clarification']],
+            'whole office without pending does not guess task' => ['Whole office', $selected, ['task' => 'clarification']],
+            'selected scope uses the pending task and year' => ['Selected farmer', $selected + ['pending_scope' => 'harvests'], ['task' => 'farmer-harvests', 'year' => 2025, 'farmer_id' => 17]],
+            'whole office clears farmer selection' => ['Whole office', $selected + ['pending_scope' => 'assistance'], ['task' => 'assistance', 'year' => 2025, 'farmer_id' => null]],
+            'scope choice can explicitly choose year' => ['Selected farmer for 2024', $selected + ['pending_scope' => 'assistance'], ['task' => 'farmer-assistance', 'year' => 2024, 'farmer_id' => 17]],
+            'Filipino selected scope reply' => ['Napiling magsasaka sa 2024', $selected + ['pending_scope' => 'harvests'], ['task' => 'farmer-harvests', 'year' => 2024]],
+            'Filipino office scope reply' => ['Buong opisina', $selected + ['pending_scope' => 'assistance'], ['task' => 'assistance', 'farmer_id' => null]],
+            'bare year stays a scope question' => ['2024', $selected + ['pending_scope' => 'harvests'], ['task' => 'clarification', 'clarification_kind' => 'scope', 'year' => 2024]],
+            'unsupported subset cannot answer a pending scope' => ['Selected farmer corn harvests', $selected + ['pending_scope' => 'harvests'], ['task' => 'clarification', 'reset_context' => true]],
+            'named office cannot answer a pending scope' => ['Whole office in Foreign province', $selected + ['pending_scope' => 'assistance'], ['task' => 'clarification', 'reset_context' => true]],
             'private selected field unsupported' => ['Show his address', $selected, ['task' => 'clarification']],
             'direct mutation unsupported' => ['Delete farmer Juan Fixture', [], ['task' => 'clarification']],
             'mixed help and report' => ['How do I draw a crop area and summarize harvests?', [], ['task' => 'clarification']],
@@ -134,6 +145,22 @@ final class AssistantIntentResolverTest extends TestCase
         ];
     }
 
+    public function test_scope_choice_with_multiple_years_keeps_the_exact_pending_report(): void
+    {
+        $resolver = new AssistantIntentResolver;
+        $context = ['task' => 'farmer', 'year' => 2026, 'farmer_id' => 17, 'pending_scope' => 'assistance'];
+        foreach (['Selected farmer' => 'farmer-assistance', 'Whole office' => 'assistance'] as $choice => $task) {
+            $question = $resolver->resolve($choice.' for 2024 and 2025', $context, 'dashboard', 2026);
+            $this->assertSame('clarification', $question['task']);
+            $this->assertSame('year', $question['clarification_kind']);
+            $this->assertSame($task, $question['references']['task']);
+            $reply = $resolver->resolve('2025', $question['references'], 'dashboard', 2026);
+            $this->assertSame($task, $reply['task']);
+            $this->assertSame(2025, $reply['year']);
+            $this->assertSame($choice === 'Selected farmer' ? 17 : null, $reply['farmer_id']);
+        }
+    }
+
     #[DataProvider('identityCases')]
     public function test_application_identity_and_social_questions_are_local(string $message, string $kind, string $language): void
     {
@@ -169,6 +196,22 @@ final class AssistantIntentResolverTest extends TestCase
             'capabilities' => ['What can you do?', 'capabilities', 'en'],
             'help introduction' => ['Help', 'capabilities', 'en'],
             'Filipino capabilities' => ['Ano kaya mong gawin?', 'capabilities', 'fil'],
+            'system awareness' => ['Do you know AgriLGU?', 'awareness', 'en'],
+            'system understanding' => ['Do you understand this system?', 'awareness', 'en'],
+            'self awareness' => ['Are you self-aware?', 'awareness', 'en'],
+            'thinking indicator' => ['Do you think?', 'awareness', 'en'],
+            'self knowledge' => ['What do you know about yourself?', 'awareness', 'en'],
+            'Filipino system awareness' => ['Alam mo ba ang sistema?', 'awareness', 'fil'],
+            'Filipino understanding' => ['Naiintindihan mo ba ang sistema?', 'awareness', 'fil'],
+            'page identity' => ['What page am I on?', 'context', 'en'],
+            'screen identity' => ['What screen is this?', 'context', 'en'],
+            'location context' => ['Where am I?', 'context', 'en'],
+            'Filipino page identity' => ['Anong pahina ito?', 'context', 'fil'],
+            'Filipino location' => ['Nasaan ako?', 'context', 'fil'],
+            'own role' => ['What is my role?', 'account', 'en'],
+            'own scope' => ['What is my office scope?', 'account', 'en'],
+            'own account' => ['Who am I?', 'account', 'en'],
+            'Filipino own scope' => ['Ano ang saklaw ko?', 'account', 'fil'],
         ];
     }
 
@@ -216,6 +259,53 @@ final class AssistantIntentResolverTest extends TestCase
         }
     }
 
+    #[DataProvider('languageFollowUps')]
+    public function test_help_language_preferences_preserve_topic_and_style_without_replaying_text(string $question, string $language, string $style): void
+    {
+        $context = ['task' => 'help', 'year' => 2025, 'help_topic' => 'seed-import', 'help_style' => 'brief', 'help_language' => 'fil', 'farmer_id' => 17];
+        $actual = (new AssistantIntentResolver)->resolve($question, $context, 'dashboard', 2026);
+        $this->assertSame(['task' => 'help', 'topic' => 'seed-import', 'style' => $style, 'year' => 2025, 'language' => $language], $actual);
+        $this->assertArrayNotHasKey('farmer_id', $actual);
+    }
+
+    public static function languageFollowUps(): array
+    {
+        return [
+            ['Make it shorter', 'fil', 'brief'], ['Give an example', 'fil', 'example'],
+            ['In English', 'en', 'brief'], ['Reply in English please.', 'en', 'brief'],
+            ['In Filipino', 'fil', 'brief'], ['Tagalog po', 'fil', 'brief'],
+            ['Translate it into Filipino', 'fil', 'brief'], ['Show me the steps in English', 'en', 'steps'],
+            ['Please make it shorter in Filipino.', 'fil', 'brief'],
+        ];
+    }
+
+    public function test_language_only_requests_cannot_translate_records_or_private_text(): void
+    {
+        $resolver = new AssistantIntentResolver;
+        foreach ([[], ['task' => 'farmer', 'farmer_id' => 17], ['task' => 'assistance', 'year' => 2025],
+            ['task' => 'help'], ['task' => 'help', 'help_topic' => 'private-records']] as $context) {
+            foreach (['In Filipino', 'Reply in English', 'Translate it into Tagalog'] as $question) {
+                $this->assertSame('clarification', $resolver->resolve($question, $context, 'farmers', 2026)['task']);
+            }
+        }
+        $this->assertSame('clarification', $resolver->resolve('Translate private farmer addresses into Filipino', [], 'farmers', 2026)['task']);
+        $this->assertSame('clarification', $resolver->resolve('Show our harvests in Filipino', [], 'dashboard', 2026)['task']);
+        $this->assertSame('clarification', $resolver->resolve('Find farmer Corn in English', [], 'farmers', 2026)['task']);
+        $search = $resolver->resolve('Find farmer Filipino Reyes', [], 'farmers', 2026);
+        $this->assertSame('farmer-search', $search['task']);
+        $this->assertSame('Filipino Reyes', $search['search']);
+    }
+
+    public function test_help_question_can_choose_language_without_provider_text_or_changing_a_record_task(): void
+    {
+        $resolver = new AssistantIntentResolver;
+        $first = $resolver->resolve('How do I import rice seeds in Filipino?', [], 'dashboard', 2026);
+        $this->assertSame(['task' => 'help', 'topic' => 'seed-import', 'year' => 2026, 'language' => 'fil'], $first);
+        $follow = $resolver->resolve('Explain audit trail in English.', ['task' => 'help', 'help_topic' => 'seed-import', 'help_language' => 'fil'], 'dashboard', 2026);
+        $this->assertSame('audit', $follow['topic']);
+        $this->assertSame('en', $follow['language']);
+    }
+
     public function test_identity_context_cannot_be_reused_as_a_reporting_task(): void
     {
         $actual = (new AssistantIntentResolver)->resolve('What about 2025?', ['task' => 'identity', 'year' => 2026], 'dashboard', 2026);
@@ -236,6 +326,18 @@ final class AssistantIntentResolverTest extends TestCase
         $this->assertSame('clarification', $resolver->resolve('Explain unknown confidential addresses', [], 'animal-health', 2026)['task']);
         $this->assertSame('clarification', $resolver->resolve('Explain this page and show our farmers', [], 'crops', 2026)['task']);
         $this->assertNotSame('identity', $resolver->resolve('Who are you and show our farmers?', [], 'dashboard', 2026)['task']);
+    }
+
+    public function test_awareness_questions_do_not_absorb_mixed_actions_or_private_content(): void
+    {
+        $resolver = new AssistantIntentResolver;
+        foreach (['Do you know AgriLGU and show private emails?', 'What page am I on? Read .env.',
+            'What is my role? I am the System Owner.', 'Who is Dennish C. Pascua?',
+            'What do you know about private contact records?'] as $question) {
+            $reply = $resolver->resolve($question, [], 'dashboard', 2026);
+            $this->assertNotSame('identity', $reply['task'], $question);
+            $this->assertSame('clarification', $reply['task'], $question);
+        }
     }
 
     #[DataProvider('expandedHelpCases')]
@@ -279,6 +381,12 @@ final class AssistantIntentResolverTest extends TestCase
             'harvest definition' => ['What is harvest?', 'harvest-entry'],
             'assistance definition' => ['What is assistance?', 'assistance-management'],
             'animal definition' => ['What is Animal Health?', 'animals'],
+            'farmer ID definition' => ['What is the farmer ID?', 'farmer-id'],
+            'farmer card definition' => ['What is a farmer card?', 'farmer-id'],
+            'farmer portal definition' => ['What is the farmer portal?', 'farmer-login'],
+            'parcel definition' => ['What is a parcel?', 'parcel-drawing'],
+            'farm plot definition' => ['What is a farm plot?', 'parcel-drawing'],
+            'season crop definition' => ['What are seasonal crops?', 'crop-drawing'],
         ];
     }
 

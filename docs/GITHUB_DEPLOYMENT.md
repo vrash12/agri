@@ -1,5 +1,28 @@
 # GitHub-to-Hostinger deployment
 
+## Pending Assistant workflow follow-up — October 11, 2026
+
+Local and uncommitted. Include `AssistantNextSteps`, conversation/context/resolver,
+reviewed help/guide, tests and both public Assistant assets with the reliability
+scope below. After release authorization, push to GitHub and fast-forward pull on
+Hostinger; mirror assets to both public directories with 0644 permissions. Verify
+editable follow-ups, scope/year choices, expired references and veterinary limits.
+No migration, dependency, environment/account operation or general cache clear.
+Preserve unrelated farmer-card work. Production remains at runtime `82a24c4`.
+
+## Pending Assistant reliability follow-up — October 11, 2026
+
+This change is local and uncommitted; production remains at the receipt below.
+After owner release authorization, push the reviewed scope to GitHub, then pull
+with `git pull --ff-only origin main` on Hostinger. Include `AssistantReportRequest`,
+the resolver/context/orchestration changes, reviewed Assistant-help passages and
+index, Assistant partial, CSS and JavaScript. Mirror assets to both public
+directories with 0644 permissions, refresh autoloading and compiled views, and
+verify help-language continuity, filtered-report clarification, 429 waits and
+permissions. No migration, dependency, environment or account operation is needed.
+Keep namespaces and budgets intact; never clear the general cache. Preserve
+unrelated pending farmer-card work. See [Office Assistant](OFFICE_ASSISTANT.md).
+
 ## Verified context-aware Assistant release — October 11, 2026
 
 Runtime `82a24c44cc873e7c71959229d699ad98b5aa2832` was pushed to GitHub main

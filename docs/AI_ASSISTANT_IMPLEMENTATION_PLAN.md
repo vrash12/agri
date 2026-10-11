@@ -1,5 +1,37 @@
 # AgriLGU Assistant — unified chat implementation plan
 
+The October 12, 2026 local awareness follow-up adds bounded application-owned
+identity, page-context and signed-in account replies. The Assistant can explain
+that it is a software helper, identify the allowlisted workspace module, and
+report the authenticated role/scope without reading operational records or
+calling OpenAI. Page context never proves active filters, unsaved fields or
+permission. It does not claim consciousness, filesystem access or autonomous
+repository awareness. No schema, dependency, environment, account or provider
+prompt change is required; this follow-up is not deployed. See
+[OFFICE_ASSISTANT.md](OFFICE_ASSISTANT.md).
+
+The October 12, 2026 local follow-up adds a bounded data-quality review task.
+It uses policy-authorized, municipality-scoped aggregate queries for current
+registry completeness and links to existing review filters; it never sends
+records or geometry to a provider and clarifies historical-year requests. The
+change requires no schema, dependency, configuration or account operation and
+is not deployed. See [Office Assistant](OFFICE_ASSISTANT.md) for the contract
+and verification result.
+
+The later local workflow enhancement retains bounded scope/year references,
+offers deterministic role-aware next messages and stages editable drafts for
+explicit Send. Preserve unfinished text, retire stale chips and reauthorize each
+selected farmer read. No provider classification, raw transcript, operational
+disclosure, schema/dependency/configuration/account update or autonomous write.
+Not deployed. See [Office Assistant](OFFICE_ASSISTANT.md).
+
+The subsequent October 11 reliability follow-up is local and not deployed:
+preserve help-language preferences, recognize simple feature definitions,
+clarify unsupported filtered reports before queries/context reuse, honor HTTP
+Retry-After and restore keyboard focus. Scope remains documented AgriLGU features
+and authorized local summaries. No schema, dependency, environment/account
+operation or wider provider disclosure. See [Office Assistant](OFFICE_ASSISTANT.md).
+
 Current follow-up: the October 11 context-aware, AgriLGU-only extension deployed
 on Hostinger in runtime `82a24c4` through GitHub main push and fast-forward pull.
 Local integrated verification and live smoke checks passed. It adds local

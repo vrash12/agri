@@ -2,6 +2,9 @@
 
 namespace Tests\Unit;
 
+use App\Models\Municipality;
+use App\Models\Province;
+use App\Models\Region;
 use App\Models\User;
 use App\Support\AssistantIdentity;
 use Illuminate\Support\Facades\Http;
@@ -41,7 +44,7 @@ final class AssistantIdentityTest extends TestCase
     public static function localReplies(): array
     {
         $cases = [];
-        foreach (['identity', 'greeting', 'thanks', 'capabilities', 'technology'] as $kind) {
+        foreach (['identity', 'greeting', 'thanks', 'capabilities', 'technology', 'context', 'awareness'] as $kind) {
             foreach (['en', 'fil'] as $language) {
                 foreach ([false, true] as $veterinary) {
                     $cases[$kind.' '.$language.($veterinary ? ' veterinary' : ' office')] = [$kind, $language, $veterinary];
@@ -58,6 +61,90 @@ final class AssistantIdentityTest extends TestCase
         $answer = (new AssistantIdentity)->answer(new User(['role' => User::ROLE_MUNICIPAL_STAFF]), 'technology');
         $this->assertStringContainsString('OpenAI', $answer);
         $this->assertStringNotContainsString('fixture-private-value-do-not-echo', $answer);
+    }
+
+    #[DataProvider('pageContexts')]
+    public function test_page_awareness_uses_only_a_bounded_display_label(string $module, string $label): void
+    {
+        Http::preventStrayRequests();
+        $user = new User(['role' => User::ROLE_MUNICIPAL_STAFF]);
+        $answer = (new AssistantIdentity)->answer($user, 'context', 'en', $module);
+        $this->assertStringContainsString($label, $answer);
+        $this->assertStringContainsString('cannot see active filters or unsaved fields', $answer);
+        $this->assertStringContainsString('role and office scope still control access', $answer);
+        $this->assertSame([], $user->getRelations());
+        Http::assertNothingSent();
+    }
+
+    public static function pageContexts(): array
+    {
+        return [
+            ['dashboard', 'Dashboard'], ['farmers', 'Farmers and farmer registry'],
+            ['crops', 'Crop and parcel mapping'], ['satellite', 'Satellite / NDVI'],
+            ['assistance', 'Assistance and seed releases'], ['coverage', 'Assistance coverage'],
+            ['harvests', 'Harvest records'], ['animal-health', 'Animal Health'],
+            ['cooperatives', 'Farmer cooperatives'], ['machinery', 'Machinery inventory'],
+            ['accounts', 'Office accounts'], ['geofences', 'Municipality geofences'],
+            ['backups', 'Backup Folder'], ['audit', 'Audit trail'],
+        ];
+    }
+
+    public function test_unknown_page_hints_are_not_echoed_or_claimed_as_visible(): void
+    {
+        $user = new User(['role' => User::ROLE_MUNICIPAL_STAFF]);
+        foreach (['other', 'private-path-fixture', '<script>fixture</script>'] as $module) {
+            $answer = (new AssistantIdentity)->answer($user, 'context', 'en', $module);
+            $this->assertStringContainsString('No specific page has been shared', $answer);
+            $this->assertStringNotContainsString($module, $answer);
+        }
+    }
+
+    #[DataProvider('accountRoles')]
+    public function test_account_awareness_uses_only_the_authenticated_role_and_assigned_scope(string $role, string $label, string $scope): void
+    {
+        Http::preventStrayRequests();
+        $user = new User(['role' => $role, 'name' => 'PrivateNameFixture', 'email' => 'private@example.test',
+            'password' => 'private-credential-fixture']);
+        $user->setRelation('municipality', new Municipality(['name' => 'Assigned municipality']));
+        $user->setRelation('province', new Province(['name' => 'Assigned province']));
+        $user->setRelation('region', new Region(['name' => 'Assigned region']));
+        foreach (['en', 'fil'] as $language) {
+            $answer = (new AssistantIdentity)->answer($user, 'account', $language);
+            $this->assertStringContainsString($label, $answer);
+            $this->assertStringContainsString($scope, $answer);
+            foreach (['PrivateNameFixture', 'private@example.test', 'private-credential-fixture'] as $private) {
+                $this->assertStringNotContainsString($private, $answer);
+            }
+            $this->assertLessThan(1600, mb_strlen($answer));
+        }
+        Http::assertNothingSent();
+    }
+
+    public static function accountRoles(): array
+    {
+        return [
+            [User::ROLE_SYSTEM_OWNER, 'System Owner', 'All supervised provinces'],
+            [User::ROLE_REGIONAL_HEAD, 'Regional Head', 'Assigned region'],
+            [User::ROLE_SUPER_ADMIN, 'Super Admin', 'Assigned province'],
+            [User::ROLE_PROVINCIAL_STAFF, 'Provincial Staff', 'Assigned province'],
+            [User::ROLE_PROVINCIAL_VET, 'Provincial Veterinary Office', 'Assigned province'],
+            [User::ROLE_MUNICIPAL_HEAD, 'Head Agriculturist', 'Assigned municipality'],
+            [User::ROLE_MUNICIPAL_STAFF, 'Municipal Staff', 'Assigned municipality'],
+        ];
+    }
+
+    public function test_self_awareness_describes_implemented_context_and_no_consciousness(): void
+    {
+        $user = new User(['role' => User::ROLE_MUNICIPAL_STAFF]);
+        foreach (['en', 'fil'] as $language) {
+            $answer = (new AssistantIdentity)->answer($user, 'awareness', $language, 'dashboard');
+            $this->assertStringContainsString('AgriLGU Assistant', $answer);
+            $this->assertStringContainsString('Dashboard', $answer);
+            $this->assertStringContainsString($language === 'fil' ? 'wala akong kamalayan' : 'not a conscious person', $answer);
+            $this->assertStringContainsString($language === 'fil' ? 'sinuring gabay' : 'reviewed system guidance', $answer);
+            $this->assertStringContainsString($language === 'fil' ? 'pinoproseso ang request' : 'request is being processed', $answer);
+            $this->assertStringContainsString($language === 'fil' ? 'Hindi ko iniimbak ang buong chat' : 'do not store the full conversation', $answer);
+        }
     }
 
     #[DataProvider('scopeReplies')]

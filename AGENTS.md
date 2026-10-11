@@ -1,5 +1,71 @@
 # Agriculture Information System — Developer Guide
 
+The October 12, 2026 Assistant awareness follow-up is local and not deployed.
+Identity replies can explain that the Assistant is a software helper, answer
+bounded self/system-awareness questions, identify the allowlisted page module
+shared by the browser, and report the authenticated role and office scope.
+These local replies do not query operational tables or call OpenAI. Page hints
+are relevance context only: they never expose filters or unsaved fields, grant
+authority or replace policy checks. Veterinary accounts retain Animal Health
+boundaries. Do not claim consciousness, autonomous browsing or repository
+reading. Release the identity, resolver, conversation changes, tests and
+documentation together after owner authorization. See
+[docs/OFFICE_ASSISTANT.md](docs/OFFICE_ASSISTANT.md).
+
+The October 12, 2026 Assistant response-state follow-up is local and not
+deployed. While an office request is in flight, the unified conversation keeps
+the pending assistant bubble visible with an accessible “Thinking…” status and
+subtle animated dots; the verified reply, safe error or cancellation replaces
+that state. The indicator communicates progress only and never exposes model
+reasoning, provider output or private records. Reduced-motion preferences turn
+off the animation. No route, schema, dependency, configuration or account
+change is required; release the JavaScript, stylesheet, shared partial and
+tests together after owner authorization. See [docs/OFFICE_ASSISTANT.md](docs/OFFICE_ASSISTANT.md).
+
+The October 12, 2026 data-quality review follow-up is local and not deployed.
+The signed-in Assistant can answer “What needs attention in our registry?” with
+current, municipality-scoped counts for missing FFRS references, missing farm
+locations, farmers without saved parcels and saved plots without boundary
+geometry. It returns links to the existing review filters and explains that
+these are review queues, not fraud findings. The workflow is read-only, uses
+server-side policies and `MunicipalityAccess`, sends no records to OpenAI and
+does not accept a historical reporting year. No migration, dependency,
+configuration or account change is required; release the support class,
+resolver, records service, next-step prompts and tests together after owner
+authorization. See [docs/OFFICE_ASSISTANT.md](docs/OFFICE_ASSISTANT.md).
+
+The subsequent October 11 Assistant workflow follow-up is local and not deployed.
+`AssistantNextSteps` supplies at most three application-owned prompts from reply
+types/references, never generated text or private fields. Chips stage editable
+messages for explicit Send, preserve unfinished drafts, capture their reply's
+opaque context and retire on a newer reply. Editing releases the staged context;
+New chat/session expiry clears it. Farmer choices remain independent. Optional
+encrypted `pending_scope` permits only assistance/harvests with task `farmer`, a
+positive selected reference, one year and no choices. Bare years still ask for
+scope; scope-only replies without a pending task cannot infer a report. Selected
+reads reauthorize ownership; whole-office reports clear farmer selection. Old
+tokens/limits and provider disclosure remain unchanged. Release the new support
+class, conversation/context/resolver, reviewed guidance and both assets together.
+No migration/dependency/configuration/account change or general cache clear.
+See [docs/OFFICE_ASSISTANT.md](docs/OFFICE_ASSISTANT.md).
+
+The subsequent October 11 Assistant reliability follow-up is local and not
+deployed. Help references retain optional `help_language` (`en`/`fil`) along with
+topic/style; language switches regenerate canonical help, never translate private
+replies. Old version-1 tokens still work. `AssistantReportRequest` recognizes
+finite unsupported periods, crop/input, gender/mapping, animal/service,
+status/quantity and protected-field requests before report queries or pending-year
+references. It clarifies and resets context instead of returning broader totals;
+literal farmer searches and feature instructions remain separate. This is not
+exhaustive language understanding. Generic seeds/binhi aliases still select the
+all-category assistance summary. ID/parcel/seasonal-crop definitions now resolve
+to reviewed help. The chat honors bounded HTTP Retry-After delays with an editable
+draft/countdown and restores composer focus if the initiating control loses it;
+intentional focus movement wins. No migration, dependency, environment/account
+change or wider provider disclosure. Release backend, reviewed passages, partial
+and both Assistant assets together after owner authorization. Never clear the
+general cache. See [docs/OFFICE_ASSISTANT.md](docs/OFFICE_ASSISTANT.md).
+
 The subsequent October 11 context-aware Assistant follow-up deployed on Hostinger
 in runtime `82a24c4` through GitHub main push and Hostinger fast-forward pull.
 `AssistantIdentity` answers introductions, greetings, thanks, capabilities and
@@ -57,6 +123,14 @@ The October 11, 2026 framework follow-up deployed on Hostinger in runtime 7d36ff
 The October 11 deployed Office Assistant is now one conversation inside normal signed-in office pages. It has no help/report mode or year controls. `POST /assistant/message` uses authentication, idle/account scope, CSRF, policy and a five-per-minute throttle. `AssistantConversation` resolves supported tasks and bounded encrypted follow-up references locally; policies and `MunicipalityAccess` govern farmer/report reads. `OfficeAssistant::answerTopic` sends only canonical application-owned help plus reviewed retrieved passages/role/module/language to OpenAI, never raw questions, record data or the visible thread. Visitors, evaluators and farmer sessions are denied; veterinary accounts remain Animal Health-only. Reports are read-only and exclude contacts, birth/eligibility details, credentials, notes and coordinates. Context expires after 15 minutes and binds to user/session/scope; every record is independently reauthorized. `SynchronizeAssistantRequests` isolates chat from normal write locks; `StartApplicationSession` commits activity before slow work and suppresses late session/CSRF-cookie saves only for acquired chat requests. Other writes and sessions retain normal behavior. Chat stays in browser memory; audit stores safe counts/topic/year/latency/tokens only. Atomic UTC provider limits fail closed and are not billing. Never clear the general cache. Deploy all backend/session/route/static-help/layout and both public assets together after the dependency upgrade; no migration or account operation is required. This deployed feature passed live role, report, provider and preservation checks. See `docs/OFFICE_ASSISTANT.md`.
 
 The October 10, 2026 release installed runtime `c322a5e` through GitHub main and Hostinger fast-forward pull. It deploys AgriLGU corn branding, the in-page crop editor, saved crop icons and scoped provider usage. All 21 tables / 9,359 existing rows were preserved without migrations or account changes. The private application name now reads AgriLGU while session, cache and Redis namespaces and NDVI budget counters remain unchanged. Never clear the general cache for this release. Crop-to-harvest linkage remains a proposal. See `docs/GITHUB_DEPLOYMENT.md`.
+
+The October 12 crop-modal null-status correction is local and not deployed. The
+scoped planted-area editor now falls back to form-level save controls when the
+modal mounts its editor inside a nested container; this prevents the modal
+from failing on `textContent` for a missing local status node. Deploy the
+versioned editor script and regression test with the existing modal assets; no
+schema, account or record change is required. See
+`docs/PLANTED_CROP_AREAS.md`.
 
 The subsequent October 10 farmer-ID field artwork is local and not deployed. Shared 1011 × 638 SVG artwork now shows a rice-field landscape, with pale reading panels and an opaque QR quiet area; the back retains a clear ink-signature strip. Both CSS and canvas use the same versioned artwork paths. Classification chips fit all six supported values without moving the printed QR panel into the signature space; front labels/ID chip have bounded spacing. Names, initials and office locations use multibyte-safe capitalization. See `docs/AGRIGOV_FARMER_IDS.md` for verification and deployment steps.
 

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Http\Middleware\EnforceIdleSession;
 use App\Models\Farmer;
 use App\Models\User;
+use App\Support\FarmerCardEmblem;
 use App\Support\FarmerCardSignatory;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -133,13 +134,63 @@ class FarmerCardSignatoryTest extends TestCase
 
             $this->as($this->staff($municipalityId))->get(route('farmers.id-card', $farmer))->assertOk()
                 ->assertSee('farmer-card-holder-signature', false)
+                ->assertSee('<span>Full name</span><strong>MARÍA DELA PEÑA</strong>', false)
                 ->assertSee('<strong>MARÍA DELA PEÑA</strong>', false)
                 ->assertSee("<small>Cardholder's signature</small>", false)
+                ->assertSee('fullName: '.json_encode('MARÍA DELA PEÑA', JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT), false)
                 // The digital ID and PNG downloads draw the same line from this value.
                 ->assertSee('holderName: '.json_encode('MARÍA DELA PEÑA', JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT), false);
 
             auth()->logout();
         }
+    }
+
+    public function test_accented_initials_render_without_invalid_utf8_in_the_digital_payload(): void
+    {
+        $farmer = Farmer::create(['municipality_id' => self::RAMOS, 'first_name' => 'Ángela',
+            'last_name' => 'Ñaña', 'farm_location' => 'Sample barangay']);
+
+        $this->as($this->staff(self::RAMOS))->get(route('farmers.id-card', $farmer))->assertOk()
+            ->assertSee('<span>ÁÑ</span>', false)
+            ->assertSee('initials: '.json_encode('ÁÑ', JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT), false);
+    }
+
+    public function test_only_active_ramos_tarlac_cards_receive_the_municipality_seal(): void
+    {
+        $emblems = app(FarmerCardEmblem::class);
+        $ramos = $this->farmer(self::RAMOS);
+        $this->assertTrue($emblems->forFarmer($ramos)['municipal']);
+
+        foreach ([self::ANAO, self::OTHER_RAMOS] as $municipalityId) {
+            $farmer = $this->farmer($municipalityId);
+            $this->assertFalse($emblems->forFarmer($farmer)['municipal']);
+            $this->as($this->staff($municipalityId))->get(route('farmers.id-card', $farmer))->assertOk()
+                ->assertSee('philippines-coat-of-arms.png', false)
+                ->assertSee('PROVINCIAL AGRICULTURE OFFICE')
+                ->assertSee('Wikimedia Commons')
+                ->assertDontSee('ramos-municipality-seal.jpg', false);
+            auth()->logout();
+        }
+
+        DB::table('municipalities')->where('id', self::RAMOS)->update(['is_active' => false]);
+        $this->assertFalse($emblems->forFarmer($ramos)['municipal']);
+        DB::table('municipalities')->where('id', self::RAMOS)->update(['is_active' => true]);
+        DB::table('provinces')->where('id', 1)->update(['is_active' => false]);
+        $this->assertFalse($emblems->forFarmer($ramos)['municipal']);
+    }
+
+    public function test_ramos_html_and_canvas_share_the_seal_and_municipal_office_heading(): void
+    {
+        $this->as($this->staff(self::RAMOS))->get(route('farmers.id-card', $this->farmer(self::RAMOS)))->assertOk()
+            ->assertSee(asset('images/branding/ramos-municipality-seal.jpg'), false)
+            ->assertSee('Seal of the Municipality of Ramos, Tarlac')
+            ->assertSee('<strong>MUNICIPAL AGRICULTURE OFFICE</strong>', false)
+            ->assertSee('officeHeading: "MUNICIPAL AGRICULTURE OFFICE"', false)
+            ->assertSee('jurisdiction: "RAMOS, TARLAC"', false)
+            ->assertSee('municipalEmblem: true', false)
+            ->assertSee('officeEmblem:', false)
+            ->assertSee('Original colors and proportions preserved.')
+            ->assertDontSee('philippines-coat-of-arms.png', false);
     }
 
     private function as(User $user): self

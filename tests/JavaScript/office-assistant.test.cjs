@@ -17,13 +17,21 @@ class Element {
       toggle: (name, enabled) => enabled ? this.classList.add(name) : this.classList.remove(name)
     };
   }
+  get disabled() { return this._disabled; }
+  set disabled(value) {
+    this._disabled = value;
+    if (value && this.ownerDocument?.activeElement === this) this.ownerDocument.activeElement = this.ownerDocument.body;
+  }
   get childElementCount() { return this.children.length; }
   addEventListener(name, fn) { (this.listeners[name] ||= []).push(fn); }
   setAttribute(name, value) { this.attributes[name] = value; }
   removeAttribute(name) { delete this.attributes[name]; }
   append(...children) { children.forEach(child => { child.parent = this; this.children.push(child); }); }
   replaceChildren(...children) {
-    this.children.forEach(child => { child.parent = null; });
+    this.children.forEach(child => {
+      if (child.contains(this.ownerDocument?.activeElement)) this.ownerDocument.activeElement = this.ownerDocument.body;
+      child.parent = null;
+    });
     this.children = [];
     this.append(...children);
   }
@@ -33,7 +41,11 @@ class Element {
       ...(child.tagName === tagName ? [child] : []), ...child.querySelectorAll(tagName)
     ]);
   }
-  focus() { this.focused = true; }
+  contains(node) {
+    for (let current = node; current; current = current.parent) if (current === this) return true;
+    return false;
+  }
+  focus() { this.focused = true; if (this.ownerDocument) this.ownerDocument.activeElement = this; }
   showModal() { this.open = true; }
   close() { this.open = false; return this.fire('close'); }
   fire(name, properties = {}) {
@@ -45,28 +57,195 @@ class Element {
 
 function setup(fetcher) {
   const names = ['dialog', 'open', 'input', 'form', 'send', 'clear', 'welcome',
-    'messages', 'body', 'status', 'count', 'close', 'jump'];
+    'messages', 'body', 'status', 'count', 'close', 'jump', 'cooldown'];
   const elements = Object.fromEntries(names.map(name => [name, new Element()]));
   elements.jump.hidden = true;
   const root = { dataset: { endpoint: '/assistant/message', module: 'crops' },
     querySelector: selector => elements[selector.slice(16, -1)], querySelectorAll: () => [] };
-  const document = { querySelector: selector => selector === '[data-office-assistant]' ? root : { content: 'synthetic-csrf' },
-    createElement: tagName => new Element(tagName) };
+  const document = { body: new Element('body'),
+    querySelector: selector => selector === '[data-office-assistant]' ? root : { content: 'synthetic-csrf' },
+    createElement(tagName) { const element = new Element(tagName); element.ownerDocument = document; return element; } };
+  document.activeElement = document.body;
+  Object.values(elements).forEach(element => { element.ownerDocument = document; });
   const listeners = {};
-  let timer;
-  const window = { setTimeout(fn) { timer = fn; return 1; }, clearTimeout() { timer = null; },
+  let now = Date.UTC(2026, 9, 11, 2), nextTimer = 0;
+  const timers = new Map();
+  class ClockDate extends Date { static now() { return now; } }
+  const window = { setTimeout(fn, delay) { const id = ++nextTimer; timers.set(id, { fn, at: now + delay, delay }); return id; },
+    clearTimeout(id) { timers.delete(id); },
     addEventListener(name, fn) { listeners[name] = fn; },
     location: { href: 'https://example.test/farmers', origin: 'https://example.test' } };
   const requests = [];
   const fetch = async (url, options) => { requests.push({ url, options }); return fetcher(url, options); };
-  vm.runInNewContext(source, { document, window, fetch, AbortController, URL });
-  return { ...elements, requests, listeners, timeout: () => timer?.() };
+  vm.runInNewContext(source, { document, window, fetch, AbortController, URL, Date: ClockDate });
+  return { ...elements, document, requests, listeners, now: () => now,
+    timeout() { const timer = [...timers.entries()].find(([, entry]) => entry.delay === 30000); if (timer) timer[1].fn(); },
+    advance(milliseconds) {
+      const until = now + milliseconds;
+      let next;
+      while ((next = [...timers.entries()].sort((a, b) => a[1].at - b[1].at)[0]) && next[1].at <= until) {
+        timers.delete(next[0]); now = next[1].at; next[1].fn();
+      }
+      now = until;
+    } };
 }
-function response(status, data) { return { status, ok: status === 200, redirected: false, json: async () => data }; }
+function response(status, data, headers = {}) {
+  return { status, ok: status === 200, redirected: false, json: async () => data,
+    headers: { get: name => Object.entries(headers).find(([key]) => key.toLowerCase() === name.toLowerCase())?.[1] ?? null } };
+}
 function reply(answer, options = {}) { return response(200, { answer, source: 'help', context: null, ...options }); }
 function payload(ui, index = -1) { return JSON.parse(ui.requests.at(index).options.body); }
 function content(ui, index = -1) { return ui.messages.children.at(index).children[1].textContent; }
 function controls(ui, index = -1) { return ui.messages.children.at(index).children.at(-1).children; }
+function followups(ui, index = -1) {
+  return ui.messages.children.at(index).children.find(child => child.className === 'assistant-followups')?.children || [];
+}
+
+test('follow-up suggestions stage an editable message with its reply reference and never fetch on selection', async () => {
+  let turn = 0;
+  const ui = setup(async () => ++turn === 1 ? reply('Crop guide.', { context: 'crop-reference',
+    suggestions: [{ label: 'Show the steps', message: 'Show me the steps' }] }) : reply('Crop steps.'));
+  await ui.open.fire('click'); ui.input.value = 'How do I draw crop areas?'; await ui.form.fire('submit');
+  const suggestion = followups(ui)[0];
+  assert.equal(suggestion.disabled, false);
+  await suggestion.fire('click');
+  assert.equal(ui.requests.length, 1);
+  assert.equal(ui.input.value, 'Show me the steps');
+  assert.equal(ui.document.activeElement, ui.input);
+  assert.match(ui.status.textContent, /Edit it or send/);
+  await ui.form.fire('submit');
+  assert.deepEqual(payload(ui), { message: 'Show me the steps', module: 'crops', context: 'crop-reference' });
+  assert.equal(ui.input.value, '');
+});
+
+test('selecting a follow-up cannot overwrite an unsent draft', async () => {
+  const ui = setup(async () => reply('Guide.', { context: 'guide-reference',
+    suggestions: [{ label: 'Make it shorter', message: 'Make it shorter' }] }));
+  ui.input.value = 'How do I use this page?'; await ui.form.fire('submit');
+  ui.input.value = 'My unfinished question';
+  await followups(ui)[0].fire('click');
+  assert.equal(ui.input.value, 'My unfinished question');
+  assert.match(ui.status.textContent, /Finish or clear your current draft/);
+  assert.equal(ui.requests.length, 1);
+});
+
+test('a staged follow-up retains its own context after a farmer choice changes the conversation', async () => {
+  let turn = 0;
+  const ui = setup(async () => {
+    if (++turn === 1) return reply('Guide and choice.', { context: 'guide-reference',
+      actions: [{ label: 'Synthetic farmer', choice: 'farmer-token' }],
+      suggestions: [{ label: 'Show the steps', message: 'Show me the steps' }] });
+    if (turn === 2) return reply('Farmer summary.', { source: 'records', context: 'farmer-reference' });
+    return reply('Original guide steps.');
+  });
+  ui.input.value = 'Guide'; await ui.form.fire('submit');
+  const entry = ui.messages.children.at(-1), choice = entry.querySelectorAll('button')[0];
+  await followups(ui)[0].fire('click');
+  await choice.fire('click');
+  assert.equal(ui.input.value, 'Show me the steps');
+  await ui.form.fire('submit');
+  assert.deepEqual(payload(ui), { message: 'Show me the steps', module: 'crops', context: 'guide-reference' });
+});
+
+test('editing a staged follow-up releases its captured reference and uses the current conversation', async () => {
+  let turn = 0;
+  const ui = setup(async () => ++turn === 1 ? reply('Guide and choice.', { context: 'guide-reference',
+    actions: [{ label: 'Synthetic farmer', choice: 'farmer-token' }],
+    suggestions: [{ label: 'Show the steps', message: 'Show me the steps' }] })
+    : reply('Farmer summary.', { source: 'records', context: 'farmer-reference' }));
+  ui.input.value = 'Guide'; await ui.form.fire('submit');
+  const choice = ui.messages.children.at(-1).querySelectorAll('button')[0];
+  await followups(ui)[0].fire('click'); await choice.fire('click');
+  ui.input.value = 'His assistance'; await ui.input.fire('input'); await ui.form.fire('submit');
+  assert.deepEqual(payload(ui), { message: 'His assistance', module: 'crops', context: 'farmer-reference' });
+});
+
+test('a staged null-reference follow-up never borrows a newer farmer context', async () => {
+  let turn = 0;
+  const ui = setup(async () => ++turn === 1 ? reply('Guide and choice.', { context: null,
+    actions: [{ label: 'Synthetic farmer', choice: 'farmer-token' }],
+    suggestions: [{ label: 'Use this page', message: 'How do I use this page?' }] })
+    : reply('Farmer summary.', { source: 'records', context: 'farmer-reference' }));
+  ui.input.value = 'Guide'; await ui.form.fire('submit');
+  const choice = ui.messages.children.at(-1).querySelectorAll('button')[0];
+  await followups(ui)[0].fire('click'); await choice.fire('click'); await ui.form.fire('submit');
+  assert.deepEqual(payload(ui), { message: 'How do I use this page?', module: 'crops' });
+});
+
+test('old suggestions become inactive on another pending request and stay inactive after recovery', async () => {
+  let turn = 0, resolve;
+  const ui = setup(() => ++turn === 1 ? Promise.resolve(reply('First guide.', { context: 'first-reference',
+    suggestions: [{ label: 'Old steps', message: 'Show me the steps' }] })) : new Promise(done => { resolve = done; }));
+  ui.input.value = 'First guide'; await ui.form.fire('submit');
+  const old = followups(ui)[0];
+  ui.input.value = 'Second guide'; const pending = ui.form.fire('submit');
+  assert.equal(old.disabled, true); ui.input.value = ''; await old.fire('click');
+  assert.equal(ui.input.value, '');
+  resolve(reply('Second guide.', { context: 'second-reference',
+    suggestions: [{ label: 'New example', message: 'Give me an example' }] })); await pending;
+  assert.equal(old.disabled, true); await old.fire('click');
+  assert.equal(ui.input.value, '');
+  assert.equal(followups(ui)[0].disabled, false);
+  await followups(ui)[0].fire('click');
+  assert.equal(ui.input.value, 'Give me an example');
+});
+
+test('follow-ups are bounded plain text and malformed suggestions never render', async () => {
+  const cases = [
+    { label: '', message: 'Show me the steps' }, { label: 'x'.repeat(81), message: 'Steps' },
+    { label: 'Steps', message: 'x'.repeat(201) }, { label: 'Steps', message: '' },
+    { label: 'Steps\n', message: 'Steps' }, { label: 'Steps', message: 'Steps\u0000' },
+    { label: 'Steps', message: 'Steps\u0085' }, { label: 'Steps', message: 2026 }, null
+  ];
+  for (const suggestion of cases) {
+    const ui = setup(async () => reply('Guide.', { suggestions: [suggestion] }));
+    ui.input.value = 'Guide'; await ui.form.fire('submit');
+    assert.equal(followups(ui).length, 0, JSON.stringify(suggestion));
+  }
+  const ui = setup(async () => reply('Guide.', { suggestions: Array.from({ length: 5 }, () => ({
+    label: '<script>Steps</script>', message: 'Show me the steps'
+  })) }));
+  ui.input.value = 'Guide'; await ui.form.fire('submit');
+  assert.equal(followups(ui).length, 3);
+  assert.equal(followups(ui)[0].textContent, '<script>Steps</script>');
+  assert.equal(followups(ui)[0].innerHTML, undefined);
+  assert.equal(ui.messages.children.at(-1).querySelectorAll('script').length, 0);
+});
+
+test('cooldown and busy states prevent staging suggestions even through a direct event', async () => {
+  let turn = 0;
+  const ui = setup(async () => ++turn === 1 ? reply('Guide.', { context: 'guide-reference',
+    suggestions: [{ label: 'Steps', message: 'Show me the steps' }] })
+    : response(429, { message: 'Please wait.' }, { 'Retry-After': '3' }));
+  ui.input.value = 'Guide'; await ui.form.fire('submit'); const suggestion = followups(ui)[0];
+  ui.input.value = 'Another question'; await ui.form.fire('submit'); ui.input.value = '';
+  await suggestion.fire('click');
+  assert.equal(ui.input.value, ''); assert.equal(ui.requests.length, 2);
+  ui.advance(3000); await suggestion.fire('click');
+  assert.equal(ui.input.value, ''); assert.equal(suggestion.disabled, true);
+});
+
+test('New chat clears a staged reference and old suggestions cannot recreate it', async () => {
+  const ui = setup(async () => reply('Guide.', { context: 'guide-reference',
+    suggestions: [{ label: 'Steps', message: 'Show me the steps' }] }));
+  ui.input.value = 'Guide'; await ui.form.fire('submit'); const old = followups(ui)[0];
+  await old.fire('click'); await ui.clear.fire('click'); await old.fire('click');
+  assert.equal(ui.input.value, '');
+  ui.input.value = 'Show me the steps'; await ui.form.fire('submit');
+  assert.deepEqual(payload(ui), { message: 'Show me the steps', module: 'crops' });
+});
+
+test('session expiry erases a staged follow-up and blocks detached suggestion controls', async () => {
+  let turn = 0;
+  const ui = setup(async () => ++turn === 1 ? reply('Guide and choice.', { context: 'guide-reference',
+    actions: [{ label: 'Synthetic farmer', choice: 'farmer-token' }],
+    suggestions: [{ label: 'Steps', message: 'Show me the steps' }] }) : response(419, {}));
+  ui.input.value = 'Guide'; await ui.form.fire('submit');
+  const choice = ui.messages.children.at(-1).querySelectorAll('button')[0], old = followups(ui)[0];
+  await old.fire('click'); await choice.fire('click'); await old.fire('click');
+  assert.equal(ui.input.value, ''); assert.equal(ui.send.disabled, true); assert.equal(ui.requests.length, 2);
+  assert.equal(ui.messages.children.length, 1);
+});
 
 test('application-owned conversational replies display and retain only an opaque reference', async () => {
   const ui = setup(async () => reply('I am the AgriLGU Assistant.', { source: 'conversation', context: 'identity-reference' }));
@@ -156,7 +335,12 @@ test('a pending send cannot duplicate; close cancels and keeps a retryable messa
   assert.equal(ui.requests.length, 1);
   assert.equal(ui.send.disabled, true);
   assert.equal(ui.clear.disabled, false);
-  assert.equal(content(ui), 'Working on your question…');
+  assert.equal(content(ui), 'Thinking…');
+  const pendingContent = ui.messages.children.at(-1).children[1];
+  assert.match(pendingContent.className, /assistant-thinking/);
+  assert.equal(pendingContent.attributes.role, 'status');
+  assert.equal(pendingContent.attributes['aria-live'], 'polite');
+  assert.equal(pendingContent.attributes['aria-label'], 'Assistant is thinking');
   await ui.close.fire('click');
   assert.equal(ui.requests[0].options.signal.aborted, true);
   resolve(reply('Late answer')); await pending;
@@ -165,6 +349,23 @@ test('a pending send cannot duplicate; close cancels and keeps a retryable messa
   assert.equal(ui.input.value, 'Help');
   assert.equal(ui.open.attributes['aria-expanded'], 'false');
   assert.equal(ui.open.focused, true);
+});
+
+test('thinking indicator is replaced by a verified reply and clears its live status', async () => {
+  let resolve;
+  const ui = setup(() => new Promise(done => { resolve = done; }));
+  ui.input.value = 'Summarize farmers';
+  const pending = ui.form.fire('submit');
+  const replyEntry = ui.messages.children.at(-1);
+  const thinking = replyEntry.children[1];
+  assert.match(thinking.className, /assistant-thinking/);
+  resolve(reply('Registered farmers: 12')); await pending;
+  const completed = replyEntry.children[1];
+  assert.equal(completed.textContent, 'Registered farmers: 12');
+  assert.doesNotMatch(completed.className, /assistant-thinking/);
+  assert.equal(completed.attributes.role, undefined);
+  assert.equal(completed.attributes['aria-live'], undefined);
+  assert.equal(completed.attributes['aria-label'], undefined);
 });
 
 test('New chat cancels work immediately and clears text and opaque context before the next turn', async () => {
@@ -189,6 +390,8 @@ test('validation and allowance failures appear in the conversation, preserve inp
   assert.equal(content(ui), 'Try again in a moment.');
   assert.equal(ui.input.value, 'Question');
   assert.equal(ui.messages.children.length, 2);
+  assert.equal(controls(ui)[0].disabled, true);
+  ui.advance(60000);
   await controls(ui)[0].fire('click');
   assert.equal(content(ui), 'Successful reply');
   assert.equal(ui.messages.children.length, 2);
@@ -202,6 +405,146 @@ test('unexpected failures do not display provider diagnostics', async () => {
   assert.doesNotMatch(content(ui), /private provider/);
   assert.match(content(ui), /could not answer/);
   assert.equal(ui.input.value, 'Help');
+});
+
+test('Retry-After pauses Send, choices and Retry while keeping the draft and captured opaque reference', async () => {
+  let turn = 0;
+  const ui = setup(async () => {
+    if (++turn === 1) return reply('Choose a farmer.', { source: 'clarification', context: 'choice-context',
+      actions: [{ label: 'Synthetic farmer', choice: 'farmer-token' }] });
+    if (turn === 2) return response(429, { message: 'Too many messages. Please wait.' }, { 'Retry-After': '3' });
+    return reply('Completed reply');
+  });
+  ui.input.value = 'Find farmer Synthetic'; await ui.form.fire('submit');
+  const choice = controls(ui)[0];
+  ui.input.value = 'Our assistance'; await ui.form.fire('submit');
+  const retry = controls(ui)[0];
+  assert.equal(ui.send.disabled, true);
+  assert.equal(choice.disabled, true);
+  assert.equal(retry.disabled, true);
+  assert.equal(ui.input.disabled, false);
+  assert.equal(ui.cooldown.textContent, 'Try again in 3 seconds.');
+  assert.equal(ui.status.textContent, 'Too many messages. Please wait. Try again in 3 seconds.');
+  const initialAnnouncement = ui.status.textContent;
+  ui.advance(1000);
+  assert.equal(ui.status.textContent, initialAnnouncement);
+  ui.input.value = 'Next unsent draft';
+  await retry.fire('click'); await choice.fire('click'); await ui.form.fire('submit');
+  assert.equal(ui.requests.length, 2);
+  ui.advance(1000);
+  assert.equal(ui.cooldown.textContent, 'Try again in 1 second.');
+  assert.equal(ui.send.disabled, true);
+  ui.advance(1000);
+  assert.equal(ui.cooldown.hidden, true);
+  assert.equal(ui.send.disabled, false);
+  assert.equal(choice.disabled, false);
+  assert.equal(retry.disabled, false);
+  assert.equal(ui.status.textContent, 'You can try sending again.');
+  await retry.fire('click');
+  assert.deepEqual(payload(ui), { message: 'Our assistance', module: 'crops', context: 'choice-context' });
+  assert.equal(ui.input.value, 'Next unsent draft');
+  assert.equal(ui.messages.children.length, 4);
+});
+
+test('New chat, Close and page exit clear the conversation without bypassing an active cooldown', async () => {
+  const ui = setup(async () => response(429, { message: 'Please wait.' }, { 'Retry-After': '4' }));
+  await ui.open.fire('click'); ui.input.value = 'Question'; await ui.form.fire('submit');
+  await ui.clear.fire('click');
+  assert.equal(ui.messages.children.length, 0);
+  assert.equal(ui.send.disabled, true);
+  assert.equal(ui.cooldown.hidden, false);
+  ui.input.value = 'New question'; await ui.form.fire('submit');
+  await ui.close.fire('click'); await ui.open.fire('click');
+  await ui.form.fire('submit');
+  ui.listeners.pagehide(); await ui.open.fire('click');
+  ui.input.value = 'After page restoration'; await ui.form.fire('submit');
+  assert.equal(ui.requests.length, 1);
+  assert.equal(ui.send.disabled, true);
+  assert.equal(ui.input.value, 'After page restoration');
+  ui.advance(4000);
+  assert.equal(ui.send.disabled, false);
+});
+
+test('Retry-After accepts a future HTTP date and safely bounds absent, invalid and distant headers', async () => {
+  const cases = [
+    [null, 60], ['not a date', 60], ['x'.repeat(81), 60], ['9999999999', 300],
+    ['0', 1], ['-5', 60], ['Sun, 11 Oct 2026 02:00:02 GMT', 2],
+    ['Sat, 10 Oct 2026 02:00:00 GMT', 1], ['Sun, 11 Oct 2099 02:00:00 GMT', 300]
+  ];
+  for (const [header, seconds] of cases) {
+    const ui = setup(async () => response(429, { message: 'Please wait.' }, { 'Retry-After': header }));
+    ui.input.value = 'Question'; await ui.form.fire('submit');
+    assert.equal(ui.cooldown.textContent, 'Try again in ' + seconds + ' second' + (seconds === 1 ? '.' : 's.'), String(header));
+    ui.advance((seconds - 1) * 1000);
+    assert.equal(ui.send.disabled, true, String(header));
+    ui.advance(1000);
+    assert.equal(ui.send.disabled, false, String(header));
+  }
+});
+
+test('a focused farmer choice restores composer focus and preserves a draft when the response arrives', async () => {
+  let turn = 0, resolve;
+  const ui = setup(() => ++turn === 1 ? Promise.resolve(reply('Choose a farmer.', {
+    source: 'clarification', context: 'choice-context', actions: [{ label: 'Synthetic farmer', choice: 'farmer-token' }]
+  })) : new Promise(done => { resolve = done; }));
+  await ui.open.fire('click'); ui.input.value = 'Find farmer Synthetic'; await ui.form.fire('submit');
+  const choice = controls(ui)[0]; choice.focus();
+  const pending = choice.fire('click');
+  assert.equal(ui.document.activeElement, ui.document.body);
+  ui.input.value = 'Next unsent draft';
+  resolve(reply('Permitted farmer summary', { source: 'records' })); await pending;
+  assert.equal(ui.document.activeElement, ui.input);
+  assert.equal(ui.input.value, 'Next unsent draft');
+});
+
+test('submitting from focused Send restores composer focus without replacing the next unsent draft', async () => {
+  let resolve;
+  const ui = setup(() => new Promise(done => { resolve = done; }));
+  await ui.open.fire('click'); ui.input.value = 'Submitted question'; ui.send.focus();
+  const pending = ui.form.fire('submit');
+  assert.equal(ui.document.activeElement, ui.document.body);
+  ui.input.value = 'Next unsent draft';
+  resolve(reply('Completed reply')); await pending;
+  assert.equal(ui.document.activeElement, ui.input);
+  assert.equal(ui.input.value, 'Next unsent draft');
+  assert.equal(ui.send.disabled, false);
+});
+
+test('a Send completion respects a deliberate focus move and Enter never takes over subsequent focus', async () => {
+  for (const fromSend of [true, false]) {
+    let resolve;
+    const ui = setup(() => new Promise(done => { resolve = done; }));
+    await ui.open.fire('click'); ui.input.value = 'Question';
+    if (fromSend) ui.send.focus();
+    const pending = fromSend ? ui.form.fire('submit') : ui.input.fire('keydown', { key: 'Enter' });
+    ui.body.focus();
+    resolve(reply('Completed reply')); await pending;
+    assert.equal(ui.document.activeElement, ui.body);
+  }
+});
+
+test('reply completion never steals focus after a deliberate move to another conversation control', async () => {
+  let turn = 0, resolve;
+  const ui = setup(() => ++turn === 1 ? Promise.resolve(response(503, { message: 'Try again.' }))
+    : new Promise(done => { resolve = done; }));
+  await ui.open.fire('click'); ui.input.value = 'Question'; await ui.form.fire('submit');
+  const retry = controls(ui)[0]; retry.focus();
+  const pending = retry.fire('click');
+  ui.body.focus();
+  resolve(reply('Successful reply')); await pending;
+  assert.equal(ui.document.activeElement, ui.body);
+  assert.equal(ui.messages.children.length, 2);
+});
+
+test('a focused Retry restores composer focus after another safe failure without adding a user turn', async () => {
+  const ui = setup(async () => response(503, { message: 'Try again shortly.' }));
+  await ui.open.fire('click'); ui.input.value = 'Question'; await ui.form.fire('submit');
+  const retry = controls(ui)[0]; retry.focus();
+  await retry.fire('click');
+  assert.equal(ui.document.activeElement, ui.input);
+  assert.equal(content(ui), 'Try again shortly.');
+  assert.equal(controls(ui)[0].disabled, false);
+  assert.equal(ui.messages.children.length, 2);
 });
 
 test('expired sessions erase previous protected replies and context then prevent further requests', async () => {
@@ -360,8 +703,14 @@ test('unified dialog has no mode or year selectors and uses the shared visual sy
   assert.match(blade, /rows="2" required/);
   assert.match(blade, /aria-relevant="additions text"/);
   assert.match(blade, /Office records stay in AgriLGU/);
+  assert.match(blade, /officeAssistantPrivacy officeAssistantCount officeAssistantCooldown/);
+  assert.match(blade, /data-assistant-cooldown hidden/);
+  assert.match(blade, /assistant-presence-dot/);
+  assert.doesNotMatch(blade, /assistant-cooldown[^>]*aria-live/);
   assert.match(css, /var\(--ui-primary\)/);
   assert.match(css, /prefers-reduced-motion/);
+  assert.match(css, /assistant-thinking-dots/);
+  assert.match(css, /assistant-message\.is-pending \.assistant-thinking/);
   assert.match(css, /min-height: 44px/);
   assert.doesNotMatch(css, /100vw/);
   assert.match(css, /width: calc\(100% - 16px\)/);

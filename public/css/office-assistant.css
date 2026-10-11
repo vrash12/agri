@@ -8,7 +8,10 @@
 .assistant-dialog[open] { display: flex; flex-direction: column; animation: assistant-enter .18s ease-out; }
 .assistant-dialog::backdrop { background: rgba(20,40,27,.2); }
 .assistant-header { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--ui-border); border-top: 4px solid var(--ui-primary); flex-shrink: 0; }
-.assistant-header h2 { flex: 1; min-width: 0; margin: 0; font-size: 16px; font-weight: 700; line-height: 1.4; }
+.assistant-title { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.assistant-header h2 { min-width: 0; margin: 0; font-size: 16px; font-weight: 700; line-height: 1.4; }
+.assistant-presence { display: inline-flex; align-items: center; gap: 6px; min-width: 0; color: var(--ui-text-muted); font-size: 11px; line-height: 1.3; }
+.assistant-presence-dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: var(--ui-primary); box-shadow: 0 0 0 3px var(--ui-primary-soft); }
 .assistant-brand { display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; }
 .assistant-brand .agrilgu-logo { width: 32px; height: 32px; }
 .assistant-clear { flex-shrink: 0; min-height: 44px; padding: 0 8px; border: 0; border-radius: var(--ui-radius-control); background: transparent; color: var(--ui-primary); font: 500 14px var(--ui-font); cursor: pointer; }
@@ -28,11 +31,18 @@
 .assistant-message strong { display: block; margin-bottom: 6px; font-size: 12px; font-weight: 500; color: var(--ui-primary); }
 .assistant-message p { white-space: pre-wrap; margin: 0; font-size: 14px; line-height: 1.65; }
 .assistant-message.is-error p { color: var(--ui-danger); }
+.assistant-message.is-pending { align-self: flex-start; max-width: 92%; padding: 12px 16px; border: 1px solid var(--ui-border); border-radius: 16px 16px 16px 4px; background: var(--ui-surface-subtle); }
 .assistant-message.is-pending p { color: var(--ui-text-muted); }
+.assistant-message.is-pending .assistant-thinking { display: inline-flex; align-items: center; gap: 8px; min-height: 22px; font-size: 0; color: var(--ui-text-muted); }
+.assistant-message.is-pending .assistant-thinking::before { content: 'Thinking'; font-size: 14px; line-height: 1.5; }
+.assistant-message.is-pending .assistant-thinking::after { content: '•••'; color: var(--ui-primary); font-size: 16px; letter-spacing: 2px; line-height: 1; animation: assistant-thinking-dots 1.2s ease-in-out infinite; }
 .assistant-message .assistant-message-meta { margin: 8px 0 0; font-size: 12px; color: var(--ui-text-muted); }
 .assistant-reply-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-.assistant-reply-actions button, .assistant-reply-actions a { box-sizing: border-box; display: flex; align-items: center; min-height: 44px; max-width: 100%; padding: 8px 12px; border: 1px solid var(--ui-control-border); border-radius: var(--ui-radius-control); background: var(--ui-surface); color: var(--ui-primary); font: 500 14px/1.5 var(--ui-font); text-align: left; text-decoration: none; overflow-wrap: anywhere; cursor: pointer; }
-.assistant-reply-actions button:hover, .assistant-reply-actions a:hover { background: var(--ui-surface-subtle); }
+.assistant-reply-actions button, .assistant-reply-actions a, .assistant-followups button { box-sizing: border-box; display: flex; align-items: center; min-height: 44px; max-width: 100%; padding: 8px 12px; border: 1px solid var(--ui-control-border); border-radius: var(--ui-radius-control); background: var(--ui-surface); color: var(--ui-primary); font: 500 14px/1.5 var(--ui-font); text-align: left; text-decoration: none; overflow-wrap: anywhere; cursor: pointer; }
+.assistant-reply-actions button:hover, .assistant-reply-actions a:hover, .assistant-followups button:hover { background: var(--ui-surface-subtle); }
+.assistant-followups { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.assistant-followups button { border-color: var(--ui-border); border-radius: 22px; background: var(--ui-surface-subtle); }
+.assistant-followups button:disabled { cursor: default; }
 .assistant-jump { align-self: center; min-height: 44px; margin: 0 12px 8px; padding: 8px 16px; border: 1px solid var(--ui-control-border); border-radius: 24px; background: var(--ui-surface); color: var(--ui-primary); font: 500 14px var(--ui-font); flex-shrink: 0; cursor: pointer; }
 .assistant-compose { padding: 12px 16px; border-top: 1px solid var(--ui-border); flex-shrink: 0; }
 .assistant-compose label { display: block; font-weight: 500; margin-bottom: 8px; }
@@ -43,10 +53,12 @@
 .assistant-count { margin-left: auto; flex-shrink: 0; font-size: 12px; color: var(--ui-text-muted); }
 .assistant-send { min-height: 44px; padding: 0 16px; border: 1px solid var(--ui-primary-hover); border-radius: var(--ui-radius-control); background: var(--ui-primary); color: white; font: 500 14px var(--ui-font); flex-shrink: 0; cursor: pointer; }
 .assistant-privacy { margin: 8px 0 0; font-size: 12px; color: var(--ui-text-muted); line-height: 1.5; }
+.assistant-cooldown { margin: 8px 0 0; font-size: 12px; color: var(--ui-warning); line-height: 1.5; }
 .office-assistant button:disabled { opacity: .6; cursor: wait; }
 .assistant-screen-reader { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 @keyframes assistant-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-@media (max-width: 600px) { .assistant-launcher { right: 16px; bottom: 16px; } .assistant-dialog { max-width: calc(100% - 16px); margin: 8px; width: calc(100% - 16px); height: min(720px,calc(100dvh - 16px)); max-height: calc(100dvh - 16px); } .assistant-header { padding: 8px 12px; } .assistant-body { padding: 16px; } .assistant-keyboard-hint { display: none; } }
+@keyframes assistant-thinking-dots { 0%, 100% { opacity: .35; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-2px); } }
+@media (max-width: 600px) { .assistant-launcher { right: 16px; bottom: 16px; } .assistant-dialog { max-width: calc(100% - 16px); margin: 8px; width: calc(100% - 16px); height: min(720px,calc(100dvh - 16px)); max-height: calc(100dvh - 16px); } .assistant-header { padding: 8px 12px; } .assistant-body { padding: 16px; } .assistant-keyboard-hint { display: none; } .assistant-presence { font-size: 10px; } }
 @media (max-height: 550px) { .assistant-header { padding: 4px 12px; } .assistant-body { padding: 8px 16px; } .assistant-welcome { padding: 4px 0; } .assistant-welcome h3 { font-size: 20px; margin-bottom: 8px; } .assistant-suggestions { margin-top: 12px; } .assistant-compose { padding: 6px 12px; } .assistant-compose label { margin-bottom: 4px; font-size: 12px; } .assistant-compose textarea { height: 56px; min-height: 56px; max-height: 56px; resize: none; } .assistant-actions { margin-top: 4px; } .assistant-keyboard-hint { display: none; } .assistant-privacy { margin-top: 4px; line-height: 1.4; } .assistant-jump { margin-bottom: 4px; } }
-@media (prefers-reduced-motion: reduce) { .assistant-dialog[open] { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .assistant-dialog[open] { animation: none; } .assistant-message.is-pending .assistant-thinking::after { animation: none; opacity: .75; } }
 @media print { .office-assistant { display: none !important; } }

@@ -1,5 +1,151 @@
 # Office Assistant
 
+## Local context-awareness follow-up — October 12, 2026 (not deployed)
+
+The unified conversation now answers bounded questions about the Assistant and
+the signed-in AgriLGU workspace locally. “Do you know AgriLGU?” and “Are you
+self-aware?” explain that this is a software helper using reviewed guidance,
+not a conscious person. “What page am I on?” and “Where am I?” use the
+allowlisted module hint supplied by the current office page. “What is my role?”
+and “What is my office scope?” use the authenticated account assignment.
+
+The page label is relevance context only: it does not reveal active filters or
+unsaved fields, grant access or replace policies. Awareness replies do not query
+farmer/parcel/assistance tables, reserve provider allowance or call OpenAI.
+They retain validated opaque conversation references for polite follow-ups, and
+veterinary accounts remain Animal Health-only for operational work. Unknown or
+mixed/private questions continue to clarify locally. Do not describe this as
+consciousness or unrestricted system/file awareness. Unit and feature coverage
+passed the focused Assistant tests with the existing file-cache warnings; no
+schema, dependency, environment, account or deployment change was made.
+
+## Local response-state follow-up — October 12, 2026 (not deployed)
+
+The unified conversation keeps an assistant bubble visible while a request is
+in flight. It uses the plain “Thinking…” status with a small animated dot cue,
+an accessible live status and `aria-busy` on the pending message. A verified
+answer, bounded error/retry state or cancellation replaces the indicator. The
+animation is disabled when the user prefers reduced motion, and the cue never
+represents or reveals hidden chain-of-thought, provider details or private
+records. This is a presentation-only change: routes, authorization, payloads,
+provider prompts, records, schema, dependencies and account data are unchanged.
+The JavaScript Assistant suite passed 40 tests. Release the stylesheet,
+partial, script and regression tests together after owner authorization;
+production remains on the previously recorded runtime.
+
+## Local data-quality review follow-up — October 12, 2026 (not deployed)
+
+The unified conversation now recognizes “What needs attention in our registry?”
+and related data-quality phrases as a local, read-only review. After normal
+authentication, policy checks and `MunicipalityAccess` scoping, it returns
+current aggregate counts for registered farmers, missing FFRS references,
+missing farm locations, farmers without saved parcels and saved plots without
+boundary geometry. It provides links to the existing farmer registry review
+filters and explains that these are review queues, not fraud findings.
+
+This task does not accept a historical reporting year; it clarifies locally and
+resets context instead of returning an unscoped or misleading total. It never
+selects names, identifiers, addresses, contacts, notes, coordinates or geometry
+values for the response and never calls OpenAI. Veterinary and other existing
+role boundaries remain in force. No migration, dependency, environment,
+configuration or account change is needed. The local focused suite passed 177
+tests and 2,188 assertions with 128 pre-existing warnings; the warnings are
+test-file `file_get_contents` notices, not failures. Production remains on the
+previously recorded runtime until an owner-authorized release.
+
+## Local workflow follow-up — October 11, 2026 (not deployed)
+
+`AssistantNextSteps` provides up to three application-owned next messages after
+help, identity, reports or supported clarifications. It uses reply types and
+approved references without querying records, calling AI or reading generated
+text. Prompts never contain private names, IDs or record values. Farmer searches
+keep their separate signed choices; veterinary suggestions remain Animal Health
+and shared help only.
+
+Click a chip to fill an editable draft, then press Send. Unfinished drafts are
+never overwritten. Suggestions capture their reply's opaque reference and retire
+on a newer reply; editing releases the captured reference and uses the current
+conversation. Busy, session and rate-limit states apply. New chat/session expiry
+and page exit clear staged drafts. There is no automatic provider call, stored
+chat, mode selector or wider disclosure.
+
+After selecting a farmer, “Show assistance for 2025” asks “Selected farmer” or
+“Whole office” and retains 2025. Optional version-1 `pending_scope` permits only
+assistance/harvests, task `farmer`, a positive selected reference, one year and no
+choices. English scope replies and “Napiling magsasaka” / “Buong opisina” resolve
+that task. A bare year updates the period but still asks for scope. Multiple years
+require one year before scope; scope-only replies without a pending task cannot
+infer a report. Successful new help/reports replace hints, and rejected subsets
+reset them. Every selected read reauthorizes the farmer; whole-office results
+clear selection. Old tokens, 4 KiB bounds, 15-minute expiry and user/session/scope
+binding remain compatible.
+
+Implementation sequence: retain only approved pending references; resolve scope
+and year locally; select deterministic role-aware prompts; stage editable messages;
+verify isolation, stale references, drafts and failure paths. Release the new
+support class, conversation/context/resolver, reviewed guidance and both assets
+with the earlier local reliability changes. No migration, dependency, environment
+or account operation. Never clear the general cache. Production remains `82a24c4`.
+
+Verification passed **552 PHP tests / 3,578 assertions** and **216 JavaScript
+tests**, including 39 Assistant UI cases. Pint, changed-PHP syntax, Blade
+compilation, route and whitespace checks passed; all 78 checked local Markdown
+links resolve. Independent review and tests cover scope/year ambiguity, farmer
+reauthorization, expired/changed references, veterinary suggestions and bounded
+payloads. A normal synthetic local office browser verified farmer search/choice,
+2025 scope clarification, preserved unfinished drafts, draft-only suggestion
+selection and explicit Send returning the selected farmer's 2025 report.
+Rate-limit/stale-chip/focus failures are automated checks, not new live browser
+acceptance. No production acceptance, load benchmark or deployment ran. The
+pending farmer-card patch passed a reverse-apply check without being changed.
+
+## Local reliability follow-up — October 11, 2026 (not deployed)
+
+Help references retain optional `help_language` (`en`/`fil`) alongside topic/style.
+After Filipino guidance, “Make it shorter” stays Filipino. “In English”, “In
+Filipino” or “Tagalog po” repeats canonical help in that language and preserves
+the format. A help question may end with “in English” or “in Filipino”. Old
+version-1 tokens still work; 4 KiB limits, binding and 15-minute expiry remain.
+Language requests after private reports clarify locally and preserve the valid
+reporting reference. No previous answer, raw translation text or history enters
+OpenAI.
+
+`AssistantReportRequest` checks finite recognized unsupported report subsets
+before scope/year resolution can keep an incorrect broad pending reference:
+crop/input, season/month/date-range, gender/mapping/registry, species/service,
+status/quantity and protected fields. These paths make no operational query or
+provider call and clear pending context, so a bare year cannot widen the rejected
+request. Literal farmer names and feature-help instructions stay separate. This
+is a bounded recognizer, not exhaustive language understanding. Unqualified
+annual reports remain supported; legacy generic seeds/binhi aliases still select
+all-category assistance, not a seed-only filter. Simple farmer-ID/parcel/seasonal-
+crop definitions now resolve to reviewed help instead of record counts.
+
+HTTP 429 responses produce a visible memory-only retry countdown. Seconds and
+HTTP-date Retry-After headers are bounded to 1–300 seconds; missing/invalid values
+use 60 seconds. Send/Retry/choices wait while the draft stays editable. New chat
+and Close do not bypass this page's wait. Reload has no persistent client timer
+and server throttling remains authoritative. Start/end are announced without
+every-second live-region chatter. After an initiating Send/choice/Retry loses
+focus, the composer regains focus unless the user moved elsewhere. Plain-text
+rendering and same-origin links remain.
+
+No migration, dependency, environment or account update is required. Release
+backend/context/resolver/guard, reviewed passages, partial and both public assets
+together. Cache identity already includes language and corpus. Never clear the
+general cache or reset provider allowances.
+
+Verification passed **529 PHP tests / 3,252 assertions** and **206 JavaScript
+tests**, including 29 Assistant UI cases. Pint, changed-PHP syntax, Blade
+compilation, route verification and `git diff --check` passed. A normal local
+browser session using synthetic office records verified filtered-report
+clarification, Filipino guidance, a shorter Filipino follow-up and an English
+switch on the same crop topic. Countdown and focus behavior were verified by
+automated UI tests; this is not a production acceptance or load test. The pending
+farmer-card patch passed a reverse-apply check without being modified.
+
+## Deployed context-aware baseline
+
 Current follow-up status: the October 11 context-aware, AgriLGU-only extension is
 deployed on Hostinger in runtime `82a24c4` through GitHub main push and Hostinger
 fast-forward pull. Local verification passed 386 PHP

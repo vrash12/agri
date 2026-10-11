@@ -5,7 +5,7 @@ const vm = require('node:vm');
 const path = require('node:path');
 const source = fs.readFileSync(path.join(__dirname, '../../public/js/planted-area-editor.js'), 'utf8');
 
-function editor(saved = []) {
+function editor(saved = [], scoped = false) {
   class Events {
     constructor() { this.listeners = {}; }
     addListener(name, fn) { (this.listeners[name] ??= []).push(fn); }
@@ -48,6 +48,11 @@ function editor(saved = []) {
   class LatLngBounds { extend() {} }
   const elements = {};
   const byId = id => elements[id] ??= new Element();
+  if (scoped) {
+    const root = new Element();
+    root.querySelector = selector => selector === '#plantedSaveState' ? null : byId(selector.slice(1));
+    elements.plantedAreaEditor = root;
+  }
   byId('plantedAreaConfig').textContent = JSON.stringify({
     canDraw: true, areas: saved, crops: { corn: 'Corn', rice: 'Rice' }, colors: { corn: '#D4A017', rice: '#228B22' },
     polygon: [{ lat: 15.6, lng: 120.47 }, { lat: 15.6, lng: 120.471 }, { lat: 15.601, lng: 120.471 }, { lat: 15.601, lng: 120.47 }]
@@ -110,4 +115,10 @@ test('controls follow drawing state and the whole-parcel crop follows finished s
   assert.equal(e.byId('crop').value, 'corn');
   assert.equal(e.byId('plantedAreaCount').textContent, '1/8');
   assert.match(e.byId('plantedSaveState').textContent, /Unsaved changes/);
+});
+
+test('modal-scoped editor can update save status outside its editor root', () => {
+  const e = editor([], true);
+  e.click('plantedStart');
+  assert.match(e.byId('plantedSaveState').textContent, /Finish or cancel/);
 });

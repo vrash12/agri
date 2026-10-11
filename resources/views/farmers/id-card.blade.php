@@ -11,9 +11,9 @@
       $farmer->last_name,
       $farmer->ext_name,
   ])->filter()->implode(' '));
-  $initials = strtoupper(
-      substr($farmer->first_name ?: 'F', 0, 1)
-      .substr($farmer->last_name ?: 'R', 0, 1)
+  $initials = mb_strtoupper(
+      mb_substr($farmer->first_name ?: 'F', 0, 1)
+      .mb_substr($farmer->last_name ?: 'R', 0, 1)
   );
   $photoUrl = $farmer->profile_photo_path
       ? route('farmers.photo', $farmer)
@@ -34,6 +34,9 @@
   ])->filter()->values();
   $plotCount = $farmer->farmPlots->count();
   $cardFarmLocation = $cardFarmLocation ?? 'Parcel address not recorded';
+  $municipalCard = $cardEmblem['municipal'];
+  $cardOfficeHeading = $municipalCard ? 'MUNICIPAL AGRICULTURE OFFICE' : 'PROVINCIAL AGRICULTURE OFFICE';
+  $cardJurisdiction = $municipalCard ? 'RAMOS, TARLAC' : mb_strtoupper($provinceName);
   // 24x24 stroke icons. The same path data is drawn inline on the printed card and
   // through Path2D on the canvas export, so both renderings show identical icons.
   $cardIcons = [
@@ -92,13 +95,13 @@
         <div class="farmer-card-side-label farmer-card-screen-only"><strong>Front</strong><span>Identity and registry details</span></div>
         <div class="farmer-id-card farmer-id-card-front" id="farmerIdCardFront">
           <div class="farmer-card-header-brand">
-            <img class="farmer-card-republic-logo" src="{{ asset('images/branding/philippines-coat-of-arms.png') }}" alt="Coat of arms of the Republic of the Philippines">
+            <img class="{{ $municipalCard ? 'farmer-card-municipal-logo' : 'farmer-card-republic-logo' }}" src="{{ asset($cardEmblem['path']) }}" alt="{{ $cardEmblem['alt'] }}">
             <div>
               <small>REPUBLIKA NG PILIPINAS</small>
               <span class="farmer-card-republic-translation">Republic of the Philippines</span>
-              <strong>PROVINCIAL AGRICULTURE OFFICE</strong>
+              <strong>{{ $cardOfficeHeading }}</strong>
               <b>FARMER REGISTRY CARD</b>
-              <span>{{ strtoupper($provinceName) }}</span>
+              <span>{{ $cardJurisdiction }}</span>
             </div>
             <img class="farmer-card-da-logo" src="{{ asset('images/da.jpg') }}" alt="Department of Agriculture logo">
           </div>
@@ -116,13 +119,13 @@
           @endif
 
           <div class="farmer-card-front-details">
-            <div class="farmer-card-field farmer-card-field-name"><span>Full name</span><strong>{{ strtoupper($fullName ?: 'NAME NOT RECORDED') }}</strong></div>
+            <div class="farmer-card-field farmer-card-field-name"><span>Full name</span><strong>{{ mb_strtoupper($fullName ?: 'NAME NOT RECORDED') }}</strong></div>
             <div class="farmer-card-field"><span>AgriLGU ID <em>System-generated</em></span><strong class="farmer-card-code">{{ $farmer->agri_gov_id }}</strong></div>
             <div class="farmer-card-two-fields">
               <div class="farmer-card-field"><span>RSBSA number</span><strong>{{ $farmer->rsbsa_no ?: 'Not recorded' }}</strong></div>
               <div class="farmer-card-field"><span>FFRS number</span><strong>{{ $farmer->ffrs ?: 'Not recorded' }}</strong></div>
             </div>
-            <div class="farmer-card-field farmer-card-field-municipality"><span>Registry municipality</span><strong>{{ strtoupper($municipalityName) }}</strong></div>
+            <div class="farmer-card-field farmer-card-field-municipality"><span>Registry municipality</span><strong>{{ mb_strtoupper($municipalityName) }}</strong></div>
           </div>
 
           <div class="farmer-card-front-footer">
@@ -177,7 +180,11 @@
       </article>
     </div>
   </section>
-  <p class="farmer-card-art-credit farmer-card-screen-only">Coat of arms: Galo Ocampo; vector by Zachary Harden, <a href="https://commons.wikimedia.org/wiki/File:Coat_of_arms_of_the_Philippines.svg" target="_blank" rel="noopener">Wikimedia Commons</a>, <a href="https://creativecommons.org/licenses/by-sa/2.5/" target="_blank" rel="noopener">CC BY-SA 2.5</a>. Raster reproduction; colors unchanged.</p>
+  @if($municipalCard)
+    <p class="farmer-card-art-credit farmer-card-screen-only">Municipality of Ramos seal: image supplied by the project owner. Original colors and proportions preserved.</p>
+  @else
+    <p class="farmer-card-art-credit farmer-card-screen-only">Coat of arms: Galo Ocampo; vector by Zachary Harden, <a href="https://commons.wikimedia.org/wiki/File:Coat_of_arms_of_the_Philippines.svg" target="_blank" rel="noopener">Wikimedia Commons</a>, <a href="https://creativecommons.org/licenses/by-sa/2.5/" target="_blank" rel="noopener">CC BY-SA 2.5</a>. Raster reproduction; colors unchanged.</p>
+  @endif
 
   <dialog class="farmer-digital-dialog farmer-card-screen-only" id="farmerDigitalIdDialog" aria-labelledby="farmerDigitalIdTitle">
     <div class="farmer-digital-shell">
@@ -244,11 +251,11 @@
   .farmer-card-workspace{overflow:hidden;border:1px solid var(--module-border);border-radius:12px;background:#eef3ef}.farmer-card-workspace-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;border-bottom:1px solid var(--module-border);background:#fff}.farmer-card-workspace-head strong,.farmer-card-workspace-head span{display:block}.farmer-card-workspace-head strong{font-size:12px}.farmer-card-workspace-head div>span{margin-top:3px;color:var(--module-muted);font-size:9px}.farmer-card-id-chip{padding:6px 9px;border-radius:7px;color:var(--module-green);background:var(--module-green-soft);font:800 9px ui-monospace,monospace}
   .farmer-card-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;padding:24px}.farmer-card-grid>article{min-width:0}.farmer-card-side-label{display:flex;justify-content:space-between;gap:10px;margin-bottom:8px}.farmer-card-side-label strong{font-size:11px}.farmer-card-side-label span{color:var(--module-muted);font-size:9px}
   .farmer-digital-dialog,.farmer-qr-dialog{width:min(880px,calc(100vw - 28px));max-width:none;max-height:calc(100dvh - 28px);padding:0;overflow:hidden;border:0;border-radius:22px;background:transparent;box-shadow:0 32px 90px rgba(8,29,17,.28)}.farmer-digital-dialog::backdrop,.farmer-qr-dialog::backdrop{background:rgba(9,24,15,.72);backdrop-filter:blur(6px)}
-  .farmer-digital-shell{display:grid;max-height:calc(100dvh - 28px);overflow:auto;background:#f8fbf8}.farmer-digital-header{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px 20px;border-bottom:1px solid #d9e4dc;background:#fff}.farmer-digital-header h2,.farmer-qr-shell h2{margin:3px 0 0;color:#102219;font-size:22px;line-height:1.1}.farmer-digital-kicker,.farmer-qr-shell header span{color:#14743f;font-size:10px;font-weight:900;letter-spacing:.09em;text-transform:uppercase}.farmer-digital-icon-button{display:grid;flex:0 0 38px;width:38px;height:38px;place-items:center;border:1px solid #d5dfd8;border-radius:50%;color:#425248;background:#fff;font-size:24px;line-height:1;cursor:pointer}.farmer-digital-icon-button:hover{color:#0b6736;background:#edf7f0}.farmer-digital-icon-button:focus-visible{outline:3px solid rgba(22,131,75,.24);outline-offset:2px}
-  .farmer-digital-stage{display:grid;justify-items:center;padding:18px 20px 12px;background:radial-gradient(circle at 50% 0,#eff8f1 0,#e2eee6 48%,#dbe8df 100%)}.farmer-digital-status{display:flex;align-items:center;gap:7px;margin-bottom:10px;padding:6px 10px;border:1px solid rgba(23,119,65,.16);border-radius:999px;color:#135f35;background:rgba(255,255,255,.82);font-size:10px}.farmer-digital-status span{width:7px;height:7px;border-radius:50%;background:#24b865;box-shadow:0 0 0 4px rgba(36,184,101,.12)}.farmer-digital-card-frame{position:relative;width:min(650px,100%);aspect-ratio:1.585;display:grid;place-items:center;overflow:hidden;border-radius:22px;background:#fff;box-shadow:0 24px 62px rgba(15,54,31,.2)}.farmer-digital-card-frame img{display:block;width:100%;height:100%;object-fit:contain;opacity:0;transform:scale(.985);transition:opacity .22s ease,transform .22s ease}.farmer-digital-card-frame img.is-ready{opacity:1;transform:scale(1)}.farmer-digital-card-frame.is-changing img{opacity:.15;transform:scale(.975)}.farmer-digital-loading{position:absolute;max-width:90%;text-align:center;color:#65746a;font-size:12px;font-weight:800}.farmer-digital-hint{max-width:660px;margin:10px 0 0;color:#607067;font-size:11px;line-height:1.45;text-align:center}.farmer-digital-side-switch{display:flex;justify-content:center;gap:4px;padding:10px 20px 3px;background:#f8fbf8}.farmer-digital-side-switch button{min-width:120px;padding:9px 14px;border:0;border-radius:999px;color:#637168;background:transparent;font-size:11px;font-weight:850;cursor:pointer}.farmer-digital-side-switch button.is-active{color:#fff;background:#146f3c;box-shadow:0 6px 16px rgba(20,111,60,.2)}.farmer-digital-side-switch button:focus-visible{outline:3px solid rgba(22,131,75,.22);outline-offset:2px}.farmer-digital-actions{display:flex;align-items:center;justify-content:center;gap:8px;padding:9px 20px 14px;background:#f8fbf8}
+  .farmer-digital-shell{display:grid;max-height:calc(100dvh - 28px);overflow:auto;background:#f8fbf8}.farmer-digital-header{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px 20px;border-bottom:1px solid #d9e4dc;background:#fff}.farmer-digital-header h2,.farmer-qr-shell h2{margin:3px 0 0;color:#102219;font-size:22px;line-height:1.1}.farmer-digital-kicker,.farmer-qr-shell header span{color:#14743f;font-size:10px;font-weight:900;letter-spacing:.09em;text-transform:uppercase}.farmer-digital-icon-button{display:grid;flex:0 0 44px;width:44px;height:44px;place-items:center;border:1px solid #d5dfd8;border-radius:50%;color:#425248;background:#fff;font-size:24px;line-height:1;cursor:pointer}.farmer-digital-icon-button:hover{color:#0b6736;background:#edf7f0}.farmer-digital-icon-button:focus-visible{outline:3px solid rgba(22,131,75,.24);outline-offset:2px}
+  .farmer-digital-stage{display:grid;justify-items:center;padding:18px 20px 12px;background:radial-gradient(circle at 50% 0,#eff8f1 0,#e2eee6 48%,#dbe8df 100%)}.farmer-digital-status{display:flex;align-items:center;gap:7px;margin-bottom:10px;padding:6px 10px;border:1px solid rgba(23,119,65,.16);border-radius:999px;color:#135f35;background:rgba(255,255,255,.82);font-size:10px}.farmer-digital-status span{width:7px;height:7px;border-radius:50%;background:#24b865;box-shadow:0 0 0 4px rgba(36,184,101,.12)}.farmer-digital-card-frame{position:relative;width:min(650px,100%);aspect-ratio:1011/638;display:grid;place-items:center;overflow:hidden;border-radius:22px;background:#fff;box-shadow:0 24px 62px rgba(15,54,31,.2)}.farmer-digital-card-frame img{display:block;width:100%;height:100%;object-fit:contain;opacity:0;transform:scale(.985);transition:opacity .22s ease,transform .22s ease}.farmer-digital-card-frame img.is-ready{opacity:1;transform:scale(1)}.farmer-digital-card-frame.is-changing img{opacity:.15;transform:scale(.975)}.farmer-digital-loading{position:absolute;max-width:90%;text-align:center;color:#65746a;font-size:12px;font-weight:800}.farmer-digital-hint{max-width:660px;margin:10px 0 0;color:#607067;font-size:11px;line-height:1.45;text-align:center}.farmer-digital-side-switch{display:flex;justify-content:center;gap:4px;padding:10px 20px 3px;background:#f8fbf8}.farmer-digital-side-switch button{min-width:120px;min-height:44px;padding:9px 14px;border:0;border-radius:999px;color:#637168;background:transparent;font-size:11px;font-weight:850;cursor:pointer}.farmer-digital-side-switch button.is-active{color:#fff;background:#146f3c;box-shadow:0 6px 16px rgba(20,111,60,.2)}.farmer-digital-side-switch button:focus-visible{outline:3px solid rgba(22,131,75,.22);outline-offset:2px}.farmer-digital-actions{display:flex;align-items:center;justify-content:center;gap:8px;padding:9px 20px 14px;background:#f8fbf8}
   .farmer-qr-dialog{width:min(440px,calc(100vw - 28px))}.farmer-qr-shell{padding:20px;background:#fff;text-align:center}.farmer-qr-shell>header{display:flex;align-items:center;justify-content:space-between;gap:14px;text-align:left}.farmer-qr-image-wrap{width:min(330px,100%);margin:20px auto 12px;padding:16px;border:1px solid #d8e3db;border-radius:20px;background:#fff;box-shadow:0 16px 40px rgba(16,62,34,.1)}.farmer-qr-image-wrap img{display:block;width:100%;aspect-ratio:1;object-fit:contain}.farmer-qr-shell>strong{display:block;color:#155f36;font:900 14px ui-monospace,monospace;letter-spacing:.04em}.farmer-qr-shell>p{margin:8px auto 18px;color:#607067;font-size:11px;line-height:1.55}.farmer-qr-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.farmer-qr-actions .module-button{justify-content:center;text-align:center}
   @media(max-width:1180px){.farmer-card-grid{grid-template-columns:1fr}.farmer-card-grid>article{width:min(856px,100%);margin:auto}}
-  @media(max-width:560px){.farmer-card-grid{padding:10px;gap:16px}.farmer-card-workspace-head{align-items:flex-start;flex-direction:column}.farmer-card-notice{align-items:flex-start;flex-direction:column}.farmer-digital-dialog{width:calc(100vw - 12px);max-height:calc(100dvh - 12px);border-radius:18px}.farmer-digital-shell{max-height:calc(100dvh - 12px)}.farmer-digital-header{padding:14px 15px}.farmer-digital-header h2{font-size:17px}.farmer-digital-stage{padding:16px 10px 12px}.farmer-digital-card-frame{border-radius:14px}.farmer-digital-hint{font-size:10px}.farmer-digital-side-switch{padding:11px 10px 3px}.farmer-digital-side-switch button{min-width:105px;padding:8px 12px}.farmer-digital-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:10px 12px 14px}.farmer-digital-actions .module-button{justify-content:center;padding-inline:8px}.farmer-qr-shell{padding:16px}.farmer-qr-image-wrap{margin-top:16px}}
+  @media(max-width:560px){.farmer-card-grid{padding:10px;gap:16px}.farmer-card-workspace-head{align-items:flex-start;flex-direction:column}.farmer-card-notice{align-items:flex-start;flex-direction:column}.farmer-digital-dialog{width:calc(100vw - 12px);max-height:calc(100dvh - 12px);border-radius:18px}.farmer-digital-shell{max-height:calc(100dvh - 12px)}.farmer-digital-header{padding:14px 15px}.farmer-digital-header h2{font-size:17px}.farmer-digital-stage{padding:16px 10px 12px}.farmer-digital-card-frame{border-radius:14px}.farmer-digital-hint{font-size:10px}.farmer-digital-side-switch{padding:11px 10px 3px}.farmer-digital-side-switch button{min-width:105px;min-height:44px;padding:8px 12px}.farmer-digital-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:10px 12px 14px}.farmer-digital-actions .module-button{justify-content:center;padding-inline:8px}.farmer-qr-shell{padding:16px}.farmer-qr-image-wrap{margin-top:16px}}
   @media print{
     @page{size:A4 portrait;margin:12mm}.sidebar,.topbar,.farmer-card-screen-only,.farmer-digital-dialog,.farmer-qr-dialog{display:none!important}.main,.content{margin:0!important;padding:0!important;width:100%!important}.farmer-card-page,.farmer-card-workspace,.farmer-card-grid{display:block!important;border:0!important;background:#fff!important;padding:0!important}.farmer-card-grid>article{width:85.6mm!important;margin:0 auto 12mm!important;break-inside:avoid;page-break-inside:avoid}.farmer-id-card{width:85.6mm!important;height:54mm!important;border-radius:2.5mm!important;box-shadow:none!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   }
@@ -261,11 +268,12 @@
   document.addEventListener('DOMContentLoaded', function () {
     const cardData = {
       farmerId: @json($farmer->agri_gov_id),
-      fullName: @json(strtoupper($fullName ?: 'NAME NOT RECORDED')),
+      fullName: @json(mb_strtoupper($fullName ?: 'NAME NOT RECORDED')),
       rsbsa: @json($farmer->rsbsa_no ?: 'Not recorded'),
       ffrs: @json($farmer->ffrs ?: 'Not recorded'),
-      municipality: @json(strtoupper($municipalityName)),
-      province: @json(strtoupper($provinceName)),
+      municipality: @json(mb_strtoupper($municipalityName)),
+      jurisdiction: @json($cardJurisdiction),
+      officeHeading: @json($cardOfficeHeading),
       farmLocation: @json($cardFarmLocation),
       contact: @json($farmer->contact_number ?: 'Not recorded'),
       area: @json($farmer->farm_area_ha !== null ? number_format((float)$farmer->farm_area_ha, 2).' hectares' : 'Not recorded'),
@@ -276,10 +284,11 @@
       initials: @json($initials),
       photoUrl: @json($photoUrl),
       daLogo: @json(asset('images/da.jpg')),
-      republicLogo: @json(asset('images/branding/philippines-coat-of-arms.png')),
-      background: @json(asset('images/branding/farmer-card-background.svg')),
-      frontArt: @json(asset('images/branding/farmer-card-front-art.svg')),
-      backArt: @json(asset('images/branding/farmer-card-back-art.svg')),
+      officeEmblem: @json(asset($cardEmblem['path'])),
+      municipalEmblem: @json($municipalCard),
+      background: @json(asset('images/branding/farmer-card-background.svg').'?v=field-20261010-1'),
+      frontArt: @json(asset('images/branding/farmer-card-front-art.svg').'?v=field-20261010-1'),
+      backArt: @json(asset('images/branding/farmer-card-back-art.svg').'?v=field-20261010-1'),
       brandWordmark: @json(asset('images/branding/agrilgu-wordmark-v1.png')),
       brandMark: @json(asset('images/branding/agrilgu-mark-v1.png')),
       icons: @json($cardIcons),
@@ -428,24 +437,24 @@
     window.addEventListener('beforeprint', fitPrintedAddress);
 
     async function renderFront() {
-      const [photo, daLogo, republicLogo, background, frontArt, brandMark] = await Promise.all([
-        loadImage(cardData.photoUrl), loadImage(cardData.daLogo), loadImage(cardData.republicLogo), loadImage(cardData.background),
+      const [photo, daLogo, officeEmblem, background, frontArt, brandMark] = await Promise.all([
+        loadImage(cardData.photoUrl), loadImage(cardData.daLogo), loadImage(cardData.officeEmblem), loadImage(cardData.background),
         loadImage(cardData.frontArt), loadImage(cardData.brandMark)
       ]);
-      if (!daLogo || !republicLogo || !background || !frontArt || !brandMark) throw new Error('The card artwork could not load. Reload this page before downloading the ID.');
+      if (!daLogo || !officeEmblem || !background || !frontArt || !brandMark) throw new Error('The card artwork could not load. Reload this page before downloading the ID.');
       const canvas = document.createElement('canvas');
       canvas.width = 1011; canvas.height = 638;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(background, 0, 0, 1011, 638);
-      // Rosette, title sprigs, microtext rule, photo corners and footer band.
+      // Readable identity panel, registry microtext, photo corners and field-row footer.
       ctx.drawImage(frontArt, 0, 0, 1011, 638);
-      ctx.drawImage(republicLogo, 52, 30, 98, 109);
+      ctx.drawImage(officeEmblem, 52, cardData.municipalEmblem ? 35 : 30, 98, cardData.municipalEmblem ? 98 : 109);
       ctx.save(); ctx.beginPath(); ctx.arc(916, 86, 54, 0, Math.PI * 2); ctx.clip(); ctx.drawImage(daLogo, 862, 32, 108, 108); ctx.restore();
       ctx.textAlign = 'center'; ctx.fillStyle = '#173e2d'; ctx.font = '700 22px Arial'; ctx.fillText('REPUBLIKA NG PILIPINAS', 505, 43);
       ctx.fillStyle = '#53685c'; ctx.font = '15px Arial'; ctx.fillText('Republic of the Philippines', 505, 64);
-      ctx.fillStyle = '#243e30'; ctx.font = '700 22px Arial'; ctx.fillText('PROVINCIAL AGRICULTURE OFFICE', 505, 94);
+      ctx.fillStyle = '#243e30'; ctx.font = '700 22px Arial'; ctx.fillText(cardData.officeHeading, 505, 94);
       ctx.fillStyle = '#075b2e'; ctx.font = '900 34px Arial'; ctx.fillText('FARMER REGISTRY CARD', 505, 131);
-      fittedText(ctx, cardData.province, 505, 155, 650, 17, 700, '#53685c'); ctx.textAlign = 'left';
+      fittedText(ctx, cardData.jurisdiction, 505, 155, 650, 17, 700, '#53685c'); ctx.textAlign = 'left';
       roundRect(ctx, 52, 190, 250, 305, 18, '#245e3a', '#173f28');
       ctx.save(); ctx.beginPath(); ctx.roundRect(60, 198, 234, 289, 12); ctx.clip();
       if (photo) coverImage(ctx, photo, 60, 198, 234, 289);
@@ -466,7 +475,6 @@
       field(ctx, 'RSBSA NUMBER', cardData.rsbsa, 340, 365, 285, 27);
       field(ctx, 'FFRS NUMBER', cardData.ffrs, 650, 365, 300, 27);
       field(ctx, 'REGISTRY MUNICIPALITY', cardData.municipality, 340, 445, 490, 26);
-      roundRect(ctx, 48, 567, 58, 58, 10, '#ffffff');
       ctx.drawImage(brandMark, 52, 571, 50, 50);
       ctx.fillStyle='#fff'; ctx.font='800 27px Arial'; ctx.fillText('AgriLGU',120,592); ctx.fillStyle='#e2f1e6'; ctx.font='13px Arial'; ctx.fillText('LGU AGRICULTURE INFORMATION SYSTEM',120,614);
       ctx.textAlign='right'; ctx.fillStyle='#fff'; ctx.font='800 19px Arial'; ctx.fillText('REGISTERED FARMER',860,602);
@@ -484,7 +492,7 @@
       canvas.width = 1011; canvas.height = 638;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(background, 0, 0, 1011, 638);
-      // Patterned header band with rice sprigs, plus the faint rosette.
+      // Field-row header, white detail/QR panels and clear ink-signature area.
       ctx.drawImage(backArt, 0, 0, 1011, 638);
       roundRect(ctx,366,8,279,98,8,'#ffffff');
       ctx.drawImage(brandWordmark,390,13,230,230 * brandWordmark.height / brandWordmark.width);

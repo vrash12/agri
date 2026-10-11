@@ -30,14 +30,17 @@
   <dialog class="assistant-dialog" id="officeAssistantDialog" aria-labelledby="officeAssistantTitle" aria-describedby="officeAssistantPrivacy" data-assistant-dialog>
     <header class="assistant-header">
       <span class="assistant-brand" aria-hidden="true"><x-brand compact /></span>
-      <h2 id="officeAssistantTitle">AgriLGU Assistant</h2>
+      <div class="assistant-title">
+        <h2 id="officeAssistantTitle">AgriLGU Assistant</h2>
+        <span class="assistant-presence"><span class="assistant-presence-dot" aria-hidden="true"></span>Ready to help</span>
+      </div>
       <button class="assistant-clear" type="button" data-assistant-clear>New chat</button>
       <button class="assistant-icon-button" type="button" data-assistant-close aria-label="Close Assistant">×</button>
     </header>
     <div class="assistant-body" data-assistant-body tabindex="0" role="region" aria-label="Conversation messages">
       <div class="assistant-welcome" data-assistant-welcome>
         <h3>How can I help?</h3>
-        <p>Ask about AgriLGU features or your permitted office records. Continue with “Explain more” or “Show me the steps” after a system guide.</p>
+        <p>Ask about AgriLGU features or your permitted office records. After a guide, try “Show me the steps”, “In Filipino” or “In English”.</p>
         <div class="assistant-suggestions" aria-label="Suggested questions">
           @foreach($assistantSuggestions as $suggestion)
             <button type="button" data-assistant-suggestion>{{ $suggestion }}<span aria-hidden="true">→</span></button>
@@ -50,12 +53,13 @@
     <div class="assistant-screen-reader" role="status" aria-live="polite" data-assistant-status></div>
     <form class="assistant-compose" data-assistant-form novalidate>
       <label for="officeAssistantQuestion">Your message</label>
-      <textarea id="officeAssistantQuestion" name="message" maxlength="800" rows="2" required placeholder="Ask a question or follow up…" data-assistant-input aria-describedby="officeAssistantPrivacy officeAssistantCount"></textarea>
+      <textarea id="officeAssistantQuestion" name="message" maxlength="800" rows="2" required placeholder="Ask a question or follow up…" data-assistant-input aria-describedby="officeAssistantPrivacy officeAssistantCount officeAssistantCooldown"></textarea>
       <div class="assistant-actions">
         <span class="assistant-keyboard-hint">Enter to send · Shift + Enter for a new line</span>
         <span id="officeAssistantCount" class="assistant-count" data-assistant-count>0 / 800</span>
         <button class="assistant-send" type="submit" data-assistant-send>Send <span aria-hidden="true">↑</span></button>
       </div>
+      <p id="officeAssistantCooldown" class="assistant-cooldown" data-assistant-cooldown hidden></p>
       <p id="officeAssistantPrivacy" class="assistant-privacy">Office records stay in AgriLGU. AI receives only general help topics. Never share passwords or keys.</p>
     </form>
   </dialog>

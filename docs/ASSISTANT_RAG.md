@@ -1,5 +1,22 @@
 # Assistant retrieval and grounded help
 
+Local workflow follow-up, October 11 (not deployed): deterministic next prompts
+use approved reply/reference types rather than model text or record snippets.
+Bounded encrypted scope/year hints complete report clarifications with selected
+farmer reauthorization. Chips stage editable messages for explicit Send. Reviewed
+help describes the flow; the existing corpus digest separates answer caches.
+No new retrieval source, private-record RAG or provider disclosure. See
+[Office Assistant](OFFICE_ASSISTANT.md).
+
+Local reliability follow-up, October 11 (not deployed): optional `help_language`
+retains only `en`/`fil` with the existing topic/style. Language switches regenerate
+canonical help without translating the last reply or forwarding private text.
+Cache identity already separates languages; reviewed Assistant-help passages now
+describe this behavior and report limits. Recognized unsupported filtered reports
+clarify before queries/pending-year context instead of returning broader totals.
+No new topic, provider tool, classifier, transcript or private-record RAG.
+See [Office Assistant](OFFICE_ASSISTANT.md).
+
 Current follow-up status: the October 11 context-aware, AgriLGU-only extension is
 deployed on Hostinger in runtime `82a24c4` through GitHub main push and Hostinger
 fast-forward pull. Its 31 reviewed passages, 24 canonical topics, local

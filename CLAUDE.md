@@ -1,5 +1,39 @@
 # AgriLGU — Claude Code project instructions
 
+## Pending local Assistant awareness improvement — October 12, 2026
+
+The Assistant may answer bounded questions about itself, the current
+allowlisted workspace module and the authenticated account's role/scope.
+Treat the browser module as a relevance hint only: it does not prove active
+filters, unsaved fields or authorization. Keep awareness replies local and
+application-owned, without operational queries, provider calls, raw chat,
+private records, filesystem access or claims of consciousness. Preserve
+veterinary Animal Health isolation and release these resolver/identity/
+conversation changes with tests and documentation after explicit owner
+authorization.
+
+## Pending local Assistant response-state improvement — October 12, 2026
+
+The unified office conversation has a visual pending bubble that says
+“Thinking…” while the request is in flight. Keep it a neutral progress cue:
+never render hidden chain-of-thought, provider diagnostics, raw prompts or
+private records. Preserve the live status/`aria-busy` behavior, replace it with
+the verified answer or safe retry state, and honor reduced-motion preferences.
+This is local and not deployed; release the Assistant script, stylesheet,
+partial and tests together after explicit owner authorization.
+
+## Pending local Assistant improvement — October 12, 2026
+
+The current checkout adds a read-only data-quality review task to the unified
+office conversation. It reports only current, authorized aggregate counts for
+missing FFRS references, missing farm locations, farmers without parcels and
+plots without boundary geometry, and links to existing registry filters. Keep
+the query local: no names, identifiers, addresses, coordinates, geometry or
+record text may enter provider prompts. Historical-year quality requests must
+clarify instead of widening a report. This follow-up is not deployed and needs
+the support class, resolver, records service, prompts and tests released
+together. It requires no schema, dependency, configuration or account change.
+
 ## Purpose
 
 Act as the senior full-stack developer, AI engineer and software architect for
@@ -191,6 +225,30 @@ substitute for numeric ownership IDs.
 - Record before/after measurements; shorter code alone is not a speed result.
 
 ## AI Assistant engineering rules — deployed October 11, 2026
+
+The later workflow follow-up is local, not deployed. `AssistantNextSteps` builds
+up to three static prompts from authorized reply/reference types, never model
+output or private fields. Chips require explicit Send, preserve drafts and use
+their reply's context until editing; retire old chips but preserve farmer choices.
+Encrypted `pending_scope` allows only assistance/harvests with task `farmer`, a
+selected farmer, one year and no choices. Bare years keep scope pending; scope-only
+replies without that hint cannot infer a report. Reauthorize selected reads and
+clear farmer selection for whole-office reports. Keep legacy tokens compatible,
+veterinary prompts limited and provider disclosure unchanged. No schema,
+dependency/configuration/account change. See `docs/OFFICE_ASSISTANT.md`.
+
+The subsequent reliability follow-up is local, not deployed. Preserve optional
+`help_language` as `en`/`fil` in version-1 help references; language changes
+regenerate canonical help, never translate record replies. Recognized unsupported
+report qualifiers clarify and reset pending context before queries or
+year/comparison references can silently widen the result. Keep literal farmer
+names and canonical feature guidance outside the report guard. Its finite
+recognizers do not guarantee arbitrary-language understanding; generic seeds/binhi
+aliases still select all-category assistance. Retain editable drafts during
+bounded Retry-After waits and restore focus only when the initiating control
+loses it, respecting deliberate movement. Release backend, reviewed guidance,
+partial and both public assets together after authorization; no schema,
+dependency/configuration or account change.
 
 The unified Assistant is deployed inside authenticated office pages,
 with no mode/year forms or report sections. Tests and normal office/MySQL browser

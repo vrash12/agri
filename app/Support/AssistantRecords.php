@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Log;
 /** Private, read-only answers. Nothing from this service goes to an AI provider. */
 final class AssistantRecords
 {
-    public function __construct(private MunicipalityAccess $access) {}
+    public function __construct(private MunicipalityAccess $access, private AssistantDataQuality $quality) {}
 
     /** @return array{answer:string,source:string,report:string,year:int,actions:array,links:array} */
     public function answer(User $user, string $question, int $year, ?int $farmerId = null): array
@@ -57,6 +57,7 @@ final class AssistantRecords
                 'assistance' => $this->result($this->assistance($user, $year), 'assistance', $year, links: [$this->link('Open assistance register', 'rice-seed-distributions.index')]),
                 'harvests' => $this->result($this->harvests($user, $year), 'harvests', $year, links: [$this->link('Open harvest register', 'harvest-records.index')]),
                 'animal-health' => $this->result($this->animals($user, $year), 'animal-health', $year, links: [$this->link('Open Animal Health', 'anti-rabies-vaccinations.index')]),
+                'data-quality' => $this->qualityResult($user, $year),
                 'summary' => $user->isProvincialVeterinaryOffice()
                     ? $this->result($this->animals($user, $year), 'animal-health', $year)
                     : $this->result($this->farmerSummary($user)."\n\n".$this->assistance($user, $year)."\n\n".$this->harvests($user, $year), 'summary', $year),
@@ -76,6 +77,7 @@ final class AssistantRecords
         }
 
         return match (true) {
+            AssistantDataQuality::matches($question) => 'data-quality',
             (bool) preg_match('/\b(harvest|harvests|production|ani)\b/iu', $question) => 'harvests',
             (bool) preg_match('/\b(assistance|seed|seeds|distribution|releases|binhi|ayuda)\b/iu', $question) => 'assistance',
             (bool) preg_match('/\b(animal|animals|vaccination|deworming|hayop)\b/iu', $question) => 'animal-health',
@@ -218,6 +220,13 @@ final class AssistantRecords
         }
 
         return $this->result($text, $detail, $year, links: [['label' => 'Open farmer record', 'url' => route('farmers.records', $farmer)]]) + ['_farmer_id' => $farmer->id];
+    }
+
+    private function qualityResult(User $user, int $year): array
+    {
+        $summary = $this->quality->summary($user);
+
+        return $this->result($summary['answer'], 'data-quality', $year, links: $summary['links']);
     }
 
     /** @param class-string<Model> $model */
