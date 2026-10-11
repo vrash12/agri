@@ -2,6 +2,14 @@
 
 Current branding is **AgriLGU**, deployed in runtime `c322a5e`. Screen, print, digital ID and PNG exports use the matching corn emblem/wordmark and AgriLGU labels. Actual `AGRI-F-######` numbers, portal logins and `agri_gov_id` compatibility fields are unchanged; the dated releases below used the former name. See [AgriLGU branding](AGRILGU_BRANDING.md).
 
+The October 12, 2026 Ramos seal and field-artwork follow-up is deployed in
+runtime `d89aa10`. Ramos cards resolve the supplied municipal seal only for an
+active Ramos municipality under Tarlac, while other offices retain the national
+emblem treatment. The shared field artwork, signature lines, HTML/canvas
+rendering and five mirrored public assets were released together. No farmer
+records, identifiers, QR destinations, account assignments or signature images
+were changed; signatures remain for ink after printing.
+
 ## Field-background refinement — October 10, 2026 (local)
 
 The front footer's compact AgriLGU corn mark sits directly on the green field-row band, without a white tile. CSS uses a transparent background, and canvas draws the same transparent PNG directly. The back wordmark and QR panels retain their white surfaces.
@@ -16,7 +24,7 @@ HTML and canvas load the same three artwork files with `?v=field-20261010-1`, pr
 
 Verified locally with disposable SQLite fixtures: 14 focused card/signatory/workspace tests and three JavaScript address/overflow tests passed; Pint, PHP syntax, Blade compilation and whitespace checks passed. Desktop and approximately 390 CSS-pixel layouts were inspected with three complete slash-separated sample parcel addresses and all six classifications. Actual front/back downloads are 1011 × 638; the back QR decoded to the same fixture map link at widths 1011, 856, 650, 505 and 428 pixels and with a light blur. The review also checked missing-photo initials and full signature captions. No real farmer data was used. Physical printing and a live authenticated card export were not performed.
 
-Not pushed or deployed. After explicit owner authorization, deploy `FarmerCardEmblem`, the changed `FarmerController`, the ID Blade view, `public/css/farmer-id-card.css`, all three card SVGs and the Ramos JPEG together through GitHub push and Hostinger fast-forward pull. Mirror the five public assets to both public directories with 0644 permissions and refresh `php artisan view:cache`. No migration, account operation, environment change or general cache clearing is required. Preserve the existing session/cache namespaces and NDVI budgets.
+The field-artwork/seal follow-up above supersedes this earlier local-only note.
 
 Ramos follow-up verification: card/signatory, identifier and province-card access checks passed in the focused run, including same-name province isolation, same-municipality address rules and rejection of foreign/veterinary access. The broader run passed 30 tests and failed one existing records-page wording assertion (`ProvinceReportingScopeTest::test_municipal_staff_can_open_an_empty_profile_only_in_their_municipality`, expecting "Locked to your assigned municipality"). That route and wording were not changed by this card update; the broader suite is not claimed as fully passing.
 

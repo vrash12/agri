@@ -1,5 +1,13 @@
 # Design and UX implementation record
 
+## Verified Assistant and farmer-workflow release — October 12, 2026
+
+Runtime `d89aa10` is deployed through GitHub and Hostinger. The release includes
+the context-aware Assistant identity/page/account responses, ChatGPT-style
+pending state, guided follow-up interaction, crop-editor correction and Ramos
+farmer-card artwork. Focused PHP/JavaScript suites and Pint passed; changed
+assets were mirrored to the served public directory and returned HTTP 200.
+
 ## Assistant context awareness — local October 12, 2026
 
 The unified conversation can now answer “Who are you?”, “Do you know

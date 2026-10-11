@@ -1,5 +1,32 @@
 # GitHub-to-Hostinger deployment
 
+## Verified Hostinger release — October 12, 2026 — context-aware Assistant and farmer workflow updates
+
+Runtime `d89aa107e7f5c27d4603a0c598c5cde514a8d636` was pushed to GitHub main
+and installed with Hostinger `git pull --ff-only origin main` from `2531ae1`.
+The release includes the bounded Assistant identity/page/account awareness,
+guided follow-ups, local data-quality review, pending-state UX, crop-editor
+correction, Ramos farmer-card seal/signature artwork and their tests/docs.
+
+A private verified backup was created before the pull: 21 tables / 9,382 rows,
+3.2 MB compressed, SHA-256
+`0a9dd0be95af3248e44b3f79be1d2854fdbc0cf524955d77e317f2130b5aba72`.
+Existing untracked server recovery files were preserved. No migration,
+dependency version change, environment change, account operation or operational
+data write ran. Optimized Composer autoloading and configuration, route and
+Blade caches were refreshed; the general cache was not cleared.
+
+Changed public assets were mirrored to `public_html` with readable permissions;
+source and served hashes match. Login and all changed CSS, JavaScript, SVG and
+Ramos seal URLs returned HTTP 200. Composer reported the pre-existing untracked
+`app/Models/FarmerPlot.php` PSR-4 filename mismatch; that server file was left
+untouched and is outside this release.
+
+Focused verification passed the Assistant conversation/identity/resolver suite
+(194 tests / 2,727 assertions), records/context/report suite (99 tests / 481
+assertions), and 45 JavaScript tests. Pint and whitespace checks passed. The
+file-cache notices in the PHP suites are existing test warnings, not failures.
+
 ## Pending Assistant workflow follow-up — October 11, 2026
 
 Local and uncommitted. Include `AssistantNextSteps`, conversation/context/resolver,

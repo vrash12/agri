@@ -1,5 +1,14 @@
 # AgriLGU — Complete Feature Catalog
 
+Deployed follow-up, October 12, 2026 (`d89aa10`): the Assistant is context-aware
+within AgriLGU. It can explain who it is, whether it understands the system,
+which allowlisted workspace module is open, and the authenticated role and
+office scope. The same release includes read-only registry data-quality review,
+guided follow-ups, a visible pending-state cue, crop-editor error handling and
+Ramos farmer-card artwork/signatory support. These changes preserve policy
+authorization, veterinary isolation and private-record boundaries. See
+[GitHub deployment](docs/GITHUB_DEPLOYMENT.md).
+
 Local follow-up, October 12, 2026 (not deployed): the Office Assistant is
 context-aware within AgriLGU. It can answer who it is, whether it understands
 the system, what allowlisted workspace page is open, and which authenticated

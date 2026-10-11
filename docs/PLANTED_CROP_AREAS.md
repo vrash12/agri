@@ -1,5 +1,13 @@
 # Planted crop areas inside a parcel
 
+## Verified Hostinger release — October 12, 2026 — runtime `d89aa10`
+
+The in-page crop dialog correction is deployed through GitHub and Hostinger.
+The editor now resolves its container-scoped save status safely, avoiding the
+null `textContent` error when opening a crop workspace. No schema, account or
+record change ran; the updated editor script and regression test were released
+together.
+
 ## October 12 modal correction — local
 
 The in-page dialog mounts the editor inside its own container while the season

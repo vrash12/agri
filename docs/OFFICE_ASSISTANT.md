@@ -1,6 +1,6 @@
 # Office Assistant
 
-## Local context-awareness follow-up — October 12, 2026 (not deployed)
+## Verified context-awareness release — October 12, 2026 — runtime `d89aa10`
 
 The unified conversation now answers bounded questions about the Assistant and
 the signed-in AgriLGU workspace locally. “Do you know AgriLGU?” and “Are you
@@ -15,9 +15,11 @@ farmer/parcel/assistance tables, reserve provider allowance or call OpenAI.
 They retain validated opaque conversation references for polite follow-ups, and
 veterinary accounts remain Animal Health-only for operational work. Unknown or
 mixed/private questions continue to clarify locally. Do not describe this as
-consciousness or unrestricted system/file awareness. Unit and feature coverage
-passed the focused Assistant tests with the existing file-cache warnings; no
-schema, dependency, environment, account or deployment change was made.
+consciousness or unrestricted system/file awareness. The change is deployed in
+runtime `d89aa10` through GitHub main and Hostinger fast-forward pull. Unit and
+feature coverage passed the focused Assistant tests with the existing file-cache
+warnings; no schema, dependency version, environment, account or operational
+data change was made.
 
 ## Local response-state follow-up — October 12, 2026 (not deployed)
 

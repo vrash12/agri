@@ -1,5 +1,12 @@
 # AgriLGU — Claude Code project instructions
 
+The October 12, 2026 Assistant and farmer-workflow batch is deployed in runtime
+`d89aa10` through GitHub main and Hostinger fast-forward pull. Its bounded
+identity/page/account awareness, local data-quality review, guided follow-ups,
+pending-state UX, crop-editor correction and Ramos farmer-card changes are
+covered by the release receipt in `docs/GITHUB_DEPLOYMENT.md`. No migration,
+account operation, environment change or operational data write ran.
+
 ## Pending local Assistant awareness improvement — October 12, 2026
 
 The Assistant may answer bounded questions about itself, the current

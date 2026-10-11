@@ -1,5 +1,14 @@
 # Agriculture Information System — Developer Guide
 
+The October 12, 2026 Assistant and farmer-workflow release is deployed on
+Hostinger in runtime `d89aa10` through GitHub main and a fast-forward pull.
+It includes bounded Assistant self/page/account awareness, local data-quality
+review, guided follow-ups, the ChatGPT-style pending state, crop-editor error
+handling, Ramos farmer-card artwork/signatory support and their documentation
+and tests. No migration, account operation, environment change or operational
+data write ran; changed public assets were mirrored and caches refreshed. The
+release receipt is in [docs/GITHUB_DEPLOYMENT.md](docs/GITHUB_DEPLOYMENT.md).
+
 The October 12, 2026 Assistant awareness follow-up is local and not deployed.
 Identity replies can explain that the Assistant is a software helper, answer
 bounded self/system-awareness questions, identify the allowlisted page module
