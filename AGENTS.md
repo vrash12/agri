@@ -1,6 +1,6 @@
 # Agriculture Information System — Developer Guide
 
-The October 12 satellite request-limit correction is local and not deployed.
+The October 12 satellite request-limit correction is deployed in runtime `2d366ae`.
 Satellite analysis/images use named `satellite-observations` (6/minute) and
 `satellite-images` (12/minute) account buckets in `RouteServiceProvider`; numeric
 throttles must not replace them because their account signature collides with

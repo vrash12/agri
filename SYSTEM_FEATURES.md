@@ -1,6 +1,6 @@
 # AgriLGU — Complete Feature Catalog
 
-Local correction, October 12, 2026 (not deployed): Satellite field check has
+Deployed correction, October 12, 2026 (`2d366ae`): Satellite field check has
 separate per-account limits for picture searches and image loads. Ordinary map
 requests and other users cannot consume these limits. A genuine temporary limit
 shows a retry countdown and pauses the affected button without automatically

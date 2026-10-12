@@ -1,5 +1,38 @@
 # GitHub-to-Hostinger deployment
 
+## Verified Hostinger release — October 12, 2026 — satellite request-limit isolation
+
+Runtime `2d366aec6799b83e84397dabdc35e6438e7398bb` was pushed to GitHub main
+and installed with Hostinger `git pull --ff-only origin main` from clean tracked
+baseline `92ba1c4`. Satellite searches (6/minute) and images (12/minute) now use
+separate named per-account limits. Other numeric map requests no longer consume
+their counters. Temporary limit responses include safe retry guidance and
+`Retry-After`; the shared satellite page/modal script pauses the affected button
+with a countdown and sends no automatic retry.
+
+A private verified backup contains **21 tables / 9,446 rows**, **3.2 MB
+compressed**, SHA-256
+`dff8a38eaf37f41ef0ab58734394a3669daac6bf6ded345f29d62f9e2ccffcdf`.
+Affected runtime/public files, bootstrap caches and environment were preserved
+outside the document root. The environment file matched after installation.
+No migration, dependency, account or environment change ran, and neither the
+general cache nor satellite provider counters were cleared.
+
+`parcel-satellite.js` was mirrored to `public_html` with 0644 permissions.
+Source, served public copy and versioned live HTTPS hash matched
+`7d12238a6b0b58a78ba6ee0aeb5de339056ef9c216e97578ba4039364e71c89b`.
+Config, route and Blade caches rebuilt successfully. Login returned 200 and
+unauthenticated image access returned 401. Tracked server files remained clean;
+existing untracked files were retained.
+
+Local checks passed 240 JavaScript tests and 35 satellite/provider-usage PHP
+tests / 255 assertions, with existing missing `.env.testing` warnings. Pint,
+syntax, route middleware, Blade and whitespace checks passed. A private
+synthetic middleware probe on Hostinger confirmed independent map/search/image
+and account buckets, retry seconds and an unchanged provider budget snapshot.
+It made no provider call or account operation. Real Copernicus image generation
+and signed-in visual acceptance were not repeated.
+
 ## Verified Hostinger release — October 12, 2026 — saved crop colors on the general Ramos map
 
 Runtime `c1d83db0cabe75c9f0d4ca3e89099085a51aff29` was pushed to GitHub main

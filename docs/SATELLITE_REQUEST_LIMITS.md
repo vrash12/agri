@@ -1,6 +1,7 @@
 # Satellite field check request limits
 
-October 12, 2026: implemented locally; not deployed yet.
+Deployed October 12, 2026 in runtime `2d366ae` through GitHub main and Hostinger
+fast-forward pull. See [deployment receipt](GITHUB_DEPLOYMENT.md).
 
 ## Problem and correction
 
@@ -51,3 +52,10 @@ Local acceptance: 240 JavaScript tests passed; 35 satellite/provider-usage PHP
 tests completed with 255 assertions and no failures (existing missing
 `.env.testing` warnings). Pint, PHP/JavaScript syntax, route middleware inspection,
 Blade compilation and whitespace checks passed.
+
+A private synthetic probe on Hostinger confirmed the named routes, independent
+map/search/image/account counters and matching retry seconds. The probe invoked
+middleware with synthetic identifiers only; it made no provider call or account
+operation, and the provider budget snapshot stayed unchanged. Source, served
+public copy and versioned HTTPS script hashes matched; guest image access returned
+401. Actual Copernicus image generation was not repeated.
