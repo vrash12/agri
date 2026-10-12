@@ -1,5 +1,38 @@
 # Agriculture Information System — Developer Guide
 
+The October 12 Ramos map presentation follow-up is local and not deployed.
+When the Farmers map is scoped to the Ramos municipality, imported parcel
+polygons use a neutral white display base so crop sections and crop icons are
+easy to read. The stored `FarmPlot.color` remains unchanged for exports,
+records and other map scopes. Saved crop classifications still load with icons;
+selected crop lines/enclosures render above the white base. This is a display
+choice only: do not rewrite parcel colors or geometry. Release the map view,
+crop-layer status copy and tests together. No migration, account, provider or
+operational data write is required.
+
+The October 12 non-overlapping crop-section follow-up is local and not deployed.
+New visual enclosures cannot finish or save across another crop section, and a
+conflicting point edit restores the last accepted shape. Shared edges are
+allowed. Existing conflicting records keep their data and icons but display
+outlines without overlapping fills until corrected. `PlantedCropAreas` enforces
+the same positive-area rule on valid line enclosures and legacy polygons in
+either order, including aligned sliver overlaps. Two-point/open/crossing marks
+retain line semantics and no hectares. Release backend validation, the shared
+helper, editor, Farmers renderer, help partial and guidance together. No schema,
+account or automatic record rewrite is introduced.
+
+The October 12 crop-section shading follow-up is local and not deployed.
+Simple visual crop lines with three or more corners receive a display-only
+enclosure when the closing edge remains inside the canonical saved parcel.
+Crossing, degenerate and two-point lines remain lines; hectares and stored
+geometry are unchanged. The editor and Farmers map share `shadedRing` and use
+38% crop-color fill with an interior icon. Selected 3D crop icons draw through
+terrain and use REQUIRED collision behavior; overview icons retain collision
+management. Horizontal/vertical 2D line icons use their longest screen extent.
+Release the helper, editor, Farmers map, editor help partial and guidance
+together. No migration, configuration, account or operational write is needed.
+See [docs/PLANTED_CROP_AREAS.md](docs/PLANTED_CROP_AREAS.md).
+
 The October 12 automatic overview crop-icon follow-up is deployed in runtime
 `89ff3d1` through GitHub main and Hostinger fast-forward pull.
 `ParcelCropLayer` reads scoped classifications for loaded parcel IDs when

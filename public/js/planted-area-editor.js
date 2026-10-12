@@ -13,19 +13,22 @@
   const isLine = area => area?.type === 'line' || Array.isArray(area?.path);
   const pointsFor = area => isLine(area) ? area.path : area.polygon;
   let areas = (config.areas || []).filter(a => a && Array.isArray(pointsFor(a)));
-  let map, outline, draft = null, draftGuide = null, drawing = false, selected = -1, shapes = [], badges = [], dirty = false;
+  let map, outline, draft = null, draftGuide = null, drawing = false, selected = -1, shapes = [], shades = [], badges = [], dirty = false;
   const status = text => { byId('plantedMapStatus').textContent = text; };
+  const sections = list => window.CropAreaBadges?.sections?.(list,config.polygon) || {rings:[],conflicts:[]};
+  const overlapMessage = pairs => `Crop marks ${pairs[0][0]+1} and ${pairs[0][1]+1} cover the same land. Move the points so the sections sit beside each other. Shared edges are allowed.`;
   const sync = () => {
     const input = byId('plantedAreasInput');
     if (input) input.value = JSON.stringify(areas);
     byId('plantedAreaCount').textContent = `${areas.length}/8`;
-    byId('plantedAreaSummary').textContent = dirty ? 'Changes are not saved yet.' : areas.length ? 'Recorded for this season.' : 'No areas added yet.';
+    const conflicts=sections(areas).conflicts;
+    byId('plantedAreaSummary').textContent = conflicts.length ? overlapMessage(conflicts) : dirty ? 'Changes are not saved yet.' : areas.length ? 'Recorded for this season.' : 'No areas added yet.';
     if (config.canDraw) {
       byId('plantedSaveState').textContent = drawing ? 'Finish or cancel your drawing first.' : dirty ? 'Unsaved changes. Save to keep your crop areas.' : 'No changes yet.';
       byId('plantedIdleActions').hidden = drawing;
       byId('plantedDraftActions').hidden = !drawing;
       byId('plantedControlHeading').textContent = drawing ? 'Drawing a crop mark' : selected >= 0 ? (isLine(areas[selected]) ? 'Edit this crop mark' : 'Edit this crop area') : 'Add a crop mark';
-      byId('plantedControlHint').textContent = drawing ? 'Click along the planted section inside the parcel. This is a visual mark; no hectares are calculated.' : selected >= 0 ? 'Move points on the map or change the details below.' : 'Which crop is planted here?';
+      byId('plantedControlHint').textContent = drawing ? 'Click around the planted section to shade it, or use two points for a line. No hectares are calculated.' : selected >= 0 ? 'Move points on the map or change the details below.' : 'Which crop is planted here?';
       ['plantedCrop', 'plantedName', 'plantedVariety'].forEach(id => { byId(id).disabled = drawing; });
       byId('plantedUpdate').hidden = drawing || selected < 0;
       byId('plantedStart').textContent = selected >= 0 ? 'Draw another crop mark' : 'Start crop line';
@@ -44,7 +47,7 @@
   const pulse = shape => {
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
     shape.setOptions({strokeWeight:5,fillOpacity:.45});
-    setTimeout(() => shape.setOptions({strokeWeight:2,fillOpacity:.25}), 700);
+    setTimeout(() => shape.setOptions({strokeWeight:2,fillOpacity:.38}), 700);
   };
   function focus(index) {
     if (drawing) return;
@@ -60,7 +63,7 @@
     const bounds = new google.maps.LatLngBounds();
     pointsFor(areas[index]).forEach(point => bounds.extend(point));
     map.fitBounds(bounds, 60);
-    pulse(shapes[index]);
+    if(!sections(areas).conflicts.some(pair=>pair.includes(index)))pulse(shapes[index]);
     badges.forEach((badge, i) => badge?.select(i === index));
     badges[index]?.animate();
     renderList();
@@ -89,17 +92,41 @@
   function render() {
     badges.forEach(badge=>badge?.remove());badges=[];
     shapes.forEach(shape=>shape.setMap(null)); shapes=[];
+    shades.forEach(shape=>shape?.setMap(null)); shades=[];
+    const conflicts=sections(areas).conflicts;
+    const conflicting=new Set(conflicts.flat());
     if (map) areas.forEach((area,index)=>{
       const color = config.colors[area.crop] || '#8A9299';
       const line = isLine(area);
+      const enclosure=()=>line ? window.CropAreaBadges?.shadedRing?.(area.path,config.polygon) : null;
+      const ring=conflicting.has(index) ? null : enclosure();
+      const shade=ring ? new google.maps.Polygon({map,paths:ring,fillColor:color,fillOpacity:.38,strokeOpacity:0,clickable:false,zIndex:4}) : null;
+      shades.push(shade);
       const shape = line
         ? new google.maps.Polyline({map,path:area.path,strokeColor:color,strokeOpacity:1,strokeWeight:4,editable:config.canDraw && index===selected,zIndex:5})
-        : new google.maps.Polygon({map,paths:area.polygon,fillColor:color,fillOpacity:.25,strokeColor:color,strokeWeight:2,editable:config.canDraw && index===selected,zIndex:5});
+        : new google.maps.Polygon({map,paths:area.polygon,fillColor:color,fillOpacity:conflicting.has(index)?0:.38,strokeColor:color,strokeWeight:2,editable:config.canDraw && index===selected,zIndex:5});
       const path=shape.getPath();
-      const changed=()=>{const points=path.getArray().map(p=>({lat:p.lat(),lng:p.lng()}));if(line)areas[index].path=points;else{areas[index].polygon=points;delete areas[index].area_ha;}badges[index]?.update(points);dirty=true;sync();renderList();};
+      const changed=()=>{
+        const previous=pointsFor(area),previousHectares=area.area_ha;
+        const points=path.getArray().map(p=>({lat:p.lat(),lng:p.lng()}));
+        if(line)areas[index].path=points;else{areas[index].polygon=points;delete areas[index].area_ha;}
+        const pairs=sections(areas).conflicts;
+        if(pairs.length){
+          // Keep the last accepted geometry instead of introducing overlapping fills.
+          if(line)area.path=previous;else{area.polygon=previous;if(previousHectares!==undefined)area.area_ha=previousHectares;}
+          render();status(overlapMessage(pairs));return;
+        }
+        const nextRing=enclosure();
+        shades[index]?.setMap(null);
+        shades[index]=nextRing ? new google.maps.Polygon({map,paths:nextRing,fillColor:color,fillOpacity:.38,strokeOpacity:0,clickable:false,zIndex:4}) : null;
+        badges[index]?.remove();
+        badges[index]=window.CropAreaBadges?.overlay(google.maps,document,map,nextRing ? {crop:area.crop,name:area.name,polygon:nextRing} : area,()=>focus(index)) || null;
+        badges[index]?.select(index===selected);dirty=true;
+        if(conflicts.length)render();else{sync();renderList();}
+      };
       ['set_at','insert_at','remove_at'].forEach(event=>path.addListener(event,changed));
       shape.addListener('click',()=>focus(index));shapes.push(shape);
-      const badge=window.CropAreaBadges?.overlay(google.maps,document,map,area,()=>focus(index)) || null;
+      const badge=window.CropAreaBadges?.overlay(google.maps,document,map,ring ? {crop:area.crop,name:area.name,polygon:ring} : area,()=>focus(index)) || null;
       badge?.select(index===selected);badges.push(badge);
     });
     renderList();sync();
@@ -145,13 +172,16 @@
       });
       byId('plantedFinish').addEventListener('click',()=>{
         if(!drawing||draft.getPath().getLength()<2)return;
-        areas.push({type:'line',crop:byId('plantedCrop').value,name:byId('plantedName').value.trim(),variety:byId('plantedVariety').value.trim(),path:draft.getPath().getArray().map(p=>({lat:p.lat(),lng:p.lng()}))});
+        const mark={type:'line',crop:byId('plantedCrop').value,name:byId('plantedName').value.trim(),variety:byId('plantedVariety').value.trim(),path:draft.getPath().getArray().map(p=>({lat:p.lat(),lng:p.lng()}))};
+        const conflicts=sections([...areas,mark]).conflicts;
+        if(conflicts.length){status(overlapMessage(conflicts)+' Undo a point or cancel this drawing.');return;}
+        areas.push(mark);
         dirty=true;cancel();render();focus(areas.length-1);status('Crop line added. Save the season to keep this visual mark.');
       });
       byId('plantedUndo').addEventListener('click',()=>{if(drawing){draft.getPath().pop();draftGuide?.update(draft.getPath().getArray());status(draft.getPath().getLength()?`${draft.getPath().getLength()} points left. Click to continue the crop line.`:'All points undone. Click the first point to start again.');}sync();});
       byId('plantedCenter').addEventListener('click',()=>addPoint({latLng:map.getCenter()}));
       byId('plantedCancel').addEventListener('click',cancel);
-      byId('plantedAreasInput').form.addEventListener('submit',event=>{if(drawing){event.preventDefault();status('Finish or cancel the drawing before saving.');return;}sync();});
+      byId('plantedAreasInput').form.addEventListener('submit',event=>{if(drawing){event.preventDefault();status('Finish or cancel the drawing before saving.');return;}const conflicts=sections(areas).conflicts;if(conflicts.length){event.preventDefault();status(overlapMessage(conflicts));return;}sync();});
     }
     render();status('White outline: saved parcel. Colored lines: visual crop marks. Choose a mark to highlight it.');
   }
@@ -172,10 +202,12 @@
       draftGuide?.remove();
       badges.forEach(badge => badge?.remove());
       shapes.forEach(shape => shape.setMap(null));
+      shades.forEach(shape => shape?.setMap(null));
       draft?.setMap(null);
       draftGuide = null;
       badges = [];
       shapes = [];
+      shades = [];
       draft = null;
       map = null;
     }

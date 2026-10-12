@@ -214,6 +214,33 @@ class ParcelCropSeasonTest extends TestCase
             ->assertJsonPath('records.0.areas.0.crop', 'corn')->assertJsonCount(2, 'records.0.areas');
     }
 
+    public function test_visual_crop_enclosures_reject_overlap_and_allow_shared_edges(): void
+    {
+        $this->prepareParcel();
+        $this->actingAs(User::findOrFail(1));
+        $payload = $this->drawnPayload();
+        foreach ($payload['planted_areas'] as &$area) {
+            $area['type'] = 'line';
+            $area['path'] = $area['polygon'];
+            unset($area['polygon']);
+        }
+        unset($area);
+        $overlap = $payload;
+        $overlap['planted_areas'][1]['path'] = $this->rectangle(120.47049, 15.6, 120.471, 15.601);
+        $this->postJson($this->editUrl(), $overlap)->assertUnprocessable()->assertJsonValidationErrors('planted_areas');
+        $this->assertDatabaseCount('parcel_crop_seasons', 0);
+        $mixed = $overlap;
+        $mixed['planted_areas'][0] = $this->drawnPayload()['planted_areas'][0];
+        $this->postJson($this->editUrl(), $mixed)->assertUnprocessable()->assertJsonValidationErrors('planted_areas');
+        $mixed['planted_areas'] = array_reverse($mixed['planted_areas']);
+        $this->postJson($this->editUrl(), $mixed)->assertUnprocessable()->assertJsonValidationErrors('planted_areas');
+        $this->postJson($this->editUrl(), $payload)->assertRedirect();
+        foreach (ParcelCropSeason::firstOrFail()->planted_areas as $saved) {
+            $this->assertSame('line', $saved['type']);
+            $this->assertArrayNotHasKey('area_ha', $saved);
+        }
+    }
+
     public function test_crop_editor_can_load_and_save_inside_the_map_modal(): void
     {
         $this->actingAs(User::findOrFail(1));

@@ -39,13 +39,13 @@ test('invalid or oversized geometry has no badge and unknown crops use a safe ic
   for(const ring of [null,[],Array(51).fill({lat:0,lng:0}),[{lat:91,lng:0},{lat:1,lng:1},{lat:1,lng:0}],[null,{lat:1,lng:1},{lat:1,lng:0}],Array(3).fill({lat:0,lng:0})])assert.equal(badges.position(ring),null);
   assert.equal(badges.descriptor('<script>')[0],'Other crop');
 });
-function adapter(){
+function adapter(inputArea){
   const elements=[];let marker,animations=0,selected=0;
   class Element{constructor(name){this.name=name;this.attrs={};this.style={};this.children=[];this.events={};this.classList={toggle(){}};elements.push(this);}setAttribute(k,v){this.attrs[k]=String(v);}appendChild(v){this.children.push(v);}addEventListener(k,v){this.events[k]=v;}remove(){this.removed=true;}getAnimations(){return [];}animate(){animations++;}}
   const document={createElement:name=>new Element(name),createElementNS:(_,name)=>new Element(name)};
   class OverlayView{constructor(){marker=this;}getPanes(){return {overlayMouseTarget:{appendChild(){}}};}getProjection(){return {fromLatLngToDivPixel:p=>({x:p.lng*100,y:p.lat*100})};}setMap(map){if(map){this.onAdd();this.draw();}else this.onRemove();}}
   class LatLng{constructor(lat,lng){this.lat=lat;this.lng=lng;}}
-  const area={crop:'corn',name:'<img onerror=alert(1)>',polygon:rectangle};
+  const area=inputArea || {crop:'corn',name:'<img onerror=alert(1)>',polygon:rectangle};
   const overlay=badges.overlay({OverlayView,LatLng},document,{},area,()=>selected++);
   return {overlay,button:elements.find(el=>el.name==='button'),elements,document,get animations(){return animations;},get selected(){return selected;}};
 }
@@ -89,4 +89,37 @@ test('badge animation is finite and is skipped for reduced motion',()=>{
     global.matchMedia=()=>({matches:false});const a=adapter();a.overlay.animate();assert.equal(a.animations,1);
     global.matchMedia=()=>({matches:true});a.overlay.animate();assert.equal(a.animations,1);
   }finally{global.matchMedia=previous;}
+});
+
+test('horizontal and vertical crop lines keep their crop icons visible',()=>{
+  for(const path of [[{lat:0,lng:0},{lat:0,lng:1}],[{lat:0,lng:0},{lat:1,lng:0}]]){
+    const a=adapter({type:'line',crop:'rice',path});
+    assert.equal(a.button.hidden,false);
+    a.overlay.update(path.map(p=>({lat:p.lat/10,lng:p.lng/10})));
+    assert.equal(a.button.hidden,true,'Tiny marks remain hidden at distant zoom');
+  }
+});
+
+test('simple crop lines receive display-only shading without modifying saved points',()=>{
+  const parcel=[{lat:0,lng:0},{lat:0,lng:4},{lat:4,lng:4},{lat:4,lng:0}];
+  const path=[{lat:1,lng:1},{lat:1,lng:3},{lat:3,lng:3},{lat:3,lng:1}];
+  const before=JSON.stringify(path);
+  assert.deepEqual(badges.shadedRing(path,parcel),path);
+  assert.equal(JSON.stringify(path),before);
+  assert.deepEqual(badges.shadedRing([...path,path[0]],parcel),path);
+  assert.equal(badges.shadedRing(path.slice(0,2),parcel),null);
+  assert.equal(badges.shadedRing([path[0],path[2],path[1],path[3]],parcel),null,'Crossing scribbles are not enclosed sections');
+  assert.equal(badges.shadedRing(path.map(p=>({lat:p.lat+4,lng:p.lng})),parcel),null);
+  const concave=[{lat:0,lng:0},{lat:0,lng:4},{lat:4,lng:4},{lat:4,lng:3},{lat:1,lng:3},{lat:1,lng:1},{lat:4,lng:1},{lat:4,lng:0}];
+  assert.equal(badges.shadedRing([{lat:3,lng:.5},{lat:.5,lng:.5},{lat:.5,lng:3.5},{lat:3,lng:3.5}],concave),null,'Implicit closing edge cannot cross outside a concave parcel');
+});
+
+test('crop sections reject positive overlap but permit a shared edge',()=>{
+  const parcel=[{lat:0,lng:0},{lat:0,lng:10},{lat:10,lng:10},{lat:10,lng:0}];
+  const section=(west,east)=>({type:'line',path:[{lat:1,lng:west},{lat:1,lng:east},{lat:4,lng:east},{lat:4,lng:west}]});
+  assert.deepEqual(badges.sections([section(1,4),section(4,7)],parcel).conflicts,[]);
+  assert.deepEqual(badges.sections([section(1,4),section(3.9,7)],parcel).conflicts,[[0,1]],'Aligned sliver overlap is still overlap');
+  assert.deepEqual(badges.sections([section(1,4),section(1,4)],parcel).conflicts,[[0,1]]);
+  assert.deepEqual(badges.sections([section(1,7),section(3,4)],parcel).conflicts,[[0,1]]);
+  assert.deepEqual(badges.sections([section(1,4),{crop:'corn',polygon:section(3,5).path}],parcel).conflicts,[[0,1]],'Legacy polygons and new visual enclosures share the same check');
 });

@@ -1,5 +1,24 @@
 # AgriLGU — Complete Feature Catalog
 
+Local follow-up, October 12, 2026 (not deployed): the Ramos Farmers map uses a
+neutral white parcel presentation for imported Earth/KML plots. Existing saved
+crop sections retain their crop-color shading and crop icons remain visible over
+the white base. Stored parcel colors, geometry, exports and other municipality
+maps are unchanged.
+
+Local follow-up, October 12, 2026 (not deployed): crop sections can sit beside
+each other and share edges, but cannot cover the same land. Overlapping drawings
+stay unfinished for correction; conflicting point edits restore the previous
+shape. Saving also checks overlap on the server. Existing conflicts appear as
+outlines with a correction message; records and crop icons are preserved.
+
+Local follow-up, October 12, 2026 (not deployed): crop marks drawn around a
+simple enclosed section show translucent crop-color shading and an interior
+crop icon in the editor and selected-farmer map. Two-point or crossing marks
+remain lines. Shading is visual only, calculates no hectares and preserves the
+saved parcel. Selected crop icons stay visible over terrain and competing map
+labels; overview symbols keep their existing collision handling.
+
 Deployed follow-up, October 12, 2026 (`89ff3d1`): opening the Farmers parcel map
 automatically shows icons for saved crops in the chosen year and season without
 clicking a farmer. Multiple crops share a parcel badge; missing crop records have

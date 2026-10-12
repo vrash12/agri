@@ -1,5 +1,74 @@
 # Planted crop areas inside a parcel
 
+## Ramos white parcel presentation — October 12, 2026 (local, not deployed)
+
+The Ramos Farmers map now has a display-only white base for imported parcel
+polygons. This removes distracting imported color variations while retaining
+the original `FarmPlot.color` for records, exports and non-Ramos scopes. Saved
+crop classifications continue to load as icons, and selected-farmer crop
+sections render their colored shading above the white base. No parcel geometry,
+crop record or stored color is changed.
+
+The white override is limited to the selected Ramos municipality workspace.
+Crop controls label this as white parcels with crop icons; crop filtering still
+uses saved classifications. Release `farmers-maps.js`, the Farmers view and crop
+controls together with the pending shading/overlap work. Verification: all 235
+JavaScript tests passed, the 22 crop-season tests completed with 185 assertions
+and existing `.env.testing` warnings, and Blade compiled successfully. Live
+Google Maps visual acceptance remains outstanding.
+
+## Non-overlapping crop sections — October 12, 2026 (local, not deployed)
+
+The editor checks positive-area overlap between displayable line enclosures and
+legacy polygon sections. Shared edges/points are allowed. An overlapping draft
+cannot finish and remains available for Undo/Cancel. A conflicting point edit
+restores the last accepted coordinates. Save checks the entire list, and server
+validation independently checks valid enclosures in either record order,
+including identical, contained and aligned-sliver overlap. These checks do not
+convert stored lines or calculate hectares.
+
+Previously conflicting saved records are not rewritten: the editor and selected
+Farmers map withhold their fills, preserve outlines/icons and show a correction
+message. Remove or redraw conflicting marks before saving. Two-point or invalid
+enclosures remain visual lines and do not claim exclusive planted hectares.
+
+Release `PlantedCropAreas.php`, the three shading scripts, editor help and guides
+together with the shading follow-up below. No migration, account, environment or
+automatic data operation is required. Browser tests use synthetic Maps adapters;
+live-provider visual acceptance remains outstanding.
+
+Verification: 234 JavaScript regressions passed; all 22 crop-season PHP tests
+completed with 185 assertions and no failures (existing missing `.env.testing`
+warnings). Pint, JavaScript/PHP syntax, Blade compilation and whitespace checks
+passed. No production operation was performed.
+
+## Crop-section shading — October 12, 2026 (local, not deployed)
+
+The owner selected “Fill the enclosed section.” A visual line with at least
+three non-crossing corners can now display as a shaded crop section. The ends
+are joined for display only after checking the full closing edge against the
+canonical parcel (including concave boundaries). Invalid enclosures remain
+lines. The shared bounded helper does not change stored points, convert the
+record type or calculate hectares. Existing polygon areas also use the stronger
+38% fill. The editor updates and removes shading when points change or it closes.
+
+Selected-farmer 3D crop badges use an interior anchor for shaded marks and
+REQUIRED collision behavior with terrain occlusion disabled. This trades some
+possible label overlap for visibility while inspecting a farmer. Overview badges
+retain optional collision handling and existing batching. Horizontal and vertical
+2D lines now retain their icons when their longest screen dimension is readable.
+Drawing instructions explain enclosed shading versus two-point lines.
+
+Release `crop-area-badges.js`, `farmers-maps.js`, `planted-area-editor.js` and the
+editor help partial together, mirroring scripts to both Hostinger public
+directories. File-mtime versions invalidate these assets. No migration, account,
+provider configuration, record rewrite or general cache clear is needed.
+
+All 231 JavaScript tests passed. Synthetic regressions cover safe enclosure, crossing and concave rejection,
+unchanged data, editor repainting, interior anchors, terrain/collision options,
+horizontal line icons and existing overlay reuse/cleanup. Live Google Maps
+visual acceptance remains outstanding; adapter tests do not verify live tiles.
+
 ## Automatic overview icons — October 12, 2026 (deployed in `89ff3d1`)
 
 Opening the Farmers map loads saved crop classifications for every loaded

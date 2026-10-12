@@ -1,7 +1,7 @@
 <details class="parcel-tool-group parcel-crop-controls" id="parcelCropControls">
   <summary class="parcel-tool-label">Crop icons &amp; season <span>Saved crops on the map</span></summary>
   <div class="parcel-crop-fields">
-    <label for="parcelCropMode">Map layer<select id="parcelCropMode"><option value="saved">Saved parcel colors</option><option value="crops">Crops by season</option></select></label>
+    <label for="parcelCropMode">Map layer<select id="parcelCropMode"><option value="saved">{{ ($mapUsesWhiteParcelBase ?? false) ? 'White parcels with crop icons' : 'Saved parcel colors' }}</option><option value="crops">{{ ($mapUsesWhiteParcelBase ?? false) ? 'Filter parcels by saved crop' : 'Crops by season' }}</option></select></label>
     <label for="parcelCropYear">Year<input id="parcelCropYear" type="number" min="1990" max="{{ \App\Support\LocalTime::now()->year + 1 }}" value="{{ \App\Support\LocalTime::now()->year }}" required></label>
     <label for="parcelCropSeason">Season<select id="parcelCropSeason"><option value="dry">Dry season</option><option value="wet">Wet season</option></select></label>
     <label for="parcelCropFilter">Crop<select id="parcelCropFilter"><option value="all">All crops</option>@foreach(\App\Models\ParcelCropSeason::CROPS as $code => $label)<option value="{{ $code }}">{{ $label }}</option>@endforeach</select></label>
@@ -9,6 +9,9 @@
     <button type="button" class="btn btn-soft btn-sm" id="parcelCropRetry" hidden>Retry</button>
   </div>
   <p id="parcelCropStatus" role="status">Saved crop icons load automatically when the parcel map opens.</p>
+  @if($mapUsesWhiteParcelBase ?? false)
+    <p class="parcel-crop-help">Ramos parcels use a white base. Saved crop icons and plotted crop sections appear above it; imported colors remain available in records and exports.</p>
+  @endif
   <div id="parcelCropLegend" class="parcel-crop-legend" aria-label="Seasonal crop legend"></div>
   <p id="plantedAreaLayerStatus" role="status">Select a farmer to inspect saved crop lines and areas.</p>
   <button type="button" class="btn btn-soft btn-sm" id="plantedAreaRetry" hidden>Retry crop boundaries</button>

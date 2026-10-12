@@ -115,7 +115,7 @@ function harness(plots = []) {
     fetch: async () => ({ ok: true, json: async () => ({ plots, total: plots.length, returned: plots.length, truncated: false }) }),
   });
   const functions = ['toLatLng', 'setOverlayVisible', 'nextPlotFrame', 'shouldShowSavedPlot', 'needsFullPlotDetail',
-    'refreshSavedPlotDisplay', 'clearPlotsForFarmer', 'renderPlotsForFarmer', 'loadAllMunicipalPlots', 'applyCropStyle', 'applyParcelCropBadge'];
+    'refreshSavedPlotDisplay', 'clearPlotsForFarmer', 'renderPlotsForFarmer', 'loadAllMunicipalPlots', 'applyCropStyle', 'applyParcelCropBadge', 'useWhiteParcelBase'];
   vm.runInContext(functions.map(declaration).join('\n'), context);
   const clear = context.clearPlotsForFarmer;
   context.clearPlotsForFarmer = id => { metrics.clears++; clear(id); };
@@ -143,6 +143,23 @@ test('crop styling reuses overlays and restores saved colors without changing ge
   assert.equal(overlay.poly.isConnected, false);
   assert.equal(overlay.poly.fillColor, '#123456');
   assert.equal(JSON.stringify(plot), original);
+});
+
+test('Ramos parcel presentation uses a white base while saved crop colors and records remain intact', async () => {
+  const plot = { id: 1, farmer_id: 1, color: '#123456', polygon_json: ring() };
+  const { context } = harness();
+  context.window.__whiteParcelBase = true;
+  const original = JSON.stringify(plot);
+  context.renderPlotsForFarmer('1', [plot]);
+  const overlay = context.savedPlotOverlays[0];
+  assert.equal(overlay.savedColor, '#123456', 'The stored plot color remains available for data and exports');
+  assert.equal(overlay.poly.fillColor, '#FFFFFF');
+  assert.equal(overlay.poly.strokeColor, '#FFFFFF');
+  context.cropLayer = { color: () => '#219653', visible: () => true };
+  await context.refreshSavedPlotDisplay();
+  assert.equal(overlay.poly.fillColor, '#FFFFFF');
+  assert.equal(overlay.style.fillSoft, '#FFFFFF');
+  assert.equal(JSON.stringify(plot), original, 'The imported parcel color remains unchanged');
 });
 
 test('all 1044 parcels load in batches with one overlay each and untouched full geometry', async () => {
@@ -241,16 +258,18 @@ test('initial background batches cannot replace a newer selected-farmer response
 
 test('parcel crop icons appear on initial overview without selection and reuse markers on camera changes', async () => {
   const {context,toggle}=harness();
+  context.window.__whiteParcelBase=true;
   const helper=require('../../public/js/crop-area-badges.js');
   let markers=0,anchors=0;
   context.window.CropAreaBadges={...helper,parcelPosition:points=>{anchors++;return helper.parcelPosition(points);},parcelMarkerContent:(_,codes)=>codes.slice()};
   context.Marker3DElement=class{constructor(options){Object.assign(this,options);markers++;}replaceChildren(value){this.content=value;}};
-  context.google={maps:{CollisionBehavior:{OPTIONAL_AND_HIDES_LOWER_PRIORITY:'optional'}}};
+  context.google={maps:{CollisionBehavior:{OPTIONAL_AND_HIDES_LOWER_PRIORITY:'optional',REQUIRED:'required'}}};
   const rows=new Map([['1',{crop:'rice',area_crops:[]}],['2',{crop:'mixed',area_crops:['corn','rice']}],['3',{crop:'not_recorded',area_crops:[]}]]);
   context.cropLayer={record:id=>rows.get(String(id)),color:(_,saved)=>saved,visible:()=>true};
   for(let id=1;id<=3;id++)context.renderPlotsForFarmer(String(id),[{id,farmer_id:id,polygon_json:ring()}]);
   const [one,two,empty]=context.savedPlotOverlays;
   assert.equal(context.selectedFarmerId,null);
+  assert.equal(context.savedPlotOverlays[0].poly.fillColor,'#FFFFFF','Ramos parcels keep a neutral base beneath crop icons');
   assert.equal(one.cropBadge.isConnected,true);assert.equal(two.cropBadge.isConnected,true);
   assert.deepEqual(Array.from(two.cropBadge.content),['corn','rice']);
   assert.equal(empty.cropBadge,null,'No crop icon without a saved seasonal record');
@@ -303,12 +322,13 @@ test('overview classification loads once after the initial parcel batch without 
 
 test('planted section overlays reuse GPU objects, follow visibility and respect reduced motion', () => {
   const {context,metrics,toggle} = harness();
+  context.window.__whiteParcelBase=true;
   const status={textContent:''};
   context.document.getElementById=id=>id==='togglePlots'?toggle:id==='plantedAreaLayerStatus'?status:null;
   context.window.matchMedia=()=>({matches:true});
   let badgeCount=0;
   context.Marker3DElement=class {constructor(options){Object.assign(this,options);badgeCount++;}replaceChildren(value){this.content=value;}};
-  context.google={maps:{CollisionBehavior:{OPTIONAL_AND_HIDES_LOWER_PRIORITY:'optional'}}};
+  context.google={maps:{CollisionBehavior:{OPTIONAL_AND_HIDES_LOWER_PRIORITY:'optional',REQUIRED:'required'}}};
   context.window.CropAreaBadges={position:require('../../public/js/crop-area-badges.js').position,template:(_,crop)=>crop};
   context.map3d.range=3000;
   context.selectedFarmerId=1;
@@ -321,10 +341,14 @@ test('planted section overlays reuse GPU objects, follow visibility and respect 
   context.renderPlantedAreas(state);
   const polygon=context.plantedAreaOverlays[0].poly;
   const badge=context.plantedAreaOverlays[0].badge;
+  assert.equal(context.savedPlotOverlays[0].poly.fillColor,'#FFFFFF');
+  assert.equal(polygon.fillColor,'#D4A017','Plotted crop shading keeps its crop color above the white parent');
   context.renderPlantedAreas(state);
   assert.equal(metrics.constructed,2,'One parent and one section; camera refresh must not recreate geometry');
   assert.equal(polygon.isConnected,true);
   assert.equal(badge.isConnected,true);assert.equal(badge.content,'corn');assert.equal(badgeCount,1,'Camera refresh reuses crop badges');
+  assert.equal(badge.drawsWhenOccluded,true,'Selected crop icon stays visible over terrain');
+  assert.equal(badge.collisionBehavior,'required','Selected crop icon cannot be suppressed by another label');
   toggle.checked=false;context.renderPlantedAreas(state);assert.equal(polygon.isConnected,false);
   assert.equal(badge.isConnected,false);
   toggle.checked=true;context.cropSettings.filter='rice';context.renderPlantedAreas(state);assert.equal(polygon.isConnected,false);
@@ -339,6 +363,27 @@ test('planted section overlays reuse GPU objects, follow visibility and respect 
   assert.equal(polygon.strokeWidth,2,'Reduced motion keeps a steady boundary');
   context.renderPlantedAreas({status:'off',records:[]});assert.equal(polygon.isConnected,false);
   assert.equal(badge.isConnected,false);
+  context.map3d.range=3000;
+  context.window.CropAreaBadges=require('../../public/js/crop-area-badges.js');
+  context.window.CropAreaBadges={...context.window.CropAreaBadges,markerContent:(_,crop)=>crop};
+  const path=[{lat:15.0002,lng:120.0002},{lat:15.0002,lng:120.0008},{lat:15.0008,lng:120.0008},{lat:15.0008,lng:120.0002}];
+  const marked={type:'line',path,crop:'rice',crop_label:'Rice',color:'#219653'};
+  const before=JSON.stringify(marked);
+  context.renderPlantedAreas({status:'ready',records:[{plot_id:1,areas:[marked]}]});
+  const shaded=context.plantedAreaOverlays[0];
+  assert.equal(shaded.poly.strokeWidth,2,'A simple enclosed line is displayed as a shaded section');
+  assert.equal(shaded.poly.fillColor,context.hexToRgba('#219653',.38));
+  assert.equal(shaded.badge.content,'rice');assert.equal(shaded.badge.isConnected,true);
+  assert.equal(JSON.stringify(marked),before,'Shading cannot change stored line data or add hectares');
+  assert.equal(shaded.badge.position.lat>15.0002 && shaded.badge.position.lat<15.0008,true);
+  context.Polyline3DInteractiveElement=context.Polygon3DInteractiveElement;
+  context.renderPlantedAreas({status:'ready',records:[{plot_id:1,areas:[marked,{...marked,crop:'corn'}]}]});
+  assert.equal(context.plantedAreaOverlays.length,2);
+  for(const item of context.plantedAreaOverlays){
+    assert.equal(item.poly.fillColor,undefined,'Existing conflicting line enclosures have outlines only');
+    assert.equal(item.badge.isConnected,true,'Keep crop icons for records needing correction');
+  }
+  assert.match(status.textContent,/sections overlap/);
 });
 
 test('saved crop areas load automatically for the selected farmer with recoloring off', () => {

@@ -44,6 +44,11 @@ final class PlantedCropAreas
                     if (! $this->geometry->containsPath($parent, $path)) {
                         throw new InvalidArgumentException('This crop mark crosses outside the saved parcel. Redraw the line inside the white outline, or update the parcel boundary first.');
                     }
+                    $enclosure = $this->visualEnclosure($area['path'], $parent);
+                    if ($enclosure !== null) {
+                        $this->assertNoOverlap($geometries, $enclosure);
+                        $geometries[] = $enclosure;
+                    }
                     $result[] = [
                         'type' => 'line', 'name' => $area['name'] ?? '', 'crop' => $area['crop'],
                         'variety' => $area['variety'] ?? '',
@@ -59,11 +64,7 @@ final class PlantedCropAreas
                 if (! $this->geometry->containsPolygon($parent, $shape)) {
                     throw new InvalidArgumentException('This crop boundary crosses outside the saved parcel. Redraw only the planted part inside the white outline; unplanted land can remain blank. If the outline is wrong, update the parcel boundary first.');
                 }
-                foreach ($geometries as $existing) {
-                    if ($this->geometry->overlaps($existing, $shape)) {
-                        throw new InvalidArgumentException('Planted areas cannot overlap. Use Mixed crops for intercropping in one area.');
-                    }
-                }
+                $this->assertNoOverlap($geometries, $shape);
             } catch (InvalidArgumentException $exception) {
                 throw ValidationException::withMessages(['planted_areas' => 'Area '.($index + 1).': '.$exception->getMessage()]);
             }
@@ -78,6 +79,70 @@ final class PlantedCropAreas
         }
 
         return $result;
+    }
+
+    /** Invalid closures stay freehand lines, as in the display-only shading helper. */
+    private function visualEnclosure(array $points, array $parent): ?array
+    {
+        if (count($points) < 3) {
+            return null;
+        }
+        try {
+            $shape = $this->geometry->fromLatLngRing($points, false);
+
+            return $this->geometry->containsPolygon($parent, $shape) ? $shape : null;
+        } catch (InvalidArgumentException) {
+            // Open, collinear or crossing marks remain supported; they have no fill.
+            return null;
+        }
+    }
+
+    private function assertNoOverlap(array $existingShapes, array $shape): void
+    {
+        foreach ($existingShapes as $existing) {
+            if ($this->geometry->overlaps($existing, $shape) || $this->alignedOverlap($existing, $shape)) {
+                throw new InvalidArgumentException('Crop sections cannot cover the same land. Move their points so they sit beside each other; shared edges are allowed. Use Mixed crops for intercropping in one section.');
+            }
+        }
+    }
+
+    /** Catch positive-area overlap along collinear edges, without rejecting shared edges. */
+    private function alignedOverlap(array $first, array $second): bool
+    {
+        $a = $first['coordinates'][0];
+        $b = $second['coordinates'][0];
+        $rows = array_unique(array_column(array_merge($a, $b), 1));
+        sort($rows, SORT_NUMERIC);
+        for ($i = 1; $i < count($rows); $i++) {
+            $y = ($rows[$i - 1] + $rows[$i]) / 2;
+            $firstSpans = $this->scanline($a, $y);
+            $secondSpans = $this->scanline($b, $y);
+            for ($x = 0; $x + 1 < count($firstSpans); $x += 2) {
+                for ($z = 0; $z + 1 < count($secondSpans); $z += 2) {
+                    if (min($firstSpans[$x + 1], $secondSpans[$z + 1]) - max($firstSpans[$x], $secondSpans[$z]) > 1e-10) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /** @return list<float> */
+    private function scanline(array $ring, float $y): array
+    {
+        $crossings = [];
+        for ($i = 1; $i < count($ring); $i++) {
+            $a = $ring[$i - 1];
+            $b = $ring[$i];
+            if (($a[1] > $y) !== ($b[1] > $y)) {
+                $crossings[] = $a[0] + ($b[0] - $a[0]) * ($y - $a[1]) / ($b[1] - $a[1]);
+            }
+        }
+        sort($crossings, SORT_NUMERIC);
+
+        return $crossings;
     }
 
     /** @return array<int, array{0:float,1:float}> */

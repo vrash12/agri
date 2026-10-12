@@ -127,6 +127,82 @@
   function anchor(area) {
     return area?.type === 'line' || Array.isArray(area?.path) ? linePosition(area.path) : position(area?.polygon);
   }
+  // Display-only enclosure: never replace stored line points or calculate hectares.
+  function shadedRing(path, parcel) {
+    if (!linePosition(path) || !Array.isArray(parcel) || parcel.length < 3 || parcel.length > 1000) return null;
+    if(parcel.some(p=>!Number.isFinite(p?.lat)||!Number.isFinite(p?.lng)||Math.abs(p.lat)>90||Math.abs(p.lng)>180))return null;
+    const ring=path.map(p=>({lat:Number(p.lat),lng:Number(p.lng)}));
+    if(ring[0].lat===ring.at(-1).lat && ring[0].lng===ring.at(-1).lng)ring.pop();
+    if(ring.length<3 || !position(ring))return null;
+    const cross=(a,b,c)=>(b.lng-a.lng)*(c.lat-a.lat)-(b.lat-a.lat)*(c.lng-a.lng);
+    const on=(a,b,p)=>Math.abs(cross(a,b,p))<1e-12 && p.lng>=Math.min(a.lng,b.lng)-1e-10 && p.lng<=Math.max(a.lng,b.lng)+1e-10 && p.lat>=Math.min(a.lat,b.lat)-1e-10 && p.lat<=Math.max(a.lat,b.lat)+1e-10;
+    const intersects=(a,b,c,d)=>{
+      const abC=cross(a,b,c),abD=cross(a,b,d),cdA=cross(c,d,a),cdB=cross(c,d,b);
+      return (abC*abD<0 && cdA*cdB<0) || on(a,b,c) || on(a,b,d) || on(c,d,a) || on(c,d,b);
+    };
+    for(let i=0;i<ring.length;i++)for(let j=i+1;j<ring.length;j++){
+      if(j===i+1 || (i===0 && j===ring.length-1))continue;
+      if(intersects(ring[i],ring[(i+1)%ring.length],ring[j],ring[(j+1)%ring.length]))return null;
+    }
+    const inside=p=>{
+      let result=false;
+      for(let i=0,j=parcel.length-1;i<parcel.length;j=i++){
+        const a=parcel[j],b=parcel[i];
+        if(!Number.isFinite(a?.lat)||!Number.isFinite(a?.lng))return false;
+        if(on(a,b,p))return true;
+        if((a.lat>p.lat)!==(b.lat>p.lat) && p.lng<(b.lng-a.lng)*(p.lat-a.lat)/(b.lat-a.lat)+a.lng)result=!result;
+      }
+      return result;
+    };
+    for(let i=0;i<ring.length;i++){
+      const a=ring[i],b=ring[(i+1)%ring.length],cuts=[0,1];
+      if(!inside(a))return null;
+      for(let j=0;j<parcel.length;j++){
+        const c=parcel[j],d=parcel[(j+1)%parcel.length];
+        const denominator=(b.lng-a.lng)*(d.lat-c.lat)-(b.lat-a.lat)*(d.lng-c.lng);
+        if(Math.abs(denominator)<1e-18)continue;
+        const t=((c.lng-a.lng)*(d.lat-c.lat)-(c.lat-a.lat)*(d.lng-c.lng))/denominator;
+        const u=((c.lng-a.lng)*(b.lat-a.lat)-(c.lat-a.lat)*(b.lng-a.lng))/denominator;
+        if(t>0&&t<1&&u>=0&&u<=1)cuts.push(t);
+      }
+      cuts.sort((x,y)=>x-y);
+      for(let j=1;j<cuts.length;j++){
+        const t=(cuts[j-1]+cuts[j])/2;
+        if(!inside({lat:a.lat+(b.lat-a.lat)*t,lng:a.lng+(b.lng-a.lng)*t}))return null;
+      }
+    }
+    return ring;
+  }
+  function sections(areas, parcel) {
+    const rings=areas.map(area=>area?.type==='line'||Array.isArray(area?.path) ? shadedRing(area.path,parcel) : area?.polygon || null);
+    const conflicts=[];
+    const spans=(ring,y)=>{
+      const crossings=[];
+      for(let i=0,j=ring.length-1;i<ring.length;j=i++){
+        const a=ring[j],b=ring[i];
+        if((a.lat>y)!==(b.lat>y))crossings.push(a.lng+(b.lng-a.lng)*(y-a.lat)/(b.lat-a.lat));
+      }
+      return crossings.sort((a,b)=>a-b);
+    };
+    for(let i=0;i<rings.length;i++)for(let j=i+1;j<rings.length;j++){
+      if(!rings[i]||!rings[j])continue;
+      const rows=[...new Set([...rings[i],...rings[j]].map(p=>p.lat))].sort((a,b)=>a-b);
+      let overlap=false;
+      const side=(a,b,p)=>(b.lng-a.lng)*(p.lat-a.lat)-(b.lat-a.lat)*(p.lng-a.lng);
+      for(let x=0;x<rings[i].length&&!overlap;x++)for(let z=0;z<rings[j].length;z++){
+        const a=rings[i][x],b=rings[i][(x+1)%rings[i].length],c=rings[j][z],d=rings[j][(z+1)%rings[j].length];
+        if(side(a,b,c)*side(a,b,d)<0 && side(c,d,a)*side(c,d,b)<0)overlap=true;
+      }
+      for(let k=1;k<rows.length&&!overlap;k++){
+        const y=(rows[k-1]+rows[k])/2,a=spans(rings[i],y),b=spans(rings[j],y);
+        for(let x=0;x<a.length;x+=2)for(let z=0;z<b.length;z+=2){
+          if(Math.min(a[x+1],b[z+1])-Math.max(a[x],b[z])>1e-10)overlap=true;
+        }
+      }
+      if(overlap)conflicts.push([i,j]);
+    }
+    return {rings,conflicts};
+  }
   function overlay(maps, document, map, area, select) {
     if (!maps.OverlayView || !maps.LatLng) return null;
     const line = area?.type === 'line' || Array.isArray(area?.path);
@@ -145,7 +221,10 @@
       const p=projection.fromLatLngToDivPixel(new maps.LatLng(anchorPoint.lat,anchorPoint.lng));if(!p)return;
       badge.style.left=p.x+'px';badge.style.top=p.y+'px';
       const corners=polygon.map(v=>projection.fromLatLngToDivPixel(new maps.LatLng(v.lat,v.lng))).filter(Boolean);
-      badge.hidden=corners.length<(line?2:3) || Math.min(Math.max(...corners.map(v=>v.x))-Math.min(...corners.map(v=>v.x)),Math.max(...corners.map(v=>v.y))-Math.min(...corners.map(v=>v.y)))<26;
+      const width=Math.max(...corners.map(v=>v.x))-Math.min(...corners.map(v=>v.x));
+      const height=Math.max(...corners.map(v=>v.y))-Math.min(...corners.map(v=>v.y));
+      // A horizontal or vertical crop line has no width in one direction.
+      badge.hidden=corners.length<(line?2:3) || (line?Math.max(width,height):Math.min(width,height))<26;
     };
     marker.onRemove=()=>badge.remove();
     marker.setMap(map);
@@ -159,5 +238,5 @@
       update:nextPoints=>{polygon=nextPoints;const point=line?linePosition(nextPoints):position(nextPoints);if(point){Object.assign(anchorPoint,point);marker.draw();}else badge.hidden=true;}
     };
   }
-  return {descriptor,mapContext,svg,template,markerContent,position,parcelPosition,parcelCrops,parcelMarkerContent,linePosition,anchor,overlay};
+  return {descriptor,mapContext,svg,template,markerContent,position,parcelPosition,parcelCrops,parcelMarkerContent,linePosition,anchor,shadedRing,sections,overlay};
 });

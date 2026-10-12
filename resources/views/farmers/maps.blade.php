@@ -5,6 +5,7 @@
   $googleMapsMapId  = $googleMapsMapId ?? config('services.google_maps.map_id') ?? '';
   $farmersMapData   = $farmersMapData ?? [];
   $mapWorkspaceMunicipality = $mapWorkspaceMunicipality ?? null;
+  $mapUsesWhiteParcelBase = strcasecmp((string) ($mapWorkspaceMunicipality?->name ?? ''), 'Ramos') === 0;
   // Neutral fallback: this partial has no way of knowing which province it is
   // being rendered for, so it must not name one.
   $mapWorkspaceName = $mapWorkspaceName ?? ($mapWorkspaceMunicipality?->name ?? 'All supervised municipalities');
@@ -1414,6 +1415,7 @@
 @include('farm_plots._crop_modal')
 
 <script>
+  window.__whiteParcelBase = @json($mapUsesWhiteParcelBase);
   window.__municipalityGeofenceData = @json($mapMunicipalityBoundaries->values());
   window.__municipalitySnapshotDataUrl = @json(
     $mapWorkspaceMunicipality
