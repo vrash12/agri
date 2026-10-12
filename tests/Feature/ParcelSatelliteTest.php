@@ -11,6 +11,7 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -306,8 +307,40 @@ class ParcelSatelliteTest extends TestCase
         for ($i = 0; $i < 6; $i++) {
             $this->postJson($this->url(), $this->period())->assertOk();
         }
-        $this->postJson($this->url(), $this->period())->assertStatus(429);
+        $limited = $this->postJson($this->url(), $this->period())->assertStatus(429)->assertHeader('Retry-After');
+        $this->assertSame((int) $limited->headers->get('Retry-After'), $limited->json('retry_after'));
+        $this->assertGreaterThan(0, $limited->json('retry_after'));
+        $this->assertLessThanOrEqual(60, $limited->json('retry_after'));
+        $limited->assertJsonMissingPath('observations')->assertSee('picture searches are temporarily limited');
+        $this->travel(61)->seconds();
+        $this->postJson($this->url(), $this->period())->assertOk();
+        $this->travelBack();
         Http::assertSentCount(2);
+    }
+
+    public function test_map_activity_searches_images_and_other_accounts_have_independent_limits(): void
+    {
+        // Reproduce the old numeric account counter without querying unrelated modules.
+        Route::middleware(['web', 'auth', 'throttle:30,1'])->get('/_test/satellite-map-activity', fn () => response()->json(['ok' => true]));
+        $parcel = app(SentinelParcel::class)->describe(FarmPlot::findOrFail(1));
+        $this->fake(null, $this->png($parcel['width'], $parcel['height']));
+        $this->actingAs(User::findOrFail(1));
+        for ($i = 0; $i < 15; $i++) {
+            $this->getJson('/_test/satellite-map-activity')->assertOk();
+        }
+        for ($i = 0; $i < 6; $i++) {
+            $this->postJson($this->url(), $this->period())->assertOk();
+        }
+        $this->postJson($this->url(), $this->period())->assertStatus(429);
+        for ($i = 0; $i < 12; $i++) {
+            $this->getJson($this->imageUrl())->assertOk();
+        }
+        $this->getJson($this->imageUrl())->assertStatus(429)->assertHeader('Retry-After')
+            ->assertSee('picture loads are temporarily limited');
+        $this->getJson('/_test/satellite-map-activity')->assertOk();
+        $this->actingAs(User::findOrFail(6))->postJson($this->url(), $this->period())->assertOk();
+        $this->getJson($this->imageUrl())->assertOk();
+        Http::assertSentCount(3); // One token, one statistics call and one PNG; remaining reads use cache.
     }
 
     private function fake(?array $stats = null, string $png = ''): void

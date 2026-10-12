@@ -48,5 +48,22 @@ class RouteServiceProvider extends ServiceProvider
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
+
+        // Numeric throttles share one account signature across unrelated routes.
+        // Named satellite limits isolate searches, images and ordinary map work.
+        foreach (['satellite-observations' => [6, 'picture searches'], 'satellite-images' => [12, 'picture loads']] as $name => [$maximum, $action]) {
+            RateLimiter::for($name, function (Request $request) use ($maximum, $action) {
+                return Limit::perMinute($maximum)
+                    ->by($request->user()?->getAuthIdentifier() ?? $request->ip())
+                    ->response(function (Request $request, array $headers) use ($action) {
+                        $seconds = max(1, (int) ($headers['Retry-After'] ?? 60));
+
+                        return response()->json([
+                            'message' => 'Satellite '.$action.' are temporarily limited. Try again in '.$seconds.' seconds.',
+                            'retry_after' => $seconds,
+                        ], 429, $headers);
+                    });
+            });
+        }
     }
 }

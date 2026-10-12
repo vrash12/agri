@@ -1,5 +1,11 @@
 # AgriLGU — Complete Feature Catalog
 
+Local correction, October 12, 2026 (not deployed): Satellite field check has
+separate per-account limits for picture searches and image loads. Ordinary map
+requests and other users cannot consume these limits. A genuine temporary limit
+shows a retry countdown and pauses the affected button without automatically
+sending another request. Daily/monthly provider allowances remain unchanged.
+
 Deployed October 12, 2026 (`c1d83db`): the general Ramos map automatically colors
 parcels with saved crop classifications for the selected year/season. Parcels
 without a record remain white. Colors identify recorded crops; they do not

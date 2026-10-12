@@ -61,17 +61,42 @@
     try { payload = await response.json(); } catch (ignore) { /* HTML error pages are never rendered. */ }
     const validation = payload && payload.errors && Object.values(payload.errors).flat().find(value => typeof value === 'string');
     const message = validation || (payload && payload.message);
-    if (response.status === 429 && !message) return new Error('Too many satellite requests. Please wait before trying again.');
-    return new Error(typeof message === 'string' ? message.slice(0, 400) : 'The satellite request failed. Please try again.');
+    const error = new Error(typeof message === 'string' ? message.slice(0, 400) : response.status === 429
+      ? 'Satellite requests are temporarily limited. Please wait before trying again.'
+      : 'The satellite request failed. Please try again.');
+    if (response.status === 429) {
+      const header = response.headers?.get('Retry-After');
+      const seconds = /^\d+$/.test(header || '') ? Number(header) : header ? (Date.parse(header) - Date.now()) / 1000 : payload?.retry_after;
+      if (Number.isFinite(seconds) && seconds > 0) error.retryAfterSeconds = Math.min(300, Math.max(1, Math.ceil(seconds)));
+    }
+    return error;
   }
 
-  if (typeof module !== 'undefined' && module.exports) module.exports = { readObservations, createRequestSlot, validDay };
+  function createRetryCooldown(onTick, clock = {}) {
+    const now = clock.now || Date.now, schedule = clock.setTimeout || setTimeout, cancel = clock.clearTimeout || clearTimeout;
+    let deadline = 0, timer = null;
+    const remaining = () => Math.max(0, Math.ceil((deadline - now()) / 1000));
+    function stop() { if (timer !== null) cancel(timer); timer = null; deadline = 0; }
+    function tick() {
+      const seconds = remaining();
+      timer = null;
+      onTick(seconds);
+      if (seconds > 0) timer = schedule(tick, Math.min(1000, Math.max(1, deadline - now())));
+    }
+    return { remaining, stop, start: seconds => {
+      if (!Number.isFinite(seconds) || seconds <= 0) return;
+      stop(); deadline = now() + Math.min(300, Math.ceil(seconds)) * 1000; tick();
+    } };
+  }
+
+  if (typeof module !== 'undefined' && module.exports) module.exports = { readObservations, createRequestSlot, validDay, responseError, createRetryCooldown };
   if (typeof document === 'undefined' || !document.getElementById('satellitePage')) return;
 
   const byId = id => document.getElementById(id);
   const config = JSON.parse(byId('satelliteConfig').textContent);
   const form = byId('satelliteForm');
   const loadButton = byId('satelliteLoad');
+  const canSearch = !loadButton.disabled;
   const daySelect = byId('satelliteDate');
   const layerSelect = byId('satelliteLayer');
   const opacity = byId('satelliteOpacity');
@@ -84,6 +109,21 @@
   let overlay = null;
   let objectUrl = null;
   let mapFailed = false;
+  let statsPending = false;
+  function searchControl() {
+    const seconds = statsCooldown.remaining();
+    loadButton.disabled = !canSearch || statsPending || seconds > 0;
+    if (!statsPending) loadButton.textContent = seconds > 0 ? 'Try again in ' + seconds + 's' : 'Find pictures →';
+  }
+  const statsCooldown = createRetryCooldown(seconds => {
+    searchControl();
+    status(seconds > 0 ? 'Satellite picture searches are paused. Try again in ' + seconds + ' seconds.' : 'You can search for satellite pictures again.', seconds > 0);
+  });
+  const imageCooldown = createRetryCooldown(seconds => {
+    retry.disabled = seconds > 0;
+    retry.textContent = seconds > 0 ? 'Retry in ' + seconds + 's' : 'Retry image';
+    byId('satelliteImageCaption').textContent = seconds > 0 ? 'Picture loading is paused. Retry in ' + seconds + ' seconds.' : 'You can retry loading the picture now.';
+  });
 
   function status(message, error) {
     byId('satelliteStatus').textContent = message;
@@ -188,6 +228,10 @@
     }
     const layer = layerSelect.value;
     const caption = row.date + ' (UTC) · ' + (layer === 'ndvi' ? 'NDVI' : 'True color') + ' · Daily Sentinel-2 mosaic';
+    if (imageCooldown.remaining() > 0) {
+      byId('satelliteImageCaption').textContent = 'Picture loading is paused. Retry in ' + imageCooldown.remaining() + ' seconds.';
+      retry.hidden = false; return;
+    }
     byId('satelliteImageCaption').textContent = 'Loading ' + caption + '…';
     const url = new URL(config.imageUrl, window.location.href);
     url.search = new URLSearchParams({ date: row.date, max_cloud: String(period.max_cloud), layer: layer }).toString();
@@ -208,6 +252,7 @@
     } catch (error) {
       byId('satelliteImageCaption').textContent = caption + ' · ' + (error.message || 'Image unavailable. Please retry.');
       retry.hidden = false;
+      if (error.retryAfterSeconds) imageCooldown.start(error.retryAfterSeconds);
     }
   }
 
@@ -259,7 +304,7 @@
 
   form.addEventListener('submit', async function (event) {
     event.preventDefault();
-    if (loadButton.disabled || !form.reportValidity()) return;
+    if (loadButton.disabled || statsPending || statsCooldown.remaining() > 0 || !form.reportValidity()) return;
     const next = { from: byId('satelliteFrom').value, to: byId('satelliteTo').value, max_cloud: Number(byId('satelliteCloud').value) };
     if (!validDay(next.from) || !validDay(next.to) || next.to < next.from || Date.parse(next.to) - Date.parse(next.from) > 30 * 86400000) {
       status('Choose a valid period of up to 31 days.', true); return;
@@ -270,7 +315,7 @@
     daySelect.replaceChildren(new Option('Loading observations…', ''));
     daySelect.disabled = true; layerSelect.disabled = true;
     byId('satelliteImageCaption').textContent = 'No satellite observation loaded.';
-    loadButton.disabled = true; loadButton.textContent = 'Loading…';
+    statsPending = true; loadButton.disabled = true; loadButton.textContent = 'Loading…';
     form.setAttribute('aria-busy', 'true');
     status('Requesting cloud-masked observations for ' + next.from + ' to ' + next.to + '…');
     try {
@@ -294,8 +339,9 @@
     } catch (error) {
       daySelect.replaceChildren(new Option('No observations loaded', ''));
       status(error.message || 'Unable to load observations. Check the connection and retry.', true);
+      if (error.retryAfterSeconds) statsCooldown.start(error.retryAfterSeconds);
     } finally {
-      loadButton.disabled = false; loadButton.innerHTML = 'Find pictures <span aria-hidden="true">→</span>'; form.removeAttribute('aria-busy');
+      statsPending = false; searchControl(); form.removeAttribute('aria-busy');
     }
   });
   daySelect.addEventListener('change', loadImage);
@@ -305,7 +351,9 @@
     if (overlay) overlay.setOpacity(Number(opacity.value) / 100);
     byId('satellitePreviewImage').style.opacity = Number(opacity.value) / 100;
   });
-  window.addEventListener('pagehide', function () { statsRequest.cancel(); clearImage(); });
-  window.addEventListener('pageshow', function (event) { if (event.persisted && rows.length) loadImage(); });
+  window.addEventListener('pagehide', function () { statsRequest.cancel(); clearImage(); statsCooldown.stop(); imageCooldown.stop(); });
+  window.addEventListener('pageshow', function (event) {
+    if (event.persisted) { searchControl(); retry.disabled = false; retry.textContent = 'Retry image'; if (rows.length) loadImage(); }
+  });
   byId('satelliteLegend').hidden = true;
 }());

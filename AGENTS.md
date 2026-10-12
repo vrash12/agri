@@ -1,5 +1,17 @@
 # Agriculture Information System — Developer Guide
 
+The October 12 satellite request-limit correction is local and not deployed.
+Satellite analysis/images use named `satellite-observations` (6/minute) and
+`satellite-images` (12/minute) account buckets in `RouteServiceProvider`; numeric
+throttles must not replace them because their account signature collides with
+ordinary map traffic. HTTP 429 returns safe guidance and `Retry-After`; the
+shared satellite script pauses the affected control with a bounded countdown,
+prevents duplicate searches and never automatically retries paid work. Provider
+daily/monthly budgets remain separate and unchanged. No general cache clear,
+budget reset, migration, credential or account change is required. Release the
+provider, routes, satellite script and focused tests together. See
+[docs/SATELLITE_REQUEST_LIMITS.md](docs/SATELLITE_REQUEST_LIMITS.md).
+
 Latest release: the general Ramos crop-color adjustment is deployed in runtime
 `c1d83db` through GitHub main and Hostinger fast-forward pull. Saved crop
 classifications color parcels automatically for the selected year/season;

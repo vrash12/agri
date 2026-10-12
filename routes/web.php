@@ -280,9 +280,9 @@ Route::middleware([
     Route::get('/farm-plots/{plot}/satellite', [ParcelSatelliteController::class, 'show'])
         ->whereNumber('plot')->name('farm-plots.satellite.show');
     Route::post('/farm-plots/{plot}/satellite/observations', [ParcelSatelliteController::class, 'analyse'])
-        ->whereNumber('plot')->middleware('throttle:6,1')->name('farm-plots.satellite.analyse');
+        ->whereNumber('plot')->middleware('throttle:satellite-observations')->name('farm-plots.satellite.analyse');
     Route::get('/farm-plots/{plot}/satellite/image', [ParcelSatelliteController::class, 'image'])
-        ->whereNumber('plot')->middleware('throttle:12,1')->name('farm-plots.satellite.image');
+        ->whereNumber('plot')->middleware('throttle:satellite-images')->name('farm-plots.satellite.image');
     Route::get('/farm-plots/{plot}/seasonal-crops', [ParcelCropSeasonController::class, 'edit'])
         ->name('farm-plots.seasonal-crops.edit');
     Route::post('/farm-plots/{plot}/seasonal-crops', [ParcelCropSeasonController::class, 'store'])
