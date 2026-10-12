@@ -1,6 +1,7 @@
 # Agriculture Information System — Developer Guide
 
-The October 12 automatic overview crop-icon follow-up is local and not deployed.
+The October 12 automatic overview crop-icon follow-up is deployed in runtime
+`89ff3d1` through GitHub main and Hostinger fast-forward pull.
 `ParcelCropLayer` reads scoped classifications for loaded parcel IDs when
 `icons` is enabled even with recoloring off; requests remain capped at 200 IDs
 per batch. Crop badges appear without farmer selection, use known saved crops
@@ -24,7 +25,7 @@ and tests. No migration, account operation, environment change or operational
 data write ran; changed public assets were mirrored and caches refreshed. The
 release receipt is in [docs/GITHUB_DEPLOYMENT.md](docs/GITHUB_DEPLOYMENT.md).
 
-The October 12 freehand crop-mark follow-up is local and not deployed. New crop
+The October 12 freehand crop-mark follow-up is deployed in runtime `89ff3d1`. New crop
 marks use two or more ordered points as visual lines inside the saved parcel and
 do not calculate hectares; existing enclosed polygon crop areas remain readable
 and editable. The server validates line containment and point limits, and the

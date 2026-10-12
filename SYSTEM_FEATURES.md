@@ -1,6 +1,6 @@
 # AgriLGU — Complete Feature Catalog
 
-Local follow-up, October 12, 2026 (not deployed): opening the Farmers parcel map
+Deployed follow-up, October 12, 2026 (`89ff3d1`): opening the Farmers parcel map
 automatically shows icons for saved crops in the chosen year and season without
 clicking a farmer. Multiple crops share a parcel badge; missing crop records have
 no icon. Parcel recoloring remains optional. Zooming separates overlapping icons,
@@ -16,7 +16,7 @@ Ramos farmer-card artwork/signatory support. These changes preserve policy
 authorization, veterinary isolation and private-record boundaries. See
 [GitHub deployment](docs/GITHUB_DEPLOYMENT.md).
 
-Local follow-up, October 12, 2026 (not deployed): seasonal crop recording now
+Deployed follow-up, October 12, 2026 (`89ff3d1`): seasonal crop recording now
 supports freehand visual crop marks made from two or more points inside the
 saved parcel. These marks do not calculate hectares; existing enclosed crop
 areas remain compatible. The server, editor, crop layer and map renderer keep

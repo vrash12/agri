@@ -1,6 +1,6 @@
 # Planted crop areas inside a parcel
 
-## Automatic overview icons — October 12, 2026 (local, not deployed)
+## Automatic overview icons — October 12, 2026 (deployed in `89ff3d1`)
 
 Opening the Farmers map loads saved crop classifications for every loaded
 parcel in scoped batches of at most 200 IDs. Icons appear without selecting a
@@ -27,7 +27,7 @@ passed 25 tests / 177 assertions, and reviewed RAG checks passed 35 tests / 246
 assertions with existing file-cache warnings. Syntax, Pint, Blade compilation
 and whitespace checks passed. Maps tests use synthetic adapters, not live tiles.
 
-## Freehand crop marks — October 12, 2026 (local, not deployed)
+## Freehand crop marks — October 12, 2026 (deployed in `89ff3d1`)
 
 Staff can draw a colored crop line with two or more ordered points along the
 planted rows or section. The line stays inside the saved parcel, is stored as a

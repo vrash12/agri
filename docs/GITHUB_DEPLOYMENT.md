@@ -1,5 +1,44 @@
 # GitHub-to-Hostinger deployment
 
+## Verified Hostinger release — October 12, 2026 — crop lines and automatic overview icons
+
+Runtime `89ff3d1af921d588f91840c20ebec2c5235e328c` was pushed to GitHub main
+and installed with Hostinger `git pull --ff-only origin main` from clean tracked
+baseline `9e0fe80`, on PHP 8.3.35. Staff can save visual crop lines with two or
+more points without hectare calculations. Existing polygon crop records remain
+compatible. The Farmers map automatically loads scoped crop metadata in 200-ID
+batches and shows cached crop badges without a farmer/parcel click. Recorded
+crops follow the selected year/season; missing records produce no icon.
+
+A private verified backup contains **21 tables / 9,384 rows**, **3,375,241
+compressed bytes**, SHA-256
+`34facfc32c2103f80178866032aa26bf351e176be8de6e89e87505c04775d03a`.
+Prior tracked runtime, bootstrap caches, served assets and private environment
+were archived outside the document root. All table-row/schema fingerprints,
+environment bytes, application key and effective session/cache/Redis namespaces
+passed preservation checks before and after the smoke checks. No migration,
+dependency change, account operation, operational write or general cache clear
+ran. Existing untracked server files were retained.
+
+All five changed scripts were mirrored with 0644 permissions and match both
+public directories and live versioned HTTPS responses. Configuration, route and
+Blade caches rebuilt successfully. Homepage, office/farmer sign-in return 200;
+guest classification and crop-detail endpoints return 401. Read-only server
+checks covered synthetic line preparation without hectares, an authorized
+office crop-modal render and scoped MySQL classification without coordinates.
+Maintenance ended and tracked server files are clean.
+
+Local acceptance passed 228 JavaScript tests, 25 crop/geometry tests / 177
+assertions and 35 RAG tests / 246 assertions with existing file-cache warnings.
+Pint, syntax, Blade and whitespace checks passed. Live Google Maps icon visuals,
+real drawing/saving and every role's interactive workflow were not repeated.
+
+The private verifier initially reused the backup's native read snapshot, then
+selected an office without plotted parcels and lacked HTTP view context. It was
+corrected to use a fresh connection, an authorized plotted scope and the usual
+request/view context; preservation and smoke checks then passed. These were
+verification-helper issues and required no runtime patch or data change.
+
 ## Verified Hostinger release — October 12, 2026 — context-aware Assistant and farmer workflow updates
 
 Runtime `d89aa107e7f5c27d4603a0c598c5cde514a8d636` was pushed to GitHub main
