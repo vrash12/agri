@@ -1,5 +1,33 @@
 # GitHub-to-Hostinger deployment
 
+## Verified Hostinger release — October 12, 2026 — Ramos white parcel base and whole-map crop icons
+
+Runtime `5bd80d5c545664f9e50720ef0b42e7465d8431d` was pushed to GitHub main and
+installed with Hostinger `git pull --ff-only origin main` from `fa9ee17`, on PHP
+8.3.35. The Ramos Farmers workspace now presents imported parcel polygons with
+a neutral white display base while preserving stored plot colors, geometry and
+exports. Saved crop classifications still load across the whole plotted map in
+scoped batches, and crop icons/selected crop sections remain above the white
+base. Crop enclosures reject positive overlap while allowing shared edges; no
+record rewrite or hectare inference was introduced.
+
+A private verified backup was created before the pull: **21 tables / 9,391
+rows**, **3.2 MB compressed**, SHA-256
+`509e8974ef13e25575b3de246114e7b827341b2b95805d6d80269acec2288117` in
+`/home/u330835917/.private/crop-white-202610120145`. Existing untracked server
+files were retained. No migration, dependency, account, environment or
+operational data change ran, and the general cache was not cleared. The three
+changed public JavaScript assets were mirrored to `public_html` with 0644
+permissions; source, public copies and live HTTPS responses have matching
+hashes. Configuration, route and Blade caches were rebuilt.
+
+Local verification passed **235 JavaScript tests** and **22 crop-season PHP
+tests / 185 assertions** with the existing `.env.testing` file warning. Pint,
+JavaScript/PHP syntax, Blade compilation and whitespace checks passed. Login and
+farmer-login returned HTTP 200 after deployment; the protected crop endpoint
+redirected an unauthenticated request to sign-in. Live Google Maps visual
+acceptance remains outstanding.
+
 ## Verified Hostinger release — October 12, 2026 — crop lines and automatic overview icons
 
 Runtime `89ff3d1af921d588f91840c20ebec2c5235e328c` was pushed to GitHub main
