@@ -21,6 +21,13 @@ test('unsafe colors, coordinates and oversized boundaries fail closed',async()=>
     const model=layer.create({url:'/areas',fetch:async()=>value,onChange:()=>{}});await model.load(period,[1]);assert.equal(model.state.status,'error');assert.deepEqual(model.state.records,[]);
   }
 });
+test('visual crop lines accept two points without an area measurement',async()=>{
+  const line={type:'line',crop:'rice',crop_label:'Rice',color:'#228B22',path:[{lat:15.6,lng:120.47},{lat:15.6005,lng:120.4705}]};
+  const model=layer.create({url:'/areas',fetch:async()=>response([1],[line]),onChange:()=>{}});
+  await model.load(period,[1]);
+  assert.equal(model.state.status,'ready');
+  assert.deepEqual(model.state.records[0].areas[0].path,line.path);
+});
 test('missing migration is an explicit unavailable state',async()=>{
   const model=layer.create({url:'/areas',fetch:async()=>({ok:true,json:async()=>({available:false,message:'Drawing is unavailable'})}),onChange:()=>{}});
   await model.load(period,[1]);assert.equal(model.state.status,'error');assert.equal(model.state.error,'Drawing is unavailable');

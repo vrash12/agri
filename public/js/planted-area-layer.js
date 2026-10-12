@@ -26,9 +26,11 @@
           if(seen.has(String(record.plot_id)))throw new Error('Duplicate crop-area parcel.');
           seen.add(String(record.plot_id));
           record.areas.forEach(area=>{
-            if(!/^#[a-f0-9]{6}$/i.test(area.color)||!Array.isArray(area.polygon)||area.polygon.length<3||area.polygon.length>50)throw new Error('Invalid crop-area boundary.');
-            area.polygon.forEach(point=>{if(!Number.isFinite(Number(point.lat))||!Number.isFinite(Number(point.lng))||Math.abs(Number(point.lat))>90||Math.abs(Number(point.lng))>180)throw new Error('Invalid crop-area coordinate.');});
-            total+=area.polygon.length;
+            var line=area.type==='line' || Array.isArray(area.path);
+            var points=line?area.path:area.polygon;
+            if(!/^#[a-f0-9]{6}$/i.test(area.color)||!Array.isArray(points)||(line?points.length<2:points.length<3)||points.length>50)throw new Error(line?'Invalid crop mark.':'Invalid crop-area boundary.');
+            points.forEach(point=>{if(!Number.isFinite(Number(point.lat))||!Number.isFinite(Number(point.lng))||Math.abs(Number(point.lat))>90||Math.abs(Number(point.lng))>180)throw new Error('Invalid crop-area coordinate.');});
+            total+=points.length;
           });
         });
         if(total>8000)throw new Error('Crop-area response is too large.');

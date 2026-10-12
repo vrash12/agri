@@ -102,6 +102,8 @@ function harness(plots = []) {
     savedPlotOverlays: [], renderedPlotDataByFarmerId: new Map(), plotsCacheByFarmerId: new Map(),
     savedPlotsHiddenForEditing: false, focusedParcelFarmerId: null, selectedFarmerId: null, editingPlotId: null,
     cropLayer: null, queueCropLayer: () => {}, plantedAreaLayer: null, refreshPlantedAreas: () => {},
+    cropSettings: {enabled:false,year:2026,season:'dry',filter:'all'}, plantedAreaOverlays: [], schedulePlotDisplayRefresh: () => {},
+    overviewCropDetailsRef: null, overviewCropDetails: new Map(),
     plotDisplayRevision: 0, plotDisplayTimer: null, mapGeocodedPillEl: { textContent: '' },
     normalizePolygonRing: points => points.slice(), getEffectivePlotColor: plot => plot.color || '#22c55e',
     hexAlpha: color => color, hexToRgba: color => color, bindClickablePlotOverlay: () => {},
@@ -113,7 +115,7 @@ function harness(plots = []) {
     fetch: async () => ({ ok: true, json: async () => ({ plots, total: plots.length, returned: plots.length, truncated: false }) }),
   });
   const functions = ['toLatLng', 'setOverlayVisible', 'nextPlotFrame', 'shouldShowSavedPlot', 'needsFullPlotDetail',
-    'refreshSavedPlotDisplay', 'clearPlotsForFarmer', 'renderPlotsForFarmer', 'loadAllMunicipalPlots', 'applyCropStyle'];
+    'refreshSavedPlotDisplay', 'clearPlotsForFarmer', 'renderPlotsForFarmer', 'loadAllMunicipalPlots', 'applyCropStyle', 'applyParcelCropBadge'];
   vm.runInContext(functions.map(declaration).join('\n'), context);
   const clear = context.clearPlotsForFarmer;
   context.clearPlotsForFarmer = id => { metrics.clears++; clear(id); };
@@ -235,6 +237,67 @@ test('initial background batches cannot replace a newer selected-farmer response
   context.renderPlotsForFarmer('7', []);
   context.renderPlotsForFarmer('7', old, { append: true });
   assert.equal(mounted.size, 0, 'a newly deleted plot stays deleted');
+});
+
+test('parcel crop icons appear on initial overview without selection and reuse markers on camera changes', async () => {
+  const {context,toggle}=harness();
+  const helper=require('../../public/js/crop-area-badges.js');
+  let markers=0,anchors=0;
+  context.window.CropAreaBadges={...helper,parcelPosition:points=>{anchors++;return helper.parcelPosition(points);},parcelMarkerContent:(_,codes)=>codes.slice()};
+  context.Marker3DElement=class{constructor(options){Object.assign(this,options);markers++;}replaceChildren(value){this.content=value;}};
+  context.google={maps:{CollisionBehavior:{OPTIONAL_AND_HIDES_LOWER_PRIORITY:'optional'}}};
+  const rows=new Map([['1',{crop:'rice',area_crops:[]}],['2',{crop:'mixed',area_crops:['corn','rice']}],['3',{crop:'not_recorded',area_crops:[]}]]);
+  context.cropLayer={record:id=>rows.get(String(id)),color:(_,saved)=>saved,visible:()=>true};
+  for(let id=1;id<=3;id++)context.renderPlotsForFarmer(String(id),[{id,farmer_id:id,polygon_json:ring()}]);
+  const [one,two,empty]=context.savedPlotOverlays;
+  assert.equal(context.selectedFarmerId,null);
+  assert.equal(one.cropBadge.isConnected,true);assert.equal(two.cropBadge.isConnected,true);
+  assert.deepEqual(Array.from(two.cropBadge.content),['corn','rice']);
+  assert.equal(empty.cropBadge,null,'No crop icon without a saved seasonal record');
+  assert.match(one.cropBadge.title,/Rice.*2026 Dry season/);
+  const first=one.cropBadge;
+  await context.refreshSavedPlotDisplay();await context.refreshSavedPlotDisplay();
+  assert.equal(markers,2);assert.equal(anchors,2);assert.equal(one.cropBadge,first);
+  toggle.checked=false;await context.refreshSavedPlotDisplay();assert.equal(first.isConnected,false);
+  toggle.checked=true;context.focusedParcelFarmerId='2';await context.refreshSavedPlotDisplay();
+  assert.equal(first.isConnected,false);assert.equal(two.cropBadge.isConnected,true);
+  context.focusedParcelFarmerId=null;context.savedPlotsHiddenForEditing=true;await context.refreshSavedPlotDisplay();
+  assert.equal(two.cropBadge.isConnected,false);
+  context.savedPlotsHiddenForEditing=false;await context.refreshSavedPlotDisplay();assert.equal(first.isConnected,true);
+  context.clearPlotsForFarmer('1');assert.equal(first.isConnected,false,'Removing a parcel must remove its badge');
+  rows.clear();await context.refreshSavedPlotDisplay();assert.equal(two.cropBadge,null,'Loading failures/new periods cannot retain stale icons');
+});
+
+test('selected details replace matching overview icons and reset restores the overview', async () => {
+  const {context}=harness();
+  context.window.CropAreaBadges={...require('../../public/js/crop-area-badges.js'),parcelMarkerContent:(_,codes)=>codes.slice()};
+  context.Marker3DElement=class{constructor(options){Object.assign(this,options);}replaceChildren(value){this.content=value;}};
+  context.google={maps:{CollisionBehavior:{OPTIONAL_AND_HIDES_LOWER_PRIORITY:'optional'}}};
+  context.cropLayer={record:()=>({crop:'mixed',area_crops:['rice','corn']}),color:(_,saved)=>saved,visible:()=>true};
+  context.renderPlotsForFarmer('1',[{id:1,polygon_json:ring()}]);
+  const overlay=context.savedPlotOverlays[0];
+  context.selectedFarmerId='1';context.map3d.range=2000;
+  context.plantedAreaOverlays=[{plotId:1,crop:'rice',badge:{}}];
+  await context.refreshSavedPlotDisplay();
+  assert.deepEqual(Array.from(overlay.cropBadge.content),['corn'],'Other crop icons remain until their detail arrives');
+  context.plantedAreaOverlays=context.plantedAreaOverlays.concat({plotId:1,crop:'corn',badge:{}});
+  await context.refreshSavedPlotDisplay();assert.equal(overlay.cropBadge,null);
+  context.selectedFarmerId=null;await context.refreshSavedPlotDisplay();
+  assert.deepEqual(Array.from(overlay.cropBadge.content),['rice','corn']);assert.equal(overlay.cropBadge.isConnected,true);
+  context.cropSettings.enabled=true;context.cropSettings.filter='corn';await context.refreshSavedPlotDisplay();
+  assert.deepEqual(Array.from(overlay.cropBadge.content),['corn']);
+});
+
+test('overview classification loads once after the initial parcel batch without a click', async () => {
+  const plots=Array.from({length:42},(_,index)=>({id:index+1,farmer_id:index+1,polygon_json:ring()}));
+  const {context}=harness(plots);let queued=0,request;
+  context.queueCropLayer=()=>{queued++;};
+  await context.loadAllMunicipalPlots();assert.equal(queued,1,'Initial rendering must not reload crop metadata per farmer');
+  context.cropSettings={enabled:false,icons:true,year:2026,season:'dry',filter:'all'};
+  context.cropLayer={load:(settings,ids,force)=>{request={settings,ids,force};},color:(_,saved)=>saved,visible:()=>true,record:()=>null};
+  vm.runInContext(declaration('loadCropLayer'),context);context.loadCropLayer(false);
+  assert.equal(request.settings.icons,true);assert.equal(request.settings.enabled,false);
+  assert.equal(request.ids.length,42);assert.equal(context.selectedFarmerId,null);
 });
 
 

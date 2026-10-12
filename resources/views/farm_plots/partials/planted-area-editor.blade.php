@@ -12,14 +12,14 @@
   <div class="planted-workspace">
     <div class="planted-map-panel">
       <div class="planted-map-heading"><strong>Your parcel</strong><span><i class="planted-outline-key" aria-hidden="true"></i> White line = parcel boundary</span></div>
-      <div id="plantedAreaMap" class="planted-area-map" aria-label="Parcel and planted crop boundaries" aria-describedby="plantedMapStatus"></div>
+      <div id="plantedAreaMap" class="planted-area-map" aria-label="Parcel and crop marks" aria-describedby="plantedMapStatus"></div>
       <p id="plantedMapStatus" role="status" aria-live="polite">Loading the parcel map…</p>
-      <details class="planted-help"><summary>How to mark an area</summary><div><ol><li>Choose the crop and click Start drawing.</li><li>Click at least three corners inside the white outline.</li><li>Finish the boundary, then save the season.</li></ol><p>Separate crops need separate areas. Boundaries may touch, but cannot overlap. Choose Edit area to move existing corners.</p><p>For keyboard drawing, move the map with its arrow controls, then use Add corner at map center. Up to 8 areas, with 50 corners each.</p></div></details>
+      <details class="planted-help"><summary>How to mark a crop</summary><div><ol><li>Choose the crop and click Start crop line.</li><li>Click two or more points along the planted rows or section inside the white parcel outline.</li><li>Finish the crop line, then save the season.</li></ol><p>These colored lines are visual crop marks; they do not calculate hectares. Unplanted parts can remain blank. If the white parcel outline is wrong, update the parcel boundary before recording the crop.</p><p>For keyboard drawing, move the map with its arrow controls, then use Add point at map center. Up to 8 marks, with 50 points each.</p></div></details>
     </div>
-    <aside class="planted-control-panel" aria-label="Crop area controls">
+    <aside class="planted-control-panel" aria-label="Crop mark controls">
       @if($canDraw)
         <div class="planted-section-form">
-          <h3 id="plantedControlHeading">Add a crop area</h3>
+          <h3 id="plantedControlHeading">Add a crop mark</h3>
           <p class="module-hint" id="plantedControlHint">Which crop is planted here?</p>
           <div class="module-form-field"><label for="plantedCrop">Crop</label><select class="module-input" id="plantedCrop">@foreach($cropChoices as $code => $label) @if($code !== 'not_recorded')<option value="{{ $code }}">{{ $label }}</option>@endif @endforeach</select></div>
           <details class="planted-section-details" id="plantedSectionDetails"><summary>Area name and variety <span>Optional</span></summary><div>
@@ -27,20 +27,20 @@
             <div class="module-form-field"><label for="plantedVariety">Seed / crop variety</label><input class="module-input" id="plantedVariety" maxlength="80" placeholder="e.g. Recorded corn variety"></div>
           </div></details>
           <div class="planted-idle-actions" id="plantedIdleActions">
-            <button type="button" class="module-button module-button-primary" id="plantedUpdate" disabled hidden>Apply area details</button>
+            <button type="button" class="module-button module-button-primary" id="plantedUpdate" disabled hidden>Apply mark details</button>
             <button type="button" class="module-button module-button-primary" id="plantedStart" disabled>Start drawing</button>
           </div>
           <div class="planted-draft-actions" id="plantedDraftActions" hidden>
-            <button type="button" class="module-button module-button-primary" id="plantedFinish" disabled>Finish boundary</button>
+            <button type="button" class="module-button module-button-primary" id="plantedFinish" disabled>Finish crop line</button>
             <div class="planted-secondary-actions"><button type="button" class="module-button" id="plantedUndo" disabled>Undo corner</button><button type="button" class="module-button" id="plantedCancel" disabled>Cancel</button></div>
             <details class="planted-keyboard"><summary>Draw with the keyboard</summary><button type="button" class="module-button" id="plantedCenter" disabled>Add corner at map center</button></details>
-            <p class="module-hint">Finish this boundary before saving.</p>
+            <p class="module-hint">Finish this crop line before saving.</p>
           </div>
         </div>
       @endif
-      <section class="planted-sections" aria-labelledby="plantedListHeading"><div class="planted-list-heading"><h3 id="plantedListHeading">Crop areas</h3><span id="plantedAreaCount">{{ count($areaDraft) }}/8</span></div>
+      <section class="planted-sections" aria-labelledby="plantedListHeading"><div class="planted-list-heading"><h3 id="plantedListHeading">Crop marks</h3><span id="plantedAreaCount">{{ count($areaDraft) }}/8</span></div>
         <p id="plantedAreaSummary" class="module-hint" role="status"></p>
-        <div id="plantedAreaList" class="planted-area-list" aria-label="Planted crop areas"></div>
+        <div id="plantedAreaList" class="planted-area-list" aria-label="Crop marks"></div>
       </section>
     </aside>
   </div>

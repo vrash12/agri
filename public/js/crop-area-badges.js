@@ -62,8 +62,8 @@
   }
   // A bounded horizontal scan finds an interior anchor even for concave areas.
   // A bounding-box center or arithmetic centroid can sit outside such boundaries.
-  function position(polygon) {
-    if (!Array.isArray(polygon) || polygon.length < 3 || polygon.length > 50) return null;
+  function position(polygon, limit = 50, vertexRows = true) {
+    if (!Array.isArray(polygon) || polygon.length < 3 || polygon.length > limit) return null;
     if(polygon.some(p=>!p || p.lat === null || p.lng === null))return null;
     const ring=polygon.map(p=>({lat:Number(p.lat),lng:Number(p.lng)}));
     if (ring.some(p=>!Number.isFinite(p.lat)||!Number.isFinite(p.lng)||Math.abs(p.lat)>90||Math.abs(p.lng)>180)) return null;
@@ -71,8 +71,10 @@
     if (max===min) return null;
     let best=null,width=0;
     const rows=Array.from({length:15},(_,i)=>min+(max-min)*(i+.5)/15);
-    const distinct=[...new Set(ys)].sort((a,b)=>a-b);
-    for(let i=1;i<distinct.length;i++)rows.push((distinct[i-1]+distinct[i])/2);
+    if (vertexRows) {
+      const distinct=[...new Set(ys)].sort((a,b)=>a-b);
+      for(let i=1;i<distinct.length;i++)rows.push((distinct[i-1]+distinct[i])/2);
+    }
     rows.forEach(y=>{
       const intersections=[];
       for(let i=0,j=ring.length-1;i<ring.length;j=i++) {
@@ -90,23 +92,60 @@
     });
     return best;
   }
+  // Compute once per loaded parcel, using fixed scan rows for large rings.
+  function parcelPosition(polygon) { return position(polygon, 10000, false); }
+  function parcelCrops(record) {
+    if (!record || record.crop === 'not_recorded' || !Object.hasOwn(crops, record.crop)) return [];
+    const codes = Array.isArray(record.area_crops) && record.area_crops.length
+      ? record.area_crops : [record.crop];
+    return [...new Set(codes.filter(code => Object.hasOwn(crops, code)))].slice(0, 8);
+  }
+  function parcelMarkerContent(document, codes) {
+    const selected = [...new Set(codes.filter(code => Object.hasOwn(crops, code)))].slice(0, 8);
+    const template = document.createElement('template');
+    const node = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    const width = selected.length * 26 + 12;
+    Object.entries({viewBox:`0 0 ${width} 36`,width:String(width),height:'36','aria-hidden':'true'}).forEach(([key,value])=>node.setAttribute(key,value));
+    const frame = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    Object.entries({x:1,y:1,width:width-2,height:34,rx:9,fill:'#FFFFFF',stroke:'#20362C','stroke-width':2}).forEach(([key,value])=>frame.setAttribute(key,value));
+    node.appendChild(frame);
+    selected.forEach((code,index)=>{
+      const icon = svg(document,code,false);
+      icon.setAttribute('x',String(6+index*26)); icon.setAttribute('y','6');
+      node.appendChild(icon);
+    });
+    template.content.appendChild(node);
+    return template.content.cloneNode(true);
+  }
+  function linePosition(path) {
+    if (!Array.isArray(path) || path.length < 2 || path.length > 50) return null;
+    const points = path.map(point => ({lat:Number(point?.lat),lng:Number(point?.lng)}));
+    if (points.some(point => !Number.isFinite(point.lat) || !Number.isFinite(point.lng) || Math.abs(point.lat)>90 || Math.abs(point.lng)>180)) return null;
+    const middle = Math.floor((points.length - 1) / 2);
+    return {lat:(points[middle].lat + points[middle + 1].lat) / 2, lng:(points[middle].lng + points[middle + 1].lng) / 2};
+  }
+  function anchor(area) {
+    return area?.type === 'line' || Array.isArray(area?.path) ? linePosition(area.path) : position(area?.polygon);
+  }
   function overlay(maps, document, map, area, select) {
     if (!maps.OverlayView || !maps.LatLng) return null;
-    const anchor=position(area.polygon);if(!anchor)return null;
+    const line = area?.type === 'line' || Array.isArray(area?.path);
+    const points = line ? area.path : area.polygon;
+    const anchorPoint=anchor(area);if(!anchorPoint)return null;
     const badge=document.createElement('button');badge.type='button';badge.className='crop-map-badge';
-    const name=descriptor(area.crop)[0];badge.setAttribute('aria-label','Select '+name+' crop area');badge.title=name+(area.name?' · '+area.name:'');
+    const name=descriptor(area.crop)[0];badge.setAttribute('aria-label','Select '+name+' crop '+(area?.type==='line' || Array.isArray(area?.path) ? 'mark' : 'area'));badge.title=name+(area.name?' · '+area.name:'');
     badge.appendChild(svg(document,area.crop,false));
     const label=document.createElement('span');label.textContent=name;badge.appendChild(label);
     badge.addEventListener('click',event=>{event.stopPropagation();select();});
     maps.OverlayView.preventMapHitsAndGesturesFrom?.(badge);
-    const marker=new maps.OverlayView();let polygon=area.polygon;
+    const marker=new maps.OverlayView();let polygon=points;
     marker.onAdd=()=>marker.getPanes().overlayMouseTarget.appendChild(badge);
     marker.draw=()=>{
       const projection=marker.getProjection();if(!projection)return;
-      const p=projection.fromLatLngToDivPixel(new maps.LatLng(anchor.lat,anchor.lng));if(!p)return;
+      const p=projection.fromLatLngToDivPixel(new maps.LatLng(anchorPoint.lat,anchorPoint.lng));if(!p)return;
       badge.style.left=p.x+'px';badge.style.top=p.y+'px';
       const corners=polygon.map(v=>projection.fromLatLngToDivPixel(new maps.LatLng(v.lat,v.lng))).filter(Boolean);
-      badge.hidden=corners.length<3 || Math.min(Math.max(...corners.map(v=>v.x))-Math.min(...corners.map(v=>v.x)),Math.max(...corners.map(v=>v.y))-Math.min(...corners.map(v=>v.y)))<26;
+      badge.hidden=corners.length<(line?2:3) || Math.min(Math.max(...corners.map(v=>v.x))-Math.min(...corners.map(v=>v.x)),Math.max(...corners.map(v=>v.y))-Math.min(...corners.map(v=>v.y)))<26;
     };
     marker.onRemove=()=>badge.remove();
     marker.setMap(map);
@@ -117,8 +156,8 @@
         badge.getAnimations?.().forEach(animation=>animation.cancel());
         badge.animate?.([{transform:'translate(-50%, -50%) scale(1)'},{transform:'translate(-50%, -58%) scale(1.1)'},{transform:'translate(-50%, -50%) scale(1)'}],{duration:650,iterations:2,easing:'ease-in-out'});
       },
-      update:points=>{polygon=points;const point=position(points);if(point){Object.assign(anchor,point);marker.draw();}else badge.hidden=true;}
+      update:nextPoints=>{polygon=nextPoints;const point=line?linePosition(nextPoints):position(nextPoints);if(point){Object.assign(anchorPoint,point);marker.draw();}else badge.hidden=true;}
     };
   }
-  return {descriptor,mapContext,svg,template,markerContent,position,overlay};
+  return {descriptor,mapContext,svg,template,markerContent,position,parcelPosition,parcelCrops,parcelMarkerContent,linePosition,anchor,overlay};
 });

@@ -261,6 +261,60 @@ final class GeoGeometry
         return true;
     }
 
+    /**
+     * Check that every segment of an open drawing stays inside a polygon.
+     * Boundary contact is allowed so a crop mark may follow a parcel edge.
+     *
+     * @param  array<int, array{0:float,1:float}>  $path
+     */
+    public function containsPath(array $outer, array $path): bool
+    {
+        if (count($path) < 2) {
+            return false;
+        }
+
+        foreach ($path as $point) {
+            if (! $this->pointInGeometry($point, $outer, true)) {
+                return false;
+            }
+        }
+
+        for ($i = 0; $i < count($path) - 1; $i++) {
+            $a = $path[$i];
+            $b = $path[$i + 1];
+            if ($a === $b) {
+                continue;
+            }
+
+            foreach ($this->polygons($outer) as $polygon) {
+                foreach ($polygon as $boundaryRing) {
+                    if ($this->ringsProperlyIntersect([$a, $b], $boundaryRing)) {
+                        return false;
+                    }
+
+                    $dx = $b[0] - $a[0];
+                    $dy = $b[1] - $a[1];
+                    $length = $dx * $dx + $dy * $dy;
+                    $cuts = [0.0, 1.0];
+                    foreach ($boundaryRing as $vertex) {
+                        if ($this->onSegment($a, $vertex, $b) && $this->orientation($a, $b, $vertex) === 0) {
+                            $cuts[] = max(0.0, min(1.0, (($vertex[0] - $a[0]) * $dx + ($vertex[1] - $a[1]) * $dy) / $length));
+                        }
+                    }
+                    sort($cuts, SORT_NUMERIC);
+                    for ($cut = 1; $cut < count($cuts); $cut++) {
+                        $t = ($cuts[$cut - 1] + $cuts[$cut]) / 2;
+                        if (! $this->pointInGeometry([$a[0] + $dx * $t, $a[1] + $dy * $t], $outer, true)) {
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+
+        return true;
+    }
+
     /** @param  array<string, mixed>  $first @param  array<string, mixed>  $second */
     public function overlaps(array $first, array $second): bool
     {

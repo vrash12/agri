@@ -13,6 +13,28 @@ test('badge anchor stays inside rectangles, concave notches and reversed rings',
   for(const ring of [rectangle,concave,concave.slice().reverse()])assert.ok(inside(badges.position(ring),ring));
   assert.deepEqual(badges.position(rectangle),{lat:2,lng:2});
 });
+test('visual crop marks use a midpoint anchor without polygon area assumptions',()=>{
+  const path=[{lat:1,lng:1},{lat:2,lng:2},{lat:3,lng:3}];
+  assert.deepEqual(badges.linePosition(path),{lat:2.5,lng:2.5});
+  assert.deepEqual(badges.anchor({type:'line',path}),{lat:2.5,lng:2.5});
+});
+test('parcel icon anchors handle larger canonical rings without changing their coordinates',()=>{
+  const detailed=rectangle.flatMap((a,index)=>{
+    const b=rectangle[(index+1)%rectangle.length];
+    return Array.from({length:30},(_,i)=>({lat:a.lat+(b.lat-a.lat)*i/30,lng:a.lng+(b.lng-a.lng)*i/30}));
+  });
+  const before=JSON.stringify(detailed);
+  assert.ok(inside(badges.parcelPosition(detailed),detailed));
+  assert.equal(JSON.stringify(detailed),before);
+  assert.equal(badges.parcelPosition(Array(10001).fill({lat:0,lng:0})),null);
+});
+test('overview icons use saved crop codes and never infer a crop from missing records',()=>{
+  assert.deepEqual(badges.parcelCrops(null),[]);
+  assert.deepEqual(badges.parcelCrops({crop:'not_recorded',area_crops:['rice']}),[]);
+  assert.deepEqual(badges.parcelCrops({crop:'rice'}),['rice']);
+  assert.deepEqual(badges.parcelCrops({crop:'mixed',area_crops:['corn','rice','corn','<script>']}),['corn','rice']);
+  assert.deepEqual(badges.parcelCrops({crop:'__proto__'}),[]);
+});
 test('invalid or oversized geometry has no badge and unknown crops use a safe icon',()=>{
   for(const ring of [null,[],Array(51).fill({lat:0,lng:0}),[{lat:91,lng:0},{lat:1,lng:1},{lat:1,lng:0}],[null,{lat:1,lng:1},{lat:1,lng:0}],Array(3).fill({lat:0,lng:0})])assert.equal(badges.position(ring),null);
   assert.equal(badges.descriptor('<script>')[0],'Other crop');
@@ -43,6 +65,15 @@ test('3D marker content clones the SVG instead of leaving it inside an inert tem
   };
   const content=badges.markerContent(document,'corn');
   assert.equal(content.children.length,1);
+});
+test('one parcel marker groups distinct crop icons using static SVG content',()=>{
+  class Node{constructor(tag){this.tag=tag;this.attrs={};this.children=[];}setAttribute(key,value){this.attrs[key]=String(value);}appendChild(child){this.children.push(child);}}
+  const document={createElementNS:(_,tag)=>new Node(tag),createElement:()=>({content:{children:[],appendChild(child){this.children.push(child);},cloneNode(){return {children:this.children.slice()};}}})};
+  const content=badges.parcelMarkerContent(document,['rice','corn','rice','<img onerror>']);
+  const svg=content.children[0];
+  assert.equal(svg.attrs.width,'64');
+  assert.equal(svg.children.filter(node=>node.tag==='svg').length,2);
+  assert.equal(svg.children[0].attrs.fill,'#FFFFFF');
 });
 test('badge follows edited geometry, selects the area and cleans up when removed',()=>{
   const a=adapter();assert.equal(a.button.style.left,'200px');

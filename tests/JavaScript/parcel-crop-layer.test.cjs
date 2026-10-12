@@ -72,3 +72,33 @@ test('crop filter includes the corn section of a mixed-crop parcel', async () =>
   await layer.load({...settings,filter:'vegetables'},[1]);
   assert.equal(layer.visible(1),false);
 });
+
+test('overview icons load crop metadata without enabling recoloring or requiring farmer selection', async () => {
+  const calls=[];
+  const layer=create({url:'/layer',fetch:async url=>{
+    const ids=new URL(url,'http://localhost').searchParams.getAll('plot_ids[]');
+    calls.push(ids.length);return response(2026,'dry',ids);
+  },onChange:()=>{}});
+  const iconSettings={...settings,enabled:false,icons:true};
+  const ids=Array.from({length:451},(_,i)=>i+1);
+  await layer.load(iconSettings,ids);
+  assert.deepEqual(calls,[200,200,51]);
+  assert.equal(layer.record(1).crop,'rice');
+  assert.equal(layer.color(1,'#123456'),'#123456');
+  assert.equal(layer.visible(1),true);
+  await layer.load(iconSettings,ids);assert.equal(calls.length,3,'Camera/visibility refresh must reuse metadata');
+  await layer.load({...iconSettings,enabled:true},ids);assert.equal(calls.length,3,'Recoloring can reuse the same records');
+});
+
+test('changing periods with icons on and colors off discards late crop metadata', async () => {
+  const pending=[];
+  const layer=create({url:'/layer',fetch:()=>new Promise(resolve=>pending.push(resolve)),onChange:()=>{}});
+  const iconSettings={...settings,enabled:false,icons:true};
+  const old=layer.load(iconSettings,[1]);
+  const next=layer.load({...iconSettings,season:'wet'},[1]);
+  assert.equal(layer.record(1),null);
+  pending[1](response(2026,'wet',[1],'corn'));await next;
+  pending[0](response(2026,'dry',[1],'rice'));await old;
+  assert.equal(layer.record(1).crop,'corn');assert.equal(layer.state.season,'wet');
+  assert.equal(layer.color(1,'#123456'),'#123456');
+});

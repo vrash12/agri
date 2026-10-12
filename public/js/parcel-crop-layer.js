@@ -12,7 +12,8 @@
       state.filter = settings.filter || 'all';
       var nextIds = Array.from(new Set(ids.map(String))).sort();
       var nextKey = settings.year + '/' + settings.season + '/' + nextIds.join(',');
-      if (!state.enabled) {
+      // Overview icons read classifications even when parcel recoloring is off.
+      if (!state.enabled && !settings.icons) {
         revision++; if (abort) abort.abort(); key = ''; records.clear(); state.status = 'off'; notify(); return;
       }
       if (!force && key === nextKey && (state.status === 'ready' || state.status === 'loading')) { notify(); return; }

@@ -49,7 +49,7 @@
   </section>
 
   <section class="module-panel" aria-labelledby="cropRecordHeading">
-    <div class="module-panel-head"><div class="crop-section-heading"><span class="crop-step" aria-hidden="true">2</span><div><h2 id="cropRecordHeading">{{ $canEdit ? 'Mark each planted area' : 'Recorded planted areas' }}</h2><p>{{ $canEdit ? 'Choose a crop, then draw its area inside the white parcel outline.' : 'Choose an area to see its boundary on the map.' }}</p></div></div></div>
+    <div class="module-panel-head"><div class="crop-section-heading"><span class="crop-step" aria-hidden="true">2</span><div><h2 id="cropRecordHeading">{{ $canEdit ? 'Mark each planted area' : 'Recorded planted areas' }}</h2><p>{{ $canEdit ? 'Choose a crop, then draw a line along the planted part inside the white parcel boundary. Leave unplanted land blank.' : 'Choose a mark to see its crop line on the map.' }}</p></div></div></div>
     @if($canEdit)
       <form id="seasonalCropForm" method="POST" action="{{ route('farm-plots.seasonal-crops.store', $plot) }}">
         @csrf

@@ -8,11 +8,11 @@
     <button type="button" class="btn btn-soft btn-sm" id="parcelCropApply" disabled>Apply layer</button>
     <button type="button" class="btn btn-soft btn-sm" id="parcelCropRetry" hidden>Retry</button>
   </div>
-  <p id="parcelCropStatus" role="status">Waiting for the parcel map to load. Saved parcel colors are shown first.</p>
+  <p id="parcelCropStatus" role="status">Saved crop icons load automatically when the parcel map opens.</p>
   <div id="parcelCropLegend" class="parcel-crop-legend" aria-label="Seasonal crop legend"></div>
-  <p id="plantedAreaLayerStatus" role="status">Select a farmer to see saved crop icons and planted-area boundaries.</p>
+  <p id="plantedAreaLayerStatus" role="status">Select a farmer to inspect saved crop lines and areas.</p>
   <button type="button" class="btn btn-soft btn-sm" id="plantedAreaRetry" hidden>Retry crop boundaries</button>
-  <p class="parcel-crop-help">Crop icons appear automatically for the selected farmer's saved crop areas. Use Crop areas / season beside a parcel to open the drawing dialog without leaving the map. Choose the year and season, then apply to view another period; parcel recoloring is optional. Click Focus to highlight a parcel and its crop sections. These records do not confirm current growth. Mapped hectares are approximate. Unmarked land stays unclassified. Gray means Not recorded, not fallow.</p>
+  <p class="parcel-crop-help">Saved crop icons appear on parcels as soon as the map loads, without clicking a farmer. A parcel with multiple saved crops shows their icons together. Choose the year and season, then apply to view another period; parcel recoloring is optional. Zoom in to separate nearby icons. Parcels without a crop record for that season have no crop icon. Select a farmer to inspect crop lines and areas, or use Crop areas / season to record them. Icons describe saved records, not live growth. Visual lines have no hectare measurement; mapped polygon hectares are approximate.</p>
 </details>
 <style>
   #farmersMapModule .parcel-tool-group.parcel-crop-controls { grid-column:1 / -1; min-width:0; border-right:0; border-top:1px solid var(--ui-border); }

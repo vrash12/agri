@@ -6,6 +6,7 @@ use App\Models\FarmPlot;
 use App\Models\ParcelCropSeason;
 use App\Models\User;
 use App\Support\ConcurrentWrite;
+use Illuminate\Database\QueryException;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -132,7 +133,7 @@ class ParcelCropSeasonTest extends TestCase
         $failed = false;
         try {
             ParcelCropSeason::create(['farm_plot_id' => 1, 'municipality_id' => 1, 'crop_year' => 2026, 'season' => 'dry', 'crop' => 'rice']);
-        } catch (\Illuminate\Database\QueryException $e) {
+        } catch (QueryException $e) {
             $failed = true;
         }
         $this->assertTrue($failed);
@@ -176,6 +177,27 @@ class ParcelCropSeasonTest extends TestCase
         $this->assertSame(2, $values['planted_area_summary']['count']);
         $this->assertArrayNotHasKey('planted_areas', $values);
         $this->assertStringNotContainsString('120.47', $audit->new_values);
+    }
+
+    public function test_freehand_crop_line_saves_without_calculating_hectares(): void
+    {
+        $this->prepareParcel();
+        $payload = array_replace($this->payload(), [
+            '_plot_version' => ConcurrentWrite::version(FarmPlot::findOrFail(1)),
+            'planted_areas' => [[
+                'type' => 'line', 'name' => 'North rice rows', 'crop' => 'rice',
+                'path' => [['lat' => 15.6001, 'lng' => 120.4701], ['lat' => 15.6007, 'lng' => 120.4707]],
+            ]],
+        ]);
+
+        $this->actingAs(User::find(1))->postJson($this->editUrl(), $payload)->assertRedirect();
+        $area = ParcelCropSeason::firstOrFail()->planted_areas[0];
+        $this->assertSame('line', $area['type']);
+        $this->assertCount(2, $area['path']);
+        $this->assertArrayNotHasKey('area_ha', $area);
+        $this->getJson(route('farm-plots.planted-area-layer', ['year' => 2026, 'season' => 'dry', 'plot_ids' => [1]]))
+            ->assertOk()->assertJsonPath('records.0.areas.0.type', 'line')
+            ->assertJsonMissingPath('records.0.areas.0.area_ha');
     }
 
     public function test_saved_map_link_restores_the_farmer_and_crop_period(): void

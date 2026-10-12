@@ -33,4 +33,14 @@ class PlantedAreaGeometryTest extends TestCase
         $area = $geo->prepare(['type' => 'Polygon', 'coordinates' => [[[.5, .5], [3, .5], [3, 3], [.5, 3], [.5, .5]]]], false);
         $this->assertFalse($geo->containsPolygon($parent, $area));
     }
+
+    public function test_freehand_crop_line_stays_inside_and_rejects_a_concave_excursion(): void
+    {
+        $geo = new GeoGeometry;
+        $parent = $geo->prepare(['type' => 'Polygon', 'coordinates' => [[[0, 0], [4, 0], [4, 4], [0, 4], [0, 0]]]], false);
+        $this->assertTrue($geo->containsPath($parent, [[.5, .5], [3.5, 3.5]]));
+
+        $concave = $geo->prepare(['type' => 'Polygon', 'coordinates' => [[[0, 0], [4, 0], [4, 4], [3, 4], [3, 1], [1, 1], [1, 4], [0, 4], [0, 0]]]], false);
+        $this->assertFalse($geo->containsPath($concave, [[.5, .5], [3.5, 3.5]]));
+    }
 }

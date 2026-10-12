@@ -1,5 +1,12 @@
 # AgriLGU — Complete Feature Catalog
 
+Local follow-up, October 12, 2026 (not deployed): opening the Farmers parcel map
+automatically shows icons for saved crops in the chosen year and season without
+clicking a farmer. Multiple crops share a parcel badge; missing crop records have
+no icon. Parcel recoloring remains optional. Zooming separates overlapping icons,
+and selecting a farmer reveals the detailed crop lines/areas. Icons describe
+saved classifications, not current growth. Requests remain permission-scoped.
+
 Deployed follow-up, October 12, 2026 (`d89aa10`): the Assistant is context-aware
 within AgriLGU. It can explain who it is, whether it understands the system,
 which allowlisted workspace module is open, and the authenticated role and
@@ -8,6 +15,12 @@ guided follow-ups, a visible pending-state cue, crop-editor error handling and
 Ramos farmer-card artwork/signatory support. These changes preserve policy
 authorization, veterinary isolation and private-record boundaries. See
 [GitHub deployment](docs/GITHUB_DEPLOYMENT.md).
+
+Local follow-up, October 12, 2026 (not deployed): seasonal crop recording now
+supports freehand visual crop marks made from two or more points inside the
+saved parcel. These marks do not calculate hectares; existing enclosed crop
+areas remain compatible. The server, editor, crop layer and map renderer keep
+the same role, municipality and parcel-boundary safeguards.
 
 Local follow-up, October 12, 2026 (not deployed): the Office Assistant is
 context-aware within AgriLGU. It can answer who it is, whether it understands

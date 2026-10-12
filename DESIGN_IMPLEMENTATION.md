@@ -1,5 +1,16 @@
 # Design and UX implementation record
 
+## Automatic parcel crop icons — local October 12, 2026
+
+Crop records for loaded parcels now produce overview badges without farmer
+selection, independent of parcel recoloring. A compact white SVG plate groups
+known crop symbols; its title identifies the crops and selected season. Missing
+records produce no icon. Anchors and markers are cached and reused in the
+existing batched renderer, with collision handling for neighboring parcels.
+Selected-farmer details replace matching overview symbols; toggles, filters,
+editing, reset and deletion preserve visibility. This is local, not deployed;
+synthetic Maps tests do not establish live provider visual acceptance.
+
 ## Verified Assistant and farmer-workflow release — October 12, 2026
 
 Runtime `d89aa10` is deployed through GitHub and Hostinger. The release includes
@@ -7,6 +18,15 @@ the context-aware Assistant identity/page/account responses, ChatGPT-style
 pending state, guided follow-up interaction, crop-editor correction and Ramos
 farmer-card artwork. Focused PHP/JavaScript suites and Pint passed; changed
 assets were mirrored to the served public directory and returned HTTP 200.
+
+## Freehand crop marks — local October 12, 2026
+
+The seasonal crop editor now lets staff draw a colored line with two or more
+points along the planted rows or section. The line is a visual crop mark and
+does not claim a hectare measurement; unplanted land remains blank. Saved
+parcel containment, point limits, role scope and version checks remain active,
+and older polygon crop areas continue to render. The map, editor, server layer
+and crop badges require one coordinated release; this follow-up is not deployed.
 
 ## Assistant context awareness — local October 12, 2026
 

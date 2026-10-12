@@ -4,7 +4,7 @@
       <div>
         <div class="parcel-crop-modal-kicker">CROP AREAS / SEASON</div>
         <h2 id="parcelCropModalTitle">Mark planted areas</h2>
-        <p id="parcelCropModalSubtitle">Choose a crop, draw its boundary inside the parcel, and save the season.</p>
+        <p id="parcelCropModalSubtitle">Choose a crop, draw a line along the planted section, and save the season.</p>
       </div>
       <button type="button" class="parcel-crop-modal-close" data-crop-modal-close aria-label="Close crop area dialog">Close</button>
     </header>

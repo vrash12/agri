@@ -1,5 +1,13 @@
 # AgriLGU — Claude Code project instructions
 
+Pending October 12 automatic crop overview: the map loads scoped crop metadata
+in 200-ID batches independently of recoloring, and shows bounded, reused crop
+badges on loaded parcels without a click. No broad crop-geometry download or
+live crop inference is allowed. Preserve the selected-farmer detail path, missing
+record states, saved geometry/colors and badge cleanup during filtering/editing.
+This follow-up and freehand crop marks remain local until an authorized release;
+see `docs/PLANTED_CROP_AREAS.md` for the coordinated asset/guidance requirements.
+
 The October 12, 2026 Assistant and farmer-workflow batch is deployed in runtime
 `d89aa10` through GitHub main and Hostinger fast-forward pull. Its bounded
 identity/page/account awareness, local data-quality review, guided follow-ups,

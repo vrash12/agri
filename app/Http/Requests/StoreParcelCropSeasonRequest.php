@@ -29,14 +29,19 @@ class StoreParcelCropSeasonRequest extends FormRequest
             '_record_version' => ['required', 'string', 'regex:/^(new|[a-f0-9]{64})$/'],
             '_plot_version' => [Rule::requiredIf($this->exists('planted_areas')), 'nullable', 'string', 'regex:/^[a-f0-9]{64}$/'],
             'planted_areas' => ['sometimes', 'array', 'max:8'],
-            'planted_areas.*' => ['array:name,crop,variety,polygon,area_ha'],
+            'planted_areas.*' => ['array:type,name,crop,variety,polygon,path,area_ha'],
+            'planted_areas.*.type' => ['required', Rule::in(['polygon', 'line'])],
             'planted_areas.*.name' => ['nullable', 'string', 'max:80'],
             'planted_areas.*.variety' => ['nullable', 'string', 'max:80'],
             'planted_areas.*.crop' => ['required', Rule::in(array_diff(array_keys(ParcelCropSeason::CROPS), ['not_recorded']))],
-            'planted_areas.*.polygon' => ['required', 'array', 'min:3', 'max:50'],
+            'planted_areas.*.polygon' => ['nullable', 'array', 'min:3', 'max:50', 'required_if:planted_areas.*.type,polygon'],
             'planted_areas.*.polygon.*' => ['required', 'array:lat,lng'],
             'planted_areas.*.polygon.*.lat' => ['required', 'numeric', 'between:-90,90'],
             'planted_areas.*.polygon.*.lng' => ['required', 'numeric', 'between:-180,180'],
+            'planted_areas.*.path' => ['nullable', 'array', 'min:2', 'max:50', 'required_if:planted_areas.*.type,line'],
+            'planted_areas.*.path.*' => ['required', 'array:lat,lng'],
+            'planted_areas.*.path.*.lat' => ['required', 'numeric', 'between:-90,90'],
+            'planted_areas.*.path.*.lng' => ['required', 'numeric', 'between:-180,180'],
         ];
     }
 
@@ -53,6 +58,16 @@ class StoreParcelCropSeasonRequest extends FormRequest
                 throw ValidationException::withMessages(['planted_areas' => 'The planted-area drawing could not be read. Redraw the boundary and try again.']);
             }
             $this->merge(['planted_areas' => $areas]);
+        }
+
+        if (is_array($areas)) {
+            $this->merge(['planted_areas' => array_map(static function ($area) {
+                if (is_array($area) && ! isset($area['type'])) {
+                    $area['type'] = 'polygon';
+                }
+
+                return $area;
+            }, $areas)]);
         }
     }
 }

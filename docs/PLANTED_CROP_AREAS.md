@@ -1,5 +1,46 @@
 # Planted crop areas inside a parcel
 
+## Automatic overview icons — October 12, 2026 (local, not deployed)
+
+Opening the Farmers map loads saved crop classifications for every loaded
+parcel in scoped batches of at most 200 IDs. Icons appear without selecting a
+farmer and without enabling crop recoloring. A parcel badge groups up to eight
+distinct known crop symbols for the chosen year/season; missing records remain
+without an icon. Collision handling separates nearby badges when zooming in.
+
+This overview uses crop metadata and parcel geometry already loaded on the map,
+not a global crop-section geometry request. One cached interior anchor and
+marker per parcel are reused during camera refreshes within the existing render
+budget. Detailed crop geometry remains selected-farmer only, and available detail
+icons replace matching overview symbols. Hidden/edited/deleted parcels and
+period changes remove their stale icons. Saved parcel colors and coordinates
+are preserved. No schema, account or provider configuration changes are needed.
+
+Deploy `parcel-crop-layer.js`, `crop-area-badges.js`, `farmers-maps.js`, the crop
+controls partial and reviewed guidance together with the pending freehand crop
+work. Mirror changed public assets to both Hostinger public directories. Never
+clear the general cache. Live Google Maps visual acceptance has not been repeated.
+
+Verification: all 228 JavaScript regressions passed, including no-click loading,
+marker reuse, mixed crops, scope/period changes and cleanup. Crop/geometry checks
+passed 25 tests / 177 assertions, and reviewed RAG checks passed 35 tests / 246
+assertions with existing file-cache warnings. Syntax, Pint, Blade compilation
+and whitespace checks passed. Maps tests use synthetic adapters, not live tiles.
+
+## Freehand crop marks — October 12, 2026 (local, not deployed)
+
+Staff can draw a colored crop line with two or more ordered points along the
+planted rows or section. The line stays inside the saved parcel, is stored as a
+visual mark, and does not calculate hectares. Unplanted land can remain blank.
+Existing enclosed polygon crop areas remain readable and editable, so this is
+backward-compatible with previously recorded seasons. The server validates the
+line, point count and municipality/parcel scope before saving.
+
+The coordinated release includes `GeoGeometry`, `PlantedCropAreas`, the seasonal
+request validation, the editor, crop-area layer, crop badges, Farmers map, both
+seasonal views, the reviewed Assistant guidance and focused tests. No migration
+or data conversion is required.
+
 ## Verified Hostinger release — October 12, 2026 — runtime `d89aa10`
 
 The in-page crop dialog correction is deployed through GitHub and Hostinger.
@@ -202,8 +243,9 @@ and [3D marker graphics](https://developers.google.com/maps/documentation/javasc
 numbered green dot. A blue open line connects the second and later clicks, with a
 numbered dot at every crop-area corner. The editor reuses dot overlays as points
 change; undo, finish and cancel remove the corresponding dots/line. Guide marks
-are display-only and are never added to saved geometry. The crop area limit,
-containment/non-overlap checks and minimum of three corners remain unchanged.
+are display-only and are never added to saved geometry. Crop mark limits and
+parcel containment remain enforced. New visual lines need two points; older
+enclosed areas retain their three-point minimum and non-overlap checks.
 
 The main parcel tool uses the same numbered SVG dot artwork. New parcel creation
 now accepts consecutive map clicks beyond the fourth corner until staff save or

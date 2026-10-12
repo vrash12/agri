@@ -40,6 +40,9 @@ function editor(saved = [], scoped = false) {
     setEditable() {}
     setOptions() {}
   }
+  class Polyline extends Polygon {
+    constructor(opts) { super({...opts, paths: opts.path || []}); }
+  }
   class Map extends Events {
     constructor() { super(); map = this; }
     fitBounds() {}
@@ -59,7 +62,7 @@ function editor(saved = [], scoped = false) {
   });
   byId('plantedCrop').value = 'corn';
   const form = new Element(); byId('plantedAreasInput').form = form;
-  const maps = { Map, Polygon, MVCArray, LatLngBounds };
+  const maps = { Map, Polygon, Polyline, MVCArray, LatLngBounds };
   vm.runInNewContext(source, { document: { getElementById: byId, createElement: () => new Element() },
     google: { maps }, window: { google: { maps }, matchMedia: () => ({ matches: true }) }, confirm: () => true, setTimeout });
   return { byId, polygons, form, click: id => byId(id).fire('click'),
@@ -67,16 +70,16 @@ function editor(saved = [], scoped = false) {
     areas: () => JSON.parse(byId('plantedAreasInput').value) };
 }
 
-test('empty-ring draft starts, collects corners, finishes and serializes for save', () => {
+test('freehand crop line starts, collects points, finishes and serializes for save', () => {
   const e = editor();
   e.click('plantedStart');
   assert.equal(e.byId('plantedFinish').disabled, true);
   assert.equal(e.byId('plantedUndo').disabled, true);
   assert.equal(e.polygons.at(-1).getPath().getLength(), 0);
-  e.point(15.6, 120.47); e.point(15.6, 120.4705); e.point(15.6005, 120.47);
+  e.point(15.6, 120.47); e.point(15.6005, 120.4705);
   assert.equal(e.byId('plantedFinish').disabled, false);
   e.click('plantedFinish');
-  assert.equal(e.areas().length, 1); assert.equal(e.areas()[0].polygon.length, 3);
+  assert.equal(e.areas().length, 1); assert.equal(e.areas()[0].type, 'line'); assert.equal(e.areas()[0].path.length, 2);
   let prevented = false; e.form.fire('submit', { preventDefault: () => { prevented = true; } });
   assert.equal(prevented, false); assert.equal(e.areas()[0].crop, 'corn');
 });
@@ -93,11 +96,11 @@ test('undo, outside point refusal, cancel and restart retain recorded sections',
   assert.equal(prevented, true); assert.deepEqual(e.areas(), saved);
 });
 
-test('draft point limit and three-corner finish guard work with a real empty ring', () => {
+test('crop line point limit and two-point finish guard work with a real empty path', () => {
   const e = editor(); e.click('plantedStart'); e.click('plantedFinish'); assert.equal(e.areas().length, 0);
   for (let i = 0; i < 51; i++) e.click('plantedCenter');
   assert.equal(e.polygons.at(-1).getPath().getLength(), 50);
-  assert.match(e.byId('plantedMapStatus').textContent, /50 corners/);
+  assert.match(e.byId('plantedMapStatus').textContent, /50 points/);
 });
 
 test('controls follow drawing state and the whole-parcel crop follows finished sections', () => {
@@ -107,7 +110,7 @@ test('controls follow drawing state and the whole-parcel crop follows finished s
   assert.equal(e.byId('plantedIdleActions').hidden, true);
   assert.equal(e.byId('plantedCrop').disabled, true);
   assert.match(e.byId('plantedSaveState').textContent, /Finish or cancel/);
-  e.point(15.6, 120.47); e.point(15.6, 120.4705); e.point(15.6005, 120.47);
+  e.point(15.6, 120.47); e.point(15.6, 120.4705);
   e.click('plantedFinish');
   assert.equal(e.byId('plantedDraftActions').hidden, true);
   assert.equal(e.byId('plantedUpdate').hidden, false);
