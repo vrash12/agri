@@ -1,5 +1,33 @@
 # GitHub-to-Hostinger deployment
 
+## Verified Hostinger release — October 12, 2026 — irregular crop lines and visible whole-map icons
+
+Runtime `579e48d18f462fb3d52d3c6edd078e9c0cb4fa97` was pushed to GitHub main
+and installed with Hostinger `git pull --ff-only origin main` from `f4b4b10`, on
+PHP 8.3.35. Crop-line drawing now checks every connecting segment against the
+saved parcel before accepting it, so concave/notched parcels guide staff around
+their bends instead of producing a later save error. The server keeps the same
+authoritative containment rule and gives the same actionable guidance. Whole-map
+crop badges are visible over terrain and map labels, including in white Ramos
+parcels before farmer selection.
+
+A private verified backup was created before the pull: **21 tables / 9,394
+rows**, **3.2 MB compressed**, SHA-256
+`04d5bb3657f7f3ba29bded99409cd194068b58b70d92729ecc86ada09546c3f6` in
+`/home/u330835917/.private/crop-irregular-202610120244`. Existing untracked
+server files were retained. No migration, dependency, account, environment or
+operational data change ran, and the general cache was not cleared. The three
+changed public JavaScript assets were mirrored to `public_html` with 0644
+permissions; source, public copies and versioned live HTTPS responses match.
+Configuration, route and Blade caches were rebuilt.
+
+Local verification passed **236 JavaScript tests** and **26 crop/geometry PHP
+tests / 192 assertions** with existing `.env.testing` warnings. Pint,
+JavaScript/PHP syntax, Blade compilation and whitespace checks passed. Login and
+farmer-login returned HTTP 200 after deployment. The unversioned editor URL may
+remain cached; the file-mtime-versioned URL serves the new asset. Live drawing
+acceptance on Google Maps was not repeated.
+
 ## Verified Hostinger release — October 12, 2026 — Ramos white parcel base and whole-map crop icons
 
 Runtime `5bd80d5c545664f9e50720ef0b42e7465d8431d` was pushed to GitHub main and
