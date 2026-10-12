@@ -155,10 +155,14 @@ test('Ramos parcel presentation uses a white base while saved crop colors and re
   assert.equal(overlay.savedColor, '#123456', 'The stored plot color remains available for data and exports');
   assert.equal(overlay.poly.fillColor, '#FFFFFF');
   assert.equal(overlay.poly.strokeColor, '#FFFFFF');
-  context.cropLayer = { color: () => '#219653', visible: () => true };
+  context.cropLayer = { record: () => null, color: () => '#219653', visible: () => true };
   await context.refreshSavedPlotDisplay();
   assert.equal(overlay.poly.fillColor, '#FFFFFF');
   assert.equal(overlay.style.fillSoft, '#FFFFFF');
+  context.cropLayer.record = () => ({crop:'corn',color:'#D4A017',has_planted_areas:false});
+  await context.refreshSavedPlotDisplay();
+  assert.equal(overlay.poly.fillColor, '#D4A017','Saved crop records use their crop color on the general Ramos map');
+  assert.equal(overlay.poly.strokeColor, '#D4A017');
   assert.equal(JSON.stringify(plot), original, 'The imported parcel color remains unchanged');
 });
 

@@ -18,11 +18,11 @@ or alter stored parcel/crop data.
 ## Ramos white parcel presentation — October 12, 2026 (local, not deployed)
 
 The Ramos Farmers map now has a display-only white base for imported parcel
-polygons. This removes distracting imported color variations while retaining
-the original `FarmPlot.color` for records, exports and non-Ramos scopes. Saved
-crop classifications continue to load as icons, and selected-farmer crop
-sections render their colored shading above the white base. No parcel geometry,
-crop record or stored color is changed.
+polygons without a saved crop record. Parcels with saved Corn, Rice or other
+crop classifications use the reviewed crop color, and selected-farmer crop
+sections render their colored shading above the parcel. The original
+`FarmPlot.color` remains available for records, exports and non-Ramos scopes.
+No parcel geometry, crop record or stored color is changed.
 
 The white override is limited to the selected Ramos municipality workspace.
 Crop controls label this as white parcels with crop icons; crop filtering still

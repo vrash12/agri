@@ -1336,7 +1336,7 @@ var PopoverElement = maps3d.PopoverElement;
         if (retry) retry.hidden = state.status !== 'error';
         if (status) status.textContent = state.status === 'loading' ? 'Loading saved crop icons for the selected season…'
           : state.status === 'error' ? state.error + ' Classification colors are unavailable.'
-          : state.status === 'ready' ? state.year + ' · ' + (state.season === 'dry' ? 'Dry season' : 'Wet season') + ' · Crop icons are shown on parcels with saved crop records.' + (useWhiteParcelBase() ? ' Ramos parcels use a neutral white base.' : state.enabled ? ' Seasonal parcel colors are on.' : ' Saved parcel colors are unchanged.')
+          : state.status === 'ready' ? state.year + ' · ' + (state.season === 'dry' ? 'Dry season' : 'Wet season') + ' · Crop icons are shown on parcels with saved crop records.' + (useWhiteParcelBase() ? ' Ramos parcels without a crop stay white; saved crop records use their crop colors.' : state.enabled ? ' Seasonal parcel colors are on.' : ' Saved parcel colors are unchanged.')
           : 'Waiting for saved crop records.';
         if (legend) {
           legend.replaceChildren();
@@ -1371,7 +1371,7 @@ var PopoverElement = maps3d.PopoverElement;
     if (cropApply) cropApply.disabled = !cropLayer;
     var cropInitialStatus = document.getElementById('parcelCropStatus');
     if (cropInitialStatus) cropInitialStatus.textContent = cropLayer
-      ? (useWhiteParcelBase() ? 'Crop icons will appear automatically over Ramos parcels. The parcel base is neutral white; plotted crop sections keep their crop colors.' : 'Crop icons will appear automatically for the selected year and season. Saved parcel colors are unchanged.')
+      ? (useWhiteParcelBase() ? 'Crop icons will appear automatically over Ramos parcels. Parcels without a crop stay white; saved Corn, Rice and other crop records use their colors.' : 'Crop icons will appear automatically for the selected year and season. Saved parcel colors are unchanged.')
       : 'Seasonal crop controls could not load. Reload the page to try again.';
     if (cropApply) cropApply.addEventListener('click', function () {
       var year = document.getElementById('parcelCropYear');
@@ -1564,12 +1564,14 @@ var PopoverElement = maps3d.PopoverElement;
         + (row ? row.crop_label : state.status === 'loading' ? 'Loading crop' : 'Crop unavailable');
     }
     function applyCropStyle(overlay) {
-      var fillHex = useWhiteParcelBase() ? '#FFFFFF' : cropLayer ? cropLayer.color(overlay.plotId, overlay.savedColor) : overlay.savedColor;
-      var sectioned = !!cropLayer?.state?.enabled && cropLayer.record(overlay.plotId)?.has_planted_areas;
+      var cropRecord = cropLayer?.record?.(overlay.plotId);
+      var classifiedColor = cropRecord && cropRecord.crop !== 'not_recorded' && /^#[a-f0-9]{6}$/i.test(cropRecord.color || '') ? cropRecord.color : null;
+      var fillHex = useWhiteParcelBase() ? (classifiedColor || '#FFFFFF') : cropLayer ? cropLayer.color(overlay.plotId, overlay.savedColor) : overlay.savedColor;
+      var sectioned = !!cropLayer?.state?.enabled && cropRecord?.has_planted_areas;
       var styleKey = fillHex + '/' + !!sectioned;
       if (overlay.displayColor === styleKey) return;
       overlay.displayColor = styleKey;
-      Object.assign(overlay.style, { strokeStrong: useWhiteParcelBase() ? '#FFFFFF' : hexAlpha(fillHex, '90'), strokeHover: useWhiteParcelBase() ? '#FFFFFF' : hexAlpha(fillHex, 'B0'),
+      Object.assign(overlay.style, { strokeStrong: useWhiteParcelBase() ? (classifiedColor ? hexAlpha(fillHex, 'D0') : '#FFFFFF') : hexAlpha(fillHex, '90'), strokeHover: useWhiteParcelBase() ? (classifiedColor ? hexAlpha(fillHex, 'F0') : '#FFFFFF') : hexAlpha(fillHex, 'B0'),
         fillSoft: hexToRgba(fillHex, useWhiteParcelBase() ? 0.34 : sectioned ? 0.04 : 0.38), fillHover: hexToRgba(fillHex, useWhiteParcelBase() ? 0.44 : sectioned ? 0.08 : 0.46) });
       overlay.poly.fillColor = overlay.style.fillSoft;
       overlay.poly.strokeColor = overlay.style.strokeStrong;

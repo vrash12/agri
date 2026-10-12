@@ -10,7 +10,7 @@
   </div>
   <p id="parcelCropStatus" role="status">Saved crop icons load automatically when the parcel map opens.</p>
   @if($mapUsesWhiteParcelBase ?? false)
-    <p class="parcel-crop-help">Ramos parcels use a white base. Saved crop icons and plotted crop sections appear above it; imported colors remain available in records and exports.</p>
+    <p class="parcel-crop-help">Ramos parcels without a crop record stay white. Saved Corn, Rice and other crop records use their colors, with crop icons and plotted sections shown above them; imported colors remain available in records and exports.</p>
   @endif
   <div id="parcelCropLegend" class="parcel-crop-legend" aria-label="Seasonal crop legend"></div>
   <p id="plantedAreaLayerStatus" role="status">Select a farmer to inspect saved crop lines and areas.</p>

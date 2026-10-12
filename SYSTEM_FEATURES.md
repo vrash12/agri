@@ -7,10 +7,10 @@ The server repeats the containment check. Whole-map saved crop icons remain
 visible over terrain and map labels, including in white Ramos parcel areas.
 
 Local follow-up, October 12, 2026 (not deployed): the Ramos Farmers map uses a
-neutral white parcel presentation for imported Earth/KML plots. Existing saved
-crop sections retain their crop-color shading and crop icons remain visible over
-the white base. Stored parcel colors, geometry, exports and other municipality
-maps are unchanged.
+white parcel presentation for imported Earth/KML plots without crop records.
+Parcels with saved Corn, Rice or other crop records use their crop colors, while
+crop icons and planted sections remain visible. Stored parcel colors, geometry,
+exports and other municipality maps are unchanged.
 
 Local follow-up, October 12, 2026 (not deployed): crop sections can sit beside
 each other and share edges, but cannot cover the same land. Overlapping drawings

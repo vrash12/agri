@@ -12,8 +12,8 @@ parcel, account or schema data is rewritten.
 
 The October 12 Ramos map presentation follow-up is local and not deployed.
 When the Farmers map is scoped to the Ramos municipality, imported parcel
-polygons use a neutral white display base so crop sections and crop icons are
-easy to read. The stored `FarmPlot.color` remains unchanged for exports,
+polygons use a white display base when no crop record exists, while saved crop
+records use their crop colors so the general map remains informative. The stored `FarmPlot.color` remains unchanged for exports,
 records and other map scopes. Saved crop classifications still load with icons;
 selected crop lines/enclosures render above the white base. This is a display
 choice only: do not rewrite parcel colors or geometry. Release the map view,
