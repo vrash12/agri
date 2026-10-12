@@ -1,5 +1,14 @@
 # Agriculture Information System — Developer Guide
 
+Latest release: the general Ramos crop-color adjustment is deployed in runtime
+`c1d83db` through GitHub main and Hostinger fast-forward pull. Saved crop
+classifications color parcels automatically for the selected year/season;
+unrecorded parcels remain white. This is a parcel classification display, not
+an assertion of planted hectares. Stored import colors and coordinates remain
+unchanged. The earlier shading, overlap and irregular-line work below is also
+deployed; older local-status paragraphs describe its original implementation
+stage. See [docs/GITHUB_DEPLOYMENT.md](docs/GITHUB_DEPLOYMENT.md).
+
 The October 12 irregular-parcel crop-line follow-up is local and not deployed.
 The crop editor now checks each connecting segment, not only its clicked points,
 before accepting a mark. On concave parcels, staff are guided to add points

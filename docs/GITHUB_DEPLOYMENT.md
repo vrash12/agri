@@ -1,5 +1,31 @@
 # GitHub-to-Hostinger deployment
 
+## Verified Hostinger release — October 12, 2026 — saved crop colors on the general Ramos map
+
+Runtime `c1d83db0cabe75c9f0d4ca3e89099085a51aff29` was pushed to GitHub main
+and installed through `git pull --ff-only origin main` from `d258fec`.
+Ramos parcels with a saved crop classification for the selected year/season
+now use its crop color automatically; parcels without a classification stay
+white. This is a whole-parcel classification display, not a claim that every
+hectare has been planted. Detailed crop marks remain selected-farmer only.
+Stored imported colors, coordinates and exports remain unchanged.
+
+The private verified pre-release backup covers 21 tables / 9,430 rows, 3.2 MB
+compressed, SHA-256
+`6127f67508f01d9d082b92fd3fd3d8016a7c472194528576295d7dd2e219d7c4`.
+SSH reset after that backup, before the first pull took effect; reconnection
+confirmed `d258fec`, and the fast-forward then completed. No migration,
+dependency, account or environment changes ran; the general cache was not
+cleared. Configuration, route and Blade caches rebuilt successfully.
+
+The changed `farmers-maps.js` was mirrored with 0644 permissions. Source,
+`public_html` and the versioned live HTTPS script match SHA-256
+`64fc61c4d88b348cc8aad393db98be756f38ab4e8208bc120fc900e6a624f99e`.
+Tracked server files are clean; existing untracked files were retained. Office
+and farmer login returned HTTP 200. Local acceptance passed 236 JavaScript
+tests and 26 crop/geometry PHP tests / 192 assertions with existing test-file
+warnings. Live signed-in Maps visual acceptance remains outstanding.
+
 ## Verified Hostinger release — October 12, 2026 — irregular crop lines and visible whole-map icons
 
 Runtime `579e48d18f462fb3d52d3c6edd078e9c0cb4fa97` was pushed to GitHub main

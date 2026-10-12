@@ -1,5 +1,11 @@
 # AgriLGU — Complete Feature Catalog
 
+Deployed October 12, 2026 (`c1d83db`): the general Ramos map automatically colors
+parcels with saved crop classifications for the selected year/season. Parcels
+without a record remain white. Colors identify recorded crops; they do not
+measure planted hectares. Earlier local follow-ups below are included in this
+and the preceding releases. See [deployment receipt](docs/GITHUB_DEPLOYMENT.md).
+
 Local follow-up, October 12, 2026 (not deployed): drawing a crop line across a
 concave parcel notch is stopped at the point that would leave the saved parcel.
 Staff can continue by adding points around the bend or along the white outline.
