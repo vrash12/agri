@@ -16,6 +16,8 @@
   let map, outline, draft = null, draftGuide = null, drawing = false, selected = -1, shapes = [], shades = [], badges = [], dirty = false;
   const status = text => { byId('plantedMapStatus').textContent = text; };
   const sections = list => window.CropAreaBadges?.sections?.(list,config.polygon) || {rings:[],conflicts:[]};
+  const pathInside = path => window.CropAreaBadges?.containsPath ? window.CropAreaBadges.containsPath(path,config.polygon) : true;
+  const outsidePathMessage = 'That crop line would leave the saved parcel. Add a point around the bend or along the white outline, then continue.';
   const overlapMessage = pairs => `Crop marks ${pairs[0][0]+1} and ${pairs[0][1]+1} cover the same land. Move the points so the sections sit beside each other. Shared edges are allowed.`;
   const sync = () => {
     const input = byId('plantedAreasInput');
@@ -110,6 +112,9 @@
         const previous=pointsFor(area),previousHectares=area.area_ha;
         const points=path.getArray().map(p=>({lat:p.lat(),lng:p.lng()}));
         if(line)areas[index].path=points;else{areas[index].polygon=points;delete areas[index].area_ha;}
+        if(line && !pathInside(points)){
+          area.path=previous;render();status(outsidePathMessage);return;
+        }
         const pairs=sections(areas).conflicts;
         if(pairs.length){
           // Keep the last accepted geometry instead of introducing overlapping fills.
@@ -153,7 +158,7 @@
       }
       return included;
     };
-    const addPoint=event=>{if(!drawing||!event.latLng)return;if(!inside(event.latLng)){status('That point is outside the saved parcel. Click inside the white outline, or update the parcel boundary first.');return;}if(draft.getPath().getLength()>=50){status('This crop line already has 50 points. Finish it or undo a point.');return;}draft.getPath().push(event.latLng);draftGuide?.update(draft.getPath().getArray());sync();status(draft.getPath().getLength()===1?'Point 1 marked in green. Click along the planted section to continue.':`${draft.getPath().getLength()} points connected. Finish after at least two.`);};
+    const addPoint=event=>{if(!drawing||!event.latLng)return;const point={lat:event.latLng.lat(),lng:event.latLng.lng()};if(!inside(event.latLng)){status('That point is outside the saved parcel. Click inside the white outline, or update the parcel boundary first.');return;}if(draft.getPath().getLength()>=50){status('This crop line already has 50 points. Finish it or undo a point.');return;}const next=draft.getPath().getArray().map(p=>({lat:p.lat(),lng:p.lng()}));next.push(point);if(next.length>1&&!pathInside(next)){status(outsidePathMessage);return;}draft.getPath().push(event.latLng);draftGuide?.update(draft.getPath().getArray());sync();status(draft.getPath().getLength()===1?'Point 1 marked in green. Click along the planted section to continue.':`${draft.getPath().getLength()} points connected. Finish after at least two.`);};
     map.addListener('click',addPoint);outline.addListener('click',addPoint);
     if(config.canDraw){
       ['crop', 'notes'].forEach(id => byId(id)?.addEventListener('input', () => { dirty = true; sync(); }));
@@ -173,6 +178,7 @@
       byId('plantedFinish').addEventListener('click',()=>{
         if(!drawing||draft.getPath().getLength()<2)return;
         const mark={type:'line',crop:byId('plantedCrop').value,name:byId('plantedName').value.trim(),variety:byId('plantedVariety').value.trim(),path:draft.getPath().getArray().map(p=>({lat:p.lat(),lng:p.lng()}))};
+        if(!pathInside(mark.path)){status(outsidePathMessage);return;}
         const conflicts=sections([...areas,mark]).conflicts;
         if(conflicts.length){status(overlapMessage(conflicts)+' Undo a point or cancel this drawing.');return;}
         areas.push(mark);

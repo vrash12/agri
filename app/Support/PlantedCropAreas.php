@@ -42,7 +42,7 @@ final class PlantedCropAreas
                         throw new InvalidArgumentException('Draw a crop mark with at least 2 and at most 50 points.');
                     }
                     if (! $this->geometry->containsPath($parent, $path)) {
-                        throw new InvalidArgumentException('This crop mark crosses outside the saved parcel. Redraw the line inside the white outline, or update the parcel boundary first.');
+                        throw new InvalidArgumentException('This crop mark leaves the saved parcel. On an irregular boundary, add points around each bend or along the white outline, then continue.');
                     }
                     $enclosure = $this->visualEnclosure($area['path'], $parent);
                     if ($enclosure !== null) {

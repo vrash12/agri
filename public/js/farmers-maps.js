@@ -1611,7 +1611,7 @@ var PopoverElement = maps3d.PopoverElement;
         if (overlay.cropBadgeAnchor) {
           overlay.cropBadge = new Marker3DElement({position: overlay.cropBadgeAnchor,
             altitudeMode: AltitudeMode.CLAMP_TO_GROUND, sizePreserved: true, drawsWhenOccluded: false,
-            collisionBehavior: google.maps.CollisionBehavior.OPTIONAL_AND_HIDES_LOWER_PRIORITY, zIndex: 17});
+            drawsWhenOccluded: true, collisionBehavior: google.maps.CollisionBehavior.REQUIRED, zIndex: 17});
           overlay.cropBadge.replaceChildren(helper.parcelMarkerContent(document, codes));
         }
       }

@@ -114,6 +114,13 @@ test('simple crop lines receive display-only shading without modifying saved poi
   assert.equal(badges.shadedRing([{lat:3,lng:.5},{lat:.5,lng:.5},{lat:.5,lng:3.5},{lat:3,lng:3.5}],concave),null,'Implicit closing edge cannot cross outside a concave parcel');
 });
 
+test('crop lines follow concave parcel turns instead of saving an outside chord',()=>{
+  const parcel=[{lat:0,lng:0},{lat:0,lng:4},{lat:4,lng:4},{lat:4,lng:3},{lat:1,lng:3},{lat:1,lng:1},{lat:4,lng:1},{lat:4,lng:0}];
+  assert.equal(badges.containsPath([{lat:.5,lng:3.5},{lat:3.5,lng:3.5}],parcel),true);
+  assert.equal(badges.containsPath([{lat:.5,lng:.5},{lat:3.5,lng:3.5}],parcel),false,'A diagonal across the notch must be rejected');
+  assert.equal(badges.containsPath([{lat:.5,lng:.5},{lat:.5,lng:2},{lat:.5,lng:3.5}],parcel),true);
+});
+
 test('crop sections reject positive overlap but permit a shared edge',()=>{
   const parcel=[{lat:0,lng:0},{lat:0,lng:10},{lat:10,lng:10},{lat:10,lng:0}];
   const section=(west,east)=>({type:'line',path:[{lat:1,lng:west},{lat:1,lng:east},{lat:4,lng:east},{lat:4,lng:west}]});

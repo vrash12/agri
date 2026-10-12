@@ -271,6 +271,8 @@ test('parcel crop icons appear on initial overview without selection and reuse m
   assert.equal(context.selectedFarmerId,null);
   assert.equal(context.savedPlotOverlays[0].poly.fillColor,'#FFFFFF','Ramos parcels keep a neutral base beneath crop icons');
   assert.equal(one.cropBadge.isConnected,true);assert.equal(two.cropBadge.isConnected,true);
+  assert.equal(one.cropBadge.drawsWhenOccluded,true,'Whole-map crop icons remain visible over terrain');
+  assert.equal(one.cropBadge.collisionBehavior,'required','Whole-map crop icons are not suppressed by map labels');
   assert.deepEqual(Array.from(two.cropBadge.content),['corn','rice']);
   assert.equal(empty.cropBadge,null,'No crop icon without a saved seasonal record');
   assert.match(one.cropBadge.title,/Rice.*2026 Dry season/);

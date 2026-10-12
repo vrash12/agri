@@ -1,5 +1,15 @@
 # Agriculture Information System — Developer Guide
 
+The October 12 irregular-parcel crop-line follow-up is local and not deployed.
+The crop editor now checks each connecting segment, not only its clicked points,
+before accepting a mark. On concave parcels, staff are guided to add points
+around a bend or follow the white boundary, preventing a later save error. The
+server remains authoritative and returns the same actionable guidance. Whole-map
+crop badges use visible terrain/label settings so saved Corn, Rice and other
+known crop icons remain visible inside white Ramos parcels even before farmer
+selection. Release the helper, editor, map and focused tests together; no crop,
+parcel, account or schema data is rewritten.
+
 The October 12 Ramos map presentation follow-up is local and not deployed.
 When the Farmers map is scoped to the Ramos municipality, imported parcel
 polygons use a neutral white display base so crop sections and crop icons are

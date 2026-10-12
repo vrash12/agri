@@ -1,5 +1,20 @@
 # Planted crop areas inside a parcel
 
+## Irregular parcel line guard — October 12, 2026 (local, not deployed)
+
+The editor checks every segment between crop-line points before accepting it.
+This matters for concave or notched parcels: two points can both be inside while
+their straight connecting chord leaves the parcel. The editor now rejects that
+point with guidance to add a point around the bend or along the white outline,
+and restores the last accepted geometry when an existing point is dragged out.
+The server remains authoritative and preserves the same full-segment containment
+rule; boundary contact remains allowed. No line is silently clipped or moved.
+
+Whole-map parcel crop badges now use visible terrain/label settings. Known saved
+crop icons remain visible on the white Ramos parcel base before a farmer is
+selected; missing crop records still produce no icon. This does not infer crops
+or alter stored parcel/crop data.
+
 ## Ramos white parcel presentation — October 12, 2026 (local, not deployed)
 
 The Ramos Farmers map now has a display-only white base for imported parcel

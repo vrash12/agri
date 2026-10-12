@@ -127,6 +127,48 @@
   function anchor(area) {
     return area?.type === 'line' || Array.isArray(area?.path) ? linePosition(area.path) : position(area?.polygon);
   }
+  function containsPath(path, parcel) {
+    if (!Array.isArray(path) || path.length < 2 || path.length > 50 || !Array.isArray(parcel) || parcel.length < 3 || parcel.length > 1000) return false;
+    const points=path.map(p=>({lat:Number(p?.lat),lng:Number(p?.lng)}));
+    const boundary=parcel.map(p=>({lat:Number(p?.lat),lng:Number(p?.lng)}));
+    if(points.some(p=>!Number.isFinite(p.lat)||!Number.isFinite(p.lng)) || boundary.some(p=>!Number.isFinite(p.lat)||!Number.isFinite(p.lng)))return false;
+    const cross=(a,b,c)=>(b.lng-a.lng)*(c.lat-a.lat)-(b.lat-a.lat)*(c.lng-a.lng);
+    const on=(a,b,p)=>Math.abs(cross(a,b,p))<1e-12 && p.lng>=Math.min(a.lng,b.lng)-1e-10 && p.lng<=Math.max(a.lng,b.lng)+1e-10 && p.lat>=Math.min(a.lat,b.lat)-1e-10 && p.lat<=Math.max(a.lat,b.lat)+1e-10;
+    const inside=p=>{
+      let result=false;
+      for(let i=0,j=boundary.length-1;i<boundary.length;j=i++){
+        const a=boundary[j],b=boundary[i];
+        if(on(a,b,p))return true;
+        if((a.lat>p.lat)!==(b.lat>p.lat) && p.lng<(b.lng-a.lng)*(p.lat-a.lat)/(b.lat-a.lat)+a.lng)result=!result;
+      }
+      return result;
+    };
+    if(points.some(point=>!inside(point)))return false;
+    for(let i=0;i<points.length-1;i++){
+      const a=points[i],b=points[i+1],dx=b.lng-a.lng,dy=b.lat-a.lat,denominator=dx;
+      if(Math.abs(dx)+Math.abs(dy)<1e-14)continue;
+      const cuts=[0,1];
+      for(let j=0;j<boundary.length;j++){
+        const c=boundary[j],d=boundary[(j+1)%boundary.length],ex=d.lng-c.lng,ey=d.lat-c.lat,det=dx*ey-dy*ex;
+        if(Math.abs(det)<1e-18){
+          if(Math.abs(cross(a,b,c))<1e-12){
+            const axis=Math.abs(dx)>=Math.abs(dy)?'lng':'lat';
+            [c,d].forEach(point=>{const t=(point[axis]-a[axis])/(b[axis]-a[axis]);if(t>0&&t<1)cuts.push(t);});
+          }
+          continue;
+        }
+        const t=((c.lng-a.lng)*ey-(c.lat-a.lat)*ex)/det;
+        const u=((c.lng-a.lng)*dy-(c.lat-a.lat)*dx)/det;
+        if(t>0&&t<1&&u>=0&&u<=1)cuts.push(t);
+      }
+      cuts.sort((x,y)=>x-y);
+      for(let j=1;j<cuts.length;j++){
+        const t=(cuts[j-1]+cuts[j])/2;
+        if(!inside({lat:a.lat+dy*t,lng:a.lng+dx*t}))return false;
+      }
+    }
+    return true;
+  }
   // Display-only enclosure: never replace stored line points or calculate hectares.
   function shadedRing(path, parcel) {
     if (!linePosition(path) || !Array.isArray(parcel) || parcel.length < 3 || parcel.length > 1000) return null;
@@ -134,6 +176,7 @@
     const ring=path.map(p=>({lat:Number(p.lat),lng:Number(p.lng)}));
     if(ring[0].lat===ring.at(-1).lat && ring[0].lng===ring.at(-1).lng)ring.pop();
     if(ring.length<3 || !position(ring))return null;
+    if(!containsPath([...ring,ring[0]],parcel))return null;
     const cross=(a,b,c)=>(b.lng-a.lng)*(c.lat-a.lat)-(b.lat-a.lat)*(c.lng-a.lng);
     const on=(a,b,p)=>Math.abs(cross(a,b,p))<1e-12 && p.lng>=Math.min(a.lng,b.lng)-1e-10 && p.lng<=Math.max(a.lng,b.lng)+1e-10 && p.lat>=Math.min(a.lat,b.lat)-1e-10 && p.lat<=Math.max(a.lat,b.lat)+1e-10;
     const intersects=(a,b,c,d)=>{
@@ -238,5 +281,5 @@
       update:nextPoints=>{polygon=nextPoints;const point=line?linePosition(nextPoints):position(nextPoints);if(point){Object.assign(anchorPoint,point);marker.draw();}else badge.hidden=true;}
     };
   }
-  return {descriptor,mapContext,svg,template,markerContent,position,parcelPosition,parcelCrops,parcelMarkerContent,linePosition,anchor,shadedRing,sections,overlay};
+  return {descriptor,mapContext,svg,template,markerContent,position,parcelPosition,parcelCrops,parcelMarkerContent,linePosition,anchor,containsPath,shadedRing,sections,overlay};
 });

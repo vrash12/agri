@@ -1,5 +1,11 @@
 # AgriLGU — Complete Feature Catalog
 
+Local follow-up, October 12, 2026 (not deployed): drawing a crop line across a
+concave parcel notch is stopped at the point that would leave the saved parcel.
+Staff can continue by adding points around the bend or along the white outline.
+The server repeats the containment check. Whole-map saved crop icons remain
+visible over terrain and map labels, including in white Ramos parcel areas.
+
 Local follow-up, October 12, 2026 (not deployed): the Ramos Farmers map uses a
 neutral white parcel presentation for imported Earth/KML plots. Existing saved
 crop sections retain their crop-color shading and crop icons remain visible over
