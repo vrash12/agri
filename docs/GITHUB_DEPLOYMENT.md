@@ -1,20 +1,37 @@
 # GitHub-to-Hostinger deployment
 
-## Pending local follow-up — direct harvest attribution to planted sections — October 14, 2026
+## Verified Hostinger release — October 14, 2026 — whole-map crops and harvest section links
 
-The current working tree adds an additive, nullable reference from a direct harvest
-to one keyed planted section in the same parcel crop season. Existing JSON drawings
-receive stable server-generated section keys; the **Record harvest** action opens the
-direct form with the farmer, parcel, section, compatible commodity, year and season
-preselected, while the form offers only sections belonging to the selected farmer's
-parcel. Server validation checks municipality,
-farmer, parcel, year, season and compatible crop, while the policy rechecks the
-section's scope. Linked sections cannot be removed or reclassified until the
-harvest is unlinked. Release-projected rice harvests remain linked only to their
-assistance release. This follow-up is local, unpushed and undeployed; release the
-migration, crop-area helper/season service, harvest model/request/policy/controller,
-form, assistant guidance and focused tests together. No operational data was
-changed by this implementation.
+Runtime `8861fdaceb1933c695b6c9d58370c1b754137c8a` was pushed to GitHub `main`
+and installed with Hostinger `git pull --ff-only origin main` from `64c3c03`.
+It releases the universal white parcel presentation, whole-map saved crop
+drawings/icons with progressive 20-parcel batches, the direct harvest-to-planted
+section attribution workflow, and the reviewed guidance/checklist.
+
+Before the pull, the verified private database backup contained **21 tables / 9,465
+rows**, 3.2 MB compressed, SHA-256
+`19b40975385d422a13ee03e378e713a5ddb03f9c72ea8ffe8581bff09ab077b4` at
+`/home/u330835917/.private/crop-harvest-20261014-2222`. The affected runtime and
+public files plus the environment were archived outside the document root; the
+existing untracked server files were retained. The targeted migration ran once,
+created `parcel_crop_season_id` and `planted_area_key`, and backfilled 3 stable
+section keys across 2 existing crop-season rows. No harvest rows were rewritten,
+and no account, provider budget, credential or general cache operation ran.
+
+Configuration, route and Blade caches rebuilt successfully. Five changed public
+scripts were mirrored to `public_html/js` with `0644` permissions; source and
+served versioned files matched, including `planted-area-editor.js` hash
+`1558d006a48b1181e760fd71fc3eaad7b3db2e7c93fcddef6060fb804658a201`. Login
+returned HTTP 200, unauthenticated Farmers access redirected to sign-in, the
+schema columns were present, and tracked server files remained clean.
+
+Local checks passed 251 JavaScript tests, 24 seasonal-crop tests / 282 assertions,
+64 Assistant knowledge tests / 483 assertions, Pint, PHP/JavaScript syntax,
+Blade, route and whitespace checks. The harvest module behavior suite remains
+blocked by its pre-existing disposable SQLite bootstrap missing the `provinces`
+table; it was not pointed at production. Signed-in Google Maps drawing/save/
+reopen/icon and real Copernicus/NDVI browser acceptance remains pending until an
+approved live account and working provider access are available.
 
 ## Verified Hostinger release — October 12, 2026 — satellite request-limit isolation
 

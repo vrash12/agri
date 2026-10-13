@@ -1,15 +1,22 @@
 # AgriLGU — Complete Feature Catalog
 
-Local follow-up, October 14, 2026 (not pushed or deployed): all saved parcels
+Deployed October 14, 2026 (`8861fda`): all saved parcels
 use white outlines and pale white fills across every Farmers map scope. A
 parcel with only a saved crop classification also stays white; crop icons and
 separate saved crop sections retain their crop colors above the parcel base.
 Crop filtering, hover feedback, focus/hide controls and edit visibility retain
 their behavior. Stored parcel colors, geometry, hectares and exports are
 unchanged. This supersedes the earlier Ramos-only and classification-color
-presentation and will release with the pending whole-map crop-drawing work.
+presentation and includes the whole-map crop-drawing work.
 
-Local follow-up, October 13, 2026 (not deployed): the Farmers parcel map shows
+The same release lets staff use **Record harvest** beside a saved crop section.
+The direct harvest form preselects the farmer, parcel, section, compatible crop,
+year and season. Production is entered explicitly; no quantity, hectares or yield
+is inferred. The server checks office scope and matching records. Release-projected
+harvests remain managed through their assistance release. Signed-in Maps/NDVI
+browser acceptance remains pending; the runtime/schema/asset checks passed.
+
+Deployed October 14, 2026 (`8861fda`): the Farmers parcel map shows
 saved crop lines and shaded sections across all loaded parcels for the selected
 year and season, without choosing a farmer first. Zoomed out, parcels show
 grouped crop icons; zooming in shows icons on individual sections. Click a

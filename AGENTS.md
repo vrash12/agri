@@ -1,7 +1,18 @@
 # Agriculture Information System — Developer Guide
 
-The October 14 white-parcel presentation follow-up is local, not pushed or
-deployed. All saved parcel bases across every Farmers map scope use white
+The October 14 whole-map crop/white-parcel/harvest-link release is deployed in
+runtime `8861fda` through GitHub main and Hostinger fast-forward pull. The
+targeted additive migration backfilled stable keys on existing crop sections
+without changing their coordinates, colors or hectare values. Direct harvests
+may explicitly reference one saved section of the same farmer, parcel, year,
+season and compatible crop; release-projected harvests remain unlinked. The
+new link columns and 3 section keys across 2 crop-season rows were verified.
+No account/provider/budget change or general cache clear ran. Signed-in live
+Maps and Copernicus acceptance remains pending; see the release receipt and
+[docs/MAP_RELEASE_ACCEPTANCE_CHECKLIST.md](docs/MAP_RELEASE_ACCEPTANCE_CHECKLIST.md).
+
+The October 14 white-parcel presentation is deployed. All saved parcel bases
+across every Farmers map scope use white
 outlines and pale white fills, including parcels with only a saved crop
 classification. Saved crop icons and separate crop sections retain their crop
 colors above that base. Crop filters, hover feedback, focus/hide controls and
@@ -16,7 +27,7 @@ legend and removes the Ramos gate. No migration, account/provider change,
 budget reset or general cache clear is required. See
 [docs/PLANTED_CROP_AREAS.md](docs/PLANTED_CROP_AREAS.md).
 
-The October 13 whole-map crop-drawing follow-up is local and not deployed.
+The October 13 whole-map crop-drawing follow-up is included in runtime `8861fda`.
 Farmers discovers saved drawings from scoped metadata for loaded parcels, then
 loads every matching parcel in sequential batches of at most 20 IDs. Crops are
 visible without farmer selection; camera changes reuse accepted records and GPU

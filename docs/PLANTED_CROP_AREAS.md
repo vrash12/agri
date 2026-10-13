@@ -1,6 +1,15 @@
 # Planted crop areas inside a parcel
 
-## White parcel bases in every Farmers scope — October 14, 2026 (local, not deployed)
+## White parcel bases in every Farmers scope — deployed October 14, 2026
+
+Runtime `8861fda` is installed through GitHub main and Hostinger fast-forward pull,
+including whole-map drawings/icons and direct harvest attribution. The targeted
+additive migration created the link columns and backfilled 3 stable section keys
+across 2 existing crop-season rows. Runtime, schema and versioned public assets
+were verified; signed-in Maps/NDVI acceptance remains pending. See
+[deployment receipt](GITHUB_DEPLOYMENT.md) and
+[acceptance checklist](MAP_RELEASE_ACCEPTANCE_CHECKLIST.md). Earlier local-status
+paragraphs below describe the implementation stage before this release.
 
 Every saved parcel base on the Farmers map now uses a white outline and pale
 white fill, including parcels with only a saved crop classification. This
