@@ -120,7 +120,7 @@ final class AssistantKnowledgeTest extends TestCase
         $this->assertStringContainsString('not a physical inspection', $retrieve('machinery'));
         $this->assertStringContainsString('only farmers', mb_strtolower($retrieve('cooperatives')));
         $this->assertStringContainsString('Only one boundary', $retrieve('geofences'));
-        $this->assertStringContainsString('not implemented', $retrieve('system-overview'));
+        $this->assertStringContainsString('direct harvest can carry an explicit planted-section attribution', $retrieve('system-overview'));
         $this->assertStringContainsString('not an automatic fraud finding', $retrieve('data-quality'));
         $this->assertStringContainsString('blank/invalid rows can be skipped', $retrieve('farmer-registry'));
         $this->assertStringContainsString('gpt-4.1-mini-2025-04-14', $retrieve('ai-technology'));
@@ -166,7 +166,7 @@ final class AssistantKnowledgeTest extends TestCase
         $this->assertStringContainsString('up to 8', $text);
         $this->assertStringContainsString('3–50', $text);
         $this->assertStringContainsString('cannot overlap', $text);
-        $this->assertStringContainsString('not implemented', $text);
+        $this->assertStringContainsString('linked harvest prevents', $text);
         $this->assertNotContains('rice-release-import', array_column($crop['passages'], 'id'));
 
         $ndvi = $knowledge->retrieve($this->user(), 'ndvi', OfficeAssistant::TOPICS['ndvi']['question']);

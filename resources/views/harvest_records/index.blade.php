@@ -215,6 +215,9 @@
                   @else
                     <span class="harvest-source direct">Entered directly</span>
                   @endif
+                  @if($harvest->parcel_crop_season_id)
+                    <br><small>Planted section{{ $harvest->parcelCropSeason?->crop_year ? ' · '.$harvest->parcelCropSeason->crop_year : '' }}</small>
+                  @endif
                 </td>
                 <td>
                   @if($canManageOperations)

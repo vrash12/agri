@@ -46,7 +46,7 @@
   </div>
   @if($canDraw)<noscript><p class="module-form-body">Drawing requires JavaScript. Existing saved boundaries are retained when you save the crop summary.</p></noscript>@endif
 </div>
-<script id="plantedAreaConfig" type="application/json">{!! json_encode(['polygon' => $plot->polygon_json, 'areas' => $areaDraft, 'crops' => $cropChoices, 'colors' => \App\Models\ParcelCropSeason::COLORS, 'canDraw' => $canDraw, 'key' => config('services.google_maps.key')], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
+<script id="plantedAreaConfig" type="application/json">{!! json_encode(['polygon' => $plot->polygon_json, 'areas' => $areaDraft, 'crops' => $cropChoices, 'colors' => \App\Models\ParcelCropSeason::COLORS, 'canDraw' => $canDraw, 'harvestUrl' => $canDraw && $cropRecord?->id ? route('harvest-records.create', ['farmer_id' => $plot->farmer_id, 'farm_plot_id' => $plot->id, 'parcel_crop_season_id' => $cropRecord->id]) : null, 'key' => config('services.google_maps.key')], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
 @if($includeScripts ?? true)
 @push('scripts')
 <script src="{{ asset('js/map-drawing-guide.js') }}?v={{ @filemtime(public_path('js/map-drawing-guide.js')) ?: 1 }}" defer></script>

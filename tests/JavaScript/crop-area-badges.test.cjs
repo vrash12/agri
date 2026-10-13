@@ -56,21 +56,21 @@ test('SVG crop stickers use static safe paths and expose a text label',()=>{
   assert.equal(a.button.attrs['aria-label'],'Select Corn crop area');
   assert.equal(a.elements.some(el=>el.name==='script'||el.name==='img'),false);
 });
-test('3D marker content clones the SVG instead of leaving it inside an inert template',()=>{
+test('3D custom SVG markers preserve the direct-child template required by Google Maps',()=>{
   const document={
     createElementNS:()=>({setAttribute(){},appendChild(){}}),
-    createElement:tag=>tag==='template'?{
+    createElement:tag=>tag==='template'?{tag,
       content:{children:[],appendChild(node){this.children.push(node);},cloneNode(){return {children:this.children.slice()};}}
     }:null
   };
   const content=badges.markerContent(document,'corn');
-  assert.equal(content.children.length,1);
+  assert.equal(content.tag,'template');assert.equal(content.content.children.length,1);
 });
 test('one parcel marker groups distinct crop icons using static SVG content',()=>{
   class Node{constructor(tag){this.tag=tag;this.attrs={};this.children=[];}setAttribute(key,value){this.attrs[key]=String(value);}appendChild(child){this.children.push(child);}}
-  const document={createElementNS:(_,tag)=>new Node(tag),createElement:()=>({content:{children:[],appendChild(child){this.children.push(child);},cloneNode(){return {children:this.children.slice()};}}})};
+  const document={createElementNS:(_,tag)=>new Node(tag),createElement:tag=>({tag,content:{children:[],appendChild(child){this.children.push(child);},cloneNode(){return {children:this.children.slice()};}}})};
   const content=badges.parcelMarkerContent(document,['rice','corn','rice','<img onerror>']);
-  const svg=content.children[0];
+  assert.equal(content.tag,'template');const svg=content.content.children[0];
   assert.equal(svg.attrs.width,'64');
   assert.equal(svg.children.filter(node=>node.tag==='svg').length,2);
   assert.equal(svg.children[0].attrs.fill,'#FFFFFF');

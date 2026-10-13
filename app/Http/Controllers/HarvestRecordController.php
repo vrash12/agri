@@ -6,6 +6,8 @@ use App\Http\Requests\StoreHarvestRecordRequest;
 use App\Models\Farmer;
 use App\Models\FarmPlot;
 use App\Models\HarvestRecord;
+use App\Models\ParcelCropSeason;
+use App\Models\User;
 use App\Support\AuditTrail;
 use App\Support\ConcurrentWrite;
 use App\Support\CsvExport;
@@ -15,6 +17,9 @@ use App\Support\LocalTime;
 use App\Support\MunicipalityAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Recording what was actually harvested.
@@ -50,8 +55,12 @@ class HarvestRecordController extends Controller
         $filters = $this->filters($request);
         $base = $this->filteredQuery($request);
 
+        $relations = ['municipality:id,name', 'farmer:id,first_name,middle_name,last_name,ext_name', 'riceSeedDistribution:id'];
+        if (Schema::hasColumn('harvest_records', 'parcel_crop_season_id')) {
+            $relations[] = 'parcelCropSeason:id,farm_plot_id,crop_year,season,planted_areas';
+        }
         $records = (clone $base)
-            ->with(['municipality:id,name', 'farmer:id,first_name,middle_name,last_name,ext_name', 'riceSeedDistribution:id'])
+            ->with($relations)
             ->orderByDesc('harvest_year')
             ->orderByDesc('date_harvested')
             ->orderByDesc('id')
@@ -87,7 +96,11 @@ class HarvestRecordController extends Controller
         $municipalityId = $this->resolveMunicipality($request, $validated);
 
         $record = $this->concurrentWrite->transaction(
-            fn () => HarvestRecord::create($this->payload($validated, $municipalityId, $request))
+            function () use ($validated, $municipalityId, $request): HarvestRecord {
+                $this->lockLinkedSection($validated, $request->user());
+
+                return HarvestRecord::create($this->payload($validated, $municipalityId, $request));
+            }
         );
 
         return redirect()
@@ -126,9 +139,10 @@ class HarvestRecordController extends Controller
         $this->concurrentWrite->execute(
             $harvestRecord,
             $request->input('_record_version'),
-            fn (HarvestRecord $current) => $current->update(
-                $this->payload($validated, $municipalityId, $request)
-            )
+            function (HarvestRecord $current) use ($validated, $municipalityId, $request): void {
+                $this->lockLinkedSection($validated, $request->user());
+                $current->update($this->payload($validated, $municipalityId, $request));
+            }
         );
 
         return redirect()
@@ -164,8 +178,11 @@ class HarvestRecordController extends Controller
     {
         $this->authorize('export', HarvestRecord::class);
 
-        $query = $this->filteredQuery($request)
-            ->with(['municipality:id,name', 'farmer:id,first_name,middle_name,last_name,ext_name,ffrs']);
+        $exportRelations = ['municipality:id,name', 'farmer:id,first_name,middle_name,last_name,ext_name,ffrs'];
+        if (Schema::hasColumn('harvest_records', 'parcel_crop_season_id')) {
+            $exportRelations[] = 'parcelCropSeason:id,farm_plot_id,crop_year,season,planted_areas';
+        }
+        $query = $this->filteredQuery($request)->with($exportRelations);
 
         // Bounded the same way the machinery export is: the row set is fixed to the
         // ids present when the export was authorized, so a concurrent write cannot
@@ -198,7 +215,7 @@ class HarvestRecordController extends Controller
             fputcsv($stream, [
                 'Municipality', 'Farmer', 'FFRS', 'Commodity', 'Variety',
                 'Season', 'Year', 'Date Harvested', 'Area Harvested (ha)',
-                'Quantity', 'Unit', 'Source', 'Notes',
+                'Quantity', 'Unit', 'Source', 'Planted section', 'Notes',
             ]);
 
             if ($maximumId === 0) {
@@ -224,6 +241,7 @@ class HarvestRecordController extends Controller
                             $record->quantity,
                             $record->quantityUnitLabel(),
                             $record->isProjected() ? 'Assistance release' : 'Entered directly',
+                            $this->plantedSectionLabel($record),
                             $record->notes,
                         ]));
                     }
@@ -384,13 +402,71 @@ class HarvestRecordController extends Controller
                 ->orderBy('id')
                 ->get(['id', 'farmer_id', 'name', 'area_ha']);
 
+        $cropSections = collect();
+        if (Schema::hasTable('parcel_crop_seasons')
+            && Schema::hasColumn('parcel_crop_seasons', 'planted_areas')) {
+            $cropSections = ParcelCropSeason::query()
+                ->whereIn('farm_plot_id', $plots->pluck('id'))
+                ->with('plot.farmer:id,municipality_id')
+                ->orderByDesc('crop_year')->orderBy('season')->get()
+                ->flatMap(function (ParcelCropSeason $season): array {
+                    if ((int) $season->municipality_id !== (int) $season->plot?->farmer?->municipality_id) {
+                        return [];
+                    }
+
+                    return collect($season->planted_areas ?: [])->filter(fn ($area) => is_array($area) && filled($area['area_key'] ?? null))
+                        ->map(fn (array $area) => [
+                            'season_id' => $season->id,
+                            'plot_id' => $season->farm_plot_id,
+                            'year' => $season->crop_year,
+                            'season' => $season->season,
+                            'crop' => $area['crop'] ?? 'other',
+                            'crop_label' => ParcelCropSeason::CROPS[$area['crop'] ?? 'other'] ?? 'Other crop',
+                            'area_key' => $area['area_key'],
+                            'name' => $area['name'] ?? '',
+                            'variety' => $area['variety'] ?? '',
+                        ])->values()->all();
+                })->values();
+        }
+
+        $requestedSectionId = (int) old(
+            'parcel_crop_season_id',
+            $record?->parcel_crop_season_id ?? $request->query('parcel_crop_season_id', 0)
+        );
+        $requestedAreaKey = (string) old(
+            'planted_area_key',
+            $record?->planted_area_key ?? $request->query('planted_area_key', '')
+        );
+        $linkedSection = $cropSections->first(
+            fn (array $section): bool => (int) $section['season_id'] === $requestedSectionId
+                && (string) $section['area_key'] === $requestedAreaKey
+        );
+        $defaultCommodity = [
+            'rice' => 'rice',
+            'corn' => 'corn',
+            'vegetables' => 'vegetable',
+            'root_crops' => 'rootcrop',
+            'fruit' => 'fruit',
+            'legumes' => 'other',
+            'mixed' => 'other',
+            'other' => 'other',
+        ][$linkedSection['crop'] ?? ''] ?? null;
+
         return [
             'record' => $record,
             'farmerOptions' => $farmerOptions,
             'selectedFarmer' => $selectedFarmerId,
+            'selectedFarmerId' => $selectedFarmerId,
             'browsingAll' => $browsingAll,
             'browseUrl' => $request->fullUrlWithQuery(['browse' => 1]),
             'plots' => $plots,
+            'cropSections' => $cropSections,
+            'defaultCropSeasonId' => $linkedSection['season_id'] ?? null,
+            'defaultPlotId' => $linkedSection['plot_id'] ?? null,
+            'defaultAreaKey' => $linkedSection['area_key'] ?? null,
+            'defaultCommodity' => $defaultCommodity,
+            'defaultHarvestYear' => $linkedSection['year'] ?? null,
+            'defaultHarvestSeason' => $linkedSection['season'] ?? null,
             'commodityOptions' => HarvestRecord::COMMODITY_LABELS,
             'seasonOptions' => HarvestRecord::SEASON_LABELS,
             'unitOptions' => HarvestRecord::QUANTITY_UNIT_LABELS,
@@ -435,7 +511,7 @@ class HarvestRecordController extends Controller
      */
     private function payload(array $validated, int $municipalityId, Request $request): array
     {
-        return [
+        $payload = [
             'municipality_id' => $municipalityId,
             'farmer_id' => $validated['farmer_id'] ?? null,
             'farm_plot_id' => $validated['farm_plot_id'] ?? null,
@@ -450,12 +526,79 @@ class HarvestRecordController extends Controller
             'notes' => $validated['notes'] ?? null,
             'recorded_by' => $request->user()->id,
         ];
+
+        if (Schema::hasColumn('harvest_records', 'parcel_crop_season_id')) {
+            $payload['parcel_crop_season_id'] = $validated['parcel_crop_season_id'] ?? null;
+        }
+        if (Schema::hasColumn('harvest_records', 'planted_area_key')) {
+            $payload['planted_area_key'] = $validated['planted_area_key'] ?? null;
+        }
+
+        return $payload;
     }
 
     private function projectedExplanation(HarvestRecord $record): string
     {
         return 'This harvest comes from an assistance release, so it is changed on that '
             .'release rather than here. Saving the release updates this record.';
+    }
+
+    private function plantedSectionLabel(HarvestRecord $record): string
+    {
+        if (! $record->parcel_crop_season_id || ! $record->parcelCropSeason) {
+            return '';
+        }
+
+        $area = collect($record->parcelCropSeason->planted_areas ?: [])
+            ->firstWhere('area_key', $record->planted_area_key);
+
+        if (! is_array($area)) {
+            return 'Section unavailable';
+        }
+
+        return trim(collect([$area['name'] ?? null, $area['crop'] ?? null])->filter()->implode(' · '))
+            ?: 'Planted section';
+    }
+
+    /** Lock and recheck the section inside the harvest write transaction. */
+    private function lockLinkedSection(array $validated, User $user): void
+    {
+        $seasonId = $validated['parcel_crop_season_id'] ?? null;
+        $areaKey = $validated['planted_area_key'] ?? null;
+        if ($seasonId === null || $areaKey === null || ! Schema::hasColumn('harvest_records', 'parcel_crop_season_id')) {
+            return;
+        }
+
+        $season = ParcelCropSeason::query()->lockForUpdate()->find($seasonId);
+        $area = $season
+            ? collect($season->planted_areas ?: [])->firstWhere('area_key', $areaKey)
+            : null;
+        if (! $season || ! is_array($area)) {
+            throw ValidationException::withMessages([
+                'planted_area_key' => 'That planted section changed while the harvest was being saved. Reload and choose it again.',
+            ]);
+        }
+        Gate::forUser($user)->authorize('view', $season);
+        $plot = $season->plot()->with('farmer')->first();
+        if (! $plot || (int) $plot->id !== (int) ($validated['farm_plot_id'] ?? 0)
+            || (int) $plot->farmer_id !== (int) ($validated['farmer_id'] ?? 0)
+            || (int) $season->municipality_id !== (int) $plot->farmer?->municipality_id) {
+            throw ValidationException::withMessages([
+                'parcel_crop_season_id' => 'The planted section no longer belongs to the selected farmer and parcel.',
+            ]);
+        }
+
+        $expected = [
+            'rice' => 'rice', 'corn' => 'corn', 'vegetables' => 'vegetable',
+            'root_crops' => 'rootcrop', 'fruit' => 'fruit', 'legumes' => 'other',
+        ][$area['crop'] ?? ''] ?? null;
+        if ((int) $season->crop_year !== (int) ($validated['harvest_year'] ?? 0)
+            || ($validated['season'] ?? null) !== $season->season
+            || ($expected !== null && $expected !== ($validated['commodity'] ?? null))) {
+            throw ValidationException::withMessages([
+                'parcel_crop_season_id' => 'The planted section changed and no longer matches this harvest. Reload and choose a current section.',
+            ]);
+        }
     }
 
     private function farmerName(Farmer $farmer): string

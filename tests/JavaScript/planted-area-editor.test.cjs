@@ -5,7 +5,7 @@ const vm = require('node:vm');
 const path = require('node:path');
 const source = fs.readFileSync(path.join(__dirname, '../../public/js/planted-area-editor.js'), 'utf8');
 
-function editor(saved = [], scoped = false, shading = false) {
+function editor(saved = [], scoped = false, shading = false, harvestUrl = null) {
   class Events {
     constructor() { this.listeners = {}; }
     addListener(name, fn) { (this.listeners[name] ??= []).push(fn); }
@@ -57,7 +57,7 @@ function editor(saved = [], scoped = false, shading = false) {
     elements.plantedAreaEditor = root;
   }
   byId('plantedAreaConfig').textContent = JSON.stringify({
-    canDraw: true, areas: saved, crops: { corn: 'Corn', rice: 'Rice' }, colors: { corn: '#D4A017', rice: '#228B22' },
+    canDraw: true, areas: saved, harvestUrl, crops: { corn: 'Corn', rice: 'Rice' }, colors: { corn: '#D4A017', rice: '#228B22' },
     polygon: [{ lat: 15.6, lng: 120.47 }, { lat: 15.6, lng: 120.471 }, { lat: 15.601, lng: 120.471 }, { lat: 15.601, lng: 120.47 }]
   });
   byId('plantedCrop').value = 'corn';
@@ -164,4 +164,12 @@ test('modal-scoped editor can update save status outside its editor root', () =>
   const e = editor([], true);
   e.click('plantedStart');
   assert.match(e.byId('plantedSaveState').textContent, /Finish or cancel/);
+});
+
+test('saved crop sections offer a keyed direct harvest link', () => {
+  const key = '11111111-1111-4111-8111-111111111111';
+  const e = editor([{ area_key: key, crop: 'corn', type: 'line', path: [{ lat: 15.6, lng: 120.47 }, { lat: 15.6005, lng: 120.4705 }] }], false, false, '/harvest-records/create?parcel_crop_season_id=4');
+  const actions = e.byId('plantedAreaList').children[0].children[2];
+  const link = actions.children.find(child => child.textContent === 'Record harvest');
+  assert.equal(link.href, `/harvest-records/create?parcel_crop_season_id=4&planted_area_key=${encodeURIComponent(key)}`);
 });

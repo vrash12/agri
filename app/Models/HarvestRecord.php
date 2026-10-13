@@ -67,6 +67,8 @@ class HarvestRecord extends Model
         'municipality_id',
         'farmer_id',
         'farm_plot_id',
+        'parcel_crop_season_id',
+        'planted_area_key',
         'rice_seed_distribution_id',
         'commodity',
         'variety',
@@ -84,6 +86,7 @@ class HarvestRecord extends Model
         'municipality_id' => 'integer',
         'farmer_id' => 'integer',
         'farm_plot_id' => 'integer',
+        'parcel_crop_season_id' => 'integer',
         'rice_seed_distribution_id' => 'integer',
         'harvest_year' => 'integer',
         'date_harvested' => 'date',
@@ -105,6 +108,17 @@ class HarvestRecord extends Model
     public function farmPlot(): BelongsTo
     {
         return $this->belongsTo(FarmPlot::class);
+    }
+
+    /**
+     * The saved parcel season containing the explicitly selected planted section.
+     *
+     * The individual section remains in the season's JSON projection for backwards
+     * compatibility; `planted_area_key` identifies it within that parent record.
+     */
+    public function parcelCropSeason(): BelongsTo
+    {
+        return $this->belongsTo(ParcelCropSeason::class, 'parcel_crop_season_id');
     }
 
     /**

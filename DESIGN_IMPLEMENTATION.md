@@ -1,5 +1,28 @@
 # Design and UX implementation record
 
+## White parcel bases across Farmers scopes — local October 14, 2026
+
+Every saved parcel base now uses a white outline and pale white fill throughout
+the Farmers map, including parcels with only saved crop classifications. This
+supersedes the earlier Ramos gate and classification recoloring. Separate crop
+lines, shaded sections and icons retain their crop colors above the base. The
+white parcel legend and **White parcels with saved crops** / **Filter parcels by
+saved crop** controls describe this behavior; crop colors in the classification
+legend describe saved crops and loaded-parcel counts. Safe request-error copy
+keeps failures distinct from missing crop records. Crop filters, hover feedback,
+focus/hide controls, edit visibility and cached overlay reuse remain intact.
+Stored parcel colors, full geometry, hectares and export data are unchanged.
+
+The source is local, not pushed or deployed. Release with the pending whole-map
+crop-drawing work: provider, route, `planted-area-layer.js`, `farmers-maps.js`,
+`crop-area-badges.js`, `parcel-crop-layer.js`, `farmers/maps.blade.php`, crop
+controls, reviewed Assistant passages and guidance together. Mirror changed
+scripts to both Hostinger public directories with 0644 permissions and rebuild
+route/config/view caches. No migration, account/provider change, budget reset or
+general cache clear is required. Earlier dated test counts describe their
+original releases; provider-backed visual acceptance for this follow-up remains
+outstanding. See [planted crop areas](docs/PLANTED_CROP_AREAS.md).
+
 ## Automatic parcel crop icons — deployed October 12, 2026 (`89ff3d1`)
 
 Crop records for loaded parcels now produce overview badges without farmer
@@ -505,6 +528,10 @@ Verification: 18 OperationsPresentationTest cases passed using isolated SQLite; 
 The login now loops eight local photographs without Pause/Play, arrows, a counter, or a credits disclosure beside the images. Five added scenes cover livestock, fishing, rice harvest, vegetable harvest, and rice drying. Required author/source/license credits are on `public/photo-credits.html`, linked from the login footer. Reduced motion keeps images still; hidden tabs suspend rotation. Upcoming images load one at a time ahead of display. This supersedes the earlier three-photo control layout.
 
 ## Seasonal parcel crop layer — 2026-09-19
+
+This is the original deployed classification-color presentation and verification
+receipt. The October 14 local follow-up above supersedes its parcel-base colors
+and control labels while preserving stored records and the dated evidence.
 
 The Parcel Map has a full-width **Crops by season** disclosure with layer, year,
 dry/wet season, and crop controls. A labeled color legend counts loaded parcels;

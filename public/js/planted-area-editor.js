@@ -81,6 +81,12 @@
       const button = document.createElement('button'); button.type = 'button'; button.className = 'module-button'; button.textContent = config.canDraw ? (isLine(area) ? 'Edit line' : 'Edit area') : 'View on map'; button.disabled = !map || drawing; button.setAttribute('aria-pressed', String(index === selected)); button.addEventListener('click',()=>focus(index));
       const actions = document.createElement('div'); actions.className = 'planted-area-actions';
       actions.append(button);
+      if (config.harvestUrl && area.area_key) {
+        const harvest = document.createElement('a'); harvest.className = 'module-button'; harvest.textContent = 'Record harvest';
+        harvest.href = config.harvestUrl + '&planted_area_key=' + encodeURIComponent(area.area_key);
+        harvest.setAttribute('aria-label', `Record harvest for ${config.crops[area.crop] || 'this crop section'}`);
+        actions.append(harvest);
+      }
       item.append(swatch,text,actions);
       if (config.canDraw) {
         const remove = document.createElement('button'); remove.type='button';remove.className='module-button';remove.textContent='Remove';remove.disabled=drawing;

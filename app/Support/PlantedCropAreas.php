@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\FarmPlot;
 use App\Models\ParcelCropSeason;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
@@ -30,8 +31,17 @@ final class PlantedCropAreas
         }
         $result = [];
         $geometries = [];
+        $keys = [];
         foreach ($areas as $index => $area) {
             try {
+                $areaKey = (string) ($area['area_key'] ?? '');
+                if ($areaKey === '') {
+                    $areaKey = (string) Str::uuid();
+                }
+                if (! preg_match('/^[a-f0-9]{8}-[a-f0-9-]{27,36}$/i', $areaKey) || isset($keys[$areaKey])) {
+                    throw new InvalidArgumentException('Each crop mark needs a unique section reference. Redraw or reload this season before saving.');
+                }
+                $keys[$areaKey] = true;
                 $type = ($area['type'] ?? 'polygon') === 'line' ? 'line' : 'polygon';
                 if (! isset(ParcelCropSeason::CROPS[$area['crop'] ?? '']) || $area['crop'] === 'not_recorded') {
                     throw new InvalidArgumentException('Choose a crop before saving the mark.');
@@ -50,7 +60,7 @@ final class PlantedCropAreas
                         $geometries[] = $enclosure;
                     }
                     $result[] = [
-                        'type' => 'line', 'name' => $area['name'] ?? '', 'crop' => $area['crop'],
+                        'type' => 'line', 'area_key' => $areaKey, 'name' => $area['name'] ?? '', 'crop' => $area['crop'],
                         'variety' => $area['variety'] ?? '',
                         'path' => array_map(fn ($point) => ['lat' => $point[1], 'lng' => $point[0]], $path),
                     ];
@@ -72,7 +82,7 @@ final class PlantedCropAreas
             $ring = $shape['coordinates'][0];
             array_pop($ring);
             $result[] = [
-                'name' => $area['name'] ?? '', 'crop' => $area['crop'], 'variety' => $area['variety'] ?? '',
+                'area_key' => $areaKey, 'name' => $area['name'] ?? '', 'crop' => $area['crop'], 'variety' => $area['variety'] ?? '',
                 'polygon' => array_map(fn ($point) => ['lat' => $point[1], 'lng' => $point[0]], $ring),
                 'area_ha' => round($this->geometry->areaHectares($shape), 4),
             ];

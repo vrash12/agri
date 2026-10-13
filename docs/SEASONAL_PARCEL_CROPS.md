@@ -1,5 +1,21 @@
 # Seasonal parcel crops — 19 September 2026
 
+The October 14 local follow-up keeps all saved parcel bases white across every
+Farmers map scope, including classification-only parcels. Crop icons and
+separate crop sections retain their colors; crop filters, hover and edit
+visibility retain their behavior. Stored colors, geometry, hectares and export
+data are unchanged. The source is not pushed or deployed and will release with
+the pending whole-map crop-drawing work. That bundle includes provider, route,
+`planted-area-layer.js`, `farmers-maps.js`, `crop-area-badges.js`,
+`parcel-crop-layer.js`, `farmers/maps.blade.php`, crop controls, reviewed
+Assistant passages and guidance. No migration, account/provider change, budget
+reset or general cache clear is required.
+
+The October 13 local follow-up shows saved crop drawings across loaded parcels
+without selecting a farmer. Details load in 20-parcel batches after scoped crop
+metadata is ready; classification-only parcels retain their crop icons. See
+[planted crop areas](PLANTED_CROP_AREAS.md) for limits and release requirements.
+
 ## Use the feature
 
 1. Open **Farmers → Parcel Map** and choose the municipality workspace.
@@ -8,13 +24,17 @@
 4. Record the crop, optionally add crop/source details, and save. Choose **Mixed
    crops** for intercropping or several crops in that season. Corrections replace
    that season's classification, with changes recorded in the audit trail.
-5. Back on the map, expand **Crops by season**, select that layer, year, season,
-   and optional crop filter, then **Apply layer**.
+5. Back on the map, expand **Crops on the map**, choose the year and season,
+   then **Apply layer**. Saved crop icons and drawings appear automatically.
+   Choose **Filter parcels by saved crop** and an optional crop filter to limit
+   the visible parcels; **White parcels with saved crops** removes that filter.
 
-The legend uses labeled colors and parcel counts. Hover cards identify the selected
-period and recorded crop. Choose **Saved parcel colors** and apply to restore the
-usual display. Apply stays disabled until the map initializes. Failed crop requests
-show an error and Retry; their temporary neutral styling does not imply missing data.
+The crop legend uses labeled crop colors and loaded-parcel counts; the parcel
+legend describes white outlines and pale white fills. Hover cards identify the
+selected period and recorded crop when crop filtering is enabled. Parcel bases
+stay white in both modes, including parcels with only a crop classification.
+Apply stays disabled until the map initializes. Failed crop requests show safe
+error guidance and Retry; the white parcel base does not imply missing crop data.
 
 ## Meaning and limits
 
@@ -22,17 +42,20 @@ show an error and Retry; their temporary neutral styling does not imply missing 
   recorded are controlled classifications. Crop notes describe varieties or sources.
 - Year and season are reporting labels explicitly chosen by staff. No date range
   or planting calendar is inferred, and records are not carried into another season.
-- Gray **Not recorded** means unknown, not fallow. An explicit correction to Not
+- **Not recorded** means unknown, not fallow, and produces no crop icon. An explicit correction to Not
   recorded is retained as a record and audited.
 - A seasonal classification does not establish what is growing today, planted
   hectares, yield, or harvest volume. Mixed crops do not allocate area per crop.
 - Farmer-level assistance and harvest data are not backfilled into particular
-  parcels. Existing parcels begin with no crop classifications.
+  parcels. A staff member may explicitly attribute a direct harvest to one saved
+  planted section from the matching farmer/parcel/year/season; this does not infer
+  production, hectares or yield. Release-projected harvests remain unlinked.
 - Counts cover loaded parcels, subject to the existing map payload cap. Farmer
   selection, visibility controls, and crop filtering can display fewer parcels.
   These are not municipality-wide crop totals or a crop-area report.
-- Layer colors are display-only. Saved colors, exact geometry, measurements,
-  editing, and parcel exports retain their existing behavior.
+- Crop colors appear on icons and separate saved sections above white parcel
+  bases. Stored parcel colors, exact geometry, measurements, editing and parcel
+  exports retain their existing behavior.
 
 ## Ownership and persistence
 
@@ -51,6 +74,11 @@ through `ConcurrentWrite`, rechecks authorization inside the transaction, and
 rejects stale record versions, including two users making the first entry. The
 existing audit observer records creation and updates with municipality scope.
 
+Each saved planted section has a stable opaque key inside the JSON drawing. The
+Harvest records form lists keyed sections for the selected farmer's parcels. The
+server rechecks section ownership, period and crop compatibility, and blocks
+removing or reclassifying a section while a harvest still references it.
+
 The authenticated `GET /farm-plots/crop-layer` accepts a year, season, and at most
 200 distinct plot IDs. It scopes parcels before returning only IDs, crop labels,
 and colors; it excludes notes, geometry, and personal farmer fields. Parcels whose
@@ -66,7 +94,12 @@ constructor; the full-map preview reproduced the error and verified this fix.
 Google's [polygon reference](https://developers.google.com/maps/documentation/javascript/reference/3d-map-draw)
 documents `path` as an assignable polygon property.
 
-## Deployment
+## Original deployment — September 19, 2026 (historical receipt)
+
+The steps and verification below describe the original classification-color
+release. The current white-parcel/whole-map follow-up uses the combined bundle
+above and requires no new migration; its controls no longer restore colored
+parcel bases.
 
 No new environment variable, dependency, API, or asset build is required. This
 feature was deployed to Hostinger on 2026-09-19 at 12:03:09 UTC (20:03 Philippine
@@ -95,7 +128,7 @@ Rollback application files together and retain the additive table and its record
 The migration's `down()` removes the entire crop table; do not run it on recorded
 data without a backup and explicit data-removal authorization.
 
-## Verification
+## Original verification — September 19, 2026
 
 Automated feature tests use an isolated in-memory SQLite database and cover saves,
 corrections, exact periods, missing records, mixed crops, validation, scoped access,

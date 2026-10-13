@@ -3,7 +3,9 @@
 
 @php
   $value = fn ($key, $default = null) => old($key, $record->{$key} ?? $default);
-  $selectedFarmer = (int) $value('farmer_id', 0);
+  $selectedFarmer = (int) $value('farmer_id', $selectedFarmerId ?? 0);
+  $selectedCropSeason = (int) $value('parcel_crop_season_id', $defaultCropSeasonId ?? 0);
+  $selectedAreaKey = (string) old('planted_area_key', $record?->planted_area_key ?? ($defaultAreaKey ?? ''));
 @endphp
 
 <div class="module-panel">
@@ -19,7 +21,7 @@
       <select class="module-input" id="commodity" name="commodity" required aria-describedby="commodity_error">
         <option value="">Choose a commodity</option>
         @foreach($commodityOptions as $key => $label)
-          <option value="{{ $key }}" @selected((string) $value('commodity') === (string) $key)>{{ $label }}</option>
+          <option value="{{ $key }}" @selected((string) $value('commodity', $defaultCommodity ?? null) === (string) $key)>{{ $label }}</option>
         @endforeach
       </select>
     </x-module.field>
@@ -57,14 +59,14 @@
   <div class="module-form-grid">
     <x-module.field name="harvest_year" label="Harvest year" :required="true">
       <input class="module-input" id="harvest_year" type="number" name="harvest_year" min="1990" max="{{ $currentYear + 1 }}" step="1"
-        required value="{{ $value('harvest_year', $currentYear) }}" aria-describedby="harvest_year_error">
+        required value="{{ $value('harvest_year', $defaultHarvestYear ?? $currentYear) }}" aria-describedby="harvest_year_error">
     </x-module.field>
 
     <x-module.field name="season" label="Season">
       <select class="module-input" id="season" name="season" aria-describedby="season_error">
         <option value="">Not recorded</option>
         @foreach($seasonOptions as $key => $label)
-          <option value="{{ $key }}" @selected((string) $value('season') === (string) $key)>{{ $label }}</option>
+          <option value="{{ $key }}" @selected((string) $value('season', $defaultHarvestSeason ?? null) === (string) $key)>{{ $label }}</option>
         @endforeach
       </select>
     </x-module.field>
@@ -84,7 +86,7 @@
   </div>
 </div>
 
-<details class="module-more" @if($selectedFarmer || $errors->hasAny(['farmer_id', 'farm_plot_id', 'municipality_id', 'notes'])) open @endif>
+<details class="module-more" @if($selectedFarmer || $errors->hasAny(['farmer_id', 'farm_plot_id', 'parcel_crop_season_id', 'planted_area_key', 'municipality_id', 'notes'])) open @endif>
   <summary>Who and where <span style="color:var(--module-muted);font-size:12px;font-weight:700">Optional</span></summary>
   <div class="module-more-content">
     <p class="module-hint">
@@ -108,11 +110,29 @@
         <select class="module-input" id="farm_plot_id" name="farm_plot_id" aria-describedby="farm_plot_id_hint farm_plot_id_error">
           <option value="">No specific parcel</option>
           @foreach($plots as $plot)
-            <option value="{{ $plot->id }}" @selected((int) $value('farm_plot_id', 0) === (int) $plot->id)>
+            <option value="{{ $plot->id }}" @selected((int) $value('farm_plot_id', $defaultPlotId ?? 0) === (int) $plot->id)>
               {{ $plot->name ?: 'Parcel #'.$plot->id }}{{ $plot->area_ha ? ' · '.number_format((float) $plot->area_ha, 4).' ha' : '' }}
             </option>
           @endforeach
         </select>
+      </x-module.field>
+
+      <x-module.field name="parcel_crop_season_id" label="Planted crop section"
+        hint="Optional. Choose a saved section to show which planted area this harvest came from.">
+        <select class="module-input" id="parcel_crop_season_id" name="parcel_crop_season_id"
+          aria-describedby="parcel_crop_season_id_hint parcel_crop_season_id_error">
+          <option value="" data-plot-id="">No specific planted section</option>
+          @foreach($cropSections as $section)
+            <option value="{{ $section['season_id'] }}" data-plot-id="{{ $section['plot_id'] }}"
+              data-area-key="{{ $section['area_key'] }}"
+              @selected($selectedCropSeason === (int) $section['season_id'] && $selectedAreaKey === $section['area_key'])>
+              {{ $section['crop_label'] }} · {{ $section['year'] }} {{ strtoupper($section['season']) }}
+              @if($section['name']) · {{ $section['name'] }}@endif
+              @if($section['variety']) · {{ $section['variety'] }}@endif
+            </option>
+          @endforeach
+        </select>
+        <input type="hidden" id="planted_area_key" name="planted_area_key" value="{{ $selectedAreaKey }}">
       </x-module.field>
 
       @if($canChooseMunicipality)
@@ -139,3 +159,37 @@
   <a class="module-button" href="{{ route('harvest-records.index') }}">Cancel</a>
   <button class="module-button module-button-primary" type="submit">{{ $buttonText }}</button>
 </div>
+
+@once
+  @push('scripts')
+    <script>
+      (() => {
+        const plot = document.getElementById('farm_plot_id');
+        const section = document.getElementById('parcel_crop_season_id');
+        const key = document.getElementById('planted_area_key');
+        if (!plot || !section || !key) return;
+        const options = Array.from(section.options);
+        const sync = () => {
+          const plotId = plot.value;
+          let selected = false;
+          options.forEach(option => {
+            const visible = !option.dataset.plotId || option.dataset.plotId === plotId;
+            option.hidden = !visible;
+            option.disabled = !visible;
+            if (!visible && option.selected) option.selected = false;
+            if (visible && option.selected && option.dataset.areaKey) selected = true;
+          });
+          if (!selected) {
+            section.value = '';
+            key.value = '';
+          } else {
+            key.value = section.selectedOptions[0]?.dataset.areaKey || '';
+          }
+        };
+        plot.addEventListener('change', sync);
+        section.addEventListener('change', () => { key.value = section.selectedOptions[0]?.dataset.areaKey || ''; });
+        sync();
+      })();
+    </script>
+  @endpush
+@endonce

@@ -30,7 +30,7 @@
           nextIds.slice(start, start + 200).forEach(function (id) { query.append('plot_ids[]', id); });
           var response = await options.fetch(options.url + '?' + query, { headers: { Accept: 'application/json' }, signal: abort.signal });
           if (current !== revision) return;
-          if (!response.ok) throw new Error(response.status === 401 || response.status === 419 ? 'Your session ended. Sign in again.' : 'Seasonal crop records could not load. Retry or use saved parcel colors.');
+          if (!response.ok) throw new Error(response.status === 401 || response.status === 419 ? 'Your session ended. Sign in again.' : 'Seasonal crop records could not load. Retry to show saved crop icons and drawings.');
           var data = await response.json();
           if (current !== revision) return;
           if (Number(data.year) !== state.year || data.season !== state.season || !Array.isArray(data.records)) throw new Error('The crop response did not match the selected period. Retry.');

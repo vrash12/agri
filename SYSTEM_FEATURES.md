@@ -1,5 +1,23 @@
 # AgriLGU — Complete Feature Catalog
 
+Local follow-up, October 14, 2026 (not pushed or deployed): all saved parcels
+use white outlines and pale white fills across every Farmers map scope. A
+parcel with only a saved crop classification also stays white; crop icons and
+separate saved crop sections retain their crop colors above the parcel base.
+Crop filtering, hover feedback, focus/hide controls and edit visibility retain
+their behavior. Stored parcel colors, geometry, hectares and exports are
+unchanged. This supersedes the earlier Ramos-only and classification-color
+presentation and will release with the pending whole-map crop-drawing work.
+
+Local follow-up, October 13, 2026 (not deployed): the Farmers parcel map shows
+saved crop lines and shaded sections across all loaded parcels for the selected
+year and season, without choosing a farmer first. Zoomed out, parcels show
+grouped crop icons; zooming in shows icons on individual sections. Click a
+section to see its farmer while keeping the other parcels visible. Loading uses
+small batches, displays progress, preserves completed drawings on a partial
+failure and lets Retry continue the remaining batches. Focus, hide and crop
+filters still apply. Stored parcel/crop records remain unchanged.
+
 Deployed correction, October 12, 2026 (`2d366ae`): Satellite field check has
 separate per-account limits for picture searches and image loads. Ordinary map
 requests and other users cannot consume these limits. A genuine temporary limit
@@ -18,11 +36,12 @@ Staff can continue by adding points around the bend or along the white outline.
 The server repeats the containment check. Whole-map saved crop icons remain
 visible over terrain and map labels, including in white Ramos parcel areas.
 
-Local follow-up, October 12, 2026 (not deployed): the Ramos Farmers map uses a
-white parcel presentation for imported Earth/KML plots without crop records.
-Parcels with saved Corn, Rice or other crop records use their crop colors, while
-crop icons and planted sections remain visible. Stored parcel colors, geometry,
-exports and other municipality maps are unchanged.
+Earlier local stage, October 12, 2026 (superseded by the October 14 follow-up):
+the Ramos Farmers map used white for imported Earth/KML plots without crop
+records and crop colors for saved classifications. Crop icons and planted
+sections remained visible; stored parcel colors, geometry and exports were
+preserved. The October 14 local presentation keeps parcel bases white in every
+Farmers map scope.
 
 Local follow-up, October 12, 2026 (not deployed): crop sections can sit beside
 each other and share edges, but cannot cover the same land. Overlapping drawings
@@ -152,7 +171,7 @@ integration were verified with synthetic data; Laravel 12/PHP 8.3+ and the
 Assistant are now deployed with verified live role/report/provider checks.
 See [OFFICE_ASSISTANT.md](docs/OFFICE_ASSISTANT.md) and
 [AI_ASSISTANT_IMPLEMENTATION_PLAN.md](docs/AI_ASSISTANT_IMPLEMENTATION_PLAN.md).
-AgriLGU corn branding, the in-page seasonal crop editor, saved crop icons and the System Owner/Super Admin satellite/map usage panel are deployed in runtime `c322a5e` on October 10, 2026. Existing records and farmer IDs are unchanged. Usage shows local NDVI reservations and outgoing Google Static Maps attempts, not complete provider billing or interactive map loads. Linking harvest records to planted crop sections is not implemented in this release.
+AgriLGU corn branding, the in-page seasonal crop editor, saved crop icons and the System Owner/Super Admin satellite/map usage panel are deployed in runtime `c322a5e` on October 10, 2026. Existing records and farmer IDs are unchanged. Usage shows local NDVI reservations and outgoing Google Static Maps attempts, not complete provider billing or interactive map loads. The deployed runtime has no planted-section harvest link; a local additive follow-up now permits a direct harvest to reference one keyed saved section after matching farmer, parcel, year, season and crop checks. Release the migration, crop/harvest backend and harvest form together; release-projected rice harvests remain unlinked.
 
 The October 10 field-background ID enhancement is local and not deployed. Front and back now show an illustrated rice-field landscape with clear reading panels, a plain white QR area, aligned signature space and green/gold borders. All six classification labels fit beside the QR; accented names and initials display correctly. Digital controls have 44px touch targets. Screen, print and PNG use the same artwork, and existing identifiers, slash-separated parcel addresses and access rules are preserved.
 
@@ -387,13 +406,13 @@ Implementation status and remaining staff/staging checks are documented in [DESI
 - Parcel boundaries are displayed without unnecessary centroid pins. The drawing follow-up shows a green first corner, numbered dots and connecting lines as each next point is added. New parcel drawing accepts further clicks after the fourth corner; existing parcel adjustments keep their corner/edge tools. Deployed October 9 in runtime `b2bc46b`.
 - Large 3D parcel collections draw in batches using one interactive shape per parcel. The overview uses lighter display outlines, while selection and close inspection restore full detail. Stored boundaries, measured areas, editing, and exports retain their original coordinates.
 - Municipality-scoped parcel loading prevents parcels from different municipalities from being mixed.
-- **Crops by season:** select a year and dry/wet season to color parcels by recorded rice/palay, corn, vegetables, root crops, fruit, legumes, mixed crops, or other crops. A crop filter and labeled legend show the classifications and counts for loaded parcels.
+- **Crops on the map:** select a year and dry/wet season to see saved crop icons and drawings. **White parcels with saved crops** keeps white parcel bases in every scope; **Filter parcels by saved crop** limits the visible parcels using recorded rice/palay, corn, vegetables, root crops, fruit, legumes, mixed crops, or other crops. A labeled crop-color legend shows the classifications and counts for loaded parcels; its colors describe crops, not parcel fills.
 - Staff record and correct a parcel's seasonal crop from the **Seasonal crops** action beside that parcel. Optional notes can identify crops grown together or the source of the observation; saved seasons remain available for review.
 - Planted-area drawing: the **Crop areas / season** action lets staff draw separate crop sections inside a parcel, with optional names/varieties. Sections may touch but cannot overlap or extend outside the parcel. The Farmers map opens the editor in an in-page dialog so staff keep the parcel map visible while drawing and saving; the standalone seasonal-crop route remains available as a fallback. Draft corners show numbered dots and connecting lines. Illustrated crop icons appear inside saved sections and automatically on the selected farmer's main map, with a brief reduced-motion-aware selection bounce in the editor. Back to parcel map preserves farmer/year/season. Unmarked land remains unclassified and mapped hectares are approximate. Core drawing deployed in `571a408`; the workspace/icons/guides deployed October 9, 2026 in `b2bc46b`; the modal follow-up is currently local until explicitly deployed.
 - Local modal correction, October 12, 2026: the nested editor safely resolves the surrounding form's save status, preventing a null `textContent` error when the crop workspace opens. No schema or record change is involved; deploy the versioned editor script with the existing modal assets.
 - Super Admin and System Owner accounts may inspect seasonal crops but cannot change them. Municipality ownership, audit logging, and stale-edit protection apply to crop records.
-- Missing crop records appear in gray as **Not recorded**. This does not mean fallow. Seasonal classifications do not establish current planting, planted hectares, or production; assistance and harvest records are not automatically assigned to parcels.
-- Switching back to **Saved parcel colors** restores the original display. Crop styling does not alter parcel boundaries, saved colors, or exports. Loading/error states are distinct from missing crop records.
+- Missing crop records are labeled **Not recorded** and have no crop icon; their parcel bases remain white. This does not mean fallow. Seasonal classifications do not establish current planting, planted hectares, or production; assistance and harvest records are not automatically assigned to parcels.
+- Switching back to **White parcels with saved crops** removes crop filtering while keeping the white parcel presentation. Crop sections and icons retain their colors; stored parcel boundaries, colors, hectares and exports are unchanged. Loading/error states are distinct from missing crop records.
 - Authorized selected-farmer KML and KMZ import.
 - Server-side KML and XML bulk parcel import for one municipality.
 - Import matching by parcel code, full name, surname and barangay, or a unique surname. Shared-surname matches fail closed for staff review instead of attaching a parcel to the first database row.

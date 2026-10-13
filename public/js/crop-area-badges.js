@@ -57,8 +57,8 @@
     const node=document.createElement('template');node.content.appendChild(svg(document,code,true));return node;
   }
   function markerContent(document, code) {
-    const node = template(document, code);
-    return node.content ? node.content.cloneNode(true) : node;
+    // Maps 3D reads custom SVG graphics from a direct-child HTML template.
+    return template(document, code);
   }
   // A bounded horizontal scan finds an interior anchor even for concave areas.
   // A bounding-box center or arithmetic centroid can sit outside such boundaries.
@@ -115,7 +115,7 @@
       node.appendChild(icon);
     });
     template.content.appendChild(node);
-    return template.content.cloneNode(true);
+    return template;
   }
   function linePosition(path) {
     if (!Array.isArray(path) || path.length < 2 || path.length > 50) return null;

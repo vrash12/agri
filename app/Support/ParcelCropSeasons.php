@@ -12,9 +12,7 @@ use Illuminate\Validation\ValidationException;
 
 class ParcelCropSeasons
 {
-    public function __construct(private ConcurrentWrite $writes, private MunicipalityAccess $access, private PlantedCropAreas $areas)
-    {
-    }
+    public function __construct(private ConcurrentWrite $writes, private MunicipalityAccess $access, private PlantedCropAreas $areas) {}
 
     public function save(FarmPlot $plot, User $user, array $data): ParcelCropSeason
     {
@@ -42,6 +40,7 @@ class ParcelCropSeasons
                     throw ValidationException::withMessages(['_plot_version' => 'The parcel boundary changed. Reload it and review the crop areas before saving.']);
                 }
                 $areas = $this->areas->prepare($current, $data['planted_areas']);
+                $this->protectLinkedHarvestSections($record, $areas);
                 $record->planted_areas = $areas;
             }
             $areaCrops = array_unique(array_column($areas, 'crop'));
@@ -53,6 +52,50 @@ class ParcelCropSeasons
 
             return $record;
         });
+    }
+
+    /**
+     * Do not leave a harvest pointing at a removed or reclassified section. A section
+     * key is retained while its geometry/details are edited; unlink the harvest first
+     * when the section itself is no longer the source of that record.
+     */
+    private function protectLinkedHarvestSections(?ParcelCropSeason $record, array $areas): void
+    {
+        if ($record === null
+            || ! Schema::hasTable('harvest_records')
+            || ! Schema::hasColumn('harvest_records', 'parcel_crop_season_id')
+            || ! Schema::hasColumn('harvest_records', 'planted_area_key')) {
+            return;
+        }
+
+        $linked = DB::table('harvest_records')
+            ->where('parcel_crop_season_id', $record->id)
+            ->get(['harvest_year', 'season', 'commodity', 'planted_area_key']);
+        if ($linked->isEmpty()) {
+            return;
+        }
+
+        $byKey = collect($areas)->keyBy('area_key');
+        foreach ($linked as $harvest) {
+            $area = $byKey->get($harvest->planted_area_key);
+            if (! is_array($area)) {
+                throw ValidationException::withMessages([
+                    'planted_areas' => 'A crop section is linked to a harvest. Unlink that harvest before removing the section.',
+                ]);
+            }
+
+            $expected = [
+                'rice' => 'rice', 'corn' => 'corn', 'vegetables' => 'vegetable',
+                'root_crops' => 'rootcrop', 'fruit' => 'fruit', 'legumes' => 'other',
+            ][$area['crop'] ?? ''] ?? null;
+            if ((int) $harvest->harvest_year !== (int) $record->crop_year
+                || ($harvest->season !== null && $harvest->season !== $record->season)
+                || ($expected !== null && $expected !== $harvest->commodity)) {
+                throw ValidationException::withMessages([
+                    'planted_areas' => 'A linked harvest no longer matches this crop section. Update or unlink the harvest before changing the section.',
+                ]);
+            }
+        }
     }
 
     public function layer(User $user, array $plotIds, int $year, string $season): array
@@ -89,7 +132,7 @@ class ParcelCropSeasons
         ];
     }
 
-    /** Bounded detail layer for the selected farmer, never the whole registry. */
+    /** Bounded detail batch for authorized parcels already loaded on the map. */
     public function plantedLayer(User $user, array $plotIds, int $year, string $season): array
     {
         if (! Schema::hasColumn('parcel_crop_seasons', 'planted_areas')) {

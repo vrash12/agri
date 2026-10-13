@@ -9,6 +9,7 @@ use App\Support\ConcurrentWrite;
 use Illuminate\Database\QueryException;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -167,6 +168,8 @@ class ParcelCropSeasonTest extends TestCase
         $this->assertSame('mixed', $record->crop);
         $this->assertCount(2, $record->planted_areas);
         $this->assertGreaterThan(0, $record->planted_areas[0]['area_ha']);
+        $this->assertMatchesRegularExpression('/^[a-f0-9-]{36}$/i', $record->planted_areas[0]['area_key']);
+        $this->assertNotSame($record->planted_areas[0]['area_key'], $record->planted_areas[1]['area_key']);
         $this->assertSame($before, FarmPlot::findOrFail(1)->getAttributes());
         $this->getJson(route('farm-plots.planted-area-layer', ['year' => 2026, 'season' => 'dry', 'plot_ids' => [1, 2]]))
             ->assertOk()->assertJsonCount(1, 'records')->assertJsonCount(2, 'records.0.areas')->assertJsonPath('records.0.areas.0.crop', 'corn');
@@ -193,11 +196,62 @@ class ParcelCropSeasonTest extends TestCase
         $this->actingAs(User::find(1))->postJson($this->editUrl(), $payload)->assertRedirect();
         $area = ParcelCropSeason::firstOrFail()->planted_areas[0];
         $this->assertSame('line', $area['type']);
+        $this->assertMatchesRegularExpression('/^[a-f0-9-]{36}$/i', $area['area_key']);
         $this->assertCount(2, $area['path']);
         $this->assertArrayNotHasKey('area_ha', $area);
         $this->getJson(route('farm-plots.planted-area-layer', ['year' => 2026, 'season' => 'dry', 'plot_ids' => [1]]))
             ->assertOk()->assertJsonPath('records.0.areas.0.type', 'line')
             ->assertJsonMissingPath('records.0.areas.0.area_ha');
+    }
+
+    public function test_overview_batches_return_drawings_for_multiple_authorized_farmers_only(): void
+    {
+        $this->prepareParcel();
+        $this->actingAs(User::findOrFail(1))->postJson($this->editUrl(), $this->drawnPayload())->assertRedirect();
+        DB::table('farmers')->insert(['id' => 4, 'municipality_id' => 1, 'first_name' => 'Another', 'last_name' => 'Farmer']);
+        $plot = FarmPlot::findOrFail(1)->replicate();
+        $plot->id = 4;
+        $plot->farmer_id = 4;
+        $plot->save();
+        $area = $this->drawnPayload()['planted_areas'][0];
+        $area['crop'] = 'rice';
+        ParcelCropSeason::create(['farm_plot_id' => 4, 'municipality_id' => 1, 'crop_year' => 2026,
+            'season' => 'dry', 'crop' => 'rice', 'planted_areas' => [$area]]);
+        $plotsBefore = FarmPlot::orderBy('id')->get()->toArray();
+        $cropsBefore = ParcelCropSeason::orderBy('id')->get()->toArray();
+        foreach ([1, 3, 6] as $account) {
+            $this->actingAs(User::findOrFail($account))
+                ->getJson(route('farm-plots.planted-area-layer', ['year' => 2026, 'season' => 'dry', 'plot_ids' => [1, 4, 2]]))
+                ->assertOk()->assertJsonCount(2, 'records')
+                ->assertJsonPath('records.0.plot_id', 1)->assertJsonPath('records.0.areas.0.crop', 'corn')
+                ->assertJsonPath('records.1.plot_id', 4)->assertJsonPath('records.1.areas.0.crop', 'rice')
+                ->assertJsonMissing(['plot_id' => 2]);
+        }
+        $this->getJson($this->layerUrl([1, 4]))->assertOk()->assertJsonPath('records.1.has_planted_areas', true)
+            ->assertJsonMissingPath('records.0.areas')->assertJsonMissingPath('records.1.areas');
+        $this->assertSame($plotsBefore, FarmPlot::orderBy('id')->get()->toArray());
+        $this->assertSame($cropsBefore, ParcelCropSeason::orderBy('id')->get()->toArray());
+    }
+
+    public function test_crop_drawing_limit_is_separate_from_map_activity_and_other_accounts(): void
+    {
+        Route::middleware(['web', 'auth', 'throttle:30,1'])->get('/_test/crop-map-activity', fn () => response()->json(['ok' => true]));
+        $this->actingAs(User::findOrFail(1));
+        for ($i = 0; $i < 30; $i++) {
+            $this->getJson('/_test/crop-map-activity')->assertOk();
+        }
+        $url = route('farm-plots.planted-area-layer', ['year' => 2026, 'season' => 'dry', 'plot_ids' => [1]]);
+        for ($i = 0; $i < 30; $i++) {
+            $this->getJson($url)->assertOk();
+        }
+        $this->getJson($url)->assertStatus(429)->assertHeader('Retry-After')->assertJsonMissingPath('records');
+        $this->getJson($this->layerUrl([1]))->assertOk();
+        $this->actingAs(User::findOrFail(2))->getJson(route('farm-plots.planted-area-layer', [
+            'year' => 2026, 'season' => 'dry', 'plot_ids' => [2],
+        ]))->assertOk();
+        $this->travel(61)->seconds();
+        $this->actingAs(User::findOrFail(1))->getJson($url)->assertOk();
+        $this->travelBack();
     }
 
     public function test_saved_map_link_restores_the_farmer_and_crop_period(): void

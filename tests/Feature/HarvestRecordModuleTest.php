@@ -2,16 +2,19 @@
 
 namespace Tests\Feature;
 
+use App\Models\AuditLog;
 use App\Models\Farmer;
 use App\Models\FarmPlot;
 use App\Models\HarvestRecord;
 use App\Models\Municipality;
+use App\Models\ParcelCropSeason;
 use App\Models\RiceSeedDistribution;
 use App\Models\User;
 use App\Support\ConcurrentWrite;
 use App\Support\HarvestFromRelease;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Tests\Support\ProvinceScopedFixtures;
 use Tests\TestCase;
 
@@ -22,7 +25,9 @@ use Tests\TestCase;
  * way to write one for corn, vegetables, fisheries or livestock. What is worth
  * pinning here is the isolation (a harvest must not name another municipality's
  * farmer) and the rule that a harvest projected from an assistance release is changed
- * at that release and nowhere else.
+ * at that release and nowhere else. Direct harvests may carry one explicitly selected
+ * planted-section reference, which is rechecked against the same farmer, parcel and
+ * reporting period.
  */
 class HarvestRecordModuleTest extends TestCase
 {
@@ -95,6 +100,95 @@ class HarvestRecordModuleTest extends TestCase
         $this->assertSame($this->municipality->id, $record->municipality_id);
         $this->assertSame($this->staff->id, $record->recorded_by);
         $this->assertFalse($record->isProjected());
+    }
+
+    public function test_a_direct_harvest_can_reference_one_saved_planted_section(): void
+    {
+        $plot = FarmPlot::create([
+            'farmer_id' => $this->farmer->id,
+            'name' => 'Corn parcel',
+            'polygon_json' => [
+                ['lat' => 15.64, 'lng' => 120.61], ['lat' => 15.65, 'lng' => 120.61],
+                ['lat' => 15.65, 'lng' => 120.62], ['lat' => 15.64, 'lng' => 120.62],
+            ],
+            'area_ha' => 1.0,
+            'centroid_lat' => 15.645,
+            'centroid_lng' => 120.615,
+        ]);
+        $key = '11111111-1111-4111-8111-111111111111';
+        $season = ParcelCropSeason::create([
+            'municipality_id' => $this->municipality->id,
+            'farm_plot_id' => $plot->id,
+            'crop_year' => 2026,
+            'season' => 'dry',
+            'crop' => 'corn',
+            'planted_areas' => [[
+                'type' => 'polygon', 'area_key' => $key, 'name' => 'North field', 'crop' => 'corn',
+                'polygon' => [
+                    ['lat' => 15.641, 'lng' => 120.611], ['lat' => 15.644, 'lng' => 120.611],
+                    ['lat' => 15.644, 'lng' => 120.614], ['lat' => 15.641, 'lng' => 120.614],
+                ], 'area_ha' => 0.1,
+            ]],
+        ]);
+
+        $this->actingAs($this->staff)
+            ->get(route('harvest-records.create', [
+                'farmer_id' => $this->farmer->id,
+                'farm_plot_id' => $plot->id,
+                'parcel_crop_season_id' => $season->id,
+                'planted_area_key' => $key,
+            ]))
+            ->assertOk()
+            ->assertSee('value="'.$this->farmer->id.'" selected', false)
+            ->assertSee('value="'.$plot->id.'" selected', false)
+            ->assertSee('value="corn" selected', false)
+            ->assertSee('value="2026"', false)
+            ->assertSee('value="dry" selected', false);
+
+        $this->assertTrue(Schema::hasColumn('harvest_records', 'parcel_crop_season_id'));
+        $this->actingAs($this->staff)
+            ->post(route('harvest-records.store'), [
+                'commodity' => 'corn', 'quantity' => 20, 'quantity_unit' => 'sack',
+                'harvest_year' => 2026, 'season' => 'dry', 'farmer_id' => $this->farmer->id,
+                'farm_plot_id' => $plot->id, 'parcel_crop_season_id' => $season->id,
+                'planted_area_key' => $key,
+            ])
+            ->assertSessionHasNoErrors()->assertRedirect();
+
+        $harvest = HarvestRecord::query()->latest('id')->firstOrFail();
+        $this->assertSame($season->id, $harvest->parcel_crop_season_id);
+        $this->assertSame($key, $harvest->planted_area_key);
+        $this->actingAs($this->staff)->get(route('harvest-records.index'))
+            ->assertOk()->assertSee('Planted section');
+    }
+
+    public function test_a_crop_section_link_must_match_the_harvest_period_and_crop(): void
+    {
+        $plot = FarmPlot::create([
+            'farmer_id' => $this->farmer->id, 'name' => 'Rice parcel',
+            'polygon_json' => [
+                ['lat' => 15.64, 'lng' => 120.61], ['lat' => 15.65, 'lng' => 120.61],
+                ['lat' => 15.65, 'lng' => 120.62], ['lat' => 15.64, 'lng' => 120.62],
+            ], 'area_ha' => 1.0,
+        ]);
+        $key = '22222222-2222-4222-8222-222222222222';
+        $season = ParcelCropSeason::create([
+            'municipality_id' => $this->municipality->id, 'farm_plot_id' => $plot->id,
+            'crop_year' => 2026, 'season' => 'wet', 'crop' => 'rice',
+            'planted_areas' => [['type' => 'line', 'area_key' => $key, 'crop' => 'rice',
+                'path' => [['lat' => 15.641, 'lng' => 120.611], ['lat' => 15.644, 'lng' => 120.614]]]],
+        ]);
+
+        $this->actingAs($this->staff)
+            ->post(route('harvest-records.store'), [
+                'commodity' => 'corn', 'quantity' => 20, 'quantity_unit' => 'sack',
+                'harvest_year' => 2025, 'season' => 'dry', 'farmer_id' => $this->farmer->id,
+                'farm_plot_id' => $plot->id, 'parcel_crop_season_id' => $season->id,
+                'planted_area_key' => $key,
+            ])
+            ->assertSessionHasErrors('parcel_crop_season_id');
+
+        $this->assertSame(0, HarvestRecord::query()->count());
     }
 
     public function test_the_owning_municipality_comes_from_the_farmer_not_from_the_form(): void
@@ -337,7 +431,7 @@ class HarvestRecordModuleTest extends TestCase
         $response->assertOk();
         $this->assertStringContainsString('text/csv', $response->headers->get('Content-Type'));
 
-        $audit = \App\Models\AuditLog::query()
+        $audit = AuditLog::query()
             ->where('module', 'Harvest records')
             ->where('event', 'exported')
             ->latest('id')

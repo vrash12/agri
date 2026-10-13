@@ -5,9 +5,11 @@ namespace App\Http\Requests;
 use App\Models\Farmer;
 use App\Models\FarmPlot;
 use App\Models\HarvestRecord;
+use App\Models\ParcelCropSeason;
 use App\Support\LocalTime;
 use App\Support\MunicipalityAccess;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
@@ -56,10 +58,16 @@ class StoreHarvestRecordRequest extends FormRequest
      */
     public function rules(): array
     {
+        $sectionReference = Schema::hasTable('parcel_crop_seasons')
+            ? ['exists:parcel_crop_seasons,id']
+            : [];
+
         return [
             'municipality_id' => ['nullable', 'integer', 'exists:municipalities,id'],
             'farmer_id' => ['nullable', 'integer', 'exists:farmers,id'],
             'farm_plot_id' => ['nullable', 'integer', 'exists:farm_plots,id'],
+            'parcel_crop_season_id' => array_merge(['nullable', 'integer'], $sectionReference),
+            'planted_area_key' => ['nullable', 'string', 'max:64', 'regex:/^[a-f0-9]{8}-[a-f0-9-]{27,36}$/i'],
 
             'commodity' => ['required', Rule::in(array_keys(HarvestRecord::COMMODITY_LABELS))],
             'variety' => ['nullable', 'string', 'max:120'],
@@ -101,6 +109,7 @@ class StoreHarvestRecordRequest extends FormRequest
         $validator->after(function (Validator $validator): void {
             $this->rejectOutOfScopeFarmer($validator);
             $this->rejectMismatchedParcel($validator);
+            $this->rejectMismatchedCropSection($validator);
             $this->rejectDateOutsideReportedYear($validator);
         });
     }
@@ -190,6 +199,70 @@ class StoreHarvestRecordRequest extends FormRequest
                 'date_harvested',
                 'The harvest date is in '.$dateYear.' but this harvest is reported under '.$year.'.'
             );
+        }
+    }
+
+    /**
+     * A section reference is meaningful only when it belongs to the selected parcel,
+     * farmer and reporting period. The area key is opaque and is never trusted on its
+     * own; it is resolved inside the authorized season JSON.
+     */
+    private function rejectMismatchedCropSection(Validator $validator): void
+    {
+        $seasonId = $this->input('parcel_crop_season_id');
+        $areaKey = $this->input('planted_area_key');
+
+        if ($seasonId === null && $areaKey === null) {
+            return;
+        }
+        if ($seasonId === null || $areaKey === null) {
+            $validator->errors()->add('parcel_crop_season_id', 'Choose one saved planted section, or clear the section selection.');
+
+            return;
+        }
+        if (! Schema::hasColumn('harvest_records', 'parcel_crop_season_id')
+            || ! Schema::hasColumn('harvest_records', 'planted_area_key')
+            || ! Schema::hasColumn('parcel_crop_seasons', 'planted_areas')) {
+            $validator->errors()->add('parcel_crop_season_id', 'Planted-section links are not available in this installation yet.');
+
+            return;
+        }
+        if ($validator->errors()->hasAny(['farmer_id', 'farm_plot_id', 'harvest_year', 'season', 'commodity'])) {
+            return;
+        }
+
+        $farmerId = $this->input('farmer_id');
+        $plotId = $this->input('farm_plot_id');
+        $record = ParcelCropSeason::query()->with('plot.farmer')->find($seasonId);
+        if (! $record || $plotId === null || (int) $record->farm_plot_id !== (int) $plotId
+            || ! $record->plot?->farmer || (int) $record->plot->farmer_id !== (int) $farmerId
+            || ! app(MunicipalityAccess::class)->scope(Farmer::query(), $this->user())->whereKey($farmerId)->exists()
+            || (int) $record->municipality_id !== (int) $record->plot->farmer->municipality_id) {
+            $validator->errors()->add('parcel_crop_season_id', 'Choose a planted section from the selected farmer’s parcel.');
+
+            return;
+        }
+
+        $area = collect($record->planted_areas ?: [])->firstWhere('area_key', $areaKey);
+        if (! is_array($area)) {
+            $validator->errors()->add('planted_area_key', 'That planted section no longer exists. Reload the harvest form and choose a current section.');
+
+            return;
+        }
+
+        if ((int) $record->crop_year !== (int) $this->input('harvest_year')
+            || $this->input('season') !== $record->season) {
+            $validator->errors()->add('parcel_crop_season_id', 'The planted section and harvest must use the same year and season.');
+
+            return;
+        }
+
+        $expectedCommodity = [
+            'rice' => 'rice', 'corn' => 'corn', 'vegetables' => 'vegetable',
+            'root_crops' => 'rootcrop', 'fruit' => 'fruit', 'legumes' => 'other',
+        ][$area['crop'] ?? ''] ?? null;
+        if ($expectedCommodity !== null && $expectedCommodity !== $this->input('commodity')) {
+            $validator->errors()->add('parcel_crop_season_id', 'Choose a harvest commodity that matches the planted section.');
         }
     }
 

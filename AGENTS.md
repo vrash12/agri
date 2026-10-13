@@ -1,5 +1,37 @@
 # Agriculture Information System — Developer Guide
 
+The October 14 white-parcel presentation follow-up is local, not pushed or
+deployed. All saved parcel bases across every Farmers map scope use white
+outlines and pale white fills, including parcels with only a saved crop
+classification. Saved crop icons and separate crop sections retain their crop
+colors above that base. Crop filters, hover feedback, focus/hide controls and
+edit visibility remain intact; stored colors, geometry, hectares and export
+data are unchanged. This supersedes the earlier Ramos-only and
+classification-recolor presentation. Release it with the pending whole-map
+crop-drawing work: provider, route, `planted-area-layer.js`, `farmers-maps.js`,
+`crop-area-badges.js`, `parcel-crop-layer.js`, `farmers/maps.blade.php`, crop
+controls, reviewed Assistant passages and guidance together. The classifier
+script supplies safe error copy; the Farmers view supplies the white parcel
+legend and removes the Ramos gate. No migration, account/provider change,
+budget reset or general cache clear is required. See
+[docs/PLANTED_CROP_AREAS.md](docs/PLANTED_CROP_AREAS.md).
+
+The October 13 whole-map crop-drawing follow-up is local and not deployed.
+Farmers discovers saved drawings from scoped metadata for loaded parcels, then
+loads every matching parcel in sequential batches of at most 20 IDs. Crops are
+visible without farmer selection; camera changes reuse accepted records and GPU
+objects, with drawing/visibility work yielding between browser frames. Partial
+failures preserve verified batches and explicit Retry resumes unfinished work;
+no automatic retry runs. Period changes and deleted parcels discard stale data.
+The named `planted-crop-layer` account limit remains 30/minute, independent of
+ordinary map/satellite traffic. Custom 3D crop SVGs use a direct-child template.
+The October 14 presentation keeps every saved parcel base white beneath crop
+icons and sections, including classification-only parcels. Stored coordinates,
+colors and hectares are unchanged. Release this with the combined bundle above.
+No migration, account/provider change, budget reset or general cache clear is
+required. See
+[docs/PLANTED_CROP_AREAS.md](docs/PLANTED_CROP_AREAS.md).
+
 The October 12 satellite request-limit correction is deployed in runtime `2d366ae`.
 Satellite analysis/images use named `satellite-observations` (6/minute) and
 `satellite-images` (12/minute) account buckets in `RouteServiceProvider`; numeric
@@ -12,7 +44,7 @@ budget reset, migration, credential or account change is required. Release the
 provider, routes, satellite script and focused tests together. See
 [docs/SATELLITE_REQUEST_LIMITS.md](docs/SATELLITE_REQUEST_LIMITS.md).
 
-Latest release: the general Ramos crop-color adjustment is deployed in runtime
+Deployed release history: the general Ramos crop-color adjustment is deployed in runtime
 `c1d83db` through GitHub main and Hostinger fast-forward pull. Saved crop
 classifications color parcels automatically for the selected year/season;
 unrecorded parcels remain white. This is a parcel classification display, not
@@ -27,19 +59,16 @@ before accepting a mark. On concave parcels, staff are guided to add points
 around a bend or follow the white boundary, preventing a later save error. The
 server remains authoritative and returns the same actionable guidance. Whole-map
 crop badges use visible terrain/label settings so saved Corn, Rice and other
-known crop icons remain visible inside white Ramos parcels even before farmer
+known crop icons remain visible above parcel bases even before farmer
 selection. Release the helper, editor, map and focused tests together; no crop,
 parcel, account or schema data is rewritten.
 
-The October 12 Ramos map presentation follow-up is local and not deployed.
-When the Farmers map is scoped to the Ramos municipality, imported parcel
-polygons use a white display base when no crop record exists, while saved crop
-records use their crop colors so the general map remains informative. The stored `FarmPlot.color` remains unchanged for exports,
-records and other map scopes. Saved crop classifications still load with icons;
-selected crop lines/enclosures render above the white base. This is a display
-choice only: do not rewrite parcel colors or geometry. Release the map view,
-crop-layer status copy and tests together. No migration, account, provider or
-operational data write is required.
+The October 12 Ramos map presentation was an earlier implementation stage,
+superseded locally by the October 14 white base across every Farmers map scope.
+That stage used white for Ramos parcels without crop records and crop colors
+for saved classifications. It preserved `FarmPlot.color`, geometry and exports.
+The deployed crop-color release is recorded above; the new universal white
+presentation remains local until explicitly released with the combined bundle.
 
 The October 12 non-overlapping crop-section follow-up is local and not deployed.
 New visual enclosures cannot finish or save across another crop section, and a
@@ -218,7 +247,7 @@ The October 11, 2026 framework follow-up deployed on Hostinger in runtime 7d36ff
 
 The October 11 deployed Office Assistant is now one conversation inside normal signed-in office pages. It has no help/report mode or year controls. `POST /assistant/message` uses authentication, idle/account scope, CSRF, policy and a five-per-minute throttle. `AssistantConversation` resolves supported tasks and bounded encrypted follow-up references locally; policies and `MunicipalityAccess` govern farmer/report reads. `OfficeAssistant::answerTopic` sends only canonical application-owned help plus reviewed retrieved passages/role/module/language to OpenAI, never raw questions, record data or the visible thread. Visitors, evaluators and farmer sessions are denied; veterinary accounts remain Animal Health-only. Reports are read-only and exclude contacts, birth/eligibility details, credentials, notes and coordinates. Context expires after 15 minutes and binds to user/session/scope; every record is independently reauthorized. `SynchronizeAssistantRequests` isolates chat from normal write locks; `StartApplicationSession` commits activity before slow work and suppresses late session/CSRF-cookie saves only for acquired chat requests. Other writes and sessions retain normal behavior. Chat stays in browser memory; audit stores safe counts/topic/year/latency/tokens only. Atomic UTC provider limits fail closed and are not billing. Never clear the general cache. Deploy all backend/session/route/static-help/layout and both public assets together after the dependency upgrade; no migration or account operation is required. This deployed feature passed live role, report, provider and preservation checks. See `docs/OFFICE_ASSISTANT.md`.
 
-The October 10, 2026 release installed runtime `c322a5e` through GitHub main and Hostinger fast-forward pull. It deploys AgriLGU corn branding, the in-page crop editor, saved crop icons and scoped provider usage. All 21 tables / 9,359 existing rows were preserved without migrations or account changes. The private application name now reads AgriLGU while session, cache and Redis namespaces and NDVI budget counters remain unchanged. Never clear the general cache for this release. Crop-to-harvest linkage remains a proposal. See `docs/GITHUB_DEPLOYMENT.md`.
+The October 10, 2026 release installed runtime `c322a5e` through GitHub main and Hostinger fast-forward pull. It deploys AgriLGU corn branding, the in-page crop editor, saved crop icons and scoped provider usage. All 21 tables / 9,359 existing rows were preserved without migrations or account changes. The private application name now reads AgriLGU while session, cache and Redis namespaces and NDVI budget counters remain unchanged. Never clear the general cache for this release. That deployed runtime has no crop-to-harvest linkage; the additive local follow-up now supports an explicitly keyed direct-harvest attribution and remains unpushed and undeployed. See `docs/GITHUB_DEPLOYMENT.md` and `docs/PLANTED_CROP_AREAS.md`.
 
 The October 12 crop-modal null-status correction is local and not deployed. The
 scoped planted-area editor now falls back to form-level save controls when the
@@ -680,11 +709,11 @@ The directory's Parcel Map disclosure preserves `#farmersMapModule` bookmarks an
 
 The 3D parcel renderer uses one interactive polygon per parcel, reuses cached overlays, and yields between drawing batches. `public/js/parcel-display-geometry.js` supplies display-only one-metre overview paths with a two-percent area-change guard and topology checks. Original rings remain in the plot cache for edits, collision checks, fitting, measurements, and exports; selected farmers and nearby parcels at close range use full detail. Never persist simplified display paths. Camera-driven refreshes are debounced and cancellable so stale batches cannot restore hidden or deleted plots. See `docs/PARCEL_MAP_PERFORMANCE.md` for verification and limits.
 
-The **Crops by season** disclosure adds a year/dry-or-wet-season crop layer to the same workspace. Staff record one classification per parcel/year/season through `GET/POST /farm-plots/{plot}/seasonal-crops`; System Owner and Super Admin accounts can inspect but cannot save. `ParcelCropSeason` / `parcel_crop_seasons` stores explicit crop records, optional source notes, and municipality ownership derived from the parcel's farmer. `StoreParcelCropSeasonRequest`, `ParcelCropSeasonPolicy`, and `ParcelCropSeasons` enforce authorization, parent ownership, a parent lock through `ConcurrentWrite`, optimistic versions, and audit logging. The unique plot/year/season constraint protects simultaneous first entries. Missing crop records appear as Not recorded, never as fallow or an inferred crop from assistance/harvest data.
+The **Crops on the map** disclosure supplies year/dry-or-wet-season crop controls in the same workspace. Saved parcel bases use white outlines and pale white fills in every scope; **White parcels with saved crops** shows saved icons/drawings, while **Filter parcels by saved crop** applies the existing classification filter without recoloring parcel bases. Colored legend entries identify saved crop classifications and counts, not parcel-base colors or hectares. Staff record one classification per parcel/year/season through `GET/POST /farm-plots/{plot}/seasonal-crops`; System Owner and Super Admin accounts can inspect but cannot save. `ParcelCropSeason` / `parcel_crop_seasons` stores explicit crop records, optional source notes, and municipality ownership derived from the parcel's farmer. `StoreParcelCropSeasonRequest`, `ParcelCropSeasonPolicy`, and `ParcelCropSeasons` enforce authorization, parent ownership, a parent lock through `ConcurrentWrite`, optimistic versions, and audit logging. The unique plot/year/season constraint protects simultaneous first entries. Missing crop records appear as Not recorded, never as fallow or an inferred crop from assistance/harvest data.
 
-The October 8 planted-section follow-up adds nullable `planted_areas` JSON through an explicitly targeted additive migration. The October 9 UI follow-up, deployed in runtime `b2bc46b`, uses a three-part season/map/save workspace, contextual drawing controls, optional disclosures and a sticky save bar. The Farmers map now opens that editor in an in-page native dialog; its server-authorized modal response and modal-only JSON save keep the map visible while preserving the standalone route as a fallback. Deploy `public/css/planted-area-editor.css`, `public/css/parcel-crop-modal.css`, the editor/workspace scripts and both seasonal views together; preserve all form/version hooks. The deployed map follow-up automatically loads saved crop icons for the selected farmer even with parcel recoloring off. The editor return link preserves municipality/farmer/year/season; query context is validated client-side and all record reads retain server scope. Clearing selection hides cached icons. Crop badges use `crop-area-badges.js` with static illustrated SVGs, bounded interior anchors and finite reduced-motion-aware selection animation. Load it before editor/workspace scripts; 3D labels reuse the existing SVG marker template and selected-owner limits. Preserve crop boundaries and scope. The shared `map-drawing-guide.js` shows a green first numbered corner and connected numbered draft dots in the crop editor and shared parcel workspace. Load it before both scripts; guide overlays are display-only and clean up on undo/finish/cancel. New parcel clicks may continue beyond four corners, while existing parcel edits keep edge insertion and selected-corner movement. Legacy enclosed-area drafts explicitly initialize their first ring with `Polygon.setPath(new MVCArray())`; freehand crop-line drafts initialize an empty `Polyline` path before points are added. Staff draw up to 8 crop marks (50 points each) inside a saved parcel, with crop, name and optional variety. New freehand line marks are visual only and do not calculate hectares; existing enclosed polygon areas retain computed approximate hectares. `PlantedCropAreas` validates full geometry without simplification, inclusive parcel containment, non-overlap, and computed approximate hectares. Parent boundaries above 1,000 points require review for this editor; stored parcels are never reduced or changed. Parent and season version tokens prevent stale writes. The crop summary derives from the sections, with Mixed crops for several crop types. Audit events retain counts/crop names without duplicating section coordinates. A scoped, throttled `farm-plots.planted-area-layer` endpoint serves at most 20 selected-owner plots; the broad crop classifier omits coordinates. Farmers map renders crop marks only for the selected farmer, reuses overlays on camera changes, and briefly highlights a chosen section while honoring reduced motion. Invalidated sections after parcel edits are hidden and labeled for review. Old classification-only rows and APIs remain compatible. This feature deployed in runtime `571a408` on October 8, 2026; the in-page modal follow-up is currently local until explicitly deployed; see `docs/PLANTED_CROP_AREAS.md`.
+The October 8 planted-section follow-up adds nullable `planted_areas` JSON through an explicitly targeted additive migration. The October 9 UI follow-up, deployed in runtime `b2bc46b`, uses a three-part season/map/save workspace, contextual drawing controls, optional disclosures and a sticky save bar. The Farmers map now opens that editor in an in-page native dialog; its server-authorized modal response and modal-only JSON save keep the map visible while preserving the standalone route as a fallback. Deploy `public/css/planted-area-editor.css`, `public/css/parcel-crop-modal.css`, the editor/workspace scripts and both seasonal views together; preserve all form/version hooks. The current local follow-up automatically loads saved crop drawings and icons across loaded parcels above white parcel bases in every scope. The editor return link preserves municipality/farmer/year/season; query context is validated client-side and all record reads retain server scope. Clearing selection keeps saved crop drawings and icons visible. Crop badges use `crop-area-badges.js` with static illustrated SVGs, bounded interior anchors and finite reduced-motion-aware selection animation. Load it before editor/workspace scripts; 3D labels use a direct-child SVG template and bounded authorized parcel batches. Preserve crop boundaries and scope. The shared `map-drawing-guide.js` shows a green first numbered corner and connected numbered draft dots in the crop editor and shared parcel workspace. Load it before both scripts; guide overlays are display-only and clean up on undo/finish/cancel. New parcel clicks may continue beyond four corners, while existing parcel edits keep edge insertion and selected-corner movement. Legacy enclosed-area drafts explicitly initialize their first ring with `Polygon.setPath(new MVCArray())`; freehand crop-line drafts initialize an empty `Polyline` path before points are added. Staff draw up to 8 crop marks (50 points each) inside a saved parcel, with crop, name and optional variety. New freehand line marks are visual only and do not calculate hectares; existing enclosed polygon areas retain computed approximate hectares. `PlantedCropAreas` validates full geometry without simplification, inclusive parcel containment, non-overlap, and computed approximate hectares. Parent boundaries above 1,000 points require review for this editor; stored parcels are never reduced or changed. Parent and season version tokens prevent stale writes. The crop summary derives from the sections, with Mixed crops for several crop types. Audit events retain counts/crop names without duplicating section coordinates. A scoped `farm-plots.planted-area-layer` endpoint serves at most 20 authorized plots per request under the independent named `planted-crop-layer` 30/minute account limit; the broad crop classifier omits coordinates. The map discovers drawings from loaded parcel metadata and loads every matching plot in sequential batches. It renders crop marks across owners within the account scope, reuses overlays on camera changes, and briefly highlights a chosen section while honoring reduced motion. Invalidated sections after parcel edits are hidden and labeled for review. Old classification-only rows and APIs remain compatible. This feature deployed in runtime `571a408` on October 8, 2026; the in-page modal follow-up is currently local until explicitly deployed; see `docs/PLANTED_CROP_AREAS.md`.
 
-`GET /farm-plots/crop-layer` returns classifications only for authorized requested parcels, capped at 200 IDs per request. `public/js/parcel-crop-layer.js` batches requests, ignores stale responses, supports crop filtering and a labeled count legend, and exposes loading/error/retry states. `farmers-maps.js` reuses existing overlays; layer colors never change saved parcel colors, geometry, or exports. Counts describe loaded parcels, not planted hectares or all municipal land. Deploy the additive migration by its explicit path after a backup and install both JavaScript assets in both Hostinger public directories. See `docs/SEASONAL_PARCEL_CROPS.md` for usage, verification, and deployment order.
+`GET /farm-plots/crop-layer` returns classifications only for authorized requested parcels, capped at 200 IDs per request. `public/js/parcel-crop-layer.js` batches requests, ignores stale responses, supports crop filtering and a labeled count legend, and exposes loading/error/retry states with safe guidance. `farmers-maps.js` reuses existing overlays and keeps parcel bases white while crop icons and separate sections retain their colors. Stored parcel colors, geometry, hectares, editing and exports remain unchanged. Counts describe loaded parcels, not planted hectares or all municipal land. The original classification feature used an additive migration; the pending white-parcel/whole-map follow-up requires none. Release its combined bundle above and mirror changed scripts to both Hostinger public directories. See `docs/SEASONAL_PARCEL_CROPS.md` for usage, verification, and deployment order.
 
 - retrieve all visible parcels or one accessible farmer's parcels as JSON;
 - draw and save polygon boundaries for the selected farmer;

@@ -1,5 +1,21 @@
 # GitHub-to-Hostinger deployment
 
+## Pending local follow-up — direct harvest attribution to planted sections — October 14, 2026
+
+The current working tree adds an additive, nullable reference from a direct harvest
+to one keyed planted section in the same parcel crop season. Existing JSON drawings
+receive stable server-generated section keys; the **Record harvest** action opens the
+direct form with the farmer, parcel, section, compatible commodity, year and season
+preselected, while the form offers only sections belonging to the selected farmer's
+parcel. Server validation checks municipality,
+farmer, parcel, year, season and compatible crop, while the policy rechecks the
+section's scope. Linked sections cannot be removed or reclassified until the
+harvest is unlinked. Release-projected rice harvests remain linked only to their
+assistance release. This follow-up is local, unpushed and undeployed; release the
+migration, crop-area helper/season service, harvest model/request/policy/controller,
+form, assistant guidance and focused tests together. No operational data was
+changed by this implementation.
+
 ## Verified Hostinger release — October 12, 2026 — satellite request-limit isolation
 
 Runtime `2d366aec6799b83e84397dabdc35e6438e7398bb` was pushed to GitHub main

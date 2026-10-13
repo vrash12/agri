@@ -1143,11 +1143,6 @@ function getEffectivePlotColor(plot) {
   );
 }
 
-function useWhiteParcelBase() {
-  return window.__whiteParcelBase === true;
-}
-
-
     function hexToRgb(hex) {
       hex = normalizeHexColor(hex);
       return {
@@ -1323,7 +1318,9 @@ var PopoverElement = maps3d.PopoverElement;
     var municipalityGeofenceOverlays = [];
     var municipalityGeofenceLabels = [];
     var cropLayerTimer = null;
-    var plantedAreaOverlays = [], plantedAreaKey = '', plantedAreaRecords = null, focusedCropPlotId = null;
+    var plantedAreaOverlays = [];
+    var plantedAreaRenderedRecords = new Map(), plantedAreaRenderRevision = 0;
+    var plantedAreaRefreshPending = false, plantedAreaRetryTimer = null;
     var overviewCropDetailsRef = null, overviewCropDetails = new Map();
     var plantedAreaLayer = window.PlantedAreaLayer ? window.PlantedAreaLayer.create({url: window.__plantedAreaLayerUrl, fetch: window.fetch.bind(window), onChange: renderPlantedAreas}) : null;
     var cropLayer = window.ParcelCropLayer ? window.ParcelCropLayer.create({
@@ -1335,8 +1332,8 @@ var PopoverElement = maps3d.PopoverElement;
         var retry = document.getElementById('parcelCropRetry');
         if (retry) retry.hidden = state.status !== 'error';
         if (status) status.textContent = state.status === 'loading' ? 'Loading saved crop icons for the selected season…'
-          : state.status === 'error' ? state.error + ' Classification colors are unavailable.'
-          : state.status === 'ready' ? state.year + ' · ' + (state.season === 'dry' ? 'Dry season' : 'Wet season') + ' · Crop icons are shown on parcels with saved crop records.' + (useWhiteParcelBase() ? ' Ramos parcels without a crop stay white; saved crop records use their crop colors.' : state.enabled ? ' Seasonal parcel colors are on.' : ' Saved parcel colors are unchanged.')
+          : state.status === 'error' ? state.error + ' Parcels remain white.'
+          : state.status === 'ready' ? state.year + ' · ' + (state.season === 'dry' ? 'Dry season' : 'Wet season') + ' · White parcels with saved crop icons and drawings.' + (state.enabled ? ' Crop filtering is on.' : '')
           : 'Waiting for saved crop records.';
         if (legend) {
           legend.replaceChildren();
@@ -1371,7 +1368,7 @@ var PopoverElement = maps3d.PopoverElement;
     if (cropApply) cropApply.disabled = !cropLayer;
     var cropInitialStatus = document.getElementById('parcelCropStatus');
     if (cropInitialStatus) cropInitialStatus.textContent = cropLayer
-      ? (useWhiteParcelBase() ? 'Crop icons will appear automatically over Ramos parcels. Parcels without a crop stay white; saved Corn, Rice and other crop records use their colors.' : 'Crop icons will appear automatically for the selected year and season. Saved parcel colors are unchanged.')
+      ? 'Parcels use white outlines and pale white fills. Saved crop icons and drawings appear automatically for the selected year and season.'
       : 'Seasonal crop controls could not load. Reload the page to try again.';
     if (cropApply) cropApply.addEventListener('click', function () {
       var year = document.getElementById('parcelCropYear');
@@ -1384,17 +1381,30 @@ var PopoverElement = maps3d.PopoverElement;
         link.href = (window.__parcelCropEditUrl || '').replace('__ID__', encodeURIComponent(link.dataset.plotCropId))
           + '?year=' + cropSettings.year + '&season=' + cropSettings.season;
       });
-      loadCropLayer(true);
-      refreshPlantedAreas(true);
+      loadCropLayer(false);
+      refreshPlantedAreas(false);
     });
     var cropRetry = document.getElementById('parcelCropRetry');
     if (cropRetry) cropRetry.addEventListener('click', function () { loadCropLayer(true); refreshPlantedAreas(true); });
-    function refreshPlantedAreas(force) {
+    function refreshPlantedAreas(force, resume) {
       if (!plantedAreaLayer) return;
-      var ids = savedPlotOverlays.filter(function (overlay) { return String(overlay.farmerId) === String(selectedFarmerId); }).map(function (overlay) { return overlay.plotId; });
-      if (focusedCropPlotId && ids.some(function (id) { return String(id) === String(focusedCropPlotId); })) ids = [focusedCropPlotId];
-      // Saved icons belong to the selected farmer; parcel recoloring is optional.
-      return plantedAreaLayer.load({enabled:true,year:cropSettings.year,season:cropSettings.season}, ids, !!force);
+      if (force) plantedAreaRefreshPending = true;
+      var metadata = cropLayer?.state;
+      if (metadata?.status !== 'ready') {
+        var previous = plantedAreaLayer.state;
+        if (!metadata || metadata.status === 'off' || metadata.status === 'error'
+          || (previous.year && (Number(previous.year) !== Number(cropSettings.year) || previous.season !== cropSettings.season))) {
+          plantedAreaLayer.load({enabled:false}, []);
+        }
+        return;
+      }
+      // Metadata discovers drawings only on authorized parcels already loaded here.
+      var ids = savedPlotOverlays.filter(function (overlay) {
+        return !overlay.disposed && cropLayer.record(overlay.plotId)?.has_planted_areas;
+      }).map(function (overlay) { return overlay.plotId; });
+      var refresh = plantedAreaRefreshPending;
+      plantedAreaRefreshPending = false;
+      return plantedAreaLayer.load({enabled:true,year:cropSettings.year,season:cropSettings.season}, ids, refresh, !!resume);
     }
     window.__refreshPlantedAreas = refreshPlantedAreas;
 
@@ -1488,75 +1498,119 @@ var PopoverElement = maps3d.PopoverElement;
     });
     document.getElementById('parcelCropModal')?.addEventListener('cancel', function (event) { event.preventDefault(); closeCropModal(); });
     window.__openParcelCropModal = openCropModal;
-    function renderPlantedAreas(state) {
+    async function renderPlantedAreas(state) {
       var status = document.getElementById('plantedAreaLayerStatus');
       var retry = document.getElementById('plantedAreaRetry');
-      if (retry) retry.hidden = state.status !== 'error';
-      if (status) status.textContent = state.status === 'error' ? state.error
-        : state.status === 'loading' ? 'Loading crop details for the selected farmer…'
-        : state.status === 'off' ? 'Crop icons appear automatically. Select a farmer to inspect saved crop lines and areas.'
-        : (state.records.some(function (row) { return row.needs_review; }) ? 'Some sections need office review after a parcel boundary change. ' : '')
-          + (state.partial ? 'Showing sections for the first 20 plots. Use Focus on another plot to see its sections. ' : '')
-          + cropSettings.year + ' · ' + (cropSettings.season === 'dry' ? 'Dry season' : 'Wet season') + '. Crop icons show saved crop marks. Select a mark to highlight its crop and variety.';
-      var key = state.status;
-      if (key !== plantedAreaKey || state.records !== plantedAreaRecords) {
-        plantedAreaKey = key;
-        plantedAreaRecords = state.records;
-        plantedAreaOverlays.forEach(function (item) { setOverlayVisible(item.poly, false); if (item.badge) setOverlayVisible(item.badge, false); });
-        plantedAreaOverlays = [];
-        if (state.status === 'ready' && (Polygon3DInteractiveElement || Polyline3DInteractiveElement)) state.records.forEach(function (record) {
-          var parcel = savedPlotOverlays.find(function (overlay) { return String(overlay.plotId) === String(record.plot_id); });
-          var conflicts = window.CropAreaBadges?.sections ? window.CropAreaBadges.sections(record.areas, parcel?.ring).conflicts : [];
-          var conflicting = new Set(conflicts.flat());
-          if (conflicts.length && status) status.textContent = 'Some crop sections overlap. Open Seasonal crops to move their points before saving. Conflicting sections are shown as outlines.';
-          record.areas.forEach(function (area, index) {
-            var line = area.type === 'line' || Array.isArray(area.path);
-            var points = line ? area.path : area.polygon;
-            if (!Array.isArray(points) || (line ? points.length < 2 : points.length < 3)) return;
-            var parent = savedPlotOverlays.find(function (overlay) { return String(overlay.plotId) === String(record.plot_id); });
-            var shade = line && !conflicting.has(index) && window.CropAreaBadges?.shadedRing ? window.CropAreaBadges.shadedRing(points, parent?.ring) : null;
-            var displayLine = line && !shade;
-            var poly = displayLine
-              ? (Polyline3DInteractiveElement ? new Polyline3DInteractiveElement({strokeColor: area.color, outerColor: hexToRgba(area.color, .32), strokeWidth: 5, outerWidth: 12, altitudeMode: AltitudeMode.CLAMP_TO_GROUND, drawsOccludedSegments: true, zIndex: 15}) : null)
-              : (Polygon3DInteractiveElement ? new Polygon3DInteractiveElement({strokeColor: area.color, strokeWidth: 2, fillColor: hexToRgba(area.color, conflicting.has(index) ? 0 : .38), altitudeMode: AltitudeMode.CLAMP_TO_GROUND, drawsOccludedSegments: true, zIndex: 15}) : null);
-            if (!poly) return;
-            poly.path = shade || points;
-            poly.addEventListener('gmp-click', function (event) {
-              event.stopPropagation?.();
-              if (plotMode) return;
-              if (status) status.textContent = area.crop_label + (area.name ? ' · ' + area.name : '') + (area.variety ? ' · ' + area.variety : '') + (line ? ' · Visual crop mark' : ' · ' + Number(area.area_ha).toFixed(4) + ' mapped ha');
-              if (!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
-                poly.strokeWidth = displayLine ? 8 : 5;
-                setTimeout(function () { poly.strokeWidth = displayLine ? 5 : 2; }, 700);
-              }
-            });
-            var badge = null;
-            if (window.CropAreaBadges && typeof Marker3DElement !== 'undefined' && Marker3DElement) {
-              var anchor = shade ? window.CropAreaBadges.position(shade) : window.CropAreaBadges.anchor ? window.CropAreaBadges.anchor(area) : window.CropAreaBadges.position(area.polygon);
-              if (anchor) {
-                badge = new Marker3DElement({position: anchor, altitudeMode: AltitudeMode.CLAMP_TO_GROUND,
-                  sizePreserved: true, drawsWhenOccluded: true,
-                  collisionBehavior: google.maps.CollisionBehavior.REQUIRED, zIndex: 18});
-                badge.replaceChildren(window.CropAreaBadges.markerContent
-                  ? window.CropAreaBadges.markerContent(document, area.crop)
-                  : window.CropAreaBadges.template(document, area.crop));
-              }
-            }
-            plantedAreaOverlays.push({plotId: record.plot_id, crop: area.crop, poly: poly, badge: badge});
-          });
-        });
-        // Replace parcel overview badges only after detail icons are available.
-        schedulePlotDisplayRefresh();
+      if (plantedAreaRetryTimer) clearTimeout(plantedAreaRetryTimer);
+      if (retry) {
+        retry.hidden = state.status !== 'error';
+        retry.disabled = state.status === 'error' && Date.now() < (state.retryAt || 0);
+        if (retry.disabled) plantedAreaRetryTimer = setTimeout(function () { retry.disabled = false; }, Math.min(60000, Math.max(1, state.retryAt - Date.now())));
       }
-      plantedAreaOverlays.forEach(function (area) {
-        var parent = savedPlotOverlays.find(function (overlay) { return String(overlay.plotId) === String(area.plotId); });
-        var visible = !!parent && String(parent.farmerId) === String(selectedFarmerId) && shouldShowSavedPlot(parent) && (!cropSettings.enabled || cropSettings.filter === 'all' || cropSettings.filter === area.crop);
-        setOverlayVisible(area.poly, visible);
-        if (area.badge) setOverlayVisible(area.badge, visible && Number(map3d.range) <= 6000);
+      var progress = state.total ? (state.loaded || 0) + ' of ' + state.total + ' parcels with crop drawings loaded. ' : '';
+      if (status) status.textContent = state.status === 'error' ? state.error
+          + ' ' + progress
+        : state.status === 'loading' ? 'Loading saved crop drawings across the map… ' + progress
+        : state.status === 'off' ? 'No saved crop drawings for this map and season. Parcels with crop classifications still show their icons.'
+        : (state.records.some(function (row) { return row.needs_review; }) ? 'Some sections need office review after a parcel boundary change. ' : '')
+          + cropSettings.year + ' · ' + (cropSettings.season === 'dry' ? 'Dry season' : 'Wet season') + '. Saved crop drawings are shown across the map. Select a mark to highlight its crop and variety.';
+      var revision = ++plantedAreaRenderRevision;
+      var parents = new Map(savedPlotOverlays.filter(function (plot) { return !plot.disposed; }).map(function (plot) { return [String(plot.plotId), plot]; }));
+      var records = new Map(state.records.map(function (record) { return [String(record.plot_id), record]; }));
+      var changed = false;
+      // Keep completed batches and their GPU objects; discard only replaced data.
+      plantedAreaOverlays = plantedAreaOverlays.filter(function (item) {
+        var keep = item.record === records.get(String(item.plotId)) && item.parentRing === parents.get(String(item.plotId))?.ring;
+        if (!keep) { setOverlayVisible(item.poly, false); setOverlayVisible(item.badge, false); changed = true; }
+        return keep;
       });
+      plantedAreaRenderedRecords.forEach(function (value, id) {
+        if (value.record !== records.get(id) || value.ring !== parents.get(id)?.ring) plantedAreaRenderedRecords.delete(id);
+      });
+      if (changed) { overviewCropDetailsRef = null; schedulePlotDisplayRefresh(); }
+      var frameStart = performance.now();
+      for (var record of state.records) {
+        if (revision !== plantedAreaRenderRevision) return;
+        var parcel = parents.get(String(record.plot_id));
+        if (!parcel || plantedAreaRenderedRecords.has(String(record.plot_id))) continue;
+        plantedAreaRenderedRecords.set(String(record.plot_id), {record:record,ring:parcel.ring});
+        if (Polygon3DInteractiveElement || Polyline3DInteractiveElement) {
+          var items = buildPlantedCropOverlays(record, parcel, status);
+          plantedAreaOverlays.push.apply(plantedAreaOverlays, items);
+          items.forEach(function (item) { showPlantedCropOverlay(item, parcel); });
+          overviewCropDetailsRef = null;
+          changed = true;
+        }
+        if (performance.now() - frameStart >= 6) {
+          if (changed) { schedulePlotDisplayRefresh(); changed = false; }
+          await nextPlotFrame();
+          frameStart = performance.now();
+        }
+      }
+      if (revision !== plantedAreaRenderRevision) return;
+      if (changed) schedulePlotDisplayRefresh();
+      frameStart = performance.now();
+      for (var area of plantedAreaOverlays) {
+        if (revision !== plantedAreaRenderRevision) return;
+        var parent = parents.get(String(area.plotId));
+        showPlantedCropOverlay(area, parent);
+        if (performance.now() - frameStart >= 6) { await nextPlotFrame(); frameStart = performance.now(); }
+      }
+    }
+    function showPlantedCropOverlay(area, parent) {
+      var visible = !!parent && shouldShowSavedPlot(parent) && (!cropSettings.enabled || cropSettings.filter === 'all' || cropSettings.filter === area.crop);
+      setOverlayVisible(area.poly, visible);
+      if (area.badge) setOverlayVisible(area.badge, visible && Number(map3d.range) <= 6000);
+    }
+    function buildPlantedCropOverlays(record, parcel, status) {
+      var items = [];
+      var conflicts = window.CropAreaBadges?.sections ? window.CropAreaBadges.sections(record.areas, parcel.ring).conflicts : [];
+      var conflicting = new Set(conflicts.flat());
+      if (conflicts.length && status) status.textContent = 'Some crop sections overlap. Open Seasonal crops to move their points before saving. Conflicting sections are shown as outlines.';
+      record.areas.forEach(function (area, index) {
+        var line = area.type === 'line' || Array.isArray(area.path);
+        var points = line ? area.path : area.polygon;
+        if (!Array.isArray(points) || (line ? points.length < 2 : points.length < 3)) return;
+        var shade = line && !conflicting.has(index) && window.CropAreaBadges?.shadedRing ? window.CropAreaBadges.shadedRing(points, parcel.ring) : null;
+        var displayLine = line && !shade;
+        var poly = displayLine
+          ? (Polyline3DInteractiveElement ? new Polyline3DInteractiveElement({strokeColor: area.color, outerColor: hexToRgba(area.color, .32), strokeWidth: 5, outerWidth: 12, altitudeMode: AltitudeMode.CLAMP_TO_GROUND, drawsOccludedSegments: true, zIndex: 15}) : null)
+          : (Polygon3DInteractiveElement ? new Polygon3DInteractiveElement({strokeColor: area.color, strokeWidth: 2, fillColor: hexToRgba(area.color, conflicting.has(index) ? 0 : .38), altitudeMode: AltitudeMode.CLAMP_TO_GROUND, drawsOccludedSegments: true, zIndex: 15}) : null);
+        if (!poly) return;
+        poly.path = shade || points;
+        poly.addEventListener('gmp-click', function (event) {
+          event.stopPropagation?.();
+          if (plotMode) return;
+          if (String(selectedFarmerId) !== String(parcel.farmerId) && typeof window.__openFarmer3d === 'function') {
+            window.__openFarmer3d(String(parcel.farmerId), {focusParcels:false}).catch(function () {
+              if (status) status.textContent = 'This crop is saved. Farmer details could not load; use the farmer finder to try again.';
+            });
+          }
+          if (status) status.textContent = area.crop_label + (area.name ? ' · ' + area.name : '') + (area.variety ? ' · ' + area.variety : '') + (line ? ' · Visual crop mark' : ' · ' + Number(area.area_ha).toFixed(4) + ' mapped ha');
+          if (!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+            poly.strokeWidth = displayLine ? 8 : 5;
+            setTimeout(function () { poly.strokeWidth = displayLine ? 5 : 2; }, 700);
+          }
+        });
+        var badge = null;
+        if (window.CropAreaBadges && typeof Marker3DElement !== 'undefined' && Marker3DElement) {
+          var anchor = shade ? window.CropAreaBadges.position(shade) : window.CropAreaBadges.anchor ? window.CropAreaBadges.anchor(area) : window.CropAreaBadges.position(area.polygon);
+          if (anchor) {
+            badge = new Marker3DElement({position: anchor, altitudeMode: AltitudeMode.CLAMP_TO_GROUND,
+              sizePreserved: true, drawsWhenOccluded: true,
+              collisionBehavior: google.maps.CollisionBehavior.REQUIRED, zIndex: 18});
+            badge.title = area.crop_label + ' · ' + cropSettings.year + ' ' + (cropSettings.season === 'dry' ? 'Dry season' : 'Wet season') + ' · Saved crop drawing';
+            badge.replaceChildren(window.CropAreaBadges.markerContent
+              ? window.CropAreaBadges.markerContent(document, area.crop)
+              : window.CropAreaBadges.template(document, area.crop));
+          }
+        }
+        items.push({plotId:record.plot_id,crop:area.crop,poly:poly,badge:badge,record:record,parentRing:parcel.ring});
+      });
+      return items;
     }
     var plantedRetry = document.getElementById('plantedAreaRetry');
-    if (plantedRetry) plantedRetry.addEventListener('click', function () { refreshPlantedAreas(true); });
+    if (plantedRetry) plantedRetry.addEventListener('click', function () { refreshPlantedAreas(false, true); });
     function cropCaption(plotId) {
       if (!cropLayer || !cropLayer.state.enabled) return '';
       var row = cropLayer.record(plotId), state = cropLayer.state;
@@ -1564,15 +1618,12 @@ var PopoverElement = maps3d.PopoverElement;
         + (row ? row.crop_label : state.status === 'loading' ? 'Loading crop' : 'Crop unavailable');
     }
     function applyCropStyle(overlay) {
-      var cropRecord = cropLayer?.record?.(overlay.plotId);
-      var classifiedColor = cropRecord && cropRecord.crop !== 'not_recorded' && /^#[a-f0-9]{6}$/i.test(cropRecord.color || '') ? cropRecord.color : null;
-      var fillHex = useWhiteParcelBase() ? (classifiedColor || '#FFFFFF') : cropLayer ? cropLayer.color(overlay.plotId, overlay.savedColor) : overlay.savedColor;
-      var sectioned = !!cropLayer?.state?.enabled && cropRecord?.has_planted_areas;
-      var styleKey = fillHex + '/' + !!sectioned;
+      var sectioned = !!plantedAreaRenderedRecords.get(String(overlay.plotId))?.record.areas.length;
+      var styleKey = '#FFFFFF/' + !!sectioned;
       if (overlay.displayColor === styleKey) return;
       overlay.displayColor = styleKey;
-      Object.assign(overlay.style, { strokeStrong: useWhiteParcelBase() ? (classifiedColor ? hexAlpha(fillHex, 'D0') : '#FFFFFF') : hexAlpha(fillHex, '90'), strokeHover: useWhiteParcelBase() ? (classifiedColor ? hexAlpha(fillHex, 'F0') : '#FFFFFF') : hexAlpha(fillHex, 'B0'),
-        fillSoft: hexToRgba(fillHex, useWhiteParcelBase() ? 0.34 : sectioned ? 0.04 : 0.38), fillHover: hexToRgba(fillHex, useWhiteParcelBase() ? 0.44 : sectioned ? 0.08 : 0.46) });
+      Object.assign(overlay.style, { strokeStrong: '#FFFFFF', strokeHover: '#FFFFFF',
+        fillSoft: hexToRgba('#FFFFFF', sectioned ? 0.04 : 0.34), fillHover: hexToRgba('#FFFFFF', sectioned ? 0.08 : 0.44) });
       overlay.poly.fillColor = overlay.style.fillSoft;
       overlay.poly.strokeColor = overlay.style.strokeStrong;
     }
@@ -1598,7 +1649,7 @@ var PopoverElement = maps3d.PopoverElement;
         });
       }
       var detailCrops = overviewCropDetails.get(String(overlay.plotId));
-      if (detailCrops && String(overlay.farmerId) === String(selectedFarmerId) && Number(map3d.range) <= 6000) {
+      if (detailCrops && Number(map3d.range) <= 6000) {
         codes = codes.filter(function (code) { return !detailCrops.has(code); });
       }
       var key = codes.join('/');
@@ -1612,7 +1663,7 @@ var PopoverElement = maps3d.PopoverElement;
         if (overlay.cropBadgeAnchor === undefined) overlay.cropBadgeAnchor = helper.parcelPosition(overlay.ring);
         if (overlay.cropBadgeAnchor) {
           overlay.cropBadge = new Marker3DElement({position: overlay.cropBadgeAnchor,
-            altitudeMode: AltitudeMode.CLAMP_TO_GROUND, sizePreserved: true, drawsWhenOccluded: false,
+            altitudeMode: AltitudeMode.CLAMP_TO_GROUND, sizePreserved: true,
             drawsWhenOccluded: true, collisionBehavior: google.maps.CollisionBehavior.REQUIRED, zIndex: 17});
           overlay.cropBadge.replaceChildren(helper.parcelMarkerContent(document, codes));
         }
@@ -1845,7 +1896,7 @@ var PopoverElement = maps3d.PopoverElement;
       }
 
       savedPlotOverlays = keep;
-      refreshPlantedAreas(true);
+      refreshPlantedAreas(false);
       queueCropLayer();
     }
 
@@ -2132,13 +2183,10 @@ function renderPlotsForFarmer(farmerId, plots, options) {
     if (!ring || ring.length < 3) continue;
 
     var storedColor = getEffectivePlotColor(pl);
-    var fillHex = useWhiteParcelBase() ? '#FFFFFF' : storedColor;
-
-    // very subtle border, same family as fill color
-    var visibleBorder = useWhiteParcelBase() ? '#FFFFFF' : hexAlpha(fillHex, '90');
-
-    // stronger fill so polygon is easier to see on satellite view
-    var fillSoft = hexToRgba(fillHex, useWhiteParcelBase() ? 0.34 : 0.38);
+    // White is presentation only; the stored color remains available for exports.
+    var fillHex = '#FFFFFF';
+    var visibleBorder = '#FFFFFF';
+    var fillSoft = hexToRgba(fillHex, 0.34);
     var overview = window.ParcelDisplayGeometry
       ? window.ParcelDisplayGeometry.overviewRing(ring, 1)
       : ring;
@@ -2166,9 +2214,9 @@ function renderPlotsForFarmer(farmerId, plots, options) {
     // The polygon already provides the full click target, including its fill.
     overlay.style = {
       strokeStrong: visibleBorder,
-      strokeHover: hexAlpha(fillHex, 'B0'),
+      strokeHover: '#FFFFFF',
       fillSoft: fillSoft,
-      fillHover: hexToRgba(fillHex, useWhiteParcelBase() ? 0.44 : 0.46),
+      fillHover: hexToRgba(fillHex, 0.44),
       polyWidth: 0.8,
       polyHoverWidth: 1.1,
       lineWidth: 14,
@@ -2239,7 +2287,7 @@ async function refreshSavedPlotDisplay() {
     } while (index < overlays.length && performance.now() - frameStart < 6);
     if (index < overlays.length) await nextPlotFrame();
   }
-  if (plantedAreaLayer) renderPlantedAreas(plantedAreaLayer.state);
+  if (plantedAreaLayer) await renderPlantedAreas(plantedAreaLayer.state);
 }
 
 function schedulePlotDisplayRefresh() {
@@ -3014,8 +3062,7 @@ function printPlotSheet(farmer, plot) {
     }
 
     function focusPlotById(plotId) {
-      focusedCropPlotId = plotId;
-      refreshPlantedAreas(true);
+      refreshPlantedAreas(false);
       var plots = findSelectedFarmerPlots();
       for (var i10 = 0; i10 < plots.length; i10++) {
         if (String(plots[i10].id) !== String(plotId)) continue;
@@ -4791,7 +4838,6 @@ window.__openFarmer3d = function (id, opts) {
     selectedFarmerId = id;
     selectedVertexIndex = -1;
     focusedParcelFarmerId = opts.focusParcels === true ? id : null;
-    focusedCropPlotId = null;
     refreshPlantedAreas(false);
 
     highlightRow(f.id);

@@ -5,7 +5,6 @@
   $googleMapsMapId  = $googleMapsMapId ?? config('services.google_maps.map_id') ?? '';
   $farmersMapData   = $farmersMapData ?? [];
   $mapWorkspaceMunicipality = $mapWorkspaceMunicipality ?? null;
-  $mapUsesWhiteParcelBase = strcasecmp((string) ($mapWorkspaceMunicipality?->name ?? ''), 'Ramos') === 0;
   // Neutral fallback: this partial has no way of knowing which province it is
   // being rendered for, so it must not name one.
   $mapWorkspaceName = $mapWorkspaceName ?? ($mapWorkspaceMunicipality?->name ?? 'All supervised municipalities');
@@ -963,7 +962,7 @@
         @if($mapMunicipalityBoundaries->isNotEmpty())
           <span><i class="parcel-legend-line parcel-legend-geofence"></i> Official municipality boundary</span>
         @endif
-        <span><i class="parcel-legend-line"></i> Saved parcel</span>
+        <span><i class="parcel-legend-line parcel-legend-saved"></i> Saved parcel</span>
         <span><i class="parcel-legend-line parcel-legend-draft"></i> Draft</span>
       </div>
 
@@ -1415,7 +1414,6 @@
 @include('farm_plots._crop_modal')
 
 <script>
-  window.__whiteParcelBase = @json($mapUsesWhiteParcelBase);
   window.__municipalityGeofenceData = @json($mapMunicipalityBoundaries->values());
   window.__municipalitySnapshotDataUrl = @json(
     $mapWorkspaceMunicipality
@@ -1942,6 +1940,11 @@
     height: 0;
     border-top: 3px dashed #15803d;
     background: transparent;
+  }
+
+  #farmersMapModule .parcel-legend-saved {
+    background: #FFFFFF;
+    box-shadow: 0 0 0 1px var(--ui-control-border);
   }
 
   #farmersMapModule .parcel-legend-draft {
