@@ -655,3 +655,12 @@ unchanged. Existing tracked/untracked operational files were preserved.
 The scheduler is visible on Hostinger at six-hour Open-Meteo and daily CHIRPS
 entries. See [automated climate evidence](CLIMATE_AUTOMATED_SOURCES.md).
 
+# Verified Hostinger follow-up — October 15, 2026 — rotating provider batches
+
+Runtime `77b27cc` was fast-forwarded from GitHub main. Unscoped automated
+source jobs now use a cache-backed rotating batch of up to 100 municipalities;
+explicit municipality refreshes remain immediate. This prevents the scheduled
+Open-Meteo and CHIRPS jobs from creating a single large provider burst. No
+migration, account, assessment, parcel, NDVI or provider-budget change ran in
+this follow-up; configuration, route and view caches were rebuilt.
+
