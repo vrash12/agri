@@ -38,6 +38,7 @@ class ClimateRiskController extends Controller
 
         return view('climate_risk.index', compact('choices', 'selected', 'filter', 'installed', 'rows', 'totals', 'paginator', 'assessments', 'plots') + [
             'plotSummaries' => $plots?->getCollection()->map(fn (FarmPlot $plot) => $this->dashboard->plotSummary($plot))->keyBy('id') ?? collect(),
+            'automatedEvidence' => $selected ? $this->dashboard->automatedEvidence($request->user(), $selected) : ['open_meteo' => null, 'chirps' => null, 'sentinel2' => null],
             'mapConfig' => ['mapUrl' => route('climate-risk.map', ['municipality_id' => $selected?->id, 'risk' => $filter]),
                 'rainfallUrl' => $selected ? route('climate-risk.rainfall', ['municipality_id' => $selected->id]) : null,
                 'areaUrl' => route('climate-risk.index'), 'mapsKey' => config('services.google_maps.key'), 'municipalityId' => $selected?->id],

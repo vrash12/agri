@@ -21,6 +21,19 @@ class Kernel extends ConsoleKernel
             ->dailyAt((string) config('backup.schedule_at', '01:30'))
             ->withoutOverlapping()
             ->runInBackground();
+
+        // Provider evidence is refreshed separately from office assessments.
+        // The command only writes source snapshots; it never creates a risk
+        // level or marks a parcel affected. Hostinger should run schedule:run
+        // from its existing cron entry.
+        $schedule->command('climate:refresh-sources --provider=open-meteo')
+            ->everySixHours()->withoutOverlapping(20)->runInBackground();
+        $schedule->command('climate:refresh-sources --provider=chirps')
+            ->dailyAt('03:15')->withoutOverlapping(30)->runInBackground();
+        if (config('climate.sources.sentinel2.enabled', false)) {
+            $schedule->command('climate:refresh-sources --provider=sentinel2')
+                ->weeklyOn(1, '04:00')->withoutOverlapping(120)->runInBackground();
+        }
     }
 
     /**

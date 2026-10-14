@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\ClimateRiskAssessment;
+use App\Models\ClimateRiskSourceReading;
 use App\Models\FarmPlot;
 use App\Models\Municipality;
 use App\Models\User;
@@ -73,5 +74,32 @@ final class ClimateRiskDashboard
             'ndvi' => $this->vegetation->forPlot($plot),
             'satellite_url' => route('farm-plots.satellite.show', $plot),
             'map_url' => route('farmers.index', ['municipality_id' => $plot->farmer->municipality_id, 'farmer_id' => $plot->farmer_id]).'#farmersMapModule'];
+    }
+
+    /**
+     * Return the latest bounded provider summaries for the selected area.
+     * These are evidence snapshots only; they never become an office level.
+     *
+     * @return array<string, array<string, mixed>|null>
+     */
+    public function automatedEvidence(User $user, Municipality $municipality): array
+    {
+        if (! Schema::hasTable('climate_risk_source_readings')
+            || ! $this->access->scopeMunicipalities(Municipality::query()->active(), $user)->whereKey($municipality->getKey())->exists()) {
+            return ['open_meteo' => null, 'chirps' => null, 'sentinel2' => null];
+        }
+
+        $rows = ClimateRiskSourceReading::query()->where('municipality_id', $municipality->getKey())
+            ->whereIn('provider', array_keys(ClimateRiskSourceReading::PROVIDERS))
+            ->orderByDesc('fetched_at')->get()->groupBy('provider');
+        $result = [];
+        foreach (array_keys(ClimateRiskSourceReading::PROVIDERS) as $provider) {
+            $result[$provider] = $rows->get($provider)?->sortByDesc('fetched_at')->first()?->only([
+                'provider', 'metric', 'observed_on', 'period_start', 'period_end', 'value', 'baseline_value',
+                'anomaly_percent', 'unit', 'status', 'source_label', 'source_url', 'metadata', 'fetched_at',
+            ]);
+        }
+
+        return $result;
     }
 }

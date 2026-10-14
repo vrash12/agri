@@ -51,6 +51,14 @@ The module combines four kinds of evidence:
   after 14 days. Ownership/boundary changes invalidate them. The dashboard never
   launches a Copernicus analysis or interprets greenness as confirmed damage.
 
+Automated source snapshots now complement these office records. Open-Meteo
+forecast summaries refresh every six hours and CHIRPS v3 area-average rainfall
+with a rolling reference refreshes daily through `climate:refresh-sources`.
+Copernicus automation remains opt-in and capped because it consumes the existing
+processing allowance; saved NDVI readings continue to appear immediately. These
+snapshots never create an office assessment or affected-parcel link. See
+[automated climate evidence](CLIMATE_AUTOMATED_SOURCES.md).
+
 ## Map, register and workflow
 
 An area has one editable assessment keyed by municipality and a normalized

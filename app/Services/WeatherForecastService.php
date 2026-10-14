@@ -35,7 +35,7 @@ class WeatherForecastService
     }
 
     /** The climate dashboard uses the saved municipality boundary reference point. */
-    public function forMunicipalityAt(Municipality $municipality, array $coordinates): array
+    public function forMunicipalityAt(Municipality $municipality, array $coordinates, bool $forceRefresh = false): array
     {
         if (! is_numeric($coordinates['latitude'] ?? null) || ! is_numeric($coordinates['longitude'] ?? null)
             || abs((float) $coordinates['latitude']) > 90 || abs((float) $coordinates['longitude']) > 180) {
@@ -43,7 +43,7 @@ class WeatherForecastService
         }
         $key = 'weather.climate.v1.'.$municipality->getKey().'.'.hash('sha256', json_encode($coordinates));
 
-        return $this->forecastAt($municipality, $coordinates, $key, false);
+        return $this->forecastAt($municipality, $coordinates, $key, $forceRefresh);
     }
 
     private function forecastAt(Municipality $municipality, array $coordinates, string $cacheKey, bool $forceRefresh): array

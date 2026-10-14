@@ -13,6 +13,18 @@
 .climate-risk .climate-alert{color:#8F4D10;background:#fff0de}
 .climate-risk .climate-critical{color:#A03E37;background:#faecea}
 .climate-risk .climate-unassessed{color:#596B61;background:#eef2ef}
+.climate-risk .climate-source-panel{margin-top:16px}
+.climate-risk .climate-source-note{display:inline-flex;align-items:center;border:1px solid #d8e4dd;border-radius:999px;padding:6px 10px;color:#52645b;font-size:12px;white-space:nowrap}
+.climate-risk .climate-source-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:0 20px 20px}
+.climate-risk .climate-source-card{display:flex;flex-direction:column;gap:7px;border:1px solid #dbe6df;border-radius:12px;padding:16px;background:#fbfdfb;min-height:170px}
+.climate-risk .climate-source-card h3{margin:0;font-size:17px;color:#173c2c}
+.climate-risk .climate-source-card strong{font-size:25px;line-height:1.1;color:#123e2b}
+.climate-risk .climate-source-card p{margin:0;color:#52645b;font-size:13px;line-height:1.5}
+.climate-risk .climate-source-card small{color:var(--climate-muted);font-size:12px;line-height:1.4}
+.climate-risk .climate-source-card a{margin-top:auto;color:#1f6947;font-size:13px;font-weight:600}
+.climate-risk .climate-source-kicker{color:#7a5b08;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+@media (max-width:900px){.climate-risk .climate-source-grid{grid-template-columns:1fr 1fr}}
+@media (max-width:620px){.climate-risk .climate-source-grid{grid-template-columns:1fr}.climate-risk .climate-source-note{white-space:normal}}
 .climate-risk .climate-explanation,.climate-risk .climate-map-status{font-size:14px;line-height:1.65;color:var(--climate-muted);padding:0 20px}
 .climate-risk>.climate-explanation{padding:0}
 .climate-risk .climate-map{height:520px;min-height:340px;background:#edf3ed}

@@ -48,6 +48,46 @@
       </div>
     </section>
     @if($selected)
+      @php($openMeteo = $automatedEvidence['open_meteo'] ?? null)
+      @php($chirps = $automatedEvidence['chirps'] ?? null)
+      @php($sentinelEvidence = $automatedEvidence['sentinel2'] ?? null)
+      <section class="module-panel climate-source-panel" aria-labelledby="automatedEvidenceTitle">
+        <div class="module-panel-head"><div><h2 id="automatedEvidenceTitle">Automated evidence</h2><p>Provider snapshots are refreshed by the scheduled worker. They support review and never create an office risk level automatically.</p></div><span class="climate-source-note">No parcel impact is inferred</span></div>
+        <div class="climate-source-grid">
+          <article class="climate-source-card">
+            <span class="climate-source-kicker">Open-Meteo</span><h3>Forecast rainfall</h3>
+            @if($openMeteo)
+              <strong>{{ $openMeteo['value'] !== null ? number_format((float) $openMeteo['value'], 1).' mm' : 'No value' }}</strong>
+              <p>{{ $openMeteo['period_start'] ?? '—' }} to {{ $openMeteo['period_end'] ?? '—' }} · {{ $openMeteo['metadata']['forecast_days'] ?? '—' }} days</p>
+              <small>Fetched {{ optional($openMeteo['fetched_at'] ?? null)->format('M j, Y g:i A') ?? '—' }} · forecast guidance</small>
+            @else
+              <strong>Not synced yet</strong><p>The scheduled refresh will add the latest seven-day forecast.</p>
+            @endif
+            <a href="https://open-meteo.com/en/docs" target="_blank" rel="noopener noreferrer">Source documentation</a>
+          </article>
+          <article class="climate-source-card">
+            <span class="climate-source-kicker">CHIRPS v3</span><h3>Recent rainfall vs reference</h3>
+            @if($chirps)
+              <strong>{{ $chirps['value'] !== null ? number_format((float) $chirps['value'], 1).' mm' : 'No value' }}</strong>
+              <p>{{ $chirps['period_start'] ?? '—' }} to {{ $chirps['period_end'] ?? '—' }}</p>
+              @if($chirps['anomaly_percent'] !== null)<small>{{ number_format((float) $chirps['anomaly_percent'], 1) }}% vs {{ $chirps['metadata']['baseline_years'] ?? 0 }}-year rolling reference</small>@else<small>Reference comparison is not available yet.</small>@endif
+            @else
+              <strong>Not synced yet</strong><p>CHIRPS updates arrive after its short reporting delay.</p>
+            @endif
+            <a href="https://chc.ucsb.edu/data/chirps3" target="_blank" rel="noopener noreferrer">Source documentation</a>
+          </article>
+          <article class="climate-source-card">
+            <span class="climate-source-kicker">Copernicus Sentinel-2</span><h3>Parcel vegetation</h3>
+            @if($sentinelEvidence)
+              <strong>Saved NDVI evidence</strong><p>Use the parcel satellite check for a new observation; cloud masking and crop stage affect availability.</p>
+              <small>Latest snapshot {{ optional($sentinelEvidence['observed_on'] ?? null)->format('M j, Y') ?? '—' }}</small>
+            @else
+              <strong>On-demand</strong><p>Satellite checks stay on-demand to protect the account processing quota.</p>
+            @endif
+            <a href="https://documentation.dataspace.copernicus.eu/Quotas.html" target="_blank" rel="noopener noreferrer">Quota guide</a>
+          </article>
+        </div>
+      </section>
       <div class="climate-evidence">
         <section class="module-panel" aria-labelledby="rainTitle">
           <div class="module-panel-head"><div><h2 id="rainTitle">Rainfall outlook</h2><p>Seven-day forecast at {{ $selected->name }}'s saved boundary reference point.</p></div><button type="button" class="module-button" id="loadClimateRainfall">Load forecast</button></div>
