@@ -67,7 +67,10 @@
           </article>
           <article class="climate-source-card">
             <span class="climate-source-kicker">CHIRPS v3</span><h3>Recent rainfall vs reference</h3>
-            @if($chirps)
+            @if($chirps && ($chirps['status'] ?? 'available') !== 'available')
+              <strong>Waiting for update</strong><p>CHIRPS has a short reporting delay; no recent rainfall value is available yet.</p>
+              <small>Last checked {{ optional($chirps['fetched_at'] ?? null)->format('M j, Y g:i A') ?? '—' }}</small>
+            @elseif($chirps)
               <strong>{{ $chirps['value'] !== null ? number_format((float) $chirps['value'], 1).' mm' : 'No value' }}</strong>
               <p>{{ $chirps['period_start'] ?? '—' }} to {{ $chirps['period_end'] ?? '—' }}</p>
               @if($chirps['anomaly_percent'] !== null)<small>{{ number_format((float) $chirps['anomaly_percent'], 1) }}% vs {{ $chirps['metadata']['baseline_years'] ?? 0 }}-year rolling reference</small>@else<small>Reference comparison is not available yet.</small>@endif
