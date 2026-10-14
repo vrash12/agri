@@ -1652,7 +1652,10 @@ var PopoverElement = maps3d.PopoverElement;
       if (detailCrops && Number(map3d.range) <= 6000) {
         codes = codes.filter(function (code) { return !detailCrops.has(code); });
       }
-      var key = codes.join('/');
+      // Grouped parcel badges stay compact while the map is zoomed out. Detail
+      // crop labels take over at close range, where the larger badge is useful.
+      var compact = Number(map3d.range) > 6000;
+      var key = (compact ? 'compact:' : 'full:') + codes.join('/');
       var visible = codes.length > 0 && shouldShowSavedPlot(overlay);
       if (overlay.cropBadgeKey !== key) {
         setOverlayVisible(overlay.cropBadge, false);
@@ -1665,7 +1668,7 @@ var PopoverElement = maps3d.PopoverElement;
           overlay.cropBadge = new Marker3DElement({position: overlay.cropBadgeAnchor,
             altitudeMode: AltitudeMode.CLAMP_TO_GROUND, sizePreserved: true,
             drawsWhenOccluded: true, collisionBehavior: google.maps.CollisionBehavior.REQUIRED, zIndex: 17});
-          overlay.cropBadge.replaceChildren(helper.parcelMarkerContent(document, codes));
+          overlay.cropBadge.replaceChildren(helper.parcelMarkerContent(document, codes, {compact: compact}));
         }
       }
       if (overlay.cropBadge) {

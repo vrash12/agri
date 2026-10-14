@@ -100,18 +100,24 @@
       ? record.area_crops : [record.crop];
     return [...new Set(codes.filter(code => Object.hasOwn(crops, code)))].slice(0, 8);
   }
-  function parcelMarkerContent(document, codes) {
+  function parcelMarkerContent(document, codes, options) {
     const selected = [...new Set(codes.filter(code => Object.hasOwn(crops, code)))].slice(0, 8);
+    const compact = !!options?.compact;
+    const gap = compact ? 18 : 26;
+    const iconSize = compact ? 16 : 24;
+    const height = compact ? 24 : 36;
     const template = document.createElement('template');
     const node = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    const width = selected.length * 26 + 12;
-    Object.entries({viewBox:`0 0 ${width} 36`,width:String(width),height:'36','aria-hidden':'true'}).forEach(([key,value])=>node.setAttribute(key,value));
+    const width = selected.length * gap + (compact ? 8 : 12);
+    Object.entries({viewBox:`0 0 ${width} ${height}`,width:String(width),height:String(height),'aria-hidden':'true'}).forEach(([key,value])=>node.setAttribute(key,value));
     const frame = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    Object.entries({x:1,y:1,width:width-2,height:34,rx:9,fill:'#FFFFFF',stroke:'#20362C','stroke-width':2}).forEach(([key,value])=>frame.setAttribute(key,value));
+    Object.entries({x:1,y:1,width:width-2,height:height-2,rx:compact ? 7 : 9,fill:'#FFFFFF',stroke:'#20362C','stroke-width':compact ? 1.5 : 2}).forEach(([key,value])=>frame.setAttribute(key,value));
     node.appendChild(frame);
     selected.forEach((code,index)=>{
       const icon = svg(document,code,false);
-      icon.setAttribute('x',String(6+index*26)); icon.setAttribute('y','6');
+      icon.setAttribute('width',String(iconSize)); icon.setAttribute('height',String(iconSize));
+      icon.setAttribute('x',String(compact ? 4 + index * gap : 6 + index * gap));
+      icon.setAttribute('y',String(compact ? 4 : 6));
       node.appendChild(icon);
     });
     template.content.appendChild(node);

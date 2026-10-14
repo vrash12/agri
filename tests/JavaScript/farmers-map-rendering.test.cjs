@@ -268,8 +268,8 @@ test('initial background batches cannot replace a newer selected-farmer response
 test('parcel crop icons appear on initial overview without selection and reuse markers on camera changes', async () => {
   const {context,toggle}=harness();
   const helper=require('../../public/js/crop-area-badges.js');
-  let markers=0,anchors=0;
-  context.window.CropAreaBadges={...helper,parcelPosition:points=>{anchors++;return helper.parcelPosition(points);},parcelMarkerContent:(_,codes)=>codes.slice()};
+  let markers=0,anchors=0,modes=[];
+  context.window.CropAreaBadges={...helper,parcelPosition:points=>{anchors++;return helper.parcelPosition(points);},parcelMarkerContent:(_,codes,options)=>{modes.push(!!options?.compact);return codes.slice();}};
   context.Marker3DElement=class{constructor(options){Object.assign(this,options);markers++;}replaceChildren(value){this.content=value;}};
   context.google={maps:{CollisionBehavior:{OPTIONAL_AND_HIDES_LOWER_PRIORITY:'optional',REQUIRED:'required'}}};
   const rows=new Map([['1',{crop:'rice',area_crops:[]}],['2',{crop:'mixed',area_crops:['corn','rice']}],['3',{crop:'not_recorded',area_crops:[]}]]);
@@ -281,18 +281,21 @@ test('parcel crop icons appear on initial overview without selection and reuse m
   assert.equal(one.cropBadge.isConnected,true);assert.equal(two.cropBadge.isConnected,true);
   assert.equal(one.cropBadge.drawsWhenOccluded,true,'Whole-map crop icons remain visible over terrain');
   assert.equal(one.cropBadge.collisionBehavior,'required','Whole-map crop icons are not suppressed by map labels');
+  assert.equal(modes[0],true,'Distant grouped badges use the compact icon treatment');
   assert.deepEqual(Array.from(two.cropBadge.content),['corn','rice']);
   assert.equal(empty.cropBadge,null,'No crop icon without a saved seasonal record');
   assert.match(one.cropBadge.title,/Rice.*2026 Dry season/);
   const first=one.cropBadge;
   await context.refreshSavedPlotDisplay();await context.refreshSavedPlotDisplay();
   assert.equal(markers,2);assert.equal(anchors,2);assert.equal(one.cropBadge,first);
+  context.map3d.range=2500;await context.refreshSavedPlotDisplay();
+  assert.equal(modes.at(-1),false,'Close parcel view restores the full crop badge');
   toggle.checked=false;await context.refreshSavedPlotDisplay();assert.equal(first.isConnected,false);
   toggle.checked=true;context.focusedParcelFarmerId='2';await context.refreshSavedPlotDisplay();
   assert.equal(first.isConnected,false);assert.equal(two.cropBadge.isConnected,true);
   context.focusedParcelFarmerId=null;context.savedPlotsHiddenForEditing=true;await context.refreshSavedPlotDisplay();
   assert.equal(two.cropBadge.isConnected,false);
-  context.savedPlotsHiddenForEditing=false;await context.refreshSavedPlotDisplay();assert.equal(first.isConnected,true);
+  context.savedPlotsHiddenForEditing=false;await context.refreshSavedPlotDisplay();assert.equal(one.cropBadge.isConnected,true);
   context.clearPlotsForFarmer('1');assert.equal(first.isConnected,false,'Removing a parcel must remove its badge');
   rows.clear();await context.refreshSavedPlotDisplay();assert.equal(two.cropBadge,null,'Loading failures/new periods cannot retain stale icons');
 });

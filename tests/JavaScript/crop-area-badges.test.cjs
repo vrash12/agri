@@ -75,6 +75,20 @@ test('one parcel marker groups distinct crop icons using static SVG content',()=
   assert.equal(svg.children.filter(node=>node.tag==='svg').length,2);
   assert.equal(svg.children[0].attrs.fill,'#FFFFFF');
 });
+test('distant parcel badges use a compact icon row while close badges keep their full size',()=>{
+  class Node{constructor(tag){this.tag=tag;this.attrs={};this.children=[];}setAttribute(key,value){this.attrs[key]=String(value);}appendChild(child){this.children.push(child);}}
+  const document={createElementNS:(_,tag)=>new Node(tag),createElement:tag=>({tag,content:{children:[],appendChild(child){this.children.push(child);}}})};
+  const compact=badges.parcelMarkerContent(document,['rice','corn'],{compact:true});
+  const compactSvg=compact.content.children[0];
+  assert.equal(compactSvg.attrs.width,'44');
+  assert.equal(compactSvg.attrs.height,'24');
+  assert.equal(compactSvg.children[1].attrs.width,'16');
+  const full=badges.parcelMarkerContent(document,['rice','corn']);
+  const fullSvg=full.content.children[0];
+  assert.equal(fullSvg.attrs.width,'64');
+  assert.equal(fullSvg.attrs.height,'36');
+  assert.equal(fullSvg.children[1].attrs.width,'24');
+});
 test('badge follows edited geometry, selects the area and cleans up when removed',()=>{
   const a=adapter();assert.equal(a.button.style.left,'200px');
   a.button.events.click({stopPropagation(){}});assert.equal(a.selected,1);
