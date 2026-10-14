@@ -1,5 +1,19 @@
 # AgriLGU — Complete Feature Catalog
 
+The **El Niño Readiness** workspace combines a scoped municipality/barangay
+risk map, seven-day rainfall forecasts, dated drought/seasonal rainfall
+assessments, explicitly reported affected parcels and saved NDVI readings.
+Office staff record Normal, Watch, Alert or Critical with evidence and review
+dates; missing or expired assessments show Not assessed. Municipality colors
+show the highest current office priority, while available barangay outlines
+(Ramos/Baguio) keep their own assessment. Forecast and satellite observations
+show sources and dates and do not automatically declare drought or damage.
+Oversight is read-only; visitors, evaluators, vets and farmer sessions have no
+access. Staff can update or withdraw assessments with validation and conflict
+protection. Installation requires the additive climate-registry migration and
+the documented runtime/assets bundle; no disaster reports are prepopulated.
+See [El Niño readiness](docs/EL_NINO_READINESS.md).
+
 Deployed October 14, 2026 (`8861fda`): all saved parcels
 use white outlines and pale white fills across every Farmers map scope. A
 parcel with only a saved crop classification also stays white; crop icons and

@@ -82,6 +82,9 @@
       <h1>Operations dashboard</h1>
       <p>Monitor field coverage, assistance delivery, and work that needs attention.</p>
       <a class="ops-text-link" href="#dashboardReports" data-open-dashboard-section="dashboardReports">View graphs and reports <span aria-hidden="true">↓</span></a>
+      @can('viewAny', \App\Models\ClimateRiskAssessment::class)
+        <a class="ops-text-link" href="{{ route('climate-risk.index') }}">El Niño readiness <span aria-hidden="true">→</span></a>
+      @endcan
     </div>
 
     <div class="ops-date"><strong>{{ $localNow->format('l, F j, Y') }}</strong><span>As of {{ $localNow->format('h:i A') }} PHT</span></div>

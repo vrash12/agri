@@ -1,5 +1,20 @@
 # Agriculture Information System — Developer Guide
 
+The October 14 El Niño readiness dashboard adds scoped `/climate-risk` pages,
+dated municipality/barangay office assessments, explicit reported-parcel links,
+cached reference-point rainfall forecasts and summaries of completed NDVI
+checks. Normal/Watch/Alert/Critical are office response priorities; unknown or
+expired areas remain Not assessed. Barangay outlines use existing Ramos/Baguio
+planning references. Oversight remains read-only; existing agriculture staff
+can maintain assessments through policies, source/date validation, shared
+locks, optimistic versions and audit-safe counts. Visitors/evaluators/vets and
+farmer sessions are excluded. Apply only the new additive climate-registry
+migration after a verified backup; mirror both new assets and rebuild
+config/route/view caches without a general cache clear. No provider/account
+changes or invented disaster records are required. See
+[docs/EL_NINO_READINESS.md](docs/EL_NINO_READINESS.md) for data provenance,
+bounded map behavior, expiry and deployment acceptance.
+
 The October 14 whole-map crop/white-parcel/harvest-link release is deployed in
 runtime `8861fda` through GitHub main and Hostinger fast-forward pull. The
 targeted additive migration backfilled stable keys on existing crop sections

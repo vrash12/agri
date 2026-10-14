@@ -77,6 +77,11 @@ class Municipality extends Model
         return $this->hasMany(MunicipalityBoundary::class);
     }
 
+    public function climateRiskAssessments(): HasMany
+    {
+        return $this->hasMany(ClimateRiskAssessment::class);
+    }
+
     public function activeBoundary(): HasOne
     {
         return $this->hasOne(MunicipalityBoundary::class)

@@ -1125,6 +1125,14 @@
               'badge' => $operationBadge,
             ],
             [
+              'label' => 'El Niño Readiness',
+              'description' => 'Dry conditions, rainfall and field checks',
+              'icon' => 'boundary',
+              'route' => 'climate-risk.index',
+              'patterns' => ['climate-risk.*'],
+              'badge' => $operationBadge,
+            ],
+            [
               'label' => 'Animal Health',
               'description' => 'Vaccines, deworming, and care',
               'icon' => 'vax',

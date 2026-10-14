@@ -9,6 +9,7 @@ use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\BarangayBoundaryController;
+use App\Http\Controllers\ClimateRiskController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EvaluatorPasswordController;
 use App\Http\Controllers\FarmerController;
@@ -179,6 +180,16 @@ Route::middleware([
 
     Route::get('/weather-advisories', [WeatherAdvisoryController::class, 'index'])
         ->name('weather.index');
+
+    Route::get('/climate-risk', [ClimateRiskController::class, 'index'])->name('climate-risk.index');
+    Route::get('/climate-risk/map', [ClimateRiskController::class, 'mapData'])->middleware('throttle:climate-risk-data')->name('climate-risk.map');
+    Route::get('/climate-risk/rainfall', [ClimateRiskController::class, 'rainfall'])->middleware('throttle:climate-risk-forecast')->name('climate-risk.rainfall');
+    Route::get('/climate-risk/parcels', [ClimateRiskController::class, 'plotLookup'])->middleware('throttle:climate-risk-data')->name('climate-risk.parcels');
+    Route::get('/climate-risk/create', [ClimateRiskController::class, 'create'])->name('climate-risk.create');
+    Route::post('/climate-risk', [ClimateRiskController::class, 'store'])->name('climate-risk.store');
+    Route::get('/climate-risk/{assessment}/edit', [ClimateRiskController::class, 'edit'])->whereNumber('assessment')->name('climate-risk.edit');
+    Route::put('/climate-risk/{assessment}', [ClimateRiskController::class, 'update'])->whereNumber('assessment')->name('climate-risk.update');
+    Route::delete('/climate-risk/{assessment}', [ClimateRiskController::class, 'destroy'])->whereNumber('assessment')->name('climate-risk.destroy');
 
     Route::post('/weather-advisories/refresh', [WeatherAdvisoryController::class, 'refresh'])
         ->middleware('throttle:6,1')

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Exceptions\SatelliteUnavailable;
 use App\Models\FarmPlot;
 use App\Support\AuditTrail;
+use App\Support\ParcelVegetationSnapshot;
 use App\Support\SentinelImagery;
 use App\Support\SentinelParcel;
 use Carbon\CarbonImmutable;
@@ -14,9 +15,7 @@ use InvalidArgumentException;
 
 class ParcelSatelliteController extends Controller
 {
-    public function __construct(private SentinelImagery $imagery, private SentinelParcel $parcels)
-    {
-    }
+    public function __construct(private SentinelImagery $imagery, private SentinelParcel $parcels, private ParcelVegetationSnapshot $vegetation) {}
 
     public function show(Request $request, FarmPlot $plot)
     {
@@ -51,6 +50,7 @@ class ParcelSatelliteController extends Controller
         }
         try {
             $result = $this->imagery->statistics($plot, $data['from'], $data['to'], (int) $data['max_cloud']);
+            $this->vegetation->remember($plot, $result);
             AuditTrail::record('viewed', 'Satellite observations', 'Reviewed Sentinel-2 observations for a saved parcel.', [
                 'auditable' => $plot, 'metadata' => ['from' => $data['from'], 'to' => $data['to'], 'source' => 'Sentinel-2 L2A'],
             ]);

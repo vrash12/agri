@@ -31,7 +31,23 @@ class WeatherForecastService
             );
         }
 
-        $cacheKey = 'weather.forecast.v2.'.$municipality->getKey();
+        return $this->forecastAt($municipality, $coordinates, 'weather.forecast.v2.'.$municipality->getKey(), $forceRefresh);
+    }
+
+    /** The climate dashboard uses the saved municipality boundary reference point. */
+    public function forMunicipalityAt(Municipality $municipality, array $coordinates): array
+    {
+        if (! is_numeric($coordinates['latitude'] ?? null) || ! is_numeric($coordinates['longitude'] ?? null)
+            || abs((float) $coordinates['latitude']) > 90 || abs((float) $coordinates['longitude']) > 180) {
+            return $this->unavailable($municipality, 'The municipality forecast reference point is unavailable.');
+        }
+        $key = 'weather.climate.v1.'.$municipality->getKey().'.'.hash('sha256', json_encode($coordinates));
+
+        return $this->forecastAt($municipality, $coordinates, $key, false);
+    }
+
+    private function forecastAt(Municipality $municipality, array $coordinates, string $cacheKey, bool $forceRefresh): array
+    {
         $staleKey = $cacheKey.'.last-known';
 
         if (! $forceRefresh) {

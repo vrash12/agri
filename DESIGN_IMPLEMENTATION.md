@@ -1,5 +1,17 @@
 # Design and UX implementation record
 
+## El Niño readiness dashboard — October 14, 2026
+
+The new office workspace uses shared operation forms/tables with white panels,
+scope filters, text-labeled Normal/Watch/Alert/Critical and gray Not assessed
+states, dated evidence and paginated reported parcels. Maps/forecast controls
+load on explicit request, prevent duplicate calls and retain the server register
+on provider failure. Assessment forms preserve invalid entries, include source
+verification and optimistic conflict recovery. Source links and NDVI dates stay
+visible. Responsive metrics/evidence panels stack on phones. Visual browser
+acceptance remains outstanding because the browser tool rejected the local tab
+under its URL policy. See [readiness guide](docs/EL_NINO_READINESS.md).
+
 ## White parcel bases across Farmers scopes — local October 14, 2026
 
 Every saved parcel base now uses a white outline and pale white fill throughout

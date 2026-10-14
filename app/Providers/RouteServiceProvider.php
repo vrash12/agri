@@ -59,6 +59,11 @@ class RouteServiceProvider extends ServiceProvider
                 });
         });
 
+        foreach (['climate-risk-data' => 30, 'climate-risk-forecast' => 12] as $name => $maximum) {
+            RateLimiter::for($name, fn (Request $request) => Limit::perMinute($maximum)
+                ->by($request->user()?->getAuthIdentifier() ?? $request->ip()));
+        }
+
         // Numeric throttles share one account signature across unrelated routes.
         // Named satellite limits isolate searches, images and ordinary map work.
         foreach (['satellite-observations' => [6, 'picture searches'], 'satellite-images' => [12, 'picture loads']] as $name => [$maximum, $action]) {
