@@ -1,6 +1,8 @@
 <?php
 
 return [
+    'refresh_batch_size' => min(200, max(10, (int) env('CLIMATE_REFRESH_BATCH_SIZE', 100))),
+
     /*
     |--------------------------------------------------------------------------
     | Automated evidence refresh

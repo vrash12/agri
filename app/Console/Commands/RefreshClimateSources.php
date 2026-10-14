@@ -13,6 +13,8 @@ use App\Support\ParcelVegetationSnapshot;
 use App\Support\SentinelImagery;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use Throwable;
 
@@ -21,6 +23,7 @@ final class RefreshClimateSources extends Command
     protected $signature = 'climate:refresh-sources
         {--provider=* : Provider(s) to refresh: open-meteo, chirps, or sentinel2}
         {--municipality=* : Limit refresh to municipality IDs}
+        {--batch-size= : Maximum municipalities in one scheduled run}
         {--force : Refresh even when the source is inside its normal freshness window}';
 
     protected $description = 'Refresh cached climate evidence without creating office assessments';
@@ -42,9 +45,10 @@ final class RefreshClimateSources extends Command
         $ids = collect($this->option('municipality'))
             ->filter(fn ($id) => ctype_digit((string) $id))
             ->map(fn ($id) => (int) $id)->values()->all();
-        $municipalities = Municipality::query()->active()->whereHas('supervisingProvince', fn ($query) => $query->active())
+        $allMunicipalities = Municipality::query()->active()->whereHas('supervisingProvince', fn ($query) => $query->active())
             ->when($ids !== [], fn ($query) => $query->whereIn('id', $ids))
             ->with('activeBoundary')->orderBy('id')->get();
+        $municipalities = $this->batch($allMunicipalities, $providers, $ids);
 
         $totals = ['open_meteo' => 0, 'chirps' => 0, 'sentinel2' => 0, 'skipped' => 0, 'failed' => 0];
         foreach ($municipalities as $municipality) {
@@ -74,6 +78,24 @@ final class RefreshClimateSources extends Command
 
         return $totals['failed'] > 0 && $totals['open_meteo'] + $totals['chirps'] + $totals['sentinel2'] === 0
             ? self::FAILURE : self::SUCCESS;
+    }
+
+    /** @param Collection<int, Municipality> $municipalities */
+    private function batch($municipalities, array $providers, array $ids)
+    {
+        if ($ids !== [] || $municipalities->count() <= 1) {
+            return $municipalities;
+        }
+        $size = min($municipalities->count(), max(1, (int) ($this->option('batch-size') ?: config('climate.refresh_batch_size', 100))));
+        $key = 'climate.sources.cursor.'.hash('sha256', implode(',', $providers));
+        $cursor = ((int) Cache::get($key, 0)) % $municipalities->count();
+        $selected = $municipalities->slice($cursor, $size);
+        if ($selected->count() < $size) {
+            $selected = $selected->concat($municipalities->slice(0, $size - $selected->count()));
+        }
+        Cache::put($key, ($cursor + $selected->count()) % $municipalities->count(), now()->addDays(14));
+
+        return $selected->values();
     }
 
     /** @return array<int, string> */

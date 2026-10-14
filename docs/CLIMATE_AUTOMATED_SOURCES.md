@@ -14,6 +14,11 @@ reporting delay. It compares that period with a rolling three-year reference
 when enough reference periods are available. This is a planning indicator, not
 an official drought category.
 
+Unscoped scheduled runs process a rotating batch of up to 100 municipalities,
+so a large national reference set does not create a single provider burst. The
+cursor is stored in the normal application cache; explicitly scoped manual
+runs (`--municipality=12`) always refresh that municipality immediately.
+
 Sentinel-2 is intentionally on-demand by default because processing consumes
 the existing Copernicus account allowance. `--provider=sentinel2` is available
 only after `CLIMATE_SENTINEL_AUTO_ENABLED=true`; it is capped by
