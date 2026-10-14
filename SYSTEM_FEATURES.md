@@ -1,6 +1,6 @@
 # AgriLGU — Complete Feature Catalog
 
-The **El Niño Readiness** workspace combines a scoped municipality/barangay
+Deployed October 14, 2026 (`166cdcb`): the **El Niño Readiness** workspace combines a scoped municipality/barangay
 risk map, seven-day rainfall forecasts, dated drought/seasonal rainfall
 assessments, explicitly reported affected parcels and saved NDVI readings.
 Office staff record Normal, Watch, Alert or Critical with evidence and review
@@ -11,7 +11,9 @@ show sources and dates and do not automatically declare drought or damage.
 Oversight is read-only; visitors, evaluators, vets and farmer sessions have no
 access. Staff can update or withdraw assessments with validation and conflict
 protection. Installation requires the additive climate-registry migration and
-the documented runtime/assets bundle; no disaster reports are prepopulated.
+the documented runtime/assets bundle. These are installed on Hostinger;
+the registry starts empty with no disaster reports prepopulated. Server role,
+data-preservation and rainfall checks passed; map/NDVI visual checks remain pending.
 See [El Niño readiness](docs/EL_NINO_READINESS.md).
 
 Deployed October 14, 2026 (`8861fda`): all saved parcels

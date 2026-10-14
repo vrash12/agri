@@ -1,5 +1,50 @@
 # GitHub-to-Hostinger deployment
 
+## Verified Hostinger release — October 14, 2026 — El Niño readiness
+
+Runtime `166cdcb` was pushed to GitHub main and installed with Hostinger
+`git pull --ff-only origin main` from clean tracked baseline `d72b6d6`. It adds
+the scoped climate-readiness dashboard, dated office/PAGASA-reviewed area
+assessments, explicit reported-parcel links, cached rainfall and completed-NDVI
+summaries. Missing or expired information remains Not assessed. The independent
+uncommitted map interaction refinement was preserved locally and excluded.
+
+A verified private database backup contained **21 tables / 9,475 rows**,
+**3,378,067 compressed bytes**, SHA-256
+`3a9094c50c0b2b8e3c7a668b65520803e799c273d388a84da4eda8e3885d066a`.
+Recovery files are outside the document root at
+`/home/u330835917/.private/climate-risk-20261014-166cdcb`; they include the prior
+tracked runtime, environment and safe fingerprint receipt. The single targeted
+`2026_10_14_000200_create_climate_risk_assessments` migration created two empty
+tables and its migration receipt. Existing operational/account/boundary rows,
+schemas, environment, session/cache namespaces and satellite allowances matched.
+No synthetic assessment, account, credential, provider setting or budget reset
+ran. The general cache was not cleared.
+
+Both climate assets were mirrored to `public_html` with 0644 permissions. Source
+and served copies matched: JavaScript SHA-256
+`839fa14732e514986845b710c957b907bff671d0f0156f87e7fe44cd5ba0a1ad`,
+CSS SHA-256 `852d727101e3385724b13bb5be7d1890a34ce537e47452fe0fca043156a92950`.
+Configuration, route and Blade caches rebuilt. The application left maintenance;
+login returned 200, anonymous readiness redirected to sign-in (302), and the map
+JSON route rejected anonymous access (401). Tracked server files remained clean.
+
+Live server checks rendered the dashboard for System Owner, Regional Head,
+Super Admin, provincial agriculture staff, municipal head and municipal staff.
+Oversight write policies denied creation; the three staff roles allowed it.
+Staff form renders passed; veterinary/evaluator policies denied access. A real
+Ramos rainfall request succeeded. The private verifier was corrected for JSON
+float normalization, optional legacy account columns and its CLI error bag;
+these corrections changed no runtime or live records. Restricted visitor cases
+are covered by synthetic tests; the live baseline has no `visitor_mode` column,
+and no unrelated visitor migration was run.
+
+Local validation passed **68 PHP tests / 467 assertions** and **6 focused
+JavaScript tests**, plus Pint, syntax, Blade, routes, whitespace and secret-pattern
+checks. Signed-in map/NDVI visual acceptance remains pending; no automated or
+official municipality drought-feed integration is claimed. See
+[readiness guide](EL_NINO_READINESS.md).
+
 ## Verified Hostinger follow-up — zoom-aware crop badge density — October 15, 2026
 
 Runtime `a73f5a7d99903b764457419da6076737a59672b3` was pushed to GitHub `main`

@@ -1,6 +1,6 @@
 # Design and UX implementation record
 
-## El Niño readiness dashboard — October 14, 2026
+## El Niño readiness dashboard — deployed October 14, 2026 (`166cdcb`)
 
 The new office workspace uses shared operation forms/tables with white panels,
 scope filters, text-labeled Normal/Watch/Alert/Critical and gray Not assessed

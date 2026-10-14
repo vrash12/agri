@@ -1,5 +1,23 @@
 # El Niño readiness dashboard
 
+## Deployed release — October 14, 2026
+
+Runtime `166cdcb` was pushed to GitHub main and installed on Hostinger through
+`git pull --ff-only origin main`. The targeted migration created two empty
+climate-registry tables. Existing row/schema fingerprints, environment,
+session/cache namespaces and NDVI budgets were preserved. All six agriculture
+role dashboard renders passed; staff form renders and read-only oversight
+policies passed; veterinary and evaluator policies denied access. Ramos rainfall
+provider access succeeded. Static asset copies/hashes and private/unauthenticated
+HTTP checks passed. No account, synthetic assessment or provider-setting change
+ran. See [deployment receipt](GITHUB_DEPLOYMENT.md).
+
+Local verification passed **68 PHP tests / 467 assertions** (climate dashboard,
+satellite, weather and dashboard presentation), **6 focused JavaScript tests**,
+Pint, syntax, Blade compilation, route and whitespace checks. Real signed-in map
+and NDVI visual acceptance remains pending because the browser tool rejected
+the local tab under its URL policy.
+
 ## Implementation and data boundaries — October 14, 2026
 
 The office dashboard and sidebar link to `/climate-risk`. Agriculture office
