@@ -310,7 +310,11 @@ class ParcelCropSeasonTest extends TestCase
         ])->post($this->editUrl(), $this->payload())
             ->assertOk()
             ->assertJsonPath('message', 'Seasonal crop saved.')
-            ->assertJsonPath('plot_id', 1);
+            ->assertJsonPath('plot_id', 1)
+            ->assertJsonPath('crop_record.plot_id', 1)
+            ->assertJsonPath('crop_record.crop', 'rice')
+            ->assertJsonPath('planted_record.plot_id', 1)
+            ->assertJsonPath('planted_record.areas', []);
     }
 
     public function test_outside_overlapping_and_self_crossing_crop_areas_are_rejected(): void

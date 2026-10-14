@@ -1451,8 +1451,16 @@ var PopoverElement = maps3d.PopoverElement;
           throw new Error(messages.join(' ') || data.message || 'The crop season could not be saved.');
         }
         cropModalMessage(data.message || 'Season saved. Updating the map…', 'success');
-        loadCropLayer(true);
-        refreshPlantedAreas(true);
+        var context = {year: data.year, season: data.season};
+        var cropUpdated = cropLayer?.upsert?.(data.crop_record, context) || false;
+        var plantedUpdated = plantedAreaLayer?.upsert?.(data.planted_record, context) || false;
+        // Older responses or unavailable drawing migrations still get the
+        // authoritative reload path. New modal responses render locally first,
+        // so the saved icon/line is visible before the dialog closes.
+        if (!cropUpdated || (data.planted_record && !plantedUpdated)) {
+          await loadCropLayer(true);
+          await refreshPlantedAreas(true);
+        }
         window.setTimeout(closeCropModal, 450);
       }).catch(function (error) {
         if (error.name === 'AbortError') return;

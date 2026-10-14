@@ -4,6 +4,16 @@
     var revision = 0, controller, key = '', periodKey = '', accepted = new Map(), retryAt = 0, refreshRequired = false;
     var state = {status:'off',records:[],error:'',partial:false,loaded:0,total:0};
     function notify(){options.onChange(state);}
+    function upsert(record, settings) {
+      if (!record || record.plot_id === null || record.plot_id === undefined || !Array.isArray(record.areas)) return false;
+      if (settings && state.year != null && (Number(settings.year) !== Number(state.year) || settings.season !== state.season)) return false;
+      accepted.set(String(record.plot_id), record);
+      var total = Math.max(Number(state.total) || 0, accepted.size);
+      state = { ...state, status: 'ready', year: Number(settings?.year ?? state.year), season: settings?.season ?? state.season,
+        records: [...accepted.values()], error: '', loaded: accepted.size, total: total, partial: accepted.size < total };
+      notify();
+      return true;
+    }
     function validate(data, settings, ids) {
       if(!data.available)throw new Error(data.message || 'Crop drawing is not available yet.');
       if(Number(data.year)!==Number(settings.year) || data.season!==settings.season || !Array.isArray(data.records))throw new Error('Crop drawings did not match the selected season. Retry.');
@@ -73,7 +83,7 @@
         state={...state,status:'error',records:[...accepted.values()],loaded:accepted.size,error:error.message,partial:accepted.size<wanted.length,retryAt:retryAt};notify();
       }
     }
-    return {load:load,get state(){return state;}};
+    return {load:load,upsert:upsert,get state(){return state;}};
   }
   root.PlantedAreaLayer={create:create};
   if(typeof module!=='undefined'&&module.exports)module.exports=root.PlantedAreaLayer;

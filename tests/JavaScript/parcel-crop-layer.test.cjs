@@ -64,6 +64,16 @@ test('switching the loaded municipality replaces the prior classifications', asy
   assert.equal(layer.record(1),null); assert.equal(layer.record(2).crop,'rice');
 });
 
+test('a modal save can update the open map without another network load', async () => {
+  let calls = 0;
+  const layer = create({url:'/layer',fetch:async()=>{ calls++; return response(2026,'dry',[1]); },onChange:()=>{}});
+  await layer.load(settings,[1]);
+  const changed = {...layer.record(1), crop:'corn', crop_label:'Corn', color:'#D4A017', area_crops:['corn'], has_planted_areas:true};
+  assert.equal(layer.upsert(changed, {year:2026, season:'dry'}), true);
+  assert.equal(layer.record(1).crop, 'corn');
+  assert.equal(calls, 1);
+});
+
 
 test('crop filter includes the corn section of a mixed-crop parcel', async () => {
   const layer=create({url:'/layer',fetch:async()=>({ok:true,json:async()=>({year:2026,season:'dry',records:[{plot_id:1,crop:'mixed',area_crops:['corn','rice'],color:'#4263C7'}],legend:[]})}),onChange:()=>{}});

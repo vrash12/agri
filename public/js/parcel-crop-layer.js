@@ -7,6 +7,16 @@
     function record(id) { return state.status === 'ready' ? records.get(String(id)) || null : null; }
     function visible(id) { var row = record(id); return !state.enabled || state.status !== 'ready' || state.filter === 'all' || row?.crop === state.filter || (row?.area_crops || []).includes(state.filter); }
     function color(id, savedColor) { return !state.enabled ? savedColor : record(id)?.color || '#64748B'; }
+    function upsert(item, settings) {
+      if (!item || item.plot_id === null || item.plot_id === undefined || !/^#[a-f0-9]{6}$/i.test(item.color || '')) return false;
+      if (settings && (Number(settings.year) !== Number(state.year) || settings.season !== state.season)) return false;
+      records.set(String(item.plot_id), item);
+      state.status = 'ready';
+      state.error = '';
+      state.count = Math.max(Number(state.count) || 0, records.size);
+      notify();
+      return true;
+    }
     async function load(settings, ids, force) {
       state.enabled = !!settings.enabled;
       state.filter = settings.filter || 'all';
@@ -47,7 +57,7 @@
         state.status = 'error'; state.error = error.message; records.clear(); notify();
       }
     }
-    return { load: load, record: record, visible: visible, color: color, state: state };
+    return { load: load, upsert: upsert, record: record, visible: visible, color: color, state: state };
   }
   root.ParcelCropLayer = { create: create };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.ParcelCropLayer;

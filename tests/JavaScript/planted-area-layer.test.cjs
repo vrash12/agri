@@ -34,6 +34,15 @@ test('missing migration is an explicit unavailable state',async()=>{
   const model=layer.create({url:'/areas',fetch:async()=>({ok:true,json:async()=>({available:false,message:'Drawing is unavailable'})}),onChange:()=>{}});
   await model.load(period,[1]);assert.equal(model.state.status,'error');assert.equal(model.state.error,'Drawing is unavailable');
 });
+
+test('a modal save can insert a new drawing into the current map state immediately', async () => {
+  const model = layer.create({url:'/areas',fetch:async()=>response([1],[]),onChange:()=>{}});
+  await model.load(period, []);
+  const drawing = {plot_id:1, areas:[{type:'line', crop:'corn', crop_label:'Corn', color:'#D4A017', path:[{lat:15.6,lng:120.47},{lat:15.6005,lng:120.4705}]}]};
+  assert.equal(model.upsert(drawing, period), true);
+  assert.equal(model.state.status, 'ready');
+  assert.deepEqual(model.state.records[0], drawing);
+});
 test('an empty list does not request crop drawings',async()=>{
   let calls=0;const model=layer.create({url:'/areas',fetch:async()=>{calls++;return response([]);},onChange:()=>{}});
   await model.load(period,[]);assert.equal(calls,0);assert.equal(model.state.status,'off');
