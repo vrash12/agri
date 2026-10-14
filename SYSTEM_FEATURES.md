@@ -16,6 +16,20 @@ the registry starts empty with no disaster reports prepopulated. Server role,
 data-preservation and rainfall checks passed; map/NDVI visual checks remain pending.
 See [El Niño readiness](docs/EL_NINO_READINESS.md).
 
+Automated evidence refresh is available through scheduled source snapshots:
+Open-Meteo forecasts run every six hours and CHIRPS recent-rainfall/reference
+comparisons run daily. Copernicus Sentinel-2 remains on-demand by default to
+protect processing quotas, with a separately capped opt-in command. These
+snapshots support staff review and never create a risk assessment or mark a
+parcel affected. See [automated climate evidence](docs/CLIMATE_AUTOMATED_SOURCES.md).
+
+Deployed October 15, 2026 (`fcfa8ca`): Farmers camera changes coalesce
+close-range overlay work, skip redundant distant refreshes and reuse crop badge
+markers across compact/full zoom states. Crop-modal saves reuse authoritative
+validated rows, batch layer notifications and close on the next frame, so new
+crop icons and lines appear faster without duplicate layer reads. Parcel
+geometry, crop records, icons, colors and permissions remain unchanged.
+
 Deployed October 14, 2026 (`8861fda`): all saved parcels
 use white outlines and pale white fills across every Farmers map scope. A
 parcel with only a saved crop classification also stays white; crop icons and

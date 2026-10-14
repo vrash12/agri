@@ -19,6 +19,27 @@ remains pending. See
 [docs/EL_NINO_READINESS.md](docs/EL_NINO_READINESS.md) for data provenance,
 bounded map behavior, expiry and deployment acceptance.
 
+The October 15 automated climate-evidence follow-up adds the additive
+`climate_risk_source_readings` table and the scheduled
+`climate:refresh-sources` command. Open-Meteo forecast summaries refresh every
+six hours and CHIRPS v3 area-average rainfall/reference snapshots refresh
+daily. Sentinel-2 remains on-demand unless its explicitly capped opt-in
+configuration is enabled. Source snapshots never create office risk levels or
+affected-parcel links; staff confirmation remains required. Apply the new
+migration only after a verified backup, rebuild caches and preserve existing
+NDVI budgets. See [docs/CLIMATE_AUTOMATED_SOURCES.md](docs/CLIMATE_AUTOMATED_SOURCES.md).
+
+The October 15 map performance release is deployed in runtime `fcfa8ca`.
+Farmers camera updates coalesce close-range display work, skip redundant
+distant refreshes when the rendered detail band is unchanged, and reuse grouped
+crop badge markers while switching between compact and full labels. Crop-modal
+saves return the already validated crop rows, batch layer notifications into a
+single refresh and close on the next frame, so a new icon/line appears without
+the old 450 ms wait or duplicate layer reads. Stored parcel geometry, crop
+records, icons, colors and permissions are unchanged. The full JavaScript suite
+and crop-season feature checks passed; no migration, account or provider
+operation ran. See [docs/PLANTED_CROP_AREAS.md](docs/PLANTED_CROP_AREAS.md).
+
 The October 14 whole-map crop/white-parcel/harvest-link release is deployed in
 runtime `8861fda` through GitHub main and Hostinger fast-forward pull. The
 targeted additive migration backfilled stable keys on existing crop sections

@@ -1,5 +1,24 @@
 # Planted crop areas inside a parcel
 
+## Camera and crop-save performance — October 15, 2026 (deployed in `fcfa8ca`)
+
+The Farmers map now coalesces close-range camera updates and ignores distant
+camera events when the rendered detail band has not changed. Grouped crop
+markers are reused when a map moves between compact and full badge sizes,
+avoiding unnecessary 3D overlay destruction during zoom and maximize/minimize
+transitions. Camera refreshes are scheduled at the next useful frame rather
+than waiting through the old 120 ms debounce.
+
+The in-page crop save now builds its response from the validated model that was
+just saved instead of querying both map layers again. The two map layers accept
+the authoritative rows silently, then render once; the modal closes on the next
+animation frame. New crop icons and lines therefore appear immediately while
+legacy invalid drawings still receive the existing review state. This remains
+presentation and response-path work: saved parcel geometry, crop records,
+icons, colors, hectares and permissions are unchanged. The full JavaScript
+suite passed 262 tests and the crop-season feature suite passed 25 tests / 293
+assertions, with the existing file-cache warnings.
+
 ## White parcel bases in every Farmers scope — deployed October 14, 2026
 
 Runtime `8861fda` is installed through GitHub main and Hostinger fast-forward pull,
@@ -26,16 +45,12 @@ entries describe saved classifications and loaded-parcel counts. A failed crop
 request shows safe Retry guidance while the parcel base stays white; white is
 not a claim that a crop record is missing.
 
-This source change is local, not pushed or deployed. Release it with the pending
-whole-map crop-drawing work: provider, route, `planted-area-layer.js`,
-`farmers-maps.js`, `crop-area-badges.js`, `parcel-crop-layer.js`,
-`resources/views/farmers/maps.blade.php`, crop controls, reviewed Assistant
-passages and guidance together. The classifier script changes safe error copy;
-the Farmers view supplies the white legend and removes the Ramos gate. Mirror
-changed scripts to both Hostinger public directories with 0644 permissions and
-rebuild route/config/view caches. No migration, account/provider change, budget
-reset or general cache clear is required. Earlier dated verification counts
-below describe their original implementation stages.
+This presentation is deployed with the whole-map crop-drawing release in
+runtime `8861fda`. The classifier script supplies safe error copy and the
+Farmers view supplies the white legend without a Ramos-only gate. No migration,
+account/provider change, budget reset or general cache clear is required.
+Earlier dated verification counts below describe their original implementation
+stages.
 
 October 14 checks: all 250 JavaScript tests passed, including white parcel
 styling, hover values, classification changes, crop visibility and unchanged
