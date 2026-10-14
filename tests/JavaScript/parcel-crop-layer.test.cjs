@@ -74,6 +74,17 @@ test('a modal save can update the open map without another network load', async 
   assert.equal(calls, 1);
 });
 
+test('modal updates can defer one layer notification for a combined refresh', async () => {
+  let changes = 0;
+  const layer = create({url:'/layer',fetch:async()=>response(2026,'dry',[1]),onChange:()=>{ changes++; }});
+  await layer.load(settings,[1]);
+  changes = 0;
+  assert.equal(layer.upsert({...layer.record(1), crop:'corn', crop_label:'Corn', color:'#D4A017'}, {year:2026, season:'dry'}, {silent:true}), true);
+  assert.equal(changes, 0);
+  layer.refresh();
+  assert.equal(changes, 1);
+});
+
 
 test('crop filter includes the corn section of a mixed-crop parcel', async () => {
   const layer=create({url:'/layer',fetch:async()=>({ok:true,json:async()=>({year:2026,season:'dry',records:[{plot_id:1,crop:'mixed',area_crops:['corn','rice'],color:'#4263C7'}],legend:[]})}),onChange:()=>{}});

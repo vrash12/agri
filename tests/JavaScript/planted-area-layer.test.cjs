@@ -43,6 +43,18 @@ test('a modal save can insert a new drawing into the current map state immediate
   assert.equal(model.state.status, 'ready');
   assert.deepEqual(model.state.records[0], drawing);
 });
+
+test('modal drawing updates can defer rendering until the combined layer refresh', async () => {
+  let changes = 0;
+  const model = layer.create({url:'/areas',fetch:async()=>response([]),onChange:()=>{ changes++; }});
+  await model.load(period, []);
+  changes = 0;
+  const drawing = {plot_id:1, areas:[]};
+  assert.equal(model.upsert(drawing, period, {silent:true}), true);
+  assert.equal(changes, 0);
+  model.refresh();
+  assert.equal(changes, 1);
+});
 test('an empty list does not request crop drawings',async()=>{
   let calls=0;const model=layer.create({url:'/areas',fetch:async()=>{calls++;return response([]);},onChange:()=>{}});
   await model.load(period,[]);assert.equal(calls,0);assert.equal(model.state.status,'off');

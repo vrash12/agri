@@ -55,6 +55,65 @@ class ParcelCropSeasons
     }
 
     /**
+     * Build the authoritative rows needed by the in-page crop modal from the
+     * model that was just saved. The save path already validated and normalized
+     * the drawing, so a second layer query (and a second geometry pass) would
+     * only add latency before the open map can update.
+     */
+    public function modalRows(FarmPlot $plot, ParcelCropSeason $record, bool $drawingsValidated = false): array
+    {
+        $crop = isset(ParcelCropSeason::CROPS[$record->crop])
+            ? $record->crop
+            : 'not_recorded';
+        $drawingsAvailable = Schema::hasColumn('parcel_crop_seasons', 'planted_areas');
+        $rawAreas = $drawingsAvailable
+            && is_array($record->planted_areas)
+            ? $record->planted_areas
+            : [];
+        $needsReview = false;
+        if ($drawingsAvailable && $rawAreas !== [] && ! $drawingsValidated) {
+            try {
+                $rawAreas = $this->areas->prepare($plot, $rawAreas);
+            } catch (ValidationException) {
+                $rawAreas = [];
+                $needsReview = true;
+            }
+        }
+        $areaCrops = array_values(array_unique(array_filter(
+            array_column($rawAreas, 'crop'),
+            fn ($areaCrop) => isset(ParcelCropSeason::CROPS[$areaCrop]) && $areaCrop !== 'not_recorded'
+        )));
+
+        $cropRecord = [
+            'plot_id' => (int) $plot->id,
+            'crop' => $crop,
+            'crop_label' => ParcelCropSeason::CROPS[$crop],
+            'color' => ParcelCropSeason::COLORS[$crop],
+            'area_crops' => $crop === 'not_recorded' ? [] : $areaCrops,
+            'has_planted_areas' => $areaCrops !== [],
+        ];
+
+        $plantedRecord = $drawingsAvailable
+            ? [
+                'plot_id' => (int) $plot->id,
+                'needs_review' => $needsReview,
+                'areas' => array_map(function (array $area): array {
+                    $areaCrop = isset(ParcelCropSeason::CROPS[$area['crop'] ?? ''])
+                        ? $area['crop']
+                        : 'other';
+
+                    return array_merge($area, [
+                        'crop_label' => ParcelCropSeason::CROPS[$areaCrop],
+                        'color' => ParcelCropSeason::COLORS[$areaCrop],
+                    ]);
+                }, $rawAreas),
+            ]
+            : null;
+
+        return ['crop_record' => $cropRecord, 'planted_record' => $plantedRecord];
+    }
+
+    /**
      * Do not leave a harvest pointing at a removed or reclassified section. A section
      * key is retained while its geometry/details are edited; unlink the harvest first
      * when the section itself is no longer the source of that record.

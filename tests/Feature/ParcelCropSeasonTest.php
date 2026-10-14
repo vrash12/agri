@@ -317,6 +317,24 @@ class ParcelCropSeasonTest extends TestCase
             ->assertJsonPath('planted_record.areas', []);
     }
 
+    public function test_crop_modal_returns_saved_drawing_rows_without_reloading_layers(): void
+    {
+        $this->prepareParcel();
+        $this->actingAs(User::find(1));
+
+        $this->withHeaders([
+            'Accept' => 'application/json',
+            'X-AgriGOV-Crop-Modal' => '1',
+        ])->post($this->editUrl(), $this->drawnPayload())
+            ->assertOk()
+            ->assertJsonPath('crop_record.crop', 'mixed')
+            ->assertJsonPath('crop_record.area_crops', ['corn', 'rice'])
+            ->assertJsonPath('crop_record.has_planted_areas', true)
+            ->assertJsonPath('planted_record.plot_id', 1)
+            ->assertJsonPath('planted_record.areas.0.crop_label', 'Corn')
+            ->assertJsonPath('planted_record.areas.0.color', '#D4A017');
+    }
+
     public function test_outside_overlapping_and_self_crossing_crop_areas_are_rejected(): void
     {
         $this->prepareParcel();

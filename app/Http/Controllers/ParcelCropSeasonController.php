@@ -56,18 +56,19 @@ class ParcelCropSeasonController extends Controller
         if ($request->header('X-AgriGOV-Crop-Modal') === '1') {
             // Return the authoritative saved rows so an already-open Farmers
             // map can update its crop icon and planted line without waiting for
-            // a second discovery request or a page reload.
-            $cropLayer = $this->crops->layer($request->user(), [$plot->id], $record->crop_year, $record->season);
-            $plantedLayer = $this->crops->plantedLayer($request->user(), [$plot->id], $record->crop_year, $record->season);
+            // extra layer queries or a page reload.
+            $modalRows = $this->crops->modalRows(
+                $plot,
+                $record,
+                array_key_exists('planted_areas', $request->validated())
+            );
 
             return response()->json([
                 'message' => 'Seasonal crop saved.',
                 'plot_id' => $plot->id,
                 'year' => $record->crop_year,
                 'season' => $record->season,
-                'crop_record' => $cropLayer['records'][0] ?? null,
-                'planted_record' => ($plantedLayer['available'] ?? false) ? ($plantedLayer['records'][0] ?? null) : null,
-            ]);
+            ] + $modalRows);
         }
 
         return redirect()->route('farm-plots.seasonal-crops.edit', [

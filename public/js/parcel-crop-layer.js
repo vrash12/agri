@@ -3,20 +3,21 @@
   function create(options) {
     var revision = 0, abort = null, key = '', records = new Map();
     var state = { enabled: false, status: 'off', year: null, season: null, filter: 'all', legend: [], count: 0, error: '' };
-    function notify() { options.onChange(state); }
+    function notify(change) { options.onChange(state, change || {}); }
     function record(id) { return state.status === 'ready' ? records.get(String(id)) || null : null; }
     function visible(id) { var row = record(id); return !state.enabled || state.status !== 'ready' || state.filter === 'all' || row?.crop === state.filter || (row?.area_crops || []).includes(state.filter); }
     function color(id, savedColor) { return !state.enabled ? savedColor : record(id)?.color || '#64748B'; }
-    function upsert(item, settings) {
+    function upsert(item, settings, change) {
       if (!item || item.plot_id === null || item.plot_id === undefined || !/^#[a-f0-9]{6}$/i.test(item.color || '')) return false;
       if (settings && (Number(settings.year) !== Number(state.year) || settings.season !== state.season)) return false;
       records.set(String(item.plot_id), item);
       state.status = 'ready';
       state.error = '';
       state.count = Math.max(Number(state.count) || 0, records.size);
-      notify();
+      if (!change?.silent) notify(change);
       return true;
     }
+    function refresh(change) { notify(change); }
     async function load(settings, ids, force) {
       state.enabled = !!settings.enabled;
       state.filter = settings.filter || 'all';
@@ -57,7 +58,7 @@
         state.status = 'error'; state.error = error.message; records.clear(); notify();
       }
     }
-    return { load: load, upsert: upsert, record: record, visible: visible, color: color, state: state };
+    return { load: load, upsert: upsert, refresh: refresh, record: record, visible: visible, color: color, state: state };
   }
   root.ParcelCropLayer = { create: create };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.ParcelCropLayer;

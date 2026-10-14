@@ -1314,6 +1314,7 @@ var PopoverElement = maps3d.PopoverElement;
     var renderedPlotDataByFarmerId = new Map();
     var plotDisplayRevision = 0;
     var plotDisplayTimer = null;
+    var plotCameraSignature = '';
     var savedPlotsHiddenForEditing = false;
     var municipalityGeofenceOverlays = [];
     var municipalityGeofenceLabels = [];
@@ -1346,7 +1347,7 @@ var PopoverElement = maps3d.PopoverElement;
         }
         hideParcelHoverCard();
         schedulePlotDisplayRefresh();
-        refreshPlantedAreas(false);
+        if (!change || !change.skipPlanted) refreshPlantedAreas(false);
       }
     }) : null;
     var currentCropYear = new Date().getFullYear();
@@ -1452,16 +1453,22 @@ var PopoverElement = maps3d.PopoverElement;
         }
         cropModalMessage(data.message || 'Season saved. Updating the map…', 'success');
         var context = {year: data.year, season: data.season};
-        var cropUpdated = cropLayer?.upsert?.(data.crop_record, context) || false;
-        var plantedUpdated = plantedAreaLayer?.upsert?.(data.planted_record, context) || false;
+        var updateChange = {silent: true};
+        var cropUpdated = cropLayer?.upsert?.(data.crop_record, context, updateChange) || false;
+        var plantedUpdated = plantedAreaLayer?.upsert?.(data.planted_record, context, updateChange) || false;
         // Older responses or unavailable drawing migrations still get the
         // authoritative reload path. New modal responses render locally first,
         // so the saved icon/line is visible before the dialog closes.
         if (!cropUpdated || (data.planted_record && !plantedUpdated)) {
           await loadCropLayer(true);
           await refreshPlantedAreas(true);
+        } else {
+          cropLayer?.refresh?.({skipPlanted: true});
+          plantedAreaLayer?.refresh?.();
+          schedulePlotDisplayRefresh({immediate: true});
         }
-        window.setTimeout(closeCropModal, 450);
+        var close = window.requestAnimationFrame || function (callback) { window.setTimeout(callback, 0); };
+        close(closeCropModal);
       }).catch(function (error) {
         if (error.name === 'AbortError') return;
         cropModalMessage(error.message || 'The crop season could not be saved. Check the form and try again.', 'error');
@@ -1639,6 +1646,7 @@ var PopoverElement = maps3d.PopoverElement;
     function applyParcelCropBadge(overlay) {
       var helper = window.CropAreaBadges;
       if (!helper?.parcelCrops || !Marker3DElement || !cropLayer) return;
+      if (overlay.cropBadge === undefined) overlay.cropBadge = null;
       var row = cropLayer.record(overlay.plotId);
       var codes = helper.parcelCrops(row);
       if (cropSettings.enabled && cropSettings.filter !== 'all') {
@@ -1660,15 +1668,25 @@ var PopoverElement = maps3d.PopoverElement;
       if (detailCrops && Number(map3d.range) <= 6000) {
         codes = codes.filter(function (code) { return !detailCrops.has(code); });
       }
+      if (!codes.length) {
+        setOverlayVisible(overlay.cropBadge, false);
+        overlay.cropBadge = null;
+        overlay.cropBadgeKey = '';
+        return;
+      }
       // Grouped parcel badges stay compact while the map is zoomed out. Detail
       // crop labels take over at close range, where the larger badge is useful.
       var compact = Number(map3d.range) > 6000;
       var key = (compact ? 'compact:' : 'full:') + codes.join('/');
       var visible = codes.length > 0 && shouldShowSavedPlot(overlay);
       if (overlay.cropBadgeKey !== key) {
-        setOverlayVisible(overlay.cropBadge, false);
-        overlay.cropBadge = null;
         overlay.cropBadgeKey = key;
+        // Keep the Maps marker alive while crossing the compact/full threshold.
+        // Replacing its content is cheaper than removing and recreating a 3D
+        // overlay during a maximize, minimize, or camera animation.
+        if (overlay.cropBadge) {
+          overlay.cropBadge.replaceChildren(helper.parcelMarkerContent(document, codes, {compact: compact}));
+        }
       }
       if (visible && !overlay.cropBadge) {
         if (overlay.cropBadgeAnchor === undefined) overlay.cropBadgeAnchor = helper.parcelPosition(overlay.ring);
@@ -2301,17 +2319,37 @@ async function refreshSavedPlotDisplay() {
   if (plantedAreaLayer) await renderPlantedAreas(plantedAreaLayer.state);
 }
 
-function schedulePlotDisplayRefresh() {
+function plotCameraDisplaySignature() {
+  var range = Number(map3d.range);
+  if (!Number.isFinite(range)) return 'unknown';
+
+  // At overview distances, panning does not change which parcel geometry is
+  // rendered. Avoid rebuilding thousands of overlays for every camera tick.
+  var band = range > 80000 ? 'labels-far' : range > 6000 ? 'crops-far' : range > 2500 ? 'overview' : 'detail';
+  var tilt = Number(map3d.tilt) > 60 ? 'steep' : 'flat';
+  if (band !== 'detail' || !map3d.center) return band + ':' + tilt;
+
+  var center = toLatLng(map3d.center);
+  if (!Number.isFinite(center.lat) || !Number.isFinite(center.lng)) return band + ':' + tilt;
+  return band + ':' + tilt + ':' + center.lat.toFixed(5) + ':' + center.lng.toFixed(5);
+}
+
+function schedulePlotDisplayRefresh(options) {
+  options = options || {};
+  var signature = options.camera ? plotCameraDisplaySignature() : '';
+  if (options.camera && signature === plotCameraSignature) return;
+  if (options.camera) plotCameraSignature = signature;
   if (plotDisplayTimer) clearTimeout(plotDisplayTimer);
   plotDisplayTimer = setTimeout(function () {
     plotDisplayTimer = null;
     refreshSavedPlotDisplay();
-  }, 120);
+  }, options.immediate ? 0 : (options.camera ? 24 : 16));
 }
 
-['gmp-rangechange', 'gmp-centerchange', 'gmp-tiltchange', 'gmp-animationend'].forEach(function (eventName) {
-  map3d.addEventListener(eventName, schedulePlotDisplayRefresh);
+['gmp-rangechange', 'gmp-centerchange', 'gmp-tiltchange'].forEach(function (eventName) {
+  map3d.addEventListener(eventName, function () { schedulePlotDisplayRefresh({camera: true}); });
 });
+map3d.addEventListener('gmp-animationend', function () { schedulePlotDisplayRefresh({camera: true, immediate: true}); });
 
 
     async function loadAllMunicipalPlots() {
