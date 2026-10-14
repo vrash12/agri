@@ -132,7 +132,16 @@ final class RefreshClimateSources extends Command
         try {
             $reading = $chirps->forMunicipality($municipality, $coordinates, true);
             if (! ($reading['available'] ?? false)) {
-                $totals['failed']++;
+                // CHIRPS preliminary data has a normal reporting delay. Keep
+                // that state visible without making the scheduler look broken.
+                $recorder->municipality($municipality, 'chirps', 'rainfall_30d', [
+                    'observed_on' => LocalTime::now()->toDateString(),
+                    'status' => 'unavailable',
+                    'source_label' => 'CHIRPS v3 area-average rainfall',
+                    'source_url' => 'https://chc.ucsb.edu/data/chirps3',
+                    'metadata' => ['message' => $reading['status_message'] ?? 'CHIRPS has not returned a usable period yet.'],
+                ]);
+                $totals['skipped']++;
 
                 return;
             }
