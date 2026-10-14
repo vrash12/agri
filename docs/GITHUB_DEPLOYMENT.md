@@ -664,3 +664,11 @@ Open-Meteo and CHIRPS jobs from creating a single large provider burst. No
 migration, account, assessment, parcel, NDVI or provider-budget change ran in
 this follow-up; configuration, route and view caches were rebuilt.
 
+# Verified Hostinger follow-up — October 15, 2026 — delayed-source messaging
+
+Runtime `30ebbd6` was fast-forwarded from GitHub main and rebuilds the view
+cache. The climate dashboard now explains that an unavailable CHIRPS snapshot
+means the provider has not published a usable recent period yet, rather than
+showing an unexplained zero. No data, provider, account or migration change
+ran in this view-only follow-up.
+
