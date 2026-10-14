@@ -1,5 +1,21 @@
 # GitHub-to-Hostinger deployment
 
+## Verified Hostinger follow-up — zoom-aware crop badge density — October 15, 2026
+
+Runtime `a73f5a7d99903b764457419da6076737a59672b3` was pushed to GitHub `main`
+and installed on Hostinger with `git pull --ff-only origin main`. Grouped crop
+badges now use a compact 16px icon row when the map range is above 6,000; close
+parcel view restores the existing 24px crop icons. Detail crop labels retain
+their close-range behavior. Stored crop records, anchors, colors, permissions,
+and database rows are unchanged.
+
+The changed `crop-area-badges.js` and `farmers-maps.js` files were mirrored to
+`public_html/js` with `0644` permissions. Source and versioned served hashes
+matched; login returned HTTP 200 and tracked server files remained clean. A
+private runtime/public backup was created before the pull. Local JavaScript
+verification passed **252 tests**; no migration, account, provider or budget
+operation ran.
+
 ## Verified Hostinger release — October 14, 2026 — whole-map crops and harvest section links
 
 Runtime `8861fdaceb1933c695b6c9d58370c1b754137c8a` was pushed to GitHub `main`

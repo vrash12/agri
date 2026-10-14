@@ -16,6 +16,10 @@ is inferred. The server checks office scope and matching records. Release-projec
 harvests remain managed through their assistance release. Signed-in Maps/NDVI
 browser acceptance remains pending; the runtime/schema/asset checks passed.
 
+The follow-up crop-badge refinement (`a73f5a7`) keeps grouped parcel icons compact
+when the map is zoomed out and restores the larger labeled crop badge at close
+parcel view. This is display-only and does not change saved crop records.
+
 Deployed October 14, 2026 (`8861fda`): the Farmers parcel map shows
 saved crop lines and shaded sections across all loaded parcels for the selected
 year and season, without choosing a farmer first. Zoomed out, parcels show

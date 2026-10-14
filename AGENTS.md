@@ -11,6 +11,12 @@ No account/provider/budget change or general cache clear ran. Signed-in live
 Maps and Copernicus acceptance remains pending; see the release receipt and
 [docs/MAP_RELEASE_ACCEPTANCE_CHECKLIST.md](docs/MAP_RELEASE_ACCEPTANCE_CHECKLIST.md).
 
+The subsequent zoom-aware crop-badge refinement is deployed in runtime `a73f5a7`.
+Grouped parcel badges use a compact icon row while the map is distant; close
+parcel view restores the larger crop badge. Stored crop data, marker anchors,
+colors and map permissions are unchanged. The full JavaScript suite passed 252
+tests; no migration, account or provider operation ran.
+
 The October 14 white-parcel presentation is deployed. All saved parcel bases
 across every Farmers map scope use white
 outlines and pale white fills, including parcels with only a saved crop
