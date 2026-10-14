@@ -635,3 +635,23 @@ Runtime commit `aabace9e5d957cd6b41bbb1010d7db70e2eb2439` was pushed to GitHub m
 ## Pending release — restricted visitor access
 
 The visitor release adds the `visitor_mode` column and a dedicated `visitor:create` command. Run the migration before provisioning an account, then create the active unassigned identity through the command's hidden password prompt. The visitor role remains `super_admin` for compatibility, but server middleware and scoped controllers expose only the aggregate overview and active municipality boundaries. Do not place visitor credentials in GitHub, deployment notes, logs, or support messages.
+# Verified Hostinger release — October 15, 2026 — automated climate evidence
+
+Runtime `72d7c78` was fast-forwarded from GitHub main after the verified
+`0334da1` release. A private backup was created before the additive
+`climate_risk_source_readings` migration: 23 tables / 9,481 rows, 3,378,453
+compressed bytes, SHA-256
+`c187de2add5dbf92cb556c9cb4d6ceedc3def428b1128a4c0380ce7c4da269e0`.
+
+The scheduled Open-Meteo and CHIRPS source jobs are registered and caches were
+rebuilt without clearing the general application cache. An initial Ramos
+Open-Meteo snapshot succeeded (seven-day forecast, 18 mm); the CHIRPS provider
+returned no usable recent granules yet and was recorded as unavailable because
+its preliminary product has a reporting delay. No office assessment, affected
+parcel, account, credential, provider-budget or NDVI write ran. Sentinel-2
+automation remains opt-in and capped; existing on-demand NDVI behavior is
+unchanged. Existing tracked/untracked operational files were preserved.
+
+The scheduler is visible on Hostinger at six-hour Open-Meteo and daily CHIRPS
+entries. See [automated climate evidence](CLIMATE_AUTOMATED_SOURCES.md).
+
