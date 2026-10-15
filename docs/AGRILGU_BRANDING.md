@@ -1,5 +1,12 @@
 # AgriLGU identity
 
+Current identity (October 15, 2026): **eAgriLGU**. Shared views and card exports use
+`eagrilgu-wordmark-v1.svg` and `eagrilgu-mark-v1.png`. The SVG embeds the corn
+image so browser image and canvas rendering require no external image fetch.
+The visible rebrand preserves existing farmer identifiers and private production
+environment values. See [current branding](AGRIGOV_BRANDING.md). The following
+sections document the prior October 10 identity and its verification.
+
 Status: local implementation on October 10, 2026; not pushed or deployed. Earlier release documents describe the former AgriGOV identity.
 
 AgriLGU is the application's name: an LGU Agriculture Information and GIS Management System. Its original emblem combines a golden corn ear, forest-green husk leaves and an agricultural field swoosh into the letter A. It follows the requested green-and-gold agriculture style. The Department of Agriculture seal and Philippine coat of arms retain their separate meaning and attribution.
