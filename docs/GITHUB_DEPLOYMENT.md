@@ -1,5 +1,26 @@
 # GitHub-to-Hostinger deployment
 
+## Verified Hostinger release — October 15, 2026 — Inter typography
+
+Runtime `3212acf` was pushed to GitHub main and installed with a fast-forward
+pull from clean tracked baseline `252561f`. The shared interface now uses
+locally hosted Inter 4.1 variable normal/italic WOFF2 files, with the bundled
+SIL OFL license. Six public assets were mirrored with readable permissions and
+compared against their source copies; font directories are 0755. Blade views
+were rebuilt. Previous tracked views and source/served CSS/JS were saved in the
+private recovery directory `inter-typography-20261015-3212acf`.
+
+The three focused presentation suites completed 18 warning-marked tests and
+164 assertions without failures; 16 crop-badge tests passed. Syntax, Blade and
+diff checks passed. Synthetic registry/form browser checks covered desktop and
+390px form/login views without horizontal overflow. The live homepage selected
+Inter and reported the font loaded, with no horizontal overflow; the office
+login returned HTTP 200 with the local font preload. Both font files, typography
+CSS, portal CSS and crop-label JavaScript returned HTTP 200 with source-matching
+hashes. No migration, account/record change, environment edit, provider call or
+general-cache clear ran. Signed-in live operational pages were not visually
+retested; local checks used synthetic fixtures.
+
 ## Verified Hostinger release — October 15, 2026 — crop colors and icons
 
 Runtime `1598e5e` fixes the undeclared `change` parameter in the map's crop-layer
