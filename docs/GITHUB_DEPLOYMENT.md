@@ -1,5 +1,40 @@
 # GitHub-to-Hostinger deployment
 
+## Verified Hostinger release — October 15, 2026 — complete crop shading
+
+Runtime `1bc08da` includes whole-parcel crop tints and immediate saved-parcel
+painting (`f2c810e`), the valid Maps 3D crop-line outer-width ratio (`6fd4189`),
+and bounded display closure for tiny crossed endpoints. All commits reached
+GitHub main and Hostinger through fast-forward pulls from clean tracked states.
+The first baseline was `e89e119`. Prior runtime/served files were backed up and
+compared in private `crop-tint-20261015-f2c810e`,
+`crop-line-width-20261015` and `crop-near-closure-20261015` directories.
+The three changed scripts were mirrored with 0644 permissions, source/served
+copies matched, and Blade was rebuilt without clearing the general cache.
+
+The final JavaScript suite passed 268 tests. Focused PHP geometry/crop-season,
+workspace presentation and reviewed-knowledge suites completed 99 warning-marked
+tests / 819 assertions with no failures; existing missing `.env.testing`
+warnings remain. Targeted Pint, PHP/JavaScript syntax and diff checks passed.
+The signed-in live Maps check loaded all 1,245 Ramos parcels, confirmed five
+colored crop sections plus the classification-only corn parcel, and retained
+white unrecorded parcels. It covered opening, owner focus and returning to all
+parcels. The final browser console contained no errors. Read-only production
+validation accepted all five seasonal records and their five sections. No live
+crop save was performed; save-before-close behavior is covered by integration
+tests using real layer subscriptions and the Maps DOM adapter.
+
+HTTP 200 source-matching SHA-256 values:
+
+- `farmers-maps.js`: `0ead2176a2726820475f413907eeac80479dbfe8da94d1a3b2f9fffa5ae7a049`
+- `planted-area-layer.js`: `6a51e77dff4b8ab2c5ccab6a0aa16c895910d44b2303d6ceac0869b062cea8b1`
+- `crop-area-badges.js`: `b099da77e83b63ad2c27dbe889528edaf4c2ec87599471c0c99f2749cae37ec9`
+
+No migrations, crop/farmer edits, account provisioning, environment changes,
+OpenAI/NDVI requests or budget resets ran. The visual endpoint correction never
+rewrites saved coordinates or calculates hectares. Existing open tabs need one
+reload to obtain the versioned scripts; staff do not need to redraw their marks.
+
 ## Verified Hostinger release — October 15, 2026 — Inter typography
 
 Runtime `3212acf` was pushed to GitHub main and installed with a fast-forward

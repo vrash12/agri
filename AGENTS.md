@@ -1,5 +1,12 @@
 # Agriculture Information System — Developer Guide
 
+The complete October 15 crop-display follow-up is deployed in runtime `1bc08da`.
+Signed-in live verification loaded all 1,245 Ramos parcels and confirmed all
+five saved crop sections plus the classification-only corn tint; the final
+browser console had no errors. All 268 JavaScript tests and 99 focused PHP
+tests / 819 assertions passed (existing test-environment warnings remain).
+See `docs/GITHUB_DEPLOYMENT.md` for the release receipt and exact checks.
+
 The October 15 whole-parcel crop tint follow-up supersedes the earlier all-white
 classification-only treatment. White outlines remain universal. A known saved
 crop with explicitly no drawn sections uses a 38% crop-color fill; unrecorded
