@@ -13,6 +13,11 @@ No migration, data rewrite or general-cache clear is required.
 Crop-line Maps 3D `outerWidth` is a ratio from 0 to 1; keep `.45`, not a pixel
 width. The invalid value `12` stopped live open-line rendering. The renderer
 test adapter now checks the real API constraint.
+Near-closed visual lines with a tiny crossed return may omit either end point
+for display only, capped at 1 metre and 1% of the line extent. Browser and PHP
+enclosure validation must both recheck containment, simplicity and overlap.
+Stored line coordinates and hectares never change. Release `crop-area-badges.js`
+and `PlantedCropAreas` together; genuinely crossing/open marks remain lines.
 
 The October 15 shared interface font is Inter 4.1. Use `--ui-font` from
 `partials.design-tokens`, which loads the locally hosted variable fonts and

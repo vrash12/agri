@@ -94,6 +94,29 @@ final class PlantedCropAreas
     /** Invalid closures stay freehand lines, as in the display-only shading helper. */
     private function visualEnclosure(array $points, array $parent): ?array
     {
+        $original = $this->strictVisualEnclosure($points, $parent);
+        if ($original !== null || count($points) < 4) {
+            return $original;
+        }
+        // Match the bounded display closure; keep the submitted line untouched
+        // while enforcing overlap rules on any resulting visible enclosure.
+        $first = $points[0];
+        $last = $points[array_key_last($points)];
+        $scale = cos(deg2rad((float) $first['lat']));
+        $distance = fn ($point) => hypot(((float) $point['lng'] - (float) $first['lng']) * $scale,
+            (float) $point['lat'] - (float) $first['lat']) * 111000;
+        $gap = $distance($last);
+        $extent = max(array_map($distance, $points));
+        if ($gap <= 0 || $gap > min(1, $extent * .01)) {
+            return null;
+        }
+
+        return $this->strictVisualEnclosure(array_slice($points, 0, -1), $parent)
+            ?? $this->strictVisualEnclosure(array_slice($points, 1), $parent);
+    }
+
+    private function strictVisualEnclosure(array $points, array $parent): ?array
+    {
         if (count($points) < 3) {
             return null;
         }

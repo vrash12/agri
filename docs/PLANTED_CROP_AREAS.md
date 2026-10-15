@@ -27,6 +27,18 @@ The Maps test adapter enforces that contract and reproduced the failure before
 the correction. This changes line styling only; it cannot close a line or add
 crop coverage. All 267 JavaScript tests pass after both corrections.
 
+Live diagnosis found three valid stored lines whose closing clicks landed
+0.1–0.9 m from the start and produced tiny crossed edges. `shadedRing` now tries
+omitting the last or first point only when the original enclosure fails, the
+gap is at most 1 m and at most 1% of the line extent. Every candidate reruns
+simple-ring and containment checks. The PHP `visualEnclosure` follows the same
+rule before overlap checks; existing conflicting fills still show outlines.
+This never alters the saved path or adds hectares. The shared helper applies
+to both the editor and general map. All five saved Ramos sections pass the
+display check without conflicts; the classification-only parcel uses its crop
+tint. Regression coverage includes preserving points, refusing larger/general
+crossings and rejecting overlaps after a near-closure repair.
+
 ## Crop-layer callback correction — October 15, 2026
 
 The classification layer subscription read `change.skipPlanted` without declaring

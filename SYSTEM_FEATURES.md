@@ -6,6 +6,9 @@ white; parcels without crop records remain white. Drawn sections retain their
 own colors without tinting the remaining land. A whole-parcel tint identifies
 the recorded seasonal crop and does not measure planted hectares. Saving a
 crop updates the edited parcel before the dialog closes.
+Near-closed crop marks also retain their shading when a tiny final click crosses
+the starting edge. The display correction keeps the saved points unchanged and
+still checks the parcel boundary and neighboring crop sections.
 
 The interface now uses locally hosted Inter typography for navigation, office
 forms/tables, chat, homepage, login, farmer portal and crop labels. Controls use

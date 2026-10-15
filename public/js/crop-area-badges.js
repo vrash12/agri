@@ -177,6 +177,19 @@
   }
   // Display-only enclosure: never replace stored line points or calculate hectares.
   function shadedRing(path, parcel) {
+    const original=strictShadedRing(path,parcel);
+    if(original || !Array.isArray(path) || path.length<4 || path.length>50)return original;
+    // A last click almost on the first corner may cross the opening edge by
+    // centimetres. Try either endpoint without changing the stored line. The
+    // repair is capped at 1 m and 1% of its extent; all geometry checks rerun.
+    const first=path[0],last=path.at(-1);
+    const scale=Math.cos(Number(first?.lat)*Math.PI/180);
+    const distance=(a,b)=>Math.hypot((Number(a?.lng)-Number(b?.lng))*scale,Number(a?.lat)-Number(b?.lat))*111000;
+    const gap=distance(first,last),extent=Math.max(...path.map(p=>distance(first,p)));
+    if(!Number.isFinite(gap) || !Number.isFinite(extent) || gap<=0 || gap>Math.min(1,extent*.01))return null;
+    return strictShadedRing(path.slice(0,-1),parcel) || strictShadedRing(path.slice(1),parcel);
+  }
+  function strictShadedRing(path, parcel) {
     if (!linePosition(path) || !Array.isArray(parcel) || parcel.length < 3 || parcel.length > 1000) return null;
     if(parcel.some(p=>!Number.isFinite(p?.lat)||!Number.isFinite(p?.lng)||Math.abs(p.lat)>90||Math.abs(p.lng)>180))return null;
     const ring=path.map(p=>({lat:Number(p.lat),lng:Number(p.lng)}));

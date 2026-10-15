@@ -135,6 +135,19 @@ test('crop lines follow concave parcel turns instead of saving an outside chord'
   assert.equal(badges.containsPath([{lat:.5,lng:.5},{lat:.5,lng:2},{lat:.5,lng:3.5}],parcel),true);
 });
 
+test('near-closed crop marks recover shading without changing points or weakening overlap checks',()=>{
+  const parcel=[{lat:15,lng:120},{lat:15,lng:120.002},{lat:15.002,lng:120.002},{lat:15.002,lng:120}];
+  const corners=[{lat:15.0002,lng:120.0002},{lat:15.0002,lng:120.0009},{lat:15.0009,lng:120.0009},{lat:15.0009,lng:120.0002}];
+  const path=[...corners,{lat:15.000199,lng:120.000201}];
+  const original=JSON.stringify(path);
+  assert.deepEqual(badges.shadedRing(path,parcel),corners);
+  assert.equal(JSON.stringify(path),original);
+  assert.deepEqual(badges.sections([{type:'line',path},{type:'line',path}],parcel).conflicts,[[0,1]]);
+  assert.equal(badges.shadedRing([...corners,{lat:15.00018,lng:120.00022}],parcel),null,'A large crossed closure is not repaired');
+  const crossed=[corners[0],corners[2],corners[1],corners[3],path.at(-1)];
+  assert.equal(badges.shadedRing(crossed,parcel),null,'Crossings elsewhere must still reject shading');
+});
+
 test('crop sections reject positive overlap but permit a shared edge',()=>{
   const parcel=[{lat:0,lng:0},{lat:0,lng:10},{lat:10,lng:10},{lat:10,lng:0}];
   const section=(west,east)=>({type:'line',path:[{lat:1,lng:west},{lat:1,lng:east},{lat:4,lng:east},{lat:4,lng:west}]});

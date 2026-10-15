@@ -2,11 +2,36 @@
 
 namespace Tests\Feature;
 
+use App\Models\FarmPlot;
 use App\Support\GeoGeometry;
+use App\Support\PlantedCropAreas;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class PlantedAreaGeometryTest extends TestCase
 {
+    public function test_near_closed_visual_marks_keep_points_and_enforce_enclosure_overlap(): void
+    {
+        $plot = new FarmPlot;
+        $plot->polygon_json = [
+            ['lat' => 15, 'lng' => 120], ['lat' => 15, 'lng' => 120.002],
+            ['lat' => 15.002, 'lng' => 120.002], ['lat' => 15.002, 'lng' => 120],
+        ];
+        $path = [
+            ['lat' => 15.0002, 'lng' => 120.0002], ['lat' => 15.0002, 'lng' => 120.0009],
+            ['lat' => 15.0009, 'lng' => 120.0009], ['lat' => 15.0009, 'lng' => 120.0002],
+            ['lat' => 15.000199, 'lng' => 120.000201],
+        ];
+        $mark = ['type' => 'line', 'crop' => 'corn', 'path' => $path];
+        $service = new PlantedCropAreas(new GeoGeometry);
+        $saved = $service->prepare($plot, [$mark]);
+        $this->assertSame($path, $saved[0]['path']);
+        $this->assertArrayNotHasKey('area_ha', $saved[0]);
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Crop sections cannot cover the same land');
+        $service->prepare($plot, [$mark, $mark]);
+    }
+
     public function test_exact_inclusive_containment_and_adjacent_boundaries(): void
     {
         $geo = new GeoGeometry;
