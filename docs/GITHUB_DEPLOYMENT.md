@@ -1,5 +1,23 @@
 # GitHub-to-Hostinger deployment
 
+## Verified Hostinger release — October 15, 2026 — eAgriLGU branding
+
+Runtime `532b9a6` includes the visible rebrand in `1c84a47` and a self-contained
+SVG wordmark with embedded corn artwork. Both commits were pushed to GitHub main
+and installed by Hostinger fast-forward pull. Seven changed public assets were
+mirrored to `public_html`, set to 0644 and compared against their source copies.
+Configuration, route and Blade caches rebuilt successfully; the general cache
+was not cleared. No migration, account operation, provider request or private
+environment edit ran.
+
+Focused verification completed with 63 JavaScript tests passing and the PHP
+runner reporting 194 passed plus 266 warning-marked tests (3,609 assertions,
+no failures); existing file-read warnings remain. PHP syntax and Blade
+compilation passed. Both live sign-in pages returned HTTP 200 with eAgriLGU
+text, and both new brand assets returned HTTP 200. A browser check of the live
+homepage confirmed the full corn emblem and unclipped eAgriLGU wordmark.
+Authenticated live card export and physical printing were not repeated.
+
 ## Verified Hostinger release — October 14, 2026 — El Niño readiness
 
 Runtime `166cdcb` was pushed to GitHub main and installed with Hostinger

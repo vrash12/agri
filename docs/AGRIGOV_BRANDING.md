@@ -22,4 +22,4 @@ Deploy the views, component, head partial, stylesheet, SVG and PNG together. On 
 
 ## Verification
 
-Local verification: the branding-focused PHP group passed 194 tests (3,562 assertions) and the focused JavaScript group passed 63 tests; Blade compilation and diff checks passed. The release keeps the existing database, accounts, provider quotas, session/cache namespaces and private environment values unchanged. Live login and both new branding assets are checked after deployment.
+Local verification: the branding-focused PHP runner reported 194 passed plus 266 warning-marked tests (3,609 assertions, no failures) and the focused JavaScript group passed 63 tests; Blade compilation and diff checks passed. The release keeps the existing database, accounts, provider quotas, session/cache namespaces and private environment values unchanged. Live login and both new branding assets are checked after deployment.
