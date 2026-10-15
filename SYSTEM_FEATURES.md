@@ -1,4 +1,6 @@
-# AgriLGU — Complete Feature Catalog
+# eAgriLGU — Complete Feature Catalog
+
+The visible application brand is now **eAgriLGU** across login, dashboards, navigation, farmer portal, Assistant, public parcel pages and digital farmer IDs. Existing registry identifiers and compatibility headers remain stable, and the production session/cache namespace is preserved.
 
 Deployed October 14, 2026 (`166cdcb`): the **El Niño Readiness** workspace combines a scoped municipality/barangay
 risk map, seven-day rainfall forecasts, dated drought/seasonal rainfall

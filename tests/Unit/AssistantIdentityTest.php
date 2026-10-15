@@ -138,7 +138,7 @@ final class AssistantIdentityTest extends TestCase
         $user = new User(['role' => User::ROLE_MUNICIPAL_STAFF]);
         foreach (['en', 'fil'] as $language) {
             $answer = (new AssistantIdentity)->answer($user, 'awareness', $language, 'dashboard');
-            $this->assertStringContainsString('AgriLGU Assistant', $answer);
+            $this->assertStringContainsString('eAgriLGU Assistant', $answer);
             $this->assertStringContainsString('Dashboard', $answer);
             $this->assertStringContainsString($language === 'fil' ? 'wala akong kamalayan' : 'not a conscious person', $answer);
             $this->assertStringContainsString($language === 'fil' ? 'sinuring gabay' : 'reviewed system guidance', $answer);
@@ -160,7 +160,7 @@ final class AssistantIdentityTest extends TestCase
             $this->assertStringContainsString('Animal Health', $answer);
             $this->assertStringNotContainsString('cooperatives', $answer);
         } elseif ($kind === 'capabilities') {
-            $this->assertStringContainsString($language === 'fil' ? 'AgriLGU lamang' : 'AgriLGU features only', $answer);
+            $this->assertStringContainsString($language === 'fil' ? 'eAgriLGU lamang' : 'eAgriLGU features only', $answer);
             foreach (['farmer registry', 'parcels', 'crop plotting', 'assistance', 'harvests', 'Animal Health', 'cooperatives', 'machinery', 'dashboard', 'weather', 'geofences', 'accounts', 'backups', 'audit'] as $module) {
                 $this->assertStringContainsString($module, $answer);
             }

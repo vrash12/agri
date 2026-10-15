@@ -102,10 +102,10 @@ class FarmerCardSignatoryTest extends TestCase
         $farmer = $this->farmer(self::RAMOS);
 
         $this->as($this->staff(self::RAMOS))->get(route('farmers.id-card', $farmer))->assertOk()
-            ->assertSee('AgriLGU ID')
+            ->assertSee('eAgriLGU ID')
             ->assertSee($farmer->agri_gov_id)
-            ->assertSee(asset('images/branding/agrilgu-wordmark-v1.png'), false)
-            ->assertSee(asset('images/branding/agrilgu-mark-v1.png'), false)
+            ->assertSee(asset('images/branding/eagrilgu-wordmark-v1.svg'), false)
+            ->assertSee(asset('images/branding/eagrilgu-mark-v1.png'), false)
             ->assertSee('brandWordmark:', false)
             ->assertSee('brandMark:', false)
             ->assertDontSee('AgriGOV')

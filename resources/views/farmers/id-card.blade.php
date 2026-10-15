@@ -120,7 +120,7 @@
 
           <div class="farmer-card-front-details">
             <div class="farmer-card-field farmer-card-field-name"><span>Full name</span><strong>{{ mb_strtoupper($fullName ?: 'NAME NOT RECORDED') }}</strong></div>
-            <div class="farmer-card-field"><span>AgriLGU ID <em>System-generated</em></span><strong class="farmer-card-code">{{ $farmer->agri_gov_id }}</strong></div>
+            <div class="farmer-card-field"><span>eAgriLGU ID <em>System-generated</em></span><strong class="farmer-card-code">{{ $farmer->agri_gov_id }}</strong></div>
             <div class="farmer-card-two-fields">
               <div class="farmer-card-field"><span>RSBSA number</span><strong>{{ $farmer->rsbsa_no ?: 'Not recorded' }}</strong></div>
               <div class="farmer-card-field"><span>FFRS number</span><strong>{{ $farmer->ffrs ?: 'Not recorded' }}</strong></div>
@@ -129,7 +129,7 @@
           </div>
 
           <div class="farmer-card-front-footer">
-            <span class="farmer-card-footer-brand"><span aria-hidden="true"><x-brand compact /></span><span>AgriLGU <i>LGU AGRICULTURE INFORMATION SYSTEM</i></span></span>
+            <span class="farmer-card-footer-brand"><span aria-hidden="true"><x-brand compact /></span><span>eAgriLGU <i>LGU AGRICULTURE INFORMATION SYSTEM</i></span></span>
             <b>{!! $cardIcon('shield') !!}REGISTERED FARMER</b>
             <strong>{{ $farmer->created_at ? $farmer->created_at->format('Y') : now()->format('Y') }}</strong>
           </div>
@@ -289,8 +289,8 @@
       background: @json(asset('images/branding/farmer-card-background.svg').'?v=field-20261010-1'),
       frontArt: @json(asset('images/branding/farmer-card-front-art.svg').'?v=field-20261010-1'),
       backArt: @json(asset('images/branding/farmer-card-back-art.svg').'?v=field-20261010-1'),
-      brandWordmark: @json(asset('images/branding/agrilgu-wordmark-v1.png')),
-      brandMark: @json(asset('images/branding/agrilgu-mark-v1.png')),
+      brandWordmark: @json(asset('images/branding/eagrilgu-wordmark-v1.svg')),
+      brandMark: @json(asset('images/branding/eagrilgu-mark-v1.png')),
       icons: @json($cardIcons),
       signatory: @json($cardSignatory ? ['name' => mb_strtoupper($cardSignatory['name']), 'title' => $cardSignatory['title']] : null),
       holderName: @json($fullName ? mb_strtoupper($fullName) : null),
@@ -468,7 +468,7 @@
         ctx.restore();
       }
       field(ctx, 'FULL NAME', cardData.fullName, 340, 205, 610, 38);
-      label(ctx, 'AGRILGU ID · SYSTEM-GENERATED', 340, 285);
+      label(ctx, 'EAGRILGU ID · SYSTEM-GENERATED', 340, 285);
       ctx.font = '800 35px monospace';
       roundRect(ctx, 333, 290, Math.min(ctx.measureText(cardData.farmerId).width, 610) + 15, 42, 9, 'rgba(20,116,63,.08)', 'rgba(20,116,63,.3)');
       fittedText(ctx, cardData.farmerId, 340, 320, 610, 35, 800, '#132018', 'monospace');
@@ -476,7 +476,7 @@
       field(ctx, 'FFRS NUMBER', cardData.ffrs, 650, 365, 300, 27);
       field(ctx, 'REGISTRY MUNICIPALITY', cardData.municipality, 340, 445, 490, 26);
       ctx.drawImage(brandMark, 52, 571, 50, 50);
-      ctx.fillStyle='#fff'; ctx.font='800 27px Arial'; ctx.fillText('AgriLGU',120,592); ctx.fillStyle='#e2f1e6'; ctx.font='13px Arial'; ctx.fillText('LGU AGRICULTURE INFORMATION SYSTEM',120,614);
+      ctx.fillStyle='#fff'; ctx.font='800 27px Arial'; ctx.fillText('eAgriLGU',120,592); ctx.fillStyle='#e2f1e6'; ctx.font='13px Arial'; ctx.fillText('LGU AGRICULTURE INFORMATION SYSTEM',120,614);
       ctx.textAlign='right'; ctx.fillStyle='#fff'; ctx.font='800 19px Arial'; ctx.fillText('REGISTERED FARMER',860,602);
       drawIcon(ctx, 'shield', 860 - ctx.measureText('REGISTERED FARMER').width - 32, 582, 24, '#eac64d', 2.2);
       ctx.font='800 22px Arial'; ctx.fillText(cardData.year,963,602); ctx.textAlign='left';

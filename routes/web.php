@@ -224,7 +224,7 @@ Route::middleware([
             now()->addHours(12),
             function () use ($query) {
                 $response = Http::withHeaders([
-                    'User-Agent' => 'AgriLGU/1.0',
+                    'User-Agent' => 'eAgriLGU/1.0',
                     'Accept' => 'application/json',
                 ])
                     ->timeout(10)

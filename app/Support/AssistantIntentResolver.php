@@ -20,7 +20,7 @@ final class AssistantIntentResolver
                 return ['task' => 'help', 'topic' => $context['help_topic'], 'style' => in_array($context['help_style'] ?? null, OfficeAssistant::STYLES, true) ? $context['help_style'] : 'plain', 'year' => $year, 'language' => $language];
             }
 
-            return $this->clarify('I can explain an AgriLGU feature in English or Filipino. Ask about a feature first. Private record replies are not sent to AI for translation.', $year);
+            return $this->clarify('I can explain an eAgriLGU feature in English or Filipino. Ask about a feature first. Private record replies are not sent to AI for translation.', $year);
         }
         if ($kind = $this->identityKind($text)) {
             return ['task' => 'identity', 'kind' => $kind, 'year' => $year, 'language' => $language];
@@ -53,11 +53,11 @@ final class AssistantIntentResolver
             return $this->yearClarification($text, $context, $year, comparison: true);
         }
         $workflow = (bool) preg_match('/\b(how\s+(?:do|does|can|to|should)|where\s+(?:do|can|is)|can\s+I|I\s+want\s+to|steps|instructions|guide\s+me|walk\s+me\s+through|show\s+me\s+how|paano|saan|gabayan|turuan|ipaliwanag|hakbang|help\s+(?:me\s+)?(?:use|draw|import|with)|tell\s+me\s+about|explain|what\s+can\s+(?:(?:my|our|the)\s+(?:veterinary\s+)?account|I\s+access)|what\s+(?:is|does)\s+(?:ndvi|the\s+assistant))\b/iu', $text)
-            || (bool) preg_match('/^(?:what\s+(?:is|does|are)|how\s+(?:is|are))\s+(?:(?:the|a|an)\s+)?(?:dashboard|weather|cooperative|cooperatives|machinery|equipment|backup|backups|audit|geofence|geofences|agrilgu|rag|privacy|farmer\s+(?:registry|id|card|portal)|(?:farm\s+)?(?:parcel|parcels|plot|plots)|seasonal\s+crops?|data\s+quality|harvest|harvests|assistance|animal\s+health|rice\s+releases?|distribution\s+sheets?)\b/iu', $text)
+            || (bool) preg_match('/^(?:what\s+(?:is|does|are)|how\s+(?:is|are))\s+(?:(?:the|a|an)\s+)?(?:dashboard|weather|cooperative|cooperatives|machinery|equipment|backup|backups|audit|geofence|geofences|e?agrilgu|rag|privacy|farmer\s+(?:registry|id|card|portal)|(?:farm\s+)?(?:parcel|parcels|plot|plots)|seasonal\s+crops?|data\s+quality|harvest|harvests|assistance|animal\s+health|rice\s+releases?|distribution\s+sheets?)\b/iu', $text)
             || (bool) preg_match('/^(?:do\s+you\s+(?:send|share)|is\s+(?:farmer\s+)?data\s+(?:sent|shared)|are\s+farmer\s+records\s+(?:sent|shared))\b.+\b(?:openai|ai|provider)\b/iu', $text)
             || (bool) preg_match('/^(?:please\s+)?(?:describe|can\s+you\s+(?:explain|describe)|help\s+me\s+understand)\b/iu', $text)
             || (bool) preg_match('/^(?:does|do|is|are|can)\b.+\b(?:support|supported|available|implemented|feature|work|allowed)\b/iu', $text)
-            || (bool) preg_match('/^(?:dashboard|weather|cooperatives?|machinery|backups?|audit\s+trail|geofences?|agrilgu|rag|assistant\s+privacy)[.!?\s]*$/iu', $text);
+            || (bool) preg_match('/^(?:dashboard|weather|cooperatives?|machinery|backups?|audit\s+trail|geofences?|e?agrilgu|rag|assistant\s+privacy)[.!?\s]*$/iu', $text);
         if ($workflow) {
             if (preg_match('/\b(?:and|also|then|at|pati|tsaka)\s+(?:summarize|show|report|count|buod|ibuod|ipakita|bilangin)\b/iu', $text)) {
                 return $this->clarify('Would you like system instructions or a records report first? I can handle one task at a time.', $year);
@@ -68,10 +68,10 @@ final class AssistantIntentResolver
             $topic = $this->helpTopic($text, $module);
 
             return $topic ? ['task' => 'help', 'topic' => $topic, 'year' => $year, 'language' => $language]
-                : $this->clarify('Which AgriLGU feature do you need help with? I can explain the dashboard, registry, parcel/crop maps, assistance, harvests, Animal Health, cooperatives, machinery or authorized office tools. Ask about one feature, or say “How do I use this page?”.', $year);
+                : $this->clarify('Which eAgriLGU feature do you need help with? I can explain the dashboard, registry, parcel/crop maps, assistance, harvests, Animal Health, cooperatives, machinery or authorized office tools. Ask about one feature, or say “How do I use this page?”.', $year);
         }
         if ($languageRequest['explicit'] || preg_match('/^(?:please\s+)?(?:translate|isalin)\b/iu', $text)) {
-            return $this->clarify('I can explain an AgriLGU feature in English or Filipino. Private record replies are not sent to AI for translation. Ask your records question without a translation request, or name a feature you want explained.', $year);
+            return $this->clarify('I can explain an eAgriLGU feature in English or Filipino. Private record replies are not sent to AI for translation. Ask your records question without a translation request, or name a feature you want explained.', $year);
         }
         if (preg_match('/^(?:please\s+)?(?:delete|remove|update|edit|change|create|reset|issue|approve|assign|send|burahin|baguhin)\b/iu', $text)) {
             return $this->clarify('This chat reads records and explains system steps. It cannot change records, issue accounts, send messages or approve requests. Use the authorized module for that action.', $year);
@@ -154,7 +154,7 @@ final class AssistantIntentResolver
         }
         if ($personal) {
             if (empty($context['farmer_id'])) {
-                return $this->clarify('Which farmer do you mean? Type “Find farmer” followed by their name or AgriLGU ID, then choose the matching record.', $year);
+                return $this->clarify('Which farmer do you mean? Type “Find farmer” followed by their name or eAgriLGU ID, then choose the matching record.', $year);
             }
             if (in_array('animal-health', $tasks, true) || (! $tasks && ! preg_match('/\b(summary|profile|record|records|info|information|details|buod)\b/iu', $text))) {
                 return $this->clarify('For the selected farmer, I can show their recorded summary, saved parcels and crops, assistance or harvests. Which would you like?', $year);
@@ -188,7 +188,7 @@ final class AssistantIntentResolver
             return ['task' => $context['task'], 'year' => $year, 'farmer_id' => $context['farmer_id'] ?? null];
         }
 
-        return $this->clarify('I help with AgriLGU features and permitted office records. Ask “Who are you?”, “How do I use this page?”, “Summarize my farmers” or name a feature you want explained. I cannot inspect server files or answer unrelated general questions.', $year);
+        return $this->clarify('I help with eAgriLGU features and permitted office records. Ask “Who are you?”, “How do I use this page?”, “Summarize my farmers” or name a feature you want explained. I cannot inspect server files or answer unrelated general questions.', $year);
     }
 
     private function reportClarification(string $text, int $year): ?array
@@ -240,7 +240,7 @@ final class AssistantIntentResolver
         $text = preg_replace('/^(?:please|paki)\s+|\s+(?:please|po)$/iu', '', $text);
 
         return match (true) {
-            (bool) preg_match('/^(?:are\s+you\s+(?:self[\s-]aware|conscious|aware(?:\s+of\s+(?:yourself|(?:this|the)\s+system|agrilgu))?)|do\s+you\s+(?:think|understand\s+(?:this|the)\s+system|know\s+(?:yourself|(?:this|the)\s+system|agrilgu))|what\s+do\s+you\s+know\s+about\s+(?:yourself|(?:this|the)\s+system|agrilgu)|alam\s+mo\s+ba\s+ang\s+(?:agrilgu|sistema|sarili\s+mo)|naiintindihan\s+mo\s+ba\s+ang\s+sistema)$/iu', $text) => 'awareness',
+            (bool) preg_match('/^(?:are\s+you\s+(?:self[\s-]aware|conscious|aware(?:\s+of\s+(?:yourself|(?:this|the)\s+system|e?agrilgu))?)|do\s+you\s+(?:think|understand\s+(?:this|the)\s+system|know\s+(?:yourself|(?:this|the)\s+system|e?agrilgu))|what\s+do\s+you\s+know\s+about\s+(?:yourself|(?:this|the)\s+system|e?agrilgu)|alam\s+mo\s+ba\s+ang\s+(?:e?agrilgu|sistema|sarili\s+mo)|naiintindihan\s+mo\s+ba\s+ang\s+sistema)$/iu', $text) => 'awareness',
             (bool) preg_match('/^(?:who\s+am\s+i|what\s+is\s+my\s+(?:role|(?:office\s+)?scope|assigned\s+area)|what(?:’s|\x27s)\s+my\s+(?:role|scope)|which\s+(?:office|area)\s+(?:am\s+i\s+assigned\s+to|can\s+i\s+access)|ano\s+(?:ang\s+)?(?:role|saklaw)\s+ko|sino\s+ako)$/iu', $text) => 'account',
             (bool) preg_match('/^(?:what\s+(?:page|screen|module)\s+(?:am\s+i\s+on|is\s+this)|where\s+am\s+i(?:\s+in)?|what\s+am\s+i\s+looking\s+at|anong\s+(?:pahina|screen|module)\s+ito|nasaan\s+ako)$/iu', $text) => 'context',
             (bool) preg_match('/^(?:who\s+(?:are\s+you|am\s+I\s+talking\s+to|is\s+(?:this|the)\s+(?:ai|assistant))|what\s+(?:are\s+you|is\s+your\s+name)|what(?:’s|\x27s)\s+your\s+name|introduce\s+yourself|sino\s+(?:ka|ikaw|ang\s+(?:ai|assistant))|ano(?:ng)?\s+(?:ang\s+)?pangalan\s+mo)$/iu', $text) => 'identity',
@@ -306,7 +306,7 @@ final class AssistantIntentResolver
             (bool) preg_match('/\b(crop|crops|corn|maize|rice|planted|planting|mais|palay|pananim)\b/iu', $text) => 'crop-drawing',
             (bool) preg_match('/\b(parcel|parcels|plot|plots|boundary|boundaries|map|mapping|field\s+boundary|lupa|mapa|hangganan)\b/iu', $text) => 'parcel-drawing',
             $module === 'assistance' && (bool) preg_match('/\b(import|upload|workbook|spreadsheet|excel)\b/iu', $text) => 'seed-import',
-            (bool) preg_match('/\bagrilgu\b|\b(?:system|platform)\s+(?:overview|features|modules)\b/iu', $text) => 'system-overview',
+            (bool) preg_match('/\be?agrilgu\b|\b(?:system|platform)\s+(?:overview|features|modules)\b/iu', $text) => 'system-overview',
             (bool) preg_match('/\b(system|assistant)\b/iu', $text) => 'help',
             default => null,
         };

@@ -10,7 +10,7 @@
   <rect y="10" width="1011" height="4" fill="#d8bb59"/>
   <rect x="24" y="22" width="963" height="145" rx="12" fill="#ffffff" fill-opacity=".91"/>
   <path d="M40 172H971" stroke="#b1c7b0" stroke-width="1"/>
-  <text x="505.5" y="178" text-anchor="middle" font-family="Arial,sans-serif" font-size="5.6" font-weight="700" letter-spacing="2" fill="#477252">AGRILGU · LOCAL AGRICULTURE REGISTRY · AGRILGU · LOCAL AGRICULTURE REGISTRY</text>
+  <text x="505.5" y="178" text-anchor="middle" font-family="Arial,sans-serif" font-size="5.6" font-weight="700" letter-spacing="2" fill="#477252">EAGRILGU · LOCAL AGRICULTURE REGISTRY · EAGRILGU · LOCAL AGRICULTURE REGISTRY</text>
   <rect x="325" y="185" width="638" height="323" rx="14" fill="#ffffff" fill-opacity=".94" stroke="#ceddca" stroke-width="1"/>
   <path d="M340 267H948M340 345H948M340 422H948" stroke="#e3eae0" stroke-width="1"/>
   <!-- Photo corners stay outside the portrait and use the same safe margin at every edge. -->

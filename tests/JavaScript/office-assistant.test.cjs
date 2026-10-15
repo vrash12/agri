@@ -248,9 +248,9 @@ test('session expiry erases a staged follow-up and blocks detached suggestion co
 });
 
 test('application-owned conversational replies display and retain only an opaque reference', async () => {
-  const ui = setup(async () => reply('I am the AgriLGU Assistant.', { source: 'conversation', context: 'identity-reference' }));
+  const ui = setup(async () => reply('I am the eAgriLGU Assistant.', { source: 'conversation', context: 'identity-reference' }));
   ui.input.value = 'Who are you?'; await ui.form.fire('submit');
-  assert.equal(content(ui), 'I am the AgriLGU Assistant.');
+  assert.equal(content(ui), 'I am the eAgriLGU Assistant.');
   assert.equal(ui.messages.children.at(-1).children[0].textContent, 'Assistant');
   assert.equal(ui.input.value, '');
   ui.input.value = 'Tell me more'; await ui.form.fire('submit');
@@ -702,7 +702,7 @@ test('unified dialog has no mode or year selectors and uses the shared visual sy
   assert.match(blade, /data-assistant-form novalidate/);
   assert.match(blade, /rows="2" required/);
   assert.match(blade, /aria-relevant="additions text"/);
-  assert.match(blade, /Office records stay in AgriLGU/);
+  assert.match(blade, /Office records stay in eAgriLGU/);
   assert.match(blade, /officeAssistantPrivacy officeAssistantCount officeAssistantCooldown/);
   assert.match(blade, /data-assistant-cooldown hidden/);
   assert.match(blade, /assistant-presence-dot/);

@@ -151,7 +151,7 @@ class FarmerIdentifierWorkflowTest extends TestCase
             ->assertJsonPath('id', $farmer->id)->assertJsonPath('agri_gov_id', $farmer->agri_gov_id);
         $this->get(route('farmers.id-card', $farmer))->assertOk()
             ->assertSee($farmer->agri_gov_id)
-            ->assertSee('AgriLGU ID')
+            ->assertSee('eAgriLGU ID')
             ->assertDontSee('AgriGOV');
     }
 

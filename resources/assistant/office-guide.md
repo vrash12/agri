@@ -1,4 +1,4 @@
-# AgriLGU Assistant knowledge curation
+# eAgriLGU Assistant knowledge curation
 
 The runtime help path retrieves reviewed passages from `knowledge/*.md` through
 the explicit `AssistantKnowledge` manifest. This index is not provider context.

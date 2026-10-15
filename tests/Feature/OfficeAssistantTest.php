@@ -210,7 +210,7 @@ class OfficeAssistantTest extends TestCase
     public function test_launcher_is_visible_only_in_authorized_office_layouts(): void
     {
         $this->actingAs($this->staff)->withViewErrors([]);
-        $this->view('layouts.app')->assertSee('data-office-assistant', false)->assertSee('AgriLGU Assistant')
+        $this->view('layouts.app')->assertSee('data-office-assistant', false)->assertSee('eAgriLGU Assistant')
             ->assertDontSee('data-assistant-mode', false)->assertDontSee('data-assistant-year', false);
         $visitor = $this->user(User::ROLE_SUPER_ADMIN);
         $visitor->forceFill(['visitor_mode' => true, 'province_id' => null, 'municipality_id' => null])->save();

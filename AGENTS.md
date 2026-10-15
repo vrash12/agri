@@ -1,5 +1,7 @@
 # Agriculture Information System — Developer Guide
 
+The October 15, 2026 visible branding release identifies the application as **eAgriLGU**. Use the new `eagrilgu-wordmark-v1.svg` and `eagrilgu-mark-v1.png` assets through the shared brand component and branding head partial. Preserve `agri_gov_id`, `agriGovId`, `AGRI-F-######`, legacy CSS hooks, request headers, session/cache namespaces and private production environment values for compatibility. The release changes visible labels, titles, Assistant copy, farmer-card artwork and browser icons without changing records, accounts, provider budgets or migrations.
+
 The October 14 El Niño readiness dashboard is deployed in runtime `166cdcb`
 through GitHub main and Hostinger fast-forward pull. It adds scoped `/climate-risk` pages,
 dated municipality/barangay office assessments, explicit reported-parcel links,

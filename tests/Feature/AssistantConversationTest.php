@@ -148,11 +148,11 @@ class AssistantConversationTest extends TestCase
     public static function localIntroductionCases(): array
     {
         return [
-            ['Who are you?', 'AgriLGU Assistant'], ['Hello!', 'How can I help with AgriLGU?'],
-            ['What can you do?', 'AgriLGU features only'], ['What AI are you using?', 'Laravel AI SDK'],
-            ['Are you ChatGPT?', 'OpenAI'], ['Sino ka?', 'Ako ang AgriLGU Assistant'],
+            ['Who are you?', 'eAgriLGU Assistant'], ['Hello!', 'How can I help with eAgriLGU?'],
+            ['What can you do?', 'eAgriLGU features only'], ['What AI are you using?', 'Laravel AI SDK'],
+            ['Are you ChatGPT?', 'OpenAI'], ['Sino ka?', 'Ako ang eAgriLGU Assistant'],
             ['Kumusta!', 'Kumusta!'], ['Salamat!', 'Walang anuman!'],
-            ['Do you know AgriLGU?', 'reviewed system guidance'],
+            ['Do you know eAgriLGU?', 'reviewed system guidance'],
             ['Are you self-aware?', 'not a conscious person'],
             ['What page am I on?', 'Farmers and farmer registry'],
             ['What is my role?', 'Municipal Staff'],
@@ -206,7 +206,7 @@ class AssistantConversationTest extends TestCase
             'password' => 'non-login-fixture', 'is_active' => true, 'role' => User::ROLE_PROVINCIAL_VET, 'province_id' => $this->own->province_id]));
         $this->actingAs($vet);
         DB::enableQueryLog();
-        $this->ask('Do you know AgriLGU?', ['module' => 'farmers'])->assertOk()->assertJsonPath('source', 'conversation')
+        $this->ask('Do you know eAgriLGU?', ['module' => 'farmers'])->assertOk()->assertJsonPath('source', 'conversation')
             ->assertSee('role and office scope still control access')->assertSee('limited to Animal Health');
         $this->ask('What is my role?', ['module' => 'farmers'])->assertOk()->assertJsonPath('source', 'conversation')
             ->assertSee('Provincial Veterinary Office')->assertSee('Own province')->assertDontSee($this->staff->name);
@@ -230,7 +230,7 @@ class AssistantConversationTest extends TestCase
         $greeting = $this->ask('Hello!')->assertOk()->assertJsonPath('source', 'conversation');
         DB::enableQueryLog();
         $this->ask('Explain more.', ['context' => $greeting->json('context')])->assertOk()->assertJsonPath('source', 'conversation')
-            ->assertSee('AgriLGU features only')->assertSee('no live browsing');
+            ->assertSee('eAgriLGU features only')->assertSee('no live browsing');
         $this->assertSame(0, $this->operationalQueries());
         $this->assertNull(Cache::get('assistant:requests:day:'.now('UTC')->format('Ymd')));
         OfficeHelpAgent::assertNeverPrompted();
@@ -452,7 +452,7 @@ class AssistantConversationTest extends TestCase
     {
         return [
             ['How do I read weather guidance?', 'weather'], ['Explain data quality checks.', 'data-quality'],
-            ['What is AgriLGU?', 'system-overview'], ['Explain RAG.', 'ai-technology'],
+            ['What is eAgriLGU?', 'system-overview'], ['Explain RAG.', 'ai-technology'],
             ['Do you send farmer records to OpenAI?', 'assistant-privacy'],
             ['How do I record fertilizer releases?', 'assistance-management'],
             ['How do I record fingerlings?', 'assistance-management'],

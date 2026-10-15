@@ -153,7 +153,7 @@ class FarmPlotController extends Controller
                     $response = Http::withHeaders([
                         'Accept' => 'image/png,image/*;q=0.9',
                         'Referer' => rtrim((string) config('app.url'), '/').'/',
-                        'User-Agent' => 'AgriLGU/1.0',
+                        'User-Agent' => 'eAgriLGU/1.0',
                     ])->timeout(20)->get(
                         'https://maps.googleapis.com/maps/api/staticmap',
                         [

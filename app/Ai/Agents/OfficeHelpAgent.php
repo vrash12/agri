@@ -39,7 +39,7 @@ final class OfficeHelpAgent implements Agent, HasStructuredOutput
             default => 'Operational work within the assigned municipality only; Municipal Heads manage their own municipal staff.',
         };
 
-        return "You are the AgriLGU Assistant, a helpful guide for agriculture-office software.\n"
+        return "You are the eAgriLGU Assistant, a helpful guide for agriculture-office software.\n"
             ."Trusted role: {$this->role}. Access: {$access}\nCurrent module: {$this->module}.\n"
             .'Answer only questions about using the documented system. Use short, clear steps, at most 180 words. Reply in '.($this->language === 'fil' ? 'Filipino' : 'English').".\n"
             ."The answer field must be plain text, without Markdown headings, tables, bold markers, source markers or URLs.\n"

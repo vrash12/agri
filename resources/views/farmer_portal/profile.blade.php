@@ -18,7 +18,7 @@
         </div>
         <div class="fp-profile-id">
             <dl>
-                <dt>AgriLGU farmer ID</dt>
+                <dt>eAgriLGU farmer ID</dt>
                 <dd class="fp-registry">{{ $farmer->agri_gov_id }}</dd>
             </dl>
             <p>Use this ID to sign in to your farmer portal.</p>

@@ -40,9 +40,9 @@ class FarmerPortalTest extends TestCase
             ->assertOk()
             ->assertSee('Farmer sign in')
             ->assertSee('Office sign in')
-            ->assertSee('AgriLGU ID or RSBSA number')
-            ->assertSee('<title>Farmer sign in | AgriLGU</title>', false)
-            ->assertSee(asset('images/branding/agrilgu-mark-v1.png'), false)
+            ->assertSee('eAgriLGU ID or RSBSA number')
+            ->assertSee('<title>Farmer sign in | eAgriLGU</title>', false)
+            ->assertSee(asset('images/branding/eagrilgu-mark-v1.png'), false)
             ->assertDontSee('AgriGOV')
             ->assertDontSee('activation code')
             ->assertDontSee('Activate my account');
@@ -195,10 +195,10 @@ class FarmerPortalTest extends TestCase
         $this->get(route('farmer-portal.home'))->assertOk()->assertDontSee('OtherPrivate');
         $this->get(route('farmer-portal.profile'))->assertOk()
             ->assertSee('OwnFarmer')
-            ->assertSee('AgriLGU farmer ID')
+            ->assertSee('eAgriLGU farmer ID')
             ->assertSee(Farmer::findOrFail(1)->agri_gov_id)
-            ->assertSee(asset('images/branding/agrilgu-wordmark-v1.png'), false)
-            ->assertSee(asset('images/branding/agrilgu-mark-v1.png'), false)
+            ->assertSee(asset('images/branding/eagrilgu-wordmark-v1.svg'), false)
+            ->assertSee(asset('images/branding/eagrilgu-mark-v1.png'), false)
             ->assertDontSee('AgriGOV')
             ->assertDontSee('OtherPrivate');
         $this->get(route('farmer-portal.parcels'))->assertOk()->assertSee('Own parcel')->assertDontSee('Foreign parcel');

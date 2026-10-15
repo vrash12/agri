@@ -61,7 +61,7 @@ final class AssistantRecords
                 'summary' => $user->isProvincialVeterinaryOffice()
                     ? $this->result($this->animals($user, $year), 'animal-health', $year)
                     : $this->result($this->farmerSummary($user)."\n\n".$this->assistance($user, $year)."\n\n".$this->harvests($user, $year), 'summary', $year),
-                default => $this->result('I can show your farmer summary, assistance report, harvest report or Animal Health summary. To find one person, type “Find farmer” followed by a name or AgriLGU ID. Reports use your account’s permitted area and one reporting year.', 'guidance', $year),
+                default => $this->result('I can show your farmer summary, assistance report, harvest report or Animal Health summary. To find one person, type “Find farmer” followed by a name or eAgriLGU ID. Reports use your account’s permitted area and one reporting year.', 'guidance', $year),
             };
         } catch (QueryException $exception) {
             // SQL errors can contain protected values. Never log the SQL or bindings.
@@ -178,7 +178,7 @@ final class AssistantRecords
         if (! $farmerId) {
             $search = trim(preg_replace('/^(?:find|search|show|hanapin)\s+(?:farmer|magsasaka)\s+/iu', '', trim($question)));
             if (mb_strlen($search) < 2 || mb_strlen($search) > 80) {
-                return $this->result('Type “Find farmer” followed by 2–80 characters of a name or a complete AgriLGU ID.', 'farmer-search', $year);
+                return $this->result('Type “Find farmer” followed by 2–80 characters of a name or a complete eAgriLGU ID.', 'farmer-search', $year);
             }
             $words = preg_split('/\s+/u', $search, 6);
             foreach ($words as $word) {
@@ -193,7 +193,7 @@ final class AssistantRecords
                 $actions[] = ['label' => $this->name($match).' · '.$match->agri_gov_id, 'farmer_id' => $match->id];
             }
 
-            return $this->result($matches->isEmpty() ? 'No matching farmer is available in your permitted area. Check the name or use a complete AgriLGU ID.'
+            return $this->result($matches->isEmpty() ? 'No matching farmer is available in your permitted area. Check the name or use a complete eAgriLGU ID.'
                 : 'Choose a farmer below to see their recorded summary.'.($matches->count() > 6 ? ' Showing the first six matches; use a fuller name to narrow the search.' : ''), 'farmer-search', $year, $actions);
         }
         $farmer = $base->whereKey($farmerId)->first(['id', 'municipality_id', 'first_name', 'middle_name', 'last_name', 'farm_area_ha']);

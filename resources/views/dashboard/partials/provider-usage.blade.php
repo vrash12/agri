@@ -3,7 +3,7 @@
     <div>
       <span class="ops-panel-kicker">Service monitoring</span>
       <h2 id="providerUsageHeading">Satellite &amp; map usage</h2>
-      <p>Shared across AgriLGU offices. These counters show activity recorded by this system.</p>
+      <p>Shared across eAgriLGU offices. These counters show activity recorded by this system.</p>
     </div>
     <span class="ops-provider-time">As of {{ $providerUsage['as_of'] }}<br>Refresh this page to update.</span>
   </div>

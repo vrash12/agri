@@ -38,7 +38,7 @@ function labelsControl() {
   return { button, attributes, map, camera, overlays, writes, click: () => listeners.get('click')() };
 }
 
-test('farmers map labels control switches imagery without changing camera or AgriLGU overlays', () => {
+test('farmers map labels control switches imagery without changing camera or eAgriLGU overlays', () => {
   const control = labelsControl();
   assert.equal(control.button.disabled, false);
   control.click();
