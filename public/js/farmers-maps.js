@@ -1327,7 +1327,7 @@ var PopoverElement = maps3d.PopoverElement;
     var cropLayer = window.ParcelCropLayer ? window.ParcelCropLayer.create({
       url: window.__parcelCropLayerUrl,
       fetch: window.fetch.bind(window),
-      onChange: function (state) {
+      onChange: function (state, change) {
         var status = document.getElementById('parcelCropStatus');
         var legend = document.getElementById('parcelCropLegend');
         var retry = document.getElementById('parcelCropRetry');

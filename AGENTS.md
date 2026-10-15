@@ -1,5 +1,14 @@
 # Agriculture Information System — Developer Guide
 
+The October 15 crop-layer callback correction receives the layer's `change`
+argument before reading `skipPlanted`. Without it, a ReferenceError stopped
+initial crop metadata requests and the modal-save refresh, leaving white parcel
+bases without saved crop colors/icons. Keep the real subscription integration
+tests alongside the renderer tests: they cover initial map loading and painting
+saved rice/corn sections before the modal closes. All 264 JavaScript tests pass.
+This is a versioned script correction only; no stored geometry, records,
+permissions, migrations or provider settings change.
+
 The October 15, 2026 visible branding release identifies the application as **eAgriLGU**. Use the new `eagrilgu-wordmark-v1.svg` and `eagrilgu-mark-v1.png` assets through the shared brand component and branding head partial. Preserve `agri_gov_id`, `agriGovId`, `AGRI-F-######`, legacy CSS hooks, request headers, session/cache namespaces and private production environment values for compatibility. The release changes visible labels, titles, Assistant copy, farmer-card artwork and browser icons without changing records, accounts, provider budgets or migrations.
 
 The October 14 El Niño readiness dashboard is deployed in runtime `166cdcb`

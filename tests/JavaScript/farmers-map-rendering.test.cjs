@@ -512,3 +512,84 @@ test('parcel clicks show the first dot, connect each next corner and continue pa
   context.editingPlotId=1;context.handleParcelMapClick({position:{lat:15.3,lng:120}});assert.equal(context.plotVertices.length,5,'Existing parcel edits retain edge insertion instead of appending stray corners');
   context.clearDraftDots();assert.equal(context.draftDots.length,0);assert.equal(context.draftLine,null);
 });
+
+// Exercise the actual layer subscriptions, not just the renderer in isolation.
+// A failure in this callback can prevent every crop request before rendering starts.
+function connectedCropHarness() {
+  const result = harness();
+  const {context, toggle} = result;
+  const status = {textContent:''};
+  context.document.getElementById = id => id === 'togglePlots' ? toggle : id === 'parcelCropStatus' ? status : null;
+  context.hideParcelHoverCard = () => {};
+  context.window.ParcelCropLayer = require('../../public/js/parcel-crop-layer.js');
+  context.window.PlantedAreaLayer = require('../../public/js/planted-area-layer.js');
+  const badges = require('../../public/js/crop-area-badges.js');
+  context.window.CropAreaBadges = {...badges, markerContent: (_,crop) => crop, parcelMarkerContent: (_,crops) => crops.slice()};
+  context.window.__parcelCropLayerUrl = '/classifications';
+  context.window.__plantedAreaLayerUrl = '/drawings';
+  context.Marker3DElement = class {constructor(options) {Object.assign(this,options);} replaceChildren(content) {this.content=content;}};
+  context.google = {maps:{CollisionBehavior:{REQUIRED:'required'}}};
+  context.map3d.range = 2000;
+  context.cropSettings.icons = true;
+  context.renderPlotsForFarmer('1', [{id:1,farmer_id:1,polygon_json:ring()}]);
+  const areas = [
+    {type:'line',crop:'rice',crop_label:'Rice / Palay',color:'#219653',path:[
+      {lat:15.0001,lng:120.0001},{lat:15.0001,lng:120.0009},{lat:15.0004,lng:120.0009},{lat:15.0004,lng:120.0001}]},
+    {type:'line',crop:'corn',crop_label:'Corn',color:'#D4A017',path:[
+      {lat:15.0005,lng:120.0001},{lat:15.0005,lng:120.0009},{lat:15.0008,lng:120.0009},{lat:15.0008,lng:120.0001}]},
+  ];
+  const crop = {plot_id:1,crop:'mixed',crop_label:'Mixed crops',color:'#607D8B',area_crops:['rice','corn'],has_planted_areas:true};
+  const planted = {plot_id:1,areas};
+  const requests = [];
+  context.window.fetch = async url => {
+    requests.push(url);
+    return {ok:true,json:async()=>({available:true,year:2026,season:'dry',records:[url.startsWith('/classifications') ? crop : planted]})};
+  };
+  vm.runInContext(['loadCropLayer','refreshPlantedAreas','renderPlantedAreas'].map(declaration).join('\n'), context);
+  const start = source.indexOf('var plantedAreaLayer = window.PlantedAreaLayer');
+  const end = source.indexOf('var currentCropYear =', start);
+  assert.ok(start >= 0 && end > start);
+  vm.runInContext(source.slice(start,end), context);
+  return {...result,status,requests,crop,planted};
+}
+
+function assertCropSectionsVisible(context) {
+  assert.equal(context.plantedAreaOverlays.length,2);
+  assert.deepEqual(Array.from(context.plantedAreaOverlays, item => item.poly.fillColor), ['#219653','#D4A017']);
+  assert.deepEqual(Array.from(context.plantedAreaOverlays, item => item.badge.content), ['rice','corn']);
+  assert.ok(context.plantedAreaOverlays.every(item => item.poly.isConnected && item.badge.isConnected));
+  assert.equal(context.savedPlotOverlays[0].poly.fillColor,'#FFFFFF');
+}
+
+test('real map subscriptions load colored crop sections and icons on opening without selecting a farmer', async () => {
+  const {context,requests,status} = connectedCropHarness();
+  await context.loadCropLayer(false);
+  for (let i=0; i<6; i++) await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(context.selectedFarmerId,null);
+  assert.equal(context.cropLayer.state.status,'ready');
+  assert.equal(context.plantedAreaLayer.state.status,'ready');
+  assert.equal(requests.length,2,'Metadata must trigger one drawing read without a click or reload');
+  assert.match(status.textContent,/2026.*Dry season/);
+  assertCropSectionsVisible(context);
+});
+
+test('real modal save subscriptions paint returned crop sections before closing without another layer request', async () => {
+  const {context,requests,crop,planted} = connectedCropHarness();
+  // Begin with an empty season that has already loaded, as on a new crop save.
+  Object.assign(context.cropLayer.state,{status:'ready',year:2026,season:'dry'});
+  const messages=[];
+  let closed=false;
+  context.FormData = class {};
+  context.fetch = async () => ({ok:true,json:async()=>({year:2026,season:'dry',crop_record:crop,planted_record:planted})});
+  context.cropModalMessage = (text,kind) => messages.push({text,kind});
+  context.closeCropModal = () => {assertCropSectionsVisible(context);closed=true;};
+  vm.runInContext(declaration('submitCropModal'),context);
+  context.submitCropModal({action:'/save-crops',querySelector:()=>({disabled:false})});
+  for (let i=0; i<10; i++) await new Promise(resolve=>setImmediate(resolve));
+  assert.deepEqual(messages.filter(message=>message.kind==='error'),[]);
+  assert.equal(closed,true,'Successful save closes after the visible colors and icons are updated');
+  assert.equal(requests.length,0,'The save response supplies the validated crop data');
+  context.selectedFarmerId=null;
+  await context.renderPlantedAreas(context.plantedAreaLayer.state);
+  assertCropSectionsVisible(context);
+});

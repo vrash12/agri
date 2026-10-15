@@ -1,5 +1,23 @@
 # Planted crop areas inside a parcel
 
+## Crop-layer callback correction — October 15, 2026
+
+The classification layer subscription read `change.skipPlanted` without declaring
+the `change` callback parameter. Its first loading notification threw before any
+metadata fetch, so the overall map kept white bases and never discovered saved
+drawings/icons. The same error interrupted notification after a successful modal
+save. Receiving the existing second callback argument fixes both paths and keeps
+the optimized save response and single drawing refresh intact.
+
+Two integration regressions execute the actual subscription with the real
+classification/drawing layer modules and the Maps DOM adapter. Both reproduced
+the original ReferenceError, then passed with the correction. They verify rice
+and corn fills/icons on initial map opening without farmer selection and before
+modal close after saving, with no extra layer request in that save notification.
+All 264 JavaScript tests pass; JavaScript syntax and whitespace checks pass.
+Deploy the versioned `farmers-maps.js` source and served copy together. No data,
+geometry, schema, account, provider or general-cache operation is needed.
+
 ## Camera and crop-save performance — October 15, 2026 (deployed in `fcfa8ca`)
 
 The Farmers map now coalesces close-range camera updates and ignores distant

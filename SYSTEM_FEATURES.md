@@ -1,5 +1,12 @@
 # eAgriLGU — Complete Feature Catalog
 
+October 15 crop-map correction: the map's crop-layer callback now lets saved
+crop colors and icons load when the parcel map opens and refresh from the save
+response before the crop dialog closes. Parcel bases stay white; saved rice,
+corn and other crop sections retain their colors above them. No replotting or
+record changes are needed. The full JavaScript suite passes 264 tests; live
+authenticated visual acceptance remains to be confirmed.
+
 The visible application brand is now **eAgriLGU** across login, dashboards, navigation, farmer portal, Assistant, public parcel pages and digital farmer IDs. Existing registry identifiers and compatibility headers remain stable, and the production session/cache namespace is preserved.
 
 Deployed October 14, 2026 (`166cdcb`): the **El Niño Readiness** workspace combines a scoped municipality/barangay
