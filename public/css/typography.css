@@ -1,0 +1,34 @@
+/* Inter 4.1, Rasmus Andersson. SIL OFL 1.1: ../fonts/inter/LICENSE.txt */
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('../fonts/inter/InterVariable.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Inter';
+    font-style: italic;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('../fonts/inter/InterVariable-Italic.woff2') format('woff2');
+}
+
+html {
+    font-family: var(--ui-font);
+    font-optical-sizing: auto;
+}
+
+body {
+    font-family: var(--ui-font);
+}
+
+button, input, select, textarea {
+    font-family: inherit;
+}
+
+/* Align quantities and dates without changing the font used for record IDs. */
+table {
+    font-variant-numeric: tabular-nums;
+}

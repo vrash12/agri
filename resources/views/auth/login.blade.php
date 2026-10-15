@@ -16,13 +16,6 @@
   <title>{{ $farmerSignIn ? 'Farmer sign in' : 'Office sign in' }} | eAgriLGU</title>
   <meta name="robots" content="noindex, nofollow">
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
-    rel="stylesheet"
-  >
-
   @include('partials.design-tokens')
   <style>
     :root {
@@ -54,14 +47,6 @@
 
     * {
       box-sizing: border-box;
-      font-family:
-        "Roboto",
-        system-ui,
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        Arial,
-        sans-serif;
     }
 
     html {

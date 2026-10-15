@@ -48,7 +48,7 @@
     }
     if (label) {
       const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      Object.entries({x:39,y:26,fill:'#20362C','font-family':'Arial, sans-serif','font-size':12,'font-weight':600}).forEach(([key,value])=>text.setAttribute(key,value));
+      Object.entries({x:39,y:26,fill:'#20362C','font-family':'Inter, Arial, sans-serif','font-size':12,'font-weight':600}).forEach(([key,value])=>text.setAttribute(key,value));
       text.textContent=name;node.appendChild(text);
     }
     return node;

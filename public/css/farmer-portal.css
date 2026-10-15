@@ -1,4 +1,4 @@
-.farmer-portal { margin:0; background:var(--ui-page-background,var(--ui-bg)); color:var(--ui-text); font-family:Roboto,system-ui,sans-serif; font-size:16px; line-height:1.55; }
+.farmer-portal { margin:0; background:var(--ui-page-background,var(--ui-bg)); color:var(--ui-text); font-family:var(--ui-font); font-size:16px; line-height:1.55; }
 .farmer-portal *, .fp-staff * { box-sizing:border-box; }
 .farmer-portal [hidden], .fp-staff [hidden] { display:none !important; }
 .farmer-portal a { color:var(--ui-primary); }

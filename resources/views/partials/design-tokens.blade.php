@@ -1,4 +1,6 @@
 @once
+<link rel="preload" href="{{ asset('fonts/inter/InterVariable.woff2') }}" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="{{ asset('css/typography.css') }}?v={{ filemtime(public_path('css/typography.css')) }}">
 <style>
   :root {
     --ui-bg: #f8faf8;
@@ -28,7 +30,7 @@
     --ui-info-soft: #edf4f8;
     --ui-radius-control: 8px;
     --ui-radius-panel: 12px;
-    --ui-font: 'Roboto', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+    --ui-font: 'Inter', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
   }
 </style>
 @endonce

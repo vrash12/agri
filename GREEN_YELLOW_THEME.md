@@ -90,7 +90,7 @@ Use yellow for the main button only inside the dark green overview, where that t
 
 ## 4. Modern UI that remains easy to use
 
-- **Typography:** Roboto with a system-font fallback; weights 400, 500, and 700. Use 14px body text and labels, 16px entry values, and at least 12px helper text. Do not shrink text to fit extra information.
+- **Typography:** Locally hosted Inter with a system-font fallback; 400 body, 500–600 labels, and 700 headings. Use 14px body text and labels, 16px entry values, and at least 12px helper text. Do not shrink text to fit extra information.
 - **Shape and spacing:** Follow the 4px spacing scale, 8px control corners, and 12px panel corners. Use 24px panel padding on desktop and 16px on phones. Keep shadows mainly for menus and dialogs.
 - **Starting point:** Show the main task and essential figures first. Keep detailed reports, advanced filters, and optional form fields in clearly labeled disclosures.
 - **Forms:** Keep required fields visible. Closing an optional section must preserve its values. Reveal sections containing validation errors and direct focus to the error summary or affected field.

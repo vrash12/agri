@@ -13,10 +13,6 @@
     <script src="{{ asset('js/session-history.js') }}?v={{ filemtime(public_path('js/session-history.js')) }}"></script>
   @endauth
 
-  <!-- Roboto -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   @include('partials.design-tokens')
 
   <!-- DataTables -->
@@ -57,7 +53,7 @@
       --navBtnSize: 44px;       /* button size */
     }
 
-    *{ box-sizing: border-box; font-family: 'Roboto', system-ui, -apple-system, Segoe UI, Arial, sans-serif; }
+    *{ box-sizing: border-box; }
     body{
       margin:0;
       color: var(--text);

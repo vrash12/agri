@@ -1,5 +1,15 @@
 # Agriculture Information System — Developer Guide
 
+The October 15 shared interface font is Inter 4.1. Use `--ui-font` from
+`partials.design-tokens`, which loads the locally hosted variable fonts and
+`public/css/typography.css` once. Preserve inherited control fonts, optical
+sizing, tabular table numerals and system fallbacks. The official font license
+is included under `public/fonts/inter`; no Google Fonts request is needed.
+Monospace identifiers and the registry-card Arial screen/print/canvas contract
+retain dedicated typesetting. Mirror the new font/CSS assets and changed
+portal CSS/crop SVG script with the views; rebuild Blade without a general
+cache clear. See `DESIGN_IMPLEMENTATION.md` for checks and provenance.
+
 The October 15 crop-layer callback correction receives the layer's `change`
 argument before reading `skipPlanted`. Without it, a ReferenceError stopped
 initial crop metadata requests and the modal-save refresh, leaving white parcel

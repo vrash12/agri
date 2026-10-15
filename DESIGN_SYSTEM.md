@@ -29,7 +29,7 @@ Inspect these references before changing an interface:
 
 | Reference | Responsibility |
 | --- | --- |
-| [Application layout](resources/views/layouts/app.blade.php) | Navigation, Roboto loading, application container, flash messages, session behavior |
+| [Application layout](resources/views/layouts/app.blade.php) | Navigation, shared typography, application container, flash messages, session behavior |
 | [Shared operations styles](resources/views/partials/operations-ui-styles.blade.php) | Existing `module-*` buttons, panels, forms, filters, tables, and state styles |
 | [Dashboard](resources/views/dashboard.blade.php) | Office overview, metric hierarchy, monthly summaries, attention links, and accessible chart figures |
 | [Dashboard styles](resources/views/dashboard/partials/styles.blade.php) | Green/yellow palette and responsive dashboard treatment |
@@ -117,13 +117,13 @@ When consolidating, existing `--module-*` and `--ops-*` names can temporarily re
 
 ## 4. Typography
 
-**Primary family:** Roboto, already used by the application shell.
+**Primary family:** Inter 4.1, hosted locally through the shared design-token partial.
 
 ```css
-font-family: 'Roboto', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
 ```
 
-Use **400** for body text, **500** for labels and emphasis, and **700** for headings and primary actions. Do not use unsupported intermediate weights such as 750 or 850, or make entire tables bold. Add no new font family for a single module.
+Use **400** for body text, **500–600** for labels and emphasis, and **700** for headings and primary actions. The variable files support weights 100–900, including existing intermediate weights; prefer the shared hierarchy for new work and avoid bolding entire tables. Add no new font family for a single module. Keep the existing Arial screen/print/canvas contract inside the fixed-size registry card artwork and monospace for identifiers.
 
 | Element | Target size | Weight | Line height |
 | --- | --- | --- | --- |
@@ -148,7 +148,7 @@ Additional rules:
 - Use tabular numerals for quantities, money, chart figures, and metrics.
 - Use a monospace stack only for identifiers or technical reference values when it improves scanning.
 - Preserve complete names in detail views. Truncated table text needs a keyboard-accessible way to read the full value.
-- Preserve a usable system-font fallback if the external font cannot load. Font delivery can be consolidated separately.
+- Preserve a usable system-font fallback if the local font cannot load. `public/css/typography.css` registers normal and italic WOFF2 faces with `font-display: swap`; the shared partial preloads only the normal face. Optical sizing is automatic and table numerals are tabular. No Google Fonts request is needed for application typography.
 
 ## 5. Spacing, shape, and density
 

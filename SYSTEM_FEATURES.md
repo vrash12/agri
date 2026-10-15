@@ -1,5 +1,10 @@
 # eAgriLGU — Complete Feature Catalog
 
+The interface now uses locally hosted Inter typography for navigation, office
+forms/tables, chat, homepage, login, farmer portal and crop labels. Controls use
+the shared font and tabular table numerals improve numeric scanning. System
+fallbacks keep text readable while the font loads.
+
 October 15 crop-map correction: the map's crop-layer callback now lets saved
 crop colors and icons load when the parcel map opens and refresh from the save
 response before the crop dialog closes. Parcel bases stay white; saved rice,

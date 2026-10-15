@@ -6,9 +6,6 @@
     <meta name="description" content="Explore eAgriLGU's farmer records, parcel maps, assistance tracking, and reports. Find local agriculture services and official DA resources.">
     <meta name="theme-color" content="#236344">
     <title>Farmer services | eAgriLGU</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     @include('partials.design-tokens')
     <link rel="stylesheet" href="{{ asset('css/welcome.css') }}?v={{ filemtime(public_path('css/welcome.css')) }}">
     <script src="{{ asset('js/welcome.js') }}?v={{ filemtime(public_path('js/welcome.js')) }}" defer></script>

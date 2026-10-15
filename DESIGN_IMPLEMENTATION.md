@@ -1,5 +1,27 @@
 # Design and UX implementation record
 
+## Shared Inter typography — October 15, 2026
+
+Office pages, login, homepage, farmer portal, public parcel page and crop SVG
+labels now use Inter through the shared `--ui-font` token. Normal and italic
+variable WOFF2 files come from the official Inter v4.1 tag, unmodified:
+`https://github.com/rsms/inter/tree/v4.1/docs/font-files`. The SIL OFL 1.1 license
+is bundled in `public/fonts/inter/LICENSE.txt`. `public/css/typography.css`
+registers both faces with swap display and automatic optical sizing; normal is
+preloaded, italic loads only when needed. Google Fonts links were removed.
+Native controls inherit the font and tables use tabular numerals. Monospace
+identifiers and the fixed-size Arial registry-card screen/print/canvas contract
+retain their dedicated typesetting.
+
+Local checks rendered the real registry and entry-form views with synthetic,
+in-memory fixtures. Desktop registry and 390px form/login checks showed no
+horizontal overflow; computed body/control styles selected Inter and the font
+reported loaded. The three focused PHP presentation suites completed 18
+warning-marked tests / 164 assertions without failures; 16 crop-badge JavaScript
+tests passed. Provider map visuals were not exercised in these font checks.
+Deploy the two font files, license, typography stylesheet, updated portal CSS,
+crop-badge script and shared views together; mirror assets and rebuild Blade.
+
 ## El Niño readiness dashboard — deployed October 14, 2026 (`166cdcb`)
 
 The new office workspace uses shared operation forms/tables with white panels,
