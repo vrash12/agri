@@ -1,7 +1,7 @@
 <details class="parcel-tool-group parcel-crop-controls" id="parcelCropControls">
   <summary class="parcel-tool-label">Crops on the map <span>Saved drawings, icons and season</span></summary>
   <div class="parcel-crop-fields">
-    <label for="parcelCropMode">Map layer<select id="parcelCropMode"><option value="saved">White parcels with saved crops</option><option value="crops">Filter parcels by saved crop</option></select></label>
+    <label for="parcelCropMode">Map layer<select id="parcelCropMode"><option value="saved">All parcels with saved crops</option><option value="crops">Filter parcels by saved crop</option></select></label>
     <label for="parcelCropYear">Year<input id="parcelCropYear" type="number" min="1990" max="{{ \App\Support\LocalTime::now()->year + 1 }}" value="{{ \App\Support\LocalTime::now()->year }}" required></label>
     <label for="parcelCropSeason">Season<select id="parcelCropSeason"><option value="dry">Dry season</option><option value="wet">Wet season</option></select></label>
     <label for="parcelCropFilter">Crop<select id="parcelCropFilter"><option value="all">All crops</option>@foreach(\App\Models\ParcelCropSeason::CROPS as $code => $label)<option value="{{ $code }}">{{ $label }}</option>@endforeach</select></label>
@@ -9,7 +9,7 @@
     <button type="button" class="btn btn-soft btn-sm" id="parcelCropRetry" hidden>Retry</button>
   </div>
   <p id="parcelCropStatus" role="status">Saved crop icons and drawings load automatically when the parcel map opens.</p>
-  <p class="parcel-crop-help">All parcels use white outlines and pale white fills. Saved crop sections and icons appear above them. Imported colors remain available in records and exports.</p>
+  <p class="parcel-crop-help">White outlines mark parcel boundaries. A saved whole-parcel crop adds its color and icon; drawn crop sections color only their saved shapes. Parcels without a crop record stay white. A whole-parcel tint identifies the recorded crop, not measured planted hectares. Imported colors remain available in records and exports.</p>
   <div id="parcelCropLegend" class="parcel-crop-legend" aria-label="Seasonal crop legend"></div>
   <p id="plantedAreaLayerStatus" role="status">Saved crop lines and shaded sections appear across the loaded parcel map, without selecting a farmer.</p>
   <button type="button" class="btn btn-soft btn-sm" id="plantedAreaRetry" hidden>Retry crop drawings</button>

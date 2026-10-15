@@ -34,8 +34,8 @@ class FarmerWorkspacePresentationTest extends TestCase
         $view->assertSee('Details &amp; history', false)->assertSee('Digital ID')->assertSee('Edit profile')->assertSee('Open parcel map');
         $view->assertSee('Registry figures for the current filters')->assertSee('farmersMapModule')
             ->assertSee('parcelSatelliteModal')->assertSee('Satellite field check')
-            ->assertSee('White parcels with saved crops')->assertSee('Filter parcels by saved crop')
-            ->assertSee('All parcels use white outlines and pale white fills.');
+            ->assertSee('All parcels with saved crops')->assertSee('Filter parcels by saved crop')
+            ->assertSee('White outlines mark parcel boundaries.');
     }
 
     public function test_super_admin_directory_keeps_read_only_actions(): void

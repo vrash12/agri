@@ -1,5 +1,16 @@
 # Agriculture Information System — Developer Guide
 
+The October 15 whole-parcel crop tint follow-up supersedes the earlier all-white
+classification-only treatment. White outlines remain universal. A known saved
+crop with explicitly no drawn sections uses a 38% crop-color fill; unrecorded
+parcels stay white. Sectioned, pending and review-required drawings never gain
+a whole-parcel crop fill. This tint identifies the seasonal classification,
+not measured planted hectares. Modal saves paint the edited parcel before
+closing and seed the drawing layer's period to avoid a redundant first-save
+request. Preserve stored import colors, geometry, permissions and provider
+limits. Release both map/layer scripts, controls and reviewed guidance together.
+No migration, data rewrite or general-cache clear is required.
+
 The October 15 shared interface font is Inter 4.1. Use `--ui-font` from
 `partials.design-tokens`, which loads the locally hosted variable fonts and
 `public/css/typography.css` once. Preserve inherited control fonts, optical

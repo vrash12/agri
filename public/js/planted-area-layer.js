@@ -11,6 +11,9 @@
       var total = Math.max(Number(state.total) || 0, accepted.size);
       state = { ...state, status: 'ready', year: Number(settings?.year ?? state.year), season: settings?.season ?? state.season,
         records: [...accepted.values()], error: '', loaded: accepted.size, total: total, partial: accepted.size < total };
+      // A first modal save seeds this period before the metadata refresh. Keep
+      // the validated row instead of discarding it and requesting it again.
+      periodKey = state.year + '/' + state.season;
       if (!change?.silent) notify(change);
       return true;
     }

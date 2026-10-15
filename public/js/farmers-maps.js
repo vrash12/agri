@@ -1334,7 +1334,7 @@ var PopoverElement = maps3d.PopoverElement;
         if (retry) retry.hidden = state.status !== 'error';
         if (status) status.textContent = state.status === 'loading' ? 'Loading saved crop icons for the selected season…'
           : state.status === 'error' ? state.error + ' Parcels remain white.'
-          : state.status === 'ready' ? state.year + ' · ' + (state.season === 'dry' ? 'Dry season' : 'Wet season') + ' · White parcels with saved crop icons and drawings.' + (state.enabled ? ' Crop filtering is on.' : '')
+          : state.status === 'ready' ? state.year + ' · ' + (state.season === 'dry' ? 'Dry season' : 'Wet season') + ' · Saved crop colors, icons and drawings.' + (state.enabled ? ' Crop filtering is on.' : '')
           : 'Waiting for saved crop records.';
         if (legend) {
           legend.replaceChildren();
@@ -1369,7 +1369,7 @@ var PopoverElement = maps3d.PopoverElement;
     if (cropApply) cropApply.disabled = !cropLayer;
     var cropInitialStatus = document.getElementById('parcelCropStatus');
     if (cropInitialStatus) cropInitialStatus.textContent = cropLayer
-      ? 'Parcels use white outlines and pale white fills. Saved crop icons and drawings appear automatically for the selected year and season.'
+      ? 'White outlines mark parcels. Saved crop colors, icons and drawings appear automatically for the selected year and season.'
       : 'Seasonal crop controls could not load. Reload the page to try again.';
     if (cropApply) cropApply.addEventListener('click', function () {
       var year = document.getElementById('parcelCropYear');
@@ -1465,6 +1465,13 @@ var PopoverElement = maps3d.PopoverElement;
         } else {
           cropLayer?.refresh?.({skipPlanted: true});
           plantedAreaLayer?.refresh?.();
+          // Paint the edited parcel before closing, without waiting for a
+          // whole-map display pass (including classification-only saves).
+          savedPlotOverlays.forEach(function (overlay) {
+            if (overlay.disposed || String(overlay.plotId) !== String(data.crop_record.plot_id)) return;
+            applyCropStyle(overlay);
+            applyParcelCropBadge(overlay);
+          });
           schedulePlotDisplayRefresh({immediate: true});
         }
         var close = window.requestAnimationFrame || function (callback) { window.setTimeout(callback, 0); };
@@ -1526,7 +1533,7 @@ var PopoverElement = maps3d.PopoverElement;
       if (status) status.textContent = state.status === 'error' ? state.error
           + ' ' + progress
         : state.status === 'loading' ? 'Loading saved crop drawings across the map… ' + progress
-        : state.status === 'off' ? 'No saved crop drawings for this map and season. Parcels with crop classifications still show their icons.'
+        : state.status === 'off' ? 'No saved crop drawings for this map and season. Whole-parcel crop records show their color and icon.'
         : (state.records.some(function (row) { return row.needs_review; }) ? 'Some sections need office review after a parcel boundary change. ' : '')
           + cropSettings.year + ' · ' + (cropSettings.season === 'dry' ? 'Dry season' : 'Wet season') + '. Saved crop drawings are shown across the map. Select a mark to highlight its crop and variety.';
       var revision = ++plantedAreaRenderRevision;
@@ -1633,12 +1640,20 @@ var PopoverElement = maps3d.PopoverElement;
         + (row ? row.crop_label : state.status === 'loading' ? 'Loading crop' : 'Crop unavailable');
     }
     function applyCropStyle(overlay) {
-      var sectioned = !!plantedAreaRenderedRecords.get(String(overlay.plotId))?.record.areas.length;
-      var styleKey = '#FFFFFF/' + !!sectioned;
+      var drawing = plantedAreaRenderedRecords.get(String(overlay.plotId))?.record;
+      var sectioned = !!drawing?.areas.length;
+      var row = cropLayer?.record?.(overlay.plotId);
+      // Only an explicitly section-free classification can tint the parcel.
+      // Pending, invalid or open drawings must never imply full crop coverage.
+      var classified = !sectioned && !drawing?.needs_review && row?.has_planted_areas === false
+        && row.crop !== 'not_recorded' && /^#[a-f0-9]{6}$/i.test(row.color || '');
+      var fill = classified ? row.color : '#FFFFFF';
+      var styleKey = fill + '/' + sectioned;
       if (overlay.displayColor === styleKey) return;
       overlay.displayColor = styleKey;
       Object.assign(overlay.style, { strokeStrong: '#FFFFFF', strokeHover: '#FFFFFF',
-        fillSoft: hexToRgba('#FFFFFF', sectioned ? 0.04 : 0.34), fillHover: hexToRgba('#FFFFFF', sectioned ? 0.08 : 0.44) });
+        fillSoft: hexToRgba(fill, sectioned ? 0.04 : classified ? 0.38 : 0.34),
+        fillHover: hexToRgba(fill, sectioned ? 0.08 : classified ? 0.48 : 0.44) });
       overlay.poly.fillColor = overlay.style.fillSoft;
       overlay.poly.strokeColor = overlay.style.strokeStrong;
     }

@@ -1,5 +1,24 @@
 # Planted crop areas inside a parcel
 
+## Whole-parcel crop tints — October 15, 2026
+
+The earlier all-white base hid the classification color on parcels with a saved
+crop but no section drawings. Those parcels now use their crop color at 38%
+opacity (48% on hover), retaining a white boundary and the existing crop badge.
+This applies automatically in the default view, across scopes and zoom levels.
+Unrecorded parcels remain white. Drawn, pending or review-required sections do
+not acquire a whole-parcel tint: their existing section/line semantics remain.
+A tint describes the seasonal classification, not planted hectares or live growth.
+
+Modal saves update the edited parcel's fill and badge before closing. The
+drawing layer now seeds its period when accepting a first saved row, so the
+subsequent map pass reuses that row without another request. Tests run the real
+subscriptions and scheduled map refresh, covering initial loading, changed
+periods, missing/review data and immediate section/whole-parcel saves. Stored
+colors, coordinates, hectares, permissions and budgets are unchanged. Deploy
+`farmers-maps.js`, `planted-area-layer.js`, the crop controls and updated reviewed
+Assistant guidance together; rebuild Blade without clearing the general cache.
+
 ## Crop-layer callback correction — October 15, 2026
 
 The classification layer subscription read `change.skipPlanted` without declaring

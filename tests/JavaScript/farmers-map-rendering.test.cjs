@@ -147,7 +147,7 @@ test('white parcel styling reuses overlays without changing saved colors, geomet
   assert.equal(JSON.stringify(plot), original);
 });
 
-test('all parcel bases stay white through classification loads, crop modes and hover styling', async () => {
+test('whole-parcel crop classifications tint immediately while keeping white outlines and saved data', async () => {
   const plot = { id: 1, farmer_id: 1, color: '#123456', polygon_json: ring() };
   const { context } = harness();
   const original = JSON.stringify(plot);
@@ -162,13 +162,40 @@ test('all parcel bases stay white through classification loads, crop modes and h
   assert.equal(overlay.style.fillSoft, '#FFFFFF');
   context.cropLayer.record = () => ({crop:'corn',color:'#D4A017',has_planted_areas:false});
   await context.refreshSavedPlotDisplay();
+  assert.equal(overlay.poly.fillColor, '#D4A017', 'The default map shows the saved whole-parcel crop');
   context.cropSettings.enabled=true;
   await context.refreshSavedPlotDisplay();
-  assert.equal(overlay.poly.fillColor, '#FFFFFF','Classification-only parcels stay white');
+  assert.equal(overlay.poly.fillColor, '#D4A017','Filtering keeps the crop tint');
   assert.equal(overlay.poly.strokeColor, '#FFFFFF');
   assert.equal(overlay.style.strokeHover, '#FFFFFF','Hover cannot restore imported or crop classification colors');
-  assert.equal(overlay.style.fillHover, '#FFFFFF');
+  assert.equal(overlay.style.fillHover, '#D4A017');
+  context.cropLayer.record = () => ({crop:'rice',color:'#219653',has_planted_areas:false});
+  await context.refreshSavedPlotDisplay();
+  assert.equal(overlay.poly.fillColor, '#219653', 'A saved crop change replaces the previous tint');
+  context.cropLayer.record = () => null;
+  await context.refreshSavedPlotDisplay();
+  assert.equal(overlay.poly.fillColor, '#FFFFFF', 'Changing period or losing metadata removes the previous crop tint');
   assert.equal(JSON.stringify(plot), original, 'The imported parcel color remains unchanged');
+});
+
+test('missing crops and unavailable or unclosed crop sections never imply whole-parcel coverage', async () => {
+  const {context} = harness();
+  context.renderPlotsForFarmer('1', [{id:1,farmer_id:1,polygon_json:ring()}]);
+  const overlay = context.savedPlotOverlays[0];
+  const rows = [null,
+    {crop:'not_recorded',color:'#8A9299',has_planted_areas:false},
+    {crop:'corn',color:'#D4A017',has_planted_areas:true},
+    {crop:'corn',color:'#D4A017'},
+  ];
+  for (const row of rows) {
+    context.cropLayer = {record:()=>row,visible:()=>true};
+    await context.refreshSavedPlotDisplay();
+    assert.equal(overlay.poly.fillColor, '#FFFFFF');
+  }
+  context.cropLayer.record = () => ({crop:'corn',color:'#D4A017',has_planted_areas:false});
+  context.plantedAreaRenderedRecords.set('1',{record:{areas:[],needs_review:true}});
+  await context.refreshSavedPlotDisplay();
+  assert.equal(overlay.poly.fillColor, '#FFFFFF','Sections awaiting review must not become a whole-parcel fill');
 });
 
 test('all 1044 parcels load in batches with one overlay each and untouched full geometry', async () => {
@@ -545,7 +572,7 @@ function connectedCropHarness() {
     requests.push(url);
     return {ok:true,json:async()=>({available:true,year:2026,season:'dry',records:[url.startsWith('/classifications') ? crop : planted]})};
   };
-  vm.runInContext(['loadCropLayer','refreshPlantedAreas','renderPlantedAreas'].map(declaration).join('\n'), context);
+  vm.runInContext(['loadCropLayer','refreshPlantedAreas','renderPlantedAreas','schedulePlotDisplayRefresh'].map(declaration).join('\n'), context);
   const start = source.indexOf('var plantedAreaLayer = window.PlantedAreaLayer');
   const end = source.indexOf('var currentCropYear =', start);
   assert.ok(start >= 0 && end > start);
@@ -564,13 +591,29 @@ function assertCropSectionsVisible(context) {
 test('real map subscriptions load colored crop sections and icons on opening without selecting a farmer', async () => {
   const {context,requests,status} = connectedCropHarness();
   await context.loadCropLayer(false);
-  for (let i=0; i<6; i++) await new Promise(resolve=>setImmediate(resolve));
+  await new Promise(resolve=>setTimeout(resolve,50));
   assert.equal(context.selectedFarmerId,null);
   assert.equal(context.cropLayer.state.status,'ready');
   assert.equal(context.plantedAreaLayer.state.status,'ready');
   assert.equal(requests.length,2,'Metadata must trigger one drawing read without a click or reload');
   assert.match(status.textContent,/2026.*Dry season/);
   assertCropSectionsVisible(context);
+});
+
+test('real map subscriptions tint classification-only parcels and show their icon without a selection', async () => {
+  const {context,requests,crop,planted} = connectedCropHarness();
+  Object.assign(crop,{crop:'corn',crop_label:'Corn',color:'#D4A017',area_crops:[],has_planted_areas:false});
+  planted.areas=[];
+  await context.loadCropLayer(false);
+  await new Promise(resolve=>setTimeout(resolve,50));
+  const overlay=context.savedPlotOverlays[0];
+  assert.equal(context.selectedFarmerId,null);
+  assert.equal(overlay.poly.fillColor,'#D4A017');
+  assert.equal(overlay.poly.strokeColor,'#FFFFFF');
+  assert.ok(overlay.cropBadge.isConnected);
+  assert.deepEqual(Array.from(overlay.cropBadge.content),['corn']);
+  assert.equal(context.plantedAreaOverlays.length,0);
+  assert.equal(requests.length,1,'Classification tint needs no extra drawing request');
 });
 
 test('real modal save subscriptions paint returned crop sections before closing without another layer request', async () => {
@@ -592,4 +635,28 @@ test('real modal save subscriptions paint returned crop sections before closing 
   context.selectedFarmerId=null;
   await context.renderPlantedAreas(context.plantedAreaLayer.state);
   assertCropSectionsVisible(context);
+});
+
+test('whole-parcel crop saves paint their color and icon before the modal closes', async () => {
+  const {context,requests,crop,planted} = connectedCropHarness();
+  Object.assign(crop,{crop:'corn',crop_label:'Corn',color:'#D4A017',area_crops:[],has_planted_areas:false});
+  planted.areas=[];
+  Object.assign(context.cropLayer.state,{status:'ready',year:2026,season:'dry'});
+  context.FormData=class {};
+  context.fetch=async()=>({ok:true,json:async()=>({year:2026,season:'dry',crop_record:crop,planted_record:planted})});
+  const errors=[];
+  context.cropModalMessage=(message,kind)=>{if(kind==='error') errors.push(message);};
+  let closed=false;
+  context.closeCropModal=()=>{
+    const overlay=context.savedPlotOverlays[0];
+    assert.equal(overlay.poly.fillColor,'#D4A017');
+    assert.equal(overlay.cropBadge.isConnected,true);
+    closed=true;
+  };
+  vm.runInContext(declaration('submitCropModal'),context);
+  context.submitCropModal({action:'/save-crops',querySelector:()=>({disabled:false})});
+  await new Promise(resolve=>setTimeout(resolve,50));
+  assert.deepEqual(errors,[]);
+  assert.equal(closed,true);
+  assert.equal(requests.length,0);
 });
