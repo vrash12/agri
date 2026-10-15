@@ -1596,7 +1596,7 @@ var PopoverElement = maps3d.PopoverElement;
         var shade = line && !conflicting.has(index) && window.CropAreaBadges?.shadedRing ? window.CropAreaBadges.shadedRing(points, parcel.ring) : null;
         var displayLine = line && !shade;
         var poly = displayLine
-          ? (Polyline3DInteractiveElement ? new Polyline3DInteractiveElement({strokeColor: area.color, outerColor: hexToRgba(area.color, .32), strokeWidth: 5, outerWidth: 12, altitudeMode: AltitudeMode.CLAMP_TO_GROUND, drawsOccludedSegments: true, zIndex: 15}) : null)
+          ? (Polyline3DInteractiveElement ? new Polyline3DInteractiveElement({strokeColor: area.color, outerColor: hexToRgba(area.color, .32), strokeWidth: 5, outerWidth: .45, altitudeMode: AltitudeMode.CLAMP_TO_GROUND, drawsOccludedSegments: true, zIndex: 15}) : null)
           : (Polygon3DInteractiveElement ? new Polygon3DInteractiveElement({strokeColor: area.color, strokeWidth: 2, fillColor: hexToRgba(area.color, conflicting.has(index) ? 0 : .38), altitudeMode: AltitudeMode.CLAMP_TO_GROUND, drawsOccludedSegments: true, zIndex: 15}) : null);
         if (!poly) return;
         poly.path = shade || points;

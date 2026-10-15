@@ -86,6 +86,8 @@ function harness(plots = []) {
       removeChild: object => { object.isConnected = false; mounted.delete(object); } },
     Polygon3DInteractiveElement: class {
       constructor(options) {
+        if (options.outerWidth != null) assert.ok(options.outerWidth >= 0 && options.outerWidth <= 1,
+          'Maps 3D outerWidth is a stroke proportion between 0 and 1, not pixels');
         Object.assign(this, options);
         this.ready = true;
         this.isConnected = false;

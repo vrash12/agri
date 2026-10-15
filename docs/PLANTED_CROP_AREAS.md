@@ -19,6 +19,14 @@ colors, coordinates, hectares, permissions and budgets are unchanged. Deploy
 `farmers-maps.js`, `planted-area-layer.js`, the crop controls and updated reviewed
 Assistant guidance together; rebuild Blade without clearing the general cache.
 
+The signed-in live check also exposed a Maps 3D construction error for open or
+conflicting crop lines: `outerWidth: 12` was treated as a ratio and rejected,
+interrupting rendering for that parcel. The line now uses `outerWidth: .45`,
+within the [documented 0–1 range](https://developers.google.com/maps/documentation/javascript/reference/3d-map-draw#Polyline3DElement.outerWidth).
+The Maps test adapter enforces that contract and reproduced the failure before
+the correction. This changes line styling only; it cannot close a line or add
+crop coverage. All 267 JavaScript tests pass after both corrections.
+
 ## Crop-layer callback correction — October 15, 2026
 
 The classification layer subscription read `change.skipPlanted` without declaring

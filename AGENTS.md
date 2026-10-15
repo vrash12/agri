@@ -10,6 +10,9 @@ closing and seed the drawing layer's period to avoid a redundant first-save
 request. Preserve stored import colors, geometry, permissions and provider
 limits. Release both map/layer scripts, controls and reviewed guidance together.
 No migration, data rewrite or general-cache clear is required.
+Crop-line Maps 3D `outerWidth` is a ratio from 0 to 1; keep `.45`, not a pixel
+width. The invalid value `12` stopped live open-line rendering. The renderer
+test adapter now checks the real API constraint.
 
 The October 15 shared interface font is Inter 4.1. Use `--ui-font` from
 `partials.design-tokens`, which loads the locally hosted variable fonts and
