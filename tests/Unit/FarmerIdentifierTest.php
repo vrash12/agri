@@ -4,7 +4,7 @@ namespace Tests\Unit;
 
 use App\Models\Farmer;
 use App\Models\FarmerPortalAccount;
-use App\Support\FarmerIdentifier;
+use App\Modules\Farmers\Application\FarmerIdentifier;
 use PHPUnit\Framework\TestCase;
 
 class FarmerIdentifierTest extends TestCase

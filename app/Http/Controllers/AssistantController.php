@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Exceptions\AssistantUnavailable;
 use App\Http\Requests\AssistantMessageRequest;
-use App\Support\AssistantConversation;
+use App\Modules\Assistant\Application\AssistantConversation;
 use App\Support\AuditTrail;
 use Illuminate\Http\JsonResponse;
 

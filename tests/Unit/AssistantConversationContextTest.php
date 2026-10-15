@@ -4,7 +4,7 @@ namespace Tests\Unit;
 
 use App\Models\Municipality;
 use App\Models\User;
-use App\Support\AssistantConversationContext;
+use App\Modules\Assistant\Application\AssistantConversationContext;
 use Illuminate\Support\Facades\Crypt;
 use Tests\TestCase;
 

@@ -12,9 +12,9 @@ use App\Models\Municipality;
 use App\Models\MunicipalityBoundary;
 use App\Models\RiceSeedDistribution;
 use App\Models\User;
-use App\Support\DashboardCoverage;
-use App\Support\DashboardMetrics;
-use App\Support\FarmerDataQuality;
+use App\Modules\Farmers\Application\FarmerDataQuality;
+use App\Modules\Reporting\Application\DashboardCoverage;
+use App\Modules\Reporting\Application\DashboardMetrics;
 use App\Support\MunicipalityAccess;
 use App\Support\ProviderUsage;
 use Illuminate\Database\Eloquent\Builder;
@@ -183,7 +183,7 @@ class DashboardController extends Controller
             ? round(($mappedFarmers / $totalFarmers) * 100, 1)
             : 0.0;
 
-        // Both rules come from App\Support\FarmerDataQuality so this headline, the
+        // Both rules come from App\Modules\Farmers\Application\FarmerDataQuality so this headline, the
         // per-municipality rollup further down, and the farmer directory that lists
         // the records behind them cannot drift apart.
         $farmersMissingFfrs = FarmerDataQuality::missingFfrs(clone $farmerQuery)->count();
@@ -439,7 +439,7 @@ class DashboardController extends Controller
         | Reporting charts
         |--------------------------------------------------------------------------
         |
-        | Every figure below is produced by App\Support\DashboardMetrics, which is
+        | Every figure below is produced by App\Modules\Reporting\Application\DashboardMetrics, which is
         | where the measurement rules are written down and tested: releases are never
         | reported as production, unique beneficiaries are counted apart from release
         | transactions, quantities in different units are never added together, and a

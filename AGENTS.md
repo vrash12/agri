@@ -1,5 +1,22 @@
 # Agriculture Information System — Developer Guide
 
+The October 16 modular-monolith refactor is implemented locally, not deployed.
+Business services now live under `App\Modules\{Farmers,Land,Agriculture,
+AnimalHealth,Climate,Assistant,Reporting}`. Use module Application APIs and the
+explicit `ModuleMap::IMPORTS` allowlist. Reporting implements the Assistant's
+`OfficeRecordReader` contract; Land implements `HarvestSectionGuard` for the
+Agriculture `RecordHarvest` action. `ModuleServiceProvider` binds both ports.
+Keep HTTP adapters, Eloquent model names and persisted identifiers stable.
+`app/Support` is reserved for the ten shared platform helpers in ModuleMap.
+Preserve `RegionOneSampleData::AUDIT_TYPE` as its historical Support class string
+so existing import receipts remain idempotent. Release all namespace moves,
+bindings, provider config, policies and views together; regenerate optimized
+autoloading and configuration/route/view caches without a general cache clear.
+No dependency, schema, account, provider or data change is required. See
+[docs/MODULAR_MONOLITH.md](docs/MODULAR_MONOLITH.md) for module ownership, checks,
+intentional shared persistence and deployment requirements. Historical Support
+class references below refer to the corresponding module services now.
+
 The complete October 15 crop-display follow-up is deployed in runtime `1bc08da`.
 Signed-in live verification loaded all 1,245 Ramos parcels and confirmed all
 five saved crop sections plus the classification-only corn tint; the final

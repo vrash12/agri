@@ -12,10 +12,10 @@ use App\Models\Region;
 use App\Models\RiceDistributionBatch;
 use App\Models\RiceSeedDistribution;
 use App\Models\User;
+use App\Modules\Agriculture\Application\SeedReleaseQuantity;
+use App\Modules\Land\Application\RegionOneSampleData;
 use App\Support\GeoGeometry;
 use App\Support\MunicipalityAccess;
-use App\Support\RegionOneSampleData;
-use App\Support\SeedReleaseQuantity;
 use DomainException;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Cache;
@@ -154,6 +154,7 @@ class RegionOneSampleDataTest extends TestCase
     public function test_repeat_application_is_a_complete_no_op_including_timestamps_tokens_and_audit(): void
     {
         $this->populate();
+        $this->assertSame(1, AuditLog::query()->where('auditable_type', 'App\\Support\\RegionOneSampleData')->count());
         $before = $this->snapshot();
         $this->travel(2)->minutes();
 

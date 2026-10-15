@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Models\Farmer;
 use App\Models\Municipality;
 use App\Models\User;
-use App\Support\FarmerPicker;
+use App\Modules\Farmers\Application\FarmerPicker;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Hash;
 use Tests\Support\ProvinceScopedFixtures;

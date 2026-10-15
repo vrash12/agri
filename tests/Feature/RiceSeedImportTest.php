@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\RiceSeedDistribution;
 use App\Models\User;
-use App\Support\HarvestFromRelease;
+use App\Modules\Agriculture\Application\HarvestFromRelease;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;

@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Municipality;
 use App\Models\MunicipalityBoundary;
-use App\Support\BarangayBoundaryReferences;
+use App\Modules\Land\Application\BarangayBoundaryReferences;
 use App\Support\MunicipalityAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

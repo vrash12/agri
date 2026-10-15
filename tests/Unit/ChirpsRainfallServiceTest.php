@@ -3,7 +3,7 @@
 namespace Tests\Unit;
 
 use App\Models\Municipality;
-use App\Services\ChirpsRainfallService;
+use App\Modules\Climate\Infrastructure\ChirpsRainfallService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;

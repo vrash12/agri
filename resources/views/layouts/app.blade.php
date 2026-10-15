@@ -1,6 +1,6 @@
 {{-- resources/views/layouts/app.blade.php --}}
 @php
-  $showOfficeAssistant = config('assistant.enabled') && auth()->check() && auth()->user()->can('use', \App\Support\OfficeAssistant::class);
+  $showOfficeAssistant = config('assistant.enabled') && auth()->check() && auth()->user()->can('use', \App\Modules\Assistant\Application\OfficeAssistant::class);
 @endphp
 <!DOCTYPE html>
 <html lang="en">

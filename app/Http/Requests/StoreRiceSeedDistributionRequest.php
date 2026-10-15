@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\RiceDistributionBatch;
 use App\Models\RiceSeedDistribution;
-use App\Support\SeedReleaseQuantity;
+use App\Modules\Agriculture\Application\SeedReleaseQuantity;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;

@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Exceptions\SatelliteUnavailable;
 use App\Models\FarmPlot;
+use App\Modules\Climate\Application\ParcelVegetationSnapshot;
+use App\Modules\Climate\Application\SentinelImagery;
+use App\Modules\Climate\Application\SentinelParcel;
 use App\Support\AuditTrail;
-use App\Support\ParcelVegetationSnapshot;
-use App\Support\SentinelImagery;
-use App\Support\SentinelParcel;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;

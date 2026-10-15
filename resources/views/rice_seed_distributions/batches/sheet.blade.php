@@ -12,7 +12,7 @@
 @php
     // Every heading below is built from the stored season and year on the batch,
     // so a sheet from another season prints its own band rather than a fixed one.
-    $totalsRow = $totals ? app(App\Support\RiceSeedDistributionSheet::class)->totalsRow($totals, $columns) : [];
+    $totalsRow = $totals ? app(App\Modules\Agriculture\Application\RiceSeedDistributionSheet::class)->totalsRow($totals, $columns) : [];
 @endphp
 
 <div class="module-page rice-sheet-page">

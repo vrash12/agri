@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\AssistanceCoverageRequest;
 use App\Models\RiceSeedDistribution;
-use App\Support\AssistanceCoverage;
+use App\Modules\Agriculture\Application\AssistanceCoverage;
 use Illuminate\Http\Request;
 
 class AssistanceCoverageController extends Controller

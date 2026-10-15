@@ -1,5 +1,12 @@
 # Planted crop areas inside a parcel
 
+October 16 local architecture follow-up: crop-season and geometry services now
+live in `App\Modules\Land\Application`. The Agriculture `RecordHarvest` action
+uses Land's `HarvestSectionGuard` contract to lock and reauthorize its linked
+section during a harvest transaction. Existing crop coordinates, shading,
+overlap rules and route/model identities retain their behavior. This refactor
+is not deployed; see [Modular monolith](MODULAR_MONOLITH.md).
+
 ## Whole-parcel crop tints — October 15, 2026
 
 The earlier all-white base hid the classification color on parcels with a saved

@@ -6,8 +6,8 @@ use App\Http\Requests\DisableFarmerPortalAccountRequest;
 use App\Http\Requests\IssueFarmerPortalActivationRequest;
 use App\Models\Farmer;
 use App\Models\FarmerPortalAccount;
+use App\Modules\Farmers\Application\FarmerPortalAccounts;
 use App\Support\ConcurrentWrite;
-use App\Support\FarmerPortalAccounts;
 use Illuminate\Http\Response;
 
 class FarmerPortalAccountController extends Controller

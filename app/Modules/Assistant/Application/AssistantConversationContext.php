@@ -1,0 +1,93 @@
+<?php
+
+namespace App\Modules\Assistant\Application;
+
+use App\Models\User;
+use App\Support\LocalTime;
+use Illuminate\Support\Facades\Crypt;
+use Throwable;
+
+/** Encrypted references are hints. Every record is independently authorized. */
+final class AssistantConversationContext
+{
+    private const TASKS = ['farmers', 'assistance', 'harvests', 'animal-health', 'summary', 'farmer-search', 'farmer', 'farmer-parcels', 'farmer-assistance', 'farmer-harvests', 'help', 'identity'];
+
+    public const HELP_STYLES = ['plain', 'brief', 'steps', 'example', 'more'];
+
+    /** @param array{task?:string,year?:int,farmer_id?:int|null,choices?:list<int>,help_topic?:string,help_style?:string,help_language?:string,pending_scope?:string} $references */
+    public function issue(User $user, string $sessionId, array $references, string $type = 'context'): string
+    {
+        $now = now('UTC')->timestamp;
+
+        $help = [];
+        if (($references['task'] ?? 'help') === 'help' && is_string($references['help_topic'] ?? null) && isset(OfficeAssistant::TOPICS[$references['help_topic']])) {
+            $help['help_topic'] = $references['help_topic'];
+            if (in_array($references['help_style'] ?? null, self::HELP_STYLES, true)) {
+                $help['help_style'] = $references['help_style'];
+            }
+            if (in_array($references['help_language'] ?? null, ['en', 'fil'], true)) {
+                $help['help_language'] = $references['help_language'];
+            }
+        }
+        if (($references['task'] ?? null) === 'farmer' && is_int($references['farmer_id'] ?? null) && $references['farmer_id'] > 0
+            && in_array($references['pending_scope'] ?? null, ['assistance', 'harvests'], true) && $type === 'context') {
+            $help['pending_scope'] = $references['pending_scope'];
+        }
+
+        return Crypt::encryptString(json_encode([
+            'version' => 1, 'type' => $type, 'user' => (int) $user->id,
+            'session' => hash('sha256', $sessionId), 'scope' => $this->scope($user),
+            'issued' => $now, 'expires' => $now + 900,
+            'task' => $references['task'] ?? 'help', 'year' => $references['year'] ?? LocalTime::now()->year,
+            'farmer_id' => $references['farmer_id'] ?? null,
+            'choices' => array_slice($references['choices'] ?? [], 0, 6),
+        ] + $help, JSON_THROW_ON_ERROR));
+    }
+
+    /** @return array{task:string,year:int,farmer_id:int|null,choices:list<int>,help_topic?:string,help_style?:string,help_language?:string,pending_scope?:string}|null */
+    public function read(User $user, string $sessionId, string $token, string $type = 'context'): ?array
+    {
+        if ($sessionId === '' || strlen($token) > 4096) {
+            return null;
+        }
+        try {
+            $value = json_decode(Crypt::decryptString($token), true, flags: JSON_THROW_ON_ERROR);
+            $now = now('UTC')->timestamp;
+            if (! is_array($value) || ($value['version'] ?? null) !== 1 || ($value['type'] ?? null) !== $type
+                || ($value['user'] ?? null) !== (int) $user->id
+                || ! is_string($value['session'] ?? null) || ! hash_equals(hash('sha256', $sessionId), $value['session'])
+                || ! is_string($value['scope'] ?? null) || ! hash_equals($this->scope($user), $value['scope'])
+                || ! is_int($value['issued'] ?? null) || ! is_int($value['expires'] ?? null)
+                || $value['issued'] > $now || $value['expires'] <= $now || $value['expires'] - $value['issued'] !== 900
+                || ! in_array($value['task'] ?? null, self::TASKS, true)
+                || ! is_int($value['year'] ?? null) || $value['year'] < 1900 || $value['year'] > 2100
+                || (! is_null($value['farmer_id'] ?? null) && (! is_int($value['farmer_id']) || $value['farmer_id'] < 1))
+                || ! is_array($value['choices'] ?? null) || ! array_is_list($value['choices']) || count($value['choices']) > 6
+                || (array_key_exists('help_topic', $value) && ($value['task'] !== 'help' || ! is_string($value['help_topic']) || ! isset(OfficeAssistant::TOPICS[$value['help_topic']])))
+                || (array_key_exists('help_style', $value) && (! isset($value['help_topic']) || ! in_array($value['help_style'], self::HELP_STYLES, true)))
+                || (array_key_exists('help_language', $value) && (! isset($value['help_topic']) || ! in_array($value['help_language'], ['en', 'fil'], true)))
+                || (array_key_exists('pending_scope', $value) && ($type !== 'context' || $value['task'] !== 'farmer' || empty($value['farmer_id'])
+                    || ! in_array($value['pending_scope'], ['assistance', 'harvests'], true) || $value['choices'] !== []))) {
+                return null;
+            }
+            foreach ($value['choices'] as $id) {
+                if (! is_int($id) || $id < 1) {
+                    return null;
+                }
+            }
+
+            return array_intersect_key($value, array_flip(['task', 'year', 'farmer_id', 'choices', 'help_topic', 'help_style', 'help_language', 'pending_scope']));
+        } catch (Throwable) {
+            // Never log tokens or decryption failures: an invalid hint is reset.
+            return null;
+        }
+    }
+
+    private function scope(User $user): string
+    {
+        return hash('sha256', json_encode([
+            $user->role, $user->region_id, $user->province_id, $user->municipality_id,
+            $user->municipality?->province_id, (bool) $user->is_active, (bool) $user->visitor_mode,
+        ], JSON_THROW_ON_ERROR));
+    }
+}

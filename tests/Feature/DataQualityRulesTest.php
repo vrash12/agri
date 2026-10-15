@@ -6,7 +6,7 @@ use App\Models\Farmer;
 use App\Models\Municipality;
 use App\Models\RiceSeedDistribution;
 use App\Models\User;
-use App\Support\FarmerDataQuality;
+use App\Modules\Farmers\Application\FarmerDataQuality;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;

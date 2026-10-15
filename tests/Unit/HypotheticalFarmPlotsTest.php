@@ -2,8 +2,8 @@
 
 namespace Tests\Unit;
 
+use App\Modules\Land\Application\HypotheticalFarmPlots;
 use App\Support\GeoGeometry;
-use App\Support\HypotheticalFarmPlots;
 use Illuminate\Config\Repository;
 use Illuminate\Container\Container;
 use InvalidArgumentException;

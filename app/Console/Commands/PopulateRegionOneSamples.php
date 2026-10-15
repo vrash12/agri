@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\User;
-use App\Support\RegionOneSampleData;
+use App\Modules\Land\Application\RegionOneSampleData;
 use DomainException;
 use Illuminate\Console\Command;
 use Throwable;

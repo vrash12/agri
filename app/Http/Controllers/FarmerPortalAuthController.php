@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ActivateFarmerPortalRequest;
 use App\Http\Requests\FarmerPortalLoginRequest;
-use App\Support\FarmerPortalAuthentication;
+use App\Modules\Farmers\Application\FarmerPortalAuthentication;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 

@@ -1,5 +1,12 @@
 # eAgriLGU — Complete Feature Catalog
 
+October 16 internal architecture refactor (local, not deployed): business
+workflows are grouped into Farmers, Land, Agriculture, Animal Health, Climate,
+Assistant and Reporting modules within the existing Laravel application.
+Local reports and crop-to-harvest checks use explicit module interfaces.
+Existing pages, permissions and record formats retain their current behavior.
+See [the architecture guide](docs/MODULAR_MONOLITH.md).
+
 October 15 whole-parcel crop display: saved crop records without drawn sections
 now show their crop-color tint and icon immediately. All parcel outlines stay
 white; parcels without crop records remain white. Drawn sections retain their

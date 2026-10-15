@@ -1,6 +1,6 @@
 @php
-  $serviceSuggestions = \App\Support\AnimalHealthFormOptions::SERVICE_SUGGESTIONS;
-  $breedsByType = \App\Support\AnimalHealthFormOptions::BREEDS_BY_TYPE;
+  $serviceSuggestions = \App\Modules\AnimalHealth\Application\AnimalHealthFormOptions::SERVICE_SUGGESTIONS;
+  $breedsByType = \App\Modules\AnimalHealth\Application\AnimalHealthFormOptions::BREEDS_BY_TYPE;
   $today = \App\Support\LocalTime::now()->toDateString();
   $rows = old('animals', [['animal_count' => 1, 'service_type' => $defaultServiceType ?? 'vaccination', 'vaccination_date' => $today]]);
   $rows = is_array($rows) ? array_values(array_filter($rows, 'is_array')) : [];

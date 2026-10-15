@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Support\RegionTwoGeofenceAppearance;
+use App\Modules\Land\Application\RegionTwoGeofenceAppearance;
 use Illuminate\Console\Command;
 use Throwable;
 

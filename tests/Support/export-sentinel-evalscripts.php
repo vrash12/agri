@@ -1,15 +1,15 @@
 <?php
 
+use App\Modules\Climate\Application\SatelliteRequestBudget;
+use App\Modules\Climate\Application\SentinelImagery;
+use App\Modules\Climate\Application\SentinelParcel;
 use App\Support\GeoGeometry;
-use App\Support\SatelliteRequestBudget;
-use App\Support\SentinelImagery;
-use App\Support\SentinelParcel;
 
 // Export the actual provider scripts for pixel-level Node tests; no framework or credentials needed.
 require __DIR__.'/../../app/Support/GeoGeometry.php';
-require __DIR__.'/../../app/Support/SentinelParcel.php';
-require __DIR__.'/../../app/Support/SentinelImagery.php';
-require __DIR__.'/../../app/Support/SatelliteRequestBudget.php';
+require __DIR__.'/../../app/Modules/Climate/Application/SentinelParcel.php';
+require __DIR__.'/../../app/Modules/Climate/Application/SentinelImagery.php';
+require __DIR__.'/../../app/Modules/Climate/Application/SatelliteRequestBudget.php';
 
 $service = new SentinelImagery(
     new SentinelParcel(new GeoGeometry),

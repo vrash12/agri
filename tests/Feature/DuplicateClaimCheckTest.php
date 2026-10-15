@@ -7,7 +7,7 @@ use App\Models\Farmer;
 use App\Models\Municipality;
 use App\Models\RiceSeedDistribution;
 use App\Models\User;
-use App\Support\DuplicateClaimCheck;
+use App\Modules\Agriculture\Application\DuplicateClaimCheck;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Hash;
 use Tests\Support\ProvinceScopedFixtures;

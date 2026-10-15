@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Municipality;
 use App\Models\User;
-use App\Services\WeatherForecastService;
+use App\Modules\Climate\Infrastructure\WeatherForecastService;
 use App\Support\MunicipalityAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;

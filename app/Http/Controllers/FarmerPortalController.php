@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\FarmerPortalAccount;
-use App\Support\FarmerPortalRecords;
+use App\Modules\Farmers\Application\FarmerPortalRecords;
 use Illuminate\Http\Request;
 
 class FarmerPortalController extends Controller

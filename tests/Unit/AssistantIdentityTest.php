@@ -6,7 +6,7 @@ use App\Models\Municipality;
 use App\Models\Province;
 use App\Models\Region;
 use App\Models\User;
-use App\Support\AssistantIdentity;
+use App\Modules\Assistant\Application\AssistantIdentity;
 use Illuminate\Support\Facades\Http;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;

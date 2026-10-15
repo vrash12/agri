@@ -16,6 +16,8 @@ use App\Models\ParcelCropSeason;
 use App\Models\RiceDistributionBatch;
 use App\Models\RiceSeedDistribution;
 use App\Models\User;
+use App\Modules\Assistant\Application\OfficeAssistant;
+use App\Modules\Assistant\Contracts\OfficeRecordReader;
 use App\Policies\AgriculturalMachineryPolicy;
 use App\Policies\AntiRabiesVaccinationPolicy;
 use App\Policies\BackupFilePolicy;
@@ -31,7 +33,6 @@ use App\Policies\ParcelCropSeasonPolicy;
 use App\Policies\RiceDistributionBatchPolicy;
 use App\Policies\RiceSeedDistributionPolicy;
 use App\Policies\UserPolicy;
-use App\Support\OfficeAssistant;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
 class AuthServiceProvider extends ServiceProvider
@@ -44,6 +45,7 @@ class AuthServiceProvider extends ServiceProvider
     protected $policies = [
         ClimateRiskAssessment::class => ClimateRiskAssessmentPolicy::class,
         OfficeAssistant::class => OfficeAssistantPolicy::class,
+        OfficeRecordReader::class => OfficeAssistantPolicy::class,
         FarmerPortalAccount::class => FarmerPortalAccountPolicy::class,
         ParcelCropSeason::class => ParcelCropSeasonPolicy::class,
         AgriculturalMachinery::class => AgriculturalMachineryPolicy::class,

@@ -1,5 +1,14 @@
 # Office Assistant
 
+October 16 local architecture follow-up: conversation/help services now live in
+`App\Modules\Assistant`, while local record reads live in
+`App\Modules\Reporting\Application\AssistantRecords`. The conversation depends
+on `OfficeRecordReader`; ModuleServiceProvider binds it and AuthServiceProvider
+applies the existing OfficeAssistantPolicy to the contract. The corpus, provider
+disclosure, budgets, encrypted context format and routes retain their behavior.
+See [Modular monolith](MODULAR_MONOLITH.md) for the complete local refactor and
+atomic release requirements. Earlier Support names below are historical.
+
 ## Verified context-awareness release — October 12, 2026 — runtime `d89aa10`
 
 The unified conversation now answers bounded questions about the Assistant and

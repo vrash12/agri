@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Ai\Agents\OfficeHelpAgent;
 use App\Exceptions\AssistantUnavailable;
 use App\Models\AuditLog;
 use App\Models\Farmer;
@@ -10,9 +9,10 @@ use App\Models\FarmerPortalAccount;
 use App\Models\Municipality;
 use App\Models\Province;
 use App\Models\User;
-use App\Support\AssistantKnowledge;
-use App\Support\AssistantRequestBudget;
-use App\Support\OfficeAssistant;
+use App\Modules\Assistant\Application\AssistantKnowledge;
+use App\Modules\Assistant\Application\AssistantRequestBudget;
+use App\Modules\Assistant\Application\OfficeAssistant;
+use App\Modules\Assistant\Infrastructure\OfficeHelpAgent;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Cache;

@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Support\FarmerIdentifier;
+use App\Modules\Farmers\Application\FarmerIdentifier;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;

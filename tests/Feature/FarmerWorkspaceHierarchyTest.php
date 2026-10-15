@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Http\Controllers\FarmerController;
 use App\Http\Controllers\FarmPlotController;
 use App\Models\User;
-use App\Support\FarmerWorkspace;
+use App\Modules\Farmers\Application\FarmerWorkspace;
 use DOMDocument;
 use DOMXPath;
 use Illuminate\Database\Eloquent\Collection;

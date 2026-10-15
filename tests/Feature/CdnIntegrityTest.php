@@ -47,10 +47,9 @@ class CdnIntegrityTest extends TestCase
     /**
      * Origins that cannot carry a hash, and why.
      *
-     * The Google Maps bootstrap negotiates its own version at load time and the
-     * Fonts stylesheet is generated per browser, so neither has a stable body to
-     * hash. Both are named in the Content-Security-Policy instead, which is the only
-     * control available for them.
+     * Google Maps negotiates its version at load time and has no stable body to
+     * hash. Retired Google Fonts origins remain in this scan so that the exact
+     * expected-origin assertion catches their return after the local Inter release.
      */
     private const UNHASHABLE = ['maps.googleapis.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 
@@ -149,7 +148,8 @@ class CdnIntegrityTest extends TestCase
         }
 
         $this->assertSame(
-            ['maps.googleapis.com', 'fonts.googleapis.com', 'fonts.gstatic.com'],
+            // Inter is hosted locally; retired Google Fonts origins must not return.
+            ['maps.googleapis.com'],
             array_values(array_intersect(self::UNHASHABLE, array_keys($found))),
             'The set of origins loaded without an integrity hash changed. Either hash the new one or record why it cannot be hashed.'
         );

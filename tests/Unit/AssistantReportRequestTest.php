@@ -2,7 +2,7 @@
 
 namespace Tests\Unit;
 
-use App\Support\AssistantReportRequest;
+use App\Modules\Assistant\Application\AssistantReportRequest;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

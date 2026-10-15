@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Support\ReferenceMunicipalityBoundaryImporter;
+use App\Modules\Land\Application\ReferenceMunicipalityBoundaryImporter;
 use Illuminate\Database\Seeder;
 
 class BulacanMunicipalityBoundarySeeder extends Seeder

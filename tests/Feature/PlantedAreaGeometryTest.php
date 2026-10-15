@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\FarmPlot;
+use App\Modules\Land\Application\PlantedCropAreas;
 use App\Support\GeoGeometry;
-use App\Support\PlantedCropAreas;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 

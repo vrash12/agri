@@ -207,8 +207,8 @@ class AuthController extends Controller
         // A browser session belongs to one audience at a time.
         Auth::guard('farmer')->logout();
         $request->session()->forget([
-            \App\Support\FarmerPortalAuthentication::VERSION_KEY,
-            \App\Support\FarmerPortalAuthentication::ACTIVITY_KEY,
+            \App\Modules\Farmers\Application\FarmerPortalAuthentication::VERSION_KEY,
+            \App\Modules\Farmers\Application\FarmerPortalAuthentication::ACTIVITY_KEY,
         ]);
 
         $user->forceFill([

@@ -20,7 +20,7 @@ return [
     | This is a window in days rather than a season comparison because
     | `harvest_season` is not recorded on any existing release. When both releases
     | do state a season, that comparison is used instead and this window is ignored
-    | — see App\Support\DuplicateClaimCheck.
+    | — see App\Modules\Agriculture\Application\DuplicateClaimCheck.
     |
     */
 

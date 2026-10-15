@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-use App\Support\OfficeAssistant;
+use App\Modules\Assistant\Application\OfficeAssistant;
 use Illuminate\Contracts\Validation\Validator as ValidatorContract;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;

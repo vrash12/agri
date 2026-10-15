@@ -10,7 +10,7 @@ use App\Models\MunicipalityBoundary;
 use App\Models\Province;
 use App\Models\Region;
 use App\Models\User;
-use App\Support\AssistanceCoverage;
+use App\Modules\Agriculture\Application\AssistanceCoverage;
 use App\Support\ConcurrentWrite;
 use App\Support\MunicipalityAccess;
 use App\Support\RegionSupervision;

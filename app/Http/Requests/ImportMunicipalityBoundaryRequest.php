@@ -11,7 +11,7 @@ use Illuminate\Validation\Rule;
  * Validation for importing a municipality geofence from a boundary file.
  *
  * Only the shape of the upload is checked here. Parsing the file and validating
- * the geometry inside it belongs to `App\Support\MunicipalityBoundaryImporter`,
+ * the geometry inside it belongs to `App\Modules\Land\Application\MunicipalityBoundaryImporter`,
  * which reports a readable reason when a file cannot be used.
  */
 class ImportMunicipalityBoundaryRequest extends FormRequest

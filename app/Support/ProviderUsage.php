@@ -3,6 +3,8 @@
 namespace App\Support;
 
 use App\Models\User;
+use App\Modules\Climate\Application\SatelliteRequestBudget;
+use App\Modules\Climate\Application\SentinelImagery;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;

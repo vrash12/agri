@@ -4,8 +4,8 @@ namespace Tests\Feature;
 
 use App\Exceptions\SatelliteUnavailable;
 use App\Models\User;
+use App\Modules\Climate\Application\SatelliteRequestBudget;
 use App\Support\ProviderUsage;
-use App\Support\SatelliteRequestBudget;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;

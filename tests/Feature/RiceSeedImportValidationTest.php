@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Support\RiceSeedImportValidation;
+use App\Modules\Agriculture\Application\RiceSeedImportValidation;
 use Illuminate\Validation\ValidationException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;

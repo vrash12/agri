@@ -3,7 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\AntiRabiesVaccination;
-use App\Support\AnimalHealthServiceRules;
+use App\Modules\AnimalHealth\Application\AnimalHealthServiceRules;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreAnimalHealthServicesRequest extends FormRequest

@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Ai\Agents\OfficeHelpAgent;
 use App\Http\Middleware\SynchronizeAssistantRequests;
 use App\Models\AuditLog;
 use App\Models\Farmer;
@@ -10,10 +9,11 @@ use App\Models\Municipality;
 use App\Models\Province;
 use App\Models\Region;
 use App\Models\User;
-use App\Support\AssistantConversationContext;
-use App\Support\AssistantIntentResolver;
-use App\Support\AssistantKnowledge;
-use App\Support\OfficeAssistant;
+use App\Modules\Assistant\Application\AssistantConversationContext;
+use App\Modules\Assistant\Application\AssistantIntentResolver;
+use App\Modules\Assistant\Application\AssistantKnowledge;
+use App\Modules\Assistant\Application\OfficeAssistant;
+use App\Modules\Assistant\Infrastructure\OfficeHelpAgent;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\Schema\Blueprint;

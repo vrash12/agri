@@ -451,7 +451,7 @@ class RiceSeedDistributionSheetTest extends TestCase
             'kgs_received' => 5000,
         ]));
 
-        $sheet = app(\App\Support\RiceSeedDistributionSheet::class);
+        $sheet = app(\App\Modules\Agriculture\Application\RiceSeedDistributionSheet::class);
         $totals = $sheet->totals($batch->fresh());
 
         $this->assertSame(40.0, $totals['kgs_received'], '5,000 pieces were added to a kilogram total.');
@@ -627,7 +627,7 @@ class RiceSeedDistributionSheetTest extends TestCase
             'date_received' => '2025-01-20',
         ]);
 
-        $sheet = app(\App\Support\RiceSeedDistributionSheet::class);
+        $sheet = app(\App\Modules\Agriculture\Application\RiceSeedDistributionSheet::class);
         $columns = $sheet->columns($this->ownBatch);
         $rows = $sheet->presentRows(
             $this->ownBatch,

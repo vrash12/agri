@@ -2,8 +2,8 @@
 
 namespace Tests\Unit;
 
-use App\Support\AssistantIntentResolver;
-use App\Support\OfficeAssistant;
+use App\Modules\Assistant\Application\AssistantIntentResolver;
+use App\Modules\Assistant\Application\OfficeAssistant;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

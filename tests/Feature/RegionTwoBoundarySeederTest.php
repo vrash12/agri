@@ -7,9 +7,9 @@ use App\Models\Municipality;
 use App\Models\MunicipalityBoundary;
 use App\Models\Province;
 use App\Models\User;
+use App\Modules\Land\Application\ReferenceMunicipalityBoundaryImporter;
 use App\Support\GeoGeometry;
 use App\Support\MunicipalityAccess;
-use App\Support\ReferenceMunicipalityBoundaryImporter;
 use Database\Seeders\BatanesMunicipalityBoundarySeeder;
 use Database\Seeders\CagayanMunicipalityBoundarySeeder;
 use Database\Seeders\IsabelaMunicipalityBoundarySeeder;
@@ -93,7 +93,7 @@ class RegionTwoBoundarySeederTest extends TestCase
         $provinceBefore = Province::orderBy('id')->get()->toJson();
         $municipalityBefore = Municipality::orderBy('id')->get()->toJson();
         $originalGeometry = MunicipalityBoundary::orderBy('id')->pluck('geojson', 'id')->all();
-        $service = app(\App\Support\RegionTwoGeofenceAppearance::class);
+        $service = app(\App\Modules\Land\Application\RegionTwoGeofenceAppearance::class);
         $before = MunicipalityBoundary::orderBy('id')->get()->toJson();
         $preview = $service->run(false, null);
         $this->assertSame(93, array_sum(array_column($preview, 'changed')));
@@ -117,7 +117,7 @@ class RegionTwoBoundarySeederTest extends TestCase
         $before = MunicipalityBoundary::orderBy('id')->get()->toJson();
         $audits = AuditLog::count();
         try {
-            app(\App\Support\RegionTwoGeofenceAppearance::class)->run(true, $this->actor->id);
+            app(\App\Modules\Land\Application\RegionTwoGeofenceAppearance::class)->run(true, $this->actor->id);
             $this->fail('Inactive scope must stop setup.');
         } catch (RuntimeException $exception) {
             $this->assertStringContainsString('Inactive province', $exception->getMessage());
@@ -129,7 +129,7 @@ class RegionTwoBoundarySeederTest extends TestCase
     public function test_region_two_style_setup_requires_an_explicit_active_owner(): void
     {
         $this->expectException(RuntimeException::class);
-        app(\App\Support\RegionTwoGeofenceAppearance::class)->run(true, null);
+        app(\App\Modules\Land\Application\RegionTwoGeofenceAppearance::class)->run(true, null);
     }
 
     public function test_all_93_boundaries_have_the_correct_supervision_and_attribution(): void

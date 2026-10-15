@@ -1,6 +1,6 @@
 @php
-  $serviceSuggestions = \App\Support\AnimalHealthFormOptions::SERVICE_SUGGESTIONS;
-  $breedsByType = \App\Support\AnimalHealthFormOptions::BREEDS_BY_TYPE;
+  $serviceSuggestions = \App\Modules\AnimalHealth\Application\AnimalHealthFormOptions::SERVICE_SUGGESTIONS;
+  $breedsByType = \App\Modules\AnimalHealth\Application\AnimalHealthFormOptions::BREEDS_BY_TYPE;
   $record = $record ?? null;
   $value = fn ($key, $default = '') => old($key, data_get($record, $key, $default));
   $dateValue = function ($key, $default = '') use ($record) {

@@ -2,13 +2,13 @@
 
 namespace Tests\Feature;
 
-use App\Ai\Agents\OfficeHelpAgent;
 use App\Models\AuditLog;
 use App\Models\Farmer;
 use App\Models\Municipality;
 use App\Models\Province;
 use App\Models\Region;
 use App\Models\User;
+use App\Modules\Assistant\Infrastructure\OfficeHelpAgent;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Cache;

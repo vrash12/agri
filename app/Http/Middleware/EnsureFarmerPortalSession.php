@@ -3,7 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\FarmerPortalAccount;
-use App\Support\FarmerPortalAuthentication;
+use App\Modules\Farmers\Application\FarmerPortalAuthentication;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;

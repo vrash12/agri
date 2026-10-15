@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
-use App\Support\DashboardMetrics;
+use App\Modules\Reporting\Application\DashboardMetrics;
 use App\Support\MunicipalityAccess;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;

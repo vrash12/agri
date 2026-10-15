@@ -2,16 +2,16 @@
 
 namespace Tests\Feature;
 
-use App\Ai\Agents\OfficeHelpAgent;
 use App\Exceptions\AssistantUnavailable;
 use App\Models\AuditLog;
 use App\Models\Farmer;
 use App\Models\Municipality;
 use App\Models\Province;
 use App\Models\User;
-use App\Support\AssistantKnowledge;
+use App\Modules\Assistant\Application\AssistantKnowledge;
+use App\Modules\Assistant\Application\OfficeAssistant;
+use App\Modules\Assistant\Infrastructure\OfficeHelpAgent;
 use App\Support\AuditTrail;
-use App\Support\OfficeAssistant;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Cache\Lock;
 use Illuminate\Database\Schema\Blueprint;

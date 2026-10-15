@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Municipality;
 use App\Models\User;
-use App\Services\WeatherForecastService;
+use App\Modules\Climate\Infrastructure\WeatherForecastService;
 use App\Support\MunicipalityAccess;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Collection;

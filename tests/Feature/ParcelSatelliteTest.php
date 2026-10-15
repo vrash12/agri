@@ -4,8 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\FarmPlot;
 use App\Models\User;
+use App\Modules\Climate\Application\SentinelParcel;
 use App\Support\ProviderUsage;
-use App\Support\SentinelParcel;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;

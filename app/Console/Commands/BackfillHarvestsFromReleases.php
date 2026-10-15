@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\RiceSeedDistribution;
-use App\Support\HarvestFromRelease;
+use App\Modules\Agriculture\Application\HarvestFromRelease;
 use Illuminate\Console\Command;
 
 /**

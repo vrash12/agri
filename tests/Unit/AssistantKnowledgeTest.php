@@ -4,8 +4,8 @@ namespace Tests\Unit;
 
 use App\Exceptions\AssistantUnavailable;
 use App\Models\User;
-use App\Support\AssistantKnowledge;
-use App\Support\OfficeAssistant;
+use App\Modules\Assistant\Application\AssistantKnowledge;
+use App\Modules\Assistant\Application\OfficeAssistant;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 

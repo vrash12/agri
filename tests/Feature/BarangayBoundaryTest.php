@@ -6,7 +6,7 @@ use App\Models\Municipality;
 use App\Models\Province;
 use App\Models\Region;
 use App\Models\User;
-use App\Support\BarangayBoundaryReferences;
+use App\Modules\Land\Application\BarangayBoundaryReferences;
 use App\Support\GeoGeometry;
 use Illuminate\Support\Facades\DB;
 use Tests\Support\ProvinceScopeSchema;

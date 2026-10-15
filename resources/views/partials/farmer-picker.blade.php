@@ -9,7 +9,7 @@
   Parameters:
     $name                field name, e.g. 'farmer_id'
     $label               visible label
-    $options             Collection from App\Support\FarmerPicker::initialOptions()
+    $options             Collection from App\Modules\Farmers\Application\FarmerPicker::initialOptions()
     $selected            currently selected farmer id, or null
     $required            whether a farmer must be chosen          (default false)
     $withProfile         ask the endpoint for the preview fields  (default false)
@@ -63,7 +63,7 @@
         @if($browsingAll)
             Showing the whole registry.
         @else
-            Type at least {{ \App\Support\FarmerPicker::MINIMUM_TERM }} characters of an eAgriLGU ID, name, FFRS or RSBSA number.
+            Type at least {{ \App\Modules\Farmers\Application\FarmerPicker::MINIMUM_TERM }} characters of an eAgriLGU ID, name, FFRS or RSBSA number.
         @endif
     </div>
 

@@ -4,11 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreAnimalHealthServicesRequest;
 use App\Models\AntiRabiesVaccination;
-use App\Support\AnimalHealthServiceRules;
+use App\Modules\AnimalHealth\Application\AnimalHealthServiceRules;
+use App\Modules\AnimalHealth\Application\RecordAnimalHealthServices;
 use App\Support\ConcurrentWrite;
 use App\Support\LocalTime;
 use App\Support\MunicipalityAccess;
-use App\Support\RecordAnimalHealthServices;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
