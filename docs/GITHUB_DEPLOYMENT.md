@@ -1,5 +1,25 @@
 # GitHub-to-Hostinger deployment
 
+## Verified Hostinger release — October 15, 2026 — crop colors and icons
+
+Runtime `1598e5e` fixes the undeclared `change` parameter in the map's crop-layer
+callback. Initial loading now reaches the classification and drawing reads;
+successful modal saves can notify both layers and show saved sections before
+closing. No saved crop/parcel data is rewritten.
+
+The full JavaScript suite passed 264 tests, including two regressions that
+reproduced the original error using the real map subscription and layer modules.
+Syntax and diff checks passed. GitHub main was fast-forwarded on Hostinger from
+`756db36` after backing up and comparing the previous source/served script under
+the private recovery directory `crop-map-callback-20261015-1598e5e`.
+The public asset was mirrored with 0644 permissions and Blade views rebuilt.
+The served HTTP 200 script matches both server copies at SHA-256
+`565d951ddd7d659bd516e18f5078da9f03fcc124aa28d5994b3ee88ed3baf90d`.
+No migration, record/account update, environment edit, provider call or general
+cache clear ran. An authenticated browser visual check remains pending because
+the available browser session is signed out. Existing open maps need a reload
+to execute the corrected versioned script.
+
 ## Verified Hostinger release — October 15, 2026 — eAgriLGU branding
 
 Runtime `532b9a6` includes the visible rebrand in `1c84a47` and a self-contained
