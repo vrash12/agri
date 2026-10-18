@@ -4,6 +4,7 @@ namespace App\Modules\Climate\Application;
 
 use App\Exceptions\SatelliteUnavailable;
 use App\Models\FarmPlot;
+use App\Platform\Observability\UsageMetrics;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Client\Response;
@@ -21,9 +22,7 @@ final class SentinelImagery
 
     private const CRS = 'http://www.opengis.net/def/crs/OGC/1.3/CRS84';
 
-    public function __construct(private SentinelParcel $parcels, private SatelliteRequestBudget $budget)
-    {
-    }
+    public function __construct(private SentinelParcel $parcels, private SatelliteRequestBudget $budget) {}
 
     public function configured(): bool
     {
@@ -31,19 +30,20 @@ final class SentinelImagery
             && trim((string) config('sentinel.client_secret')) !== '';
     }
 
-    public function statistics(FarmPlot $plot, string $from, string $to, int $maxCloud): array
+    public function statistics(FarmPlot $plot, string $from, string $to, int $maxCloud, string $index = 'ndvi'): array
     {
+        $definition = SatelliteIndex::definition($index);
         $this->requireConfiguration();
-        $parcel = $this->parcels->describe($plot);
-        $key = $this->key($plot, ['statistics', $parcel['geometry'], $from, $to, $maxCloud]);
+        $parcel = $this->parcels->describe($plot, $definition['resolution_m']);
+        $key = $this->key($plot, ['statistics', $parcel, $from, $to, $maxCloud, $index, $this->statisticsScript($index)]);
 
-        return $this->cached($key, function () use ($parcel, $from, $to, $maxCloud): array {
+        return $this->cached($key, 'sentinel-statistics', $to, function () use ($parcel, $from, $to, $maxCloud, $index, $definition): array {
             $response = $this->post(self::STATISTICS_URL, [
                 'input' => $this->input($parcel, $maxCloud),
                 'aggregation' => [
                     'timeRange' => $this->period($from, $to), 'aggregationInterval' => ['of' => 'P1D'],
                     'resx' => $parcel['resx'], 'resy' => $parcel['resy'],
-                    'evalscript' => $this->statisticsScript(),
+                    'evalscript' => $this->statisticsScript($index),
                 ],
             ]);
             $payload = $response->json();
@@ -61,7 +61,7 @@ final class SentinelImagery
                     || $date < $from || $date > $to || isset($rows[$date])) {
                     throw new SatelliteUnavailable('The satellite provider returned an invalid observation period.', 502);
                 }
-                $stats = $entry['outputs']['ndvi']['bands']['B0']['stats'] ?? null;
+                $stats = $entry['outputs'][$index]['bands']['B0']['stats'] ?? null;
                 if (! is_array($stats) || ! is_numeric($stats['sampleCount'] ?? null) || ! is_numeric($stats['noDataCount'] ?? null)) {
                     throw new SatelliteUnavailable('The satellite provider returned incomplete pixel counts.', 502);
                 }
@@ -75,7 +75,8 @@ final class SentinelImagery
                 $values = [];
                 foreach (['mean', 'min', 'max'] as $metric) {
                     $value = $stats[$metric] ?? null;
-                    if ($valid && (! is_numeric($value) || ! is_finite((float) $value) || $value < -1.001 || $value > 1.001)) {
+                    if ($valid && (! is_numeric($value) || ! is_finite((float) $value)
+                        || $value < $definition['minimum'] - 0.001 || $value > $definition['maximum'] + 0.001)) {
                         throw new SatelliteUnavailable('The satellite provider returned invalid vegetation values.', 502);
                     }
                     $values[$metric] = $valid ? round((float) $value, 4) : null;
@@ -88,18 +89,20 @@ final class SentinelImagery
             ksort($rows);
 
             return ['observations' => array_values($rows), 'source' => 'Copernicus Sentinel-2 Level-2A',
-                'method' => 'NDVI (B08 − B04) / (B08 + B04); daily UTC least-cloud mosaics; SCL mask; approximately 10 m geographic output grid.',
+                'index' => $index, 'resolution_m' => $definition['resolution_m'],
+                'method' => strtoupper($index).' '.$definition['formula'].'; harmonized reflectance; daily UTC least-cloud mosaics; SCL mask (20 m); approximately '.$definition['resolution_m'].' m geographic output grid.',
                 'generated_at' => now()->utc()->toIso8601String(), 'scene_cloud_limit' => $maxCloud];
         });
     }
 
     public function image(FarmPlot $plot, string $date, int $maxCloud, string $layer): string
     {
+        $resolution = $layer === 'true-color' ? 10 : SatelliteIndex::definition($layer)['resolution_m'];
         $this->requireConfiguration();
-        $parcel = $this->parcels->describe($plot);
-        $key = $this->key($plot, ['image', $parcel['geometry'], $date, $maxCloud, $layer]);
+        $parcel = $this->parcels->describe($plot, $resolution);
+        $key = $this->key($plot, ['image', $parcel, $date, $maxCloud, $layer, $this->imageScript($layer)]);
 
-        return $this->cached($key, function () use ($parcel, $date, $maxCloud, $layer): string {
+        return $this->cached($key, 'sentinel-image', $date, function () use ($parcel, $date, $maxCloud, $layer): string {
             $input = $this->input($parcel, $maxCloud);
             $input['data'][0]['dataFilter']['timeRange'] = $this->period($date, $date);
             $response = $this->post(self::PROCESS_URL, [
@@ -140,7 +143,12 @@ final class SentinelImagery
 
     private function key(FarmPlot $plot, array $parameters): string
     {
-        return 'sentinel:v1:'.$plot->id.':'.hash('sha256', json_encode([$plot->farmer_id, $plot->farmer?->municipality_id, $parameters, $this->credentialKey()], JSON_THROW_ON_ERROR));
+        // Geometry/grid are the boundary version; unrelated name edits do not
+        // discard a result. Script and processing revisions invalidate old output.
+        return 'sentinel:v2:'.$plot->id.':'.hash('sha256', json_encode([
+            $plot->farmer_id, $plot->farmer?->municipality_id, $parameters,
+            'sentinel-2-l2a:leastCC:NEAREST:harmonized:v1', $this->credentialKey(),
+        ], JSON_THROW_ON_ERROR));
     }
 
     private function credentialKey(): string
@@ -148,18 +156,29 @@ final class SentinelImagery
         return hash('sha256', config('sentinel.client_id').'|'.config('sentinel.client_secret'));
     }
 
-    private function cached(string $key, callable $make): mixed
+    private function cached(string $key, string $kind, string $lastDay, callable $make): mixed
     {
         $value = Cache::get($key);
+        app(UsageMetrics::class)->cache($kind, $value !== null);
         if ($value !== null) {
             return $value;
         }
         try {
-            return Cache::lock($key.':lock', 70)->block(2, function () use ($key, $make) {
+            return Cache::lock($key.':lock', 70)->block(2, function () use ($key, $kind, $lastDay, $make) {
                 $value = Cache::get($key);
                 if ($value === null) {
                     $value = $make();
-                    Cache::put($key, $value, now()->addMinutes((int) config('sentinel.cache_minutes', 720)));
+                    $historical = $lastDay < CarbonImmutable::now('UTC')
+                        ->subDays(max(7, (int) config('sentinel.settlement_days', 14)))->toDateString();
+                    // Empty/masked statistics remain short-lived so later
+                    // provider processing can supply a usable observation.
+                    $usable = $kind !== 'sentinel-statistics' || count(array_filter(
+                        $value['observations'], static fn (array $row): bool => $row['status'] === 'available'
+                    )) > 0;
+                    $expires = $historical && $usable
+                        ? now()->addDays(max(1, min(90, (int) config('sentinel.historical_cache_days', 30))))
+                        : now()->addMinutes(max(1, (int) config('sentinel.cache_minutes', 720)));
+                    Cache::put($key, $value, $expires);
                 }
 
                 return $value;
@@ -235,27 +254,32 @@ final class SentinelImagery
         return $response;
     }
 
-    private function maskScript(): string
+    public function statisticsScript(string $index = 'ndvi'): string
     {
-        return 'function clear(s) { return s.dataMask === 1 && [4,5,6].indexOf(s.SCL) !== -1 && s.B08 + s.B04 > 0; }';
-    }
+        $input = json_encode([SatelliteIndex::input($index)], JSON_THROW_ON_ERROR);
+        $calculation = SatelliteIndex::calculation($index);
 
-    public function statisticsScript(): string
-    {
-        return '//VERSION=3'."\n".$this->maskScript()."\n".<<<'JS'
-function setup() { return {input: [{bands: ["B04","B08","SCL","dataMask"]}], output: [{id:"ndvi",bands:1,sampleType:"FLOAT32"},{id:"dataMask",bands:1}]}; }
-function evaluatePixel(s) { var ok = clear(s); return {ndvi:[ok ? (s.B08-s.B04)/(s.B08+s.B04) : 0],dataMask:[ok ? 1 : 0]}; }
-JS;
+        return '//VERSION=3'."\n".$calculation."\n".
+            'function setup() { return {input:'.$input.',output:[{id:"'.$index.'",bands:1,sampleType:"FLOAT32"},{id:"dataMask",bands:1}]}; }'."\n".
+            'function evaluatePixel(s) { var v = indexValue(s); return {'.$index.':[v === null ? 0 : v],dataMask:[v === null ? 0 : 1]}; }';
     }
 
     public function imageScript(string $layer): string
     {
-        $pixel = $layer === 'true-color'
-            ? 'return [Math.min(1,2.5*s.B04),Math.min(1,2.5*s.B03),Math.min(1,2.5*s.B02),ok ? 1 : 0];'
-            : 'var v = ok ? (s.B08-s.B04)/(s.B08+s.B04) : 0; var rgb = colorBlend(v, [-1,0,0.2,0.5,1], [[0.2,0.3,0.65],[0.65,0.48,0.3],[0.95,0.83,0.3],[0.5,0.72,0.25],[0.06,0.32,0.15]]); return [rgb[0],rgb[1],rgb[2],ok ? 1 : 0];';
+        $trueColor = $layer === 'true-color';
+        $input = json_encode([SatelliteIndex::input($layer)], JSON_THROW_ON_ERROR);
+        if ($trueColor) {
+            $pixel = 'return [Math.min(1,2.5*s.B04),Math.min(1,2.5*s.B03),Math.min(1,2.5*s.B02),1];';
+        } else {
+            $definition = SatelliteIndex::definition($layer);
+            $colors = array_map(static fn (string $hex): array => array_map(
+                static fn (string $part): float => hexdec($part) / 255, str_split(substr($hex, 1), 2)), $definition['colors']);
+            $pixel = 'var rgb = colorBlend(v,'.json_encode($definition['stops'], JSON_THROW_ON_ERROR).','.
+                json_encode($colors, JSON_THROW_ON_ERROR).'); return [rgb[0],rgb[1],rgb[2],1];';
+        }
 
-        return '//VERSION=3'."\n".$this->maskScript()."\n".
-            'function setup() { return {input:[{bands:["B02","B03","B04","B08","SCL","dataMask"]}],output:{bands:4,sampleType:"AUTO"}}; }'."\n".
-            'function evaluatePixel(s) { var ok = clear(s); '.$pixel.' }';
+        return '//VERSION=3'."\n".SatelliteIndex::calculation($trueColor ? 'ndvi' : $layer)."\n".
+            'function setup() { return {input:'.$input.',output:{bands:4,sampleType:"AUTO"}}; }'."\n".
+            'function evaluatePixel(s) { var v = indexValue(s); if (v === null) return [0,0,0,0]; '.$pixel.' }';
     }
 }

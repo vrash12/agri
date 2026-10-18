@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Modules\Assistant\Application\AssistantKnowledge;
 use App\Modules\Assistant\Application\OfficeAssistant;
 use App\Modules\Assistant\Infrastructure\OfficeHelpAgent;
+use App\Platform\Observability\UsageMetrics;
 use App\Support\AuditTrail;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Cache\Lock;
@@ -120,6 +121,13 @@ final class AssistantRagTest extends TestCase
         $this->assertSame(0, $audits[1]->metadata['provider_input_count']);
         $this->assertSame(0, $audits[1]->metadata['provider_output_count']);
         $this->assertSame('cache', $audits[1]->metadata['delivery']);
+        $metrics = app(UsageMetrics::class);
+        $metrics->flush();
+        $counts = $metrics->snapshot()['periods']['day'];
+        $this->assertEquals(128, $counts['ai.input_tokens']);
+        $this->assertEquals(29, $counts['ai.output_tokens']);
+        $this->assertEquals(1, $counts['provider.openai.attempts']);
+        $this->assertEquals(1, $counts['cache.assistant-help.hits']);
         $this->assertSame(1, $this->dailyRequests());
         OfficeHelpAgent::assertPromptedTimes(1);
         // Count names avoid the existing global secret-key filter; actual token

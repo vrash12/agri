@@ -10,6 +10,7 @@ use App\Models\Municipality;
 use App\Models\MunicipalityBoundary;
 use App\Modules\Land\Application\BarangayBoundaryReferences;
 use App\Modules\Land\Application\MunicipalityBoundaryImporter;
+use App\Platform\Observability\UsageMetrics;
 use App\Support\AuditTrail;
 use App\Support\ConcurrentWrite;
 use App\Support\GeoGeometry;
@@ -298,6 +299,7 @@ class MunicipalityBoundaryController extends Controller
             .$boundary->id.':'
             .$requestedVersion;
         $map = Cache::get($cacheKey);
+        app(UsageMetrics::class)->cache('google-static', is_array($map));
         $failureMessage = 'Google could not generate the municipality satellite image. Please try again.';
 
         if (! is_array($map)) {

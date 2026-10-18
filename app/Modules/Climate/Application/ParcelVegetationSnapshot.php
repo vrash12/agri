@@ -11,6 +11,10 @@ final class ParcelVegetationSnapshot
 {
     public function remember(FarmPlot $plot, array $result): void
     {
+        // The climate dashboard consumes NDVI only. Other indices have different meanings/scales.
+        if (($result['index'] ?? 'ndvi') !== 'ndvi') {
+            return;
+        }
         if (! is_array($result['observations'] ?? null) || count($result['observations']) > 31) {
             return;
         }

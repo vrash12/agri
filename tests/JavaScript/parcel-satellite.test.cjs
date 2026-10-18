@@ -4,7 +4,7 @@ const vm = require('node:vm');
 const path = require('node:path');
 const fs = require('node:fs');
 const { execFileSync } = require('node:child_process');
-const { readObservations, createRequestSlot, validDay, responseError, createRetryCooldown } = require('../../public/js/parcel-satellite.js');
+const { readObservations, createRequestSlot, validDay, responseError, createRetryCooldown, indexScale } = require('../../public/js/parcel-satellite.js');
 const scripts = JSON.parse(execFileSync(process.env.PHP_BINARY || 'php', [path.join(__dirname, '../Support/export-sentinel-evalscripts.php')], { encoding: 'utf8' }));
 const period = { from: '2026-08-01', to: '2026-08-03' };
 const row = { date: '2026-08-01', mean: 0, min: -0.2, max: 0.2, valid_pixels: 14, status: 'available' };
@@ -35,6 +35,62 @@ test('water and bare soil preserve negative and zero NDVI; true color uses the v
   assert.ok(Math.abs(water.ndvi[0] + 1 / 3) < 1e-9);
   assert.deepEqual(evaluate(scripts.statistics, { ...pixel, SCL: 5, B08: 0.2 }), { ndvi: [0], dataMask: [1] });
   assert.deepEqual(evaluate(scripts.trueColor, pixel), [0.5, 0.375, 0.25, 1]);
+});
+
+test('actual NDMI, SAVI and EVI scripts use reflectance formulas and identical image/statistics masks', () => {
+  const pixel = { B02: 0.1, B04: 0.2, B08: 0.6, B11: 0.3, SCL: 4, dataMask: 1 };
+  const expected = { ndvi: 0.5, ndmi: 1 / 3, savi: 1.5 * 0.4 / 1.3, evi: 2.5 * 0.4 / 2.05 };
+  for (const [id, scriptsForIndex] of Object.entries(scripts.indexes)) {
+    const value = evaluate(scriptsForIndex.statistics, pixel);
+    assert.ok(Math.abs(value[id][0] - expected[id]) < 1e-9, id + ' formula');
+    assert.equal(value.dataMask[0], 1);
+    const sandbox = {};
+    vm.runInNewContext(scriptsForIndex.statistics + '; config = setup();', sandbox);
+    const input = sandbox.config.input[0];
+    input.bands.forEach((band, i) => assert.equal(input.units[i], band.startsWith('B') ? 'REFLECTANCE' : 'DN'));
+    for (let scl = 0; scl <= 11; scl++) {
+      const mask = [4, 5, 6].includes(scl) ? 1 : 0;
+      assert.equal(evaluate(scriptsForIndex.statistics, { ...pixel, SCL: scl }).dataMask[0], mask, id);
+      assert.equal(evaluate(scriptsForIndex.image, { ...pixel, SCL: scl })[3], mask, id);
+    }
+    for (const bad of [{ dataMask: 0 }, { B08: NaN }, { B08: Infinity }, { B08: -0.1 }, { B08: undefined }]) {
+      const invalid = { ...pixel, ...bad };
+      assert.equal(evaluate(scriptsForIndex.statistics, invalid).dataMask[0], 0, id);
+      assert.equal(evaluate(scriptsForIndex.image, invalid)[3], 0, id);
+    }
+  }
+});
+
+test('undefined divisions are masked and valid zero, negative and above-one values remain measurements', () => {
+  const pixel = { B02: 0.1, B04: 0.2, B08: 0.6, B11: 0.3, SCL: 4, dataMask: 1 };
+  for (const [id, changes] of [['ndmi', { B08: 0, B11: 0 }], ['evi', { B02: 2.8 / 7.5 }], ['evi', { B02: (2.8 - 1e-8) / 7.5 }]]) {
+    assert.equal(evaluate(scripts.indexes[id].statistics, { ...pixel, ...changes }).dataMask[0], 0, id);
+    assert.equal(evaluate(scripts.indexes[id].image, { ...pixel, ...changes })[3], 0, id);
+  }
+  for (const id of ['ndmi', 'savi', 'evi']) {
+    const zero = evaluate(scripts.indexes[id].statistics, { ...pixel, B08: 0.2, B11: 0.2 });
+    assert.deepEqual(zero, { [id]: [0], dataMask: [1] });
+    assert.ok(evaluate(scripts.indexes[id].statistics, { ...pixel, B08: 0.1 })[id][0] < 0, id);
+  }
+  const evi = evaluate(scripts.indexes.evi.statistics, { ...pixel, B02: 2 / 7.5 });
+  assert.ok(evi.evi[0] > 1); assert.equal(evi.dataMask[0], 1);
+  const savi = evaluate(scripts.indexes.savi.statistics, { ...pixel, B08: 3 });
+  assert.ok(savi.savi[0] > 1); assert.equal(savi.dataMask[0], 1);
+});
+
+test('responses are tied to the selected index/grid and EVI/SAVI axes preserve values above one', () => {
+  for (const id of ['ndmi', 'savi', 'evi']) {
+    const definition = scripts.definitions[id], selected = { ...period, index: id };
+    const value = { ...row, mean: id === 'ndmi' ? 0 : 1.2, min: 0, max: id === 'ndmi' ? 0.2 : 1.3 };
+    const payload = { index: id, resolution_m: definition.resolution_m, observations: [value] };
+    assert.equal(readObservations(payload, selected, definition)[0].mean, value.mean);
+    assert.throws(() => readObservations({ ...payload, index: 'ndvi' }, selected, definition), /selected index/);
+    assert.throws(() => readObservations({ ...payload, resolution_m: 99 }, selected, definition), /selected index/);
+    assert.throws(() => readObservations({ ...payload, index: undefined }, selected, definition), /selected index/);
+    assert.throws(() => readObservations({ ...payload, observations: [{ ...value, mean: Infinity }] }, selected, definition));
+  }
+  const scale = indexScale([{ ...row, mean: 1.2, min: -1.2, max: 1.4 }]);
+  assert.deepEqual(scale, { min: -1.2, max: 1.4 });
 });
 
 test('daily observations sort dates and preserve zero separately from a fully masked day', () => {
@@ -113,13 +169,14 @@ test('cooldown follows elapsed time, restores controls without retrying and canc
 function satellitePage(fetcher) {
   const elements=new Map(),events=new Map(),timers=new Map();let clock=0,timerId=0;
   class Element {
-    constructor(){this.value='';this.disabled=false;this.style={};this.dataset={};this.children=[];this.events={};this.classList={toggle(){}};}
-    setAttribute(){} removeAttribute(){} appendChild(child){this.children.push(child);} replaceChildren(...children){this.children=children;}
+    constructor(){this.value='';this.disabled=false;this.style={};this.dataset={};this.children=[];this.events={};this.attributes={};this.classList={toggle(){}};}
+    setAttribute(key,value){this.attributes[key]=value;} removeAttribute(key){delete this.attributes[key];} appendChild(child){this.children.push(child);} replaceChildren(...children){this.children=children;}
     addEventListener(name,callback){this.events[name]=callback;} add(child){this.children.push(child);} reportValidity(){return true;}
     querySelector(){return {value:'synthetic-token'};}
   }
   const byId=id=>{if(!elements.has(id))elements.set(id,new Element());return elements.get(id);};
-  byId('satelliteConfig').textContent=JSON.stringify({geometry:null,bounds:null,imageUrl:'/image'});
+  byId('satelliteConfig').textContent=JSON.stringify({geometry:null,bounds:null,imageUrl:'/image',indexes:scripts.definitions});
+  byId('satelliteIndex').value='ndvi';
   byId('satelliteForm').action='/observations';byId('satelliteFrom').value=period.from;byId('satelliteTo').value=period.to;byId('satelliteCloud').value='60';byId('satelliteLayer').value='ndvi';
   class MockDate extends Date {static now(){return clock;}}
   vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../../public/js/parcel-satellite.js'),'utf8'),{
@@ -155,4 +212,79 @@ test('image cooldown leaves picture searches available and prevents image retrie
   await page.byId('satelliteLayer').events.change();assert.equal(images,1);
   page.advance(4000);assert.equal(page.byId('satelliteImageRetry').disabled,false);assert.equal(images,1);
   page.events.get('pagehide')();assert.equal(page.timers.size,0);
+});
+
+test('changing the selected index discards old data without fetching and does not let old completion unlock a new search', async () => {
+  const calls = [];
+  const page = satellitePage((url, options) => new Promise(resolve => calls.push({ url, options, resolve })));
+  const first = page.submit();
+  assert.equal(JSON.parse(calls[0].options.body).index, 'ndvi');
+  page.byId('satelliteIndex').value = 'ndmi'; page.byId('satelliteIndex').events.change();
+  assert.equal(calls.length, 1, 'Selection alone cannot start paid work');
+  assert.equal(calls[0].options.signal.aborted, true);
+  assert.equal(page.byId('satelliteDate').disabled, true);
+  assert.equal(page.byId('satelliteScore').hidden, true);
+  assert.match(page.byId('satelliteResolution').textContent, /20 m/);
+  assert.match(page.byId('satelliteLegendHigh').textContent, /water signal/);
+  const second = page.submit();
+  calls[0].resolve({ ok: true, json: async () => ({ observations: [row] }) });
+  await first;
+  assert.equal(page.byId('satelliteLoad').disabled, true, 'A superseded request cannot unlock the current search');
+  calls[1].resolve({ ok: true, json: async () => ({ index: 'ndmi', resolution_m: 20, observations: [] }) });
+  await second;
+  assert.equal(page.byId('satelliteLoad').disabled, false);
+  assert.equal(calls.length, 2);
+});
+
+test('each new index requests its matching image and labels; switching indices preserves a provider cooldown', async () => {
+  for (const id of ['ndmi', 'savi', 'evi']) {
+    const calls = [];
+    const page = satellitePage(async (url, options) => {
+      calls.push({ url, options });
+      if (url === '/observations') return { ok: true, json: async () => ({ index: id, resolution_m: scripts.definitions[id].resolution_m, observations: [row] }) };
+      return { ok: false, status: 429, headers: { get: () => '5' }, json: async () => ({ message: 'Satellite image loads limited.' }) };
+    });
+    page.byId('satelliteIndex').value = id; page.byId('satelliteIndex').events.change();
+    await page.submit(); await new Promise(resolve => setImmediate(resolve));
+    assert.equal(new URL(calls[1].url).searchParams.get('layer'), id);
+    assert.match(page.byId('satelliteMeanLabel').textContent, new RegExp(id.toUpperCase()));
+    page.byId('satelliteIndex').value = 'ndvi'; page.byId('satelliteIndex').events.change();
+    assert.equal(calls.length, 2); assert.equal(page.byId('satelliteImageRetry').disabled, true);
+    assert.equal(page.byId('satelliteScore').hidden, true);
+    page.events.get('pagehide')(); assert.equal(page.timers.size, 0);
+  }
+});
+
+test('the rendered EVI summary and chart show measurements above one without clipping or health grades', async () => {
+  const page = satellitePage(async url => url === '/observations'
+    ? { ok: true, json: async () => ({ index: 'evi', resolution_m: 10, observations: [{ ...row, mean: 1.2, min: -1.1, max: 1.4 }] }) }
+    : { ok: false, status: 502, headers: { get: () => null }, json: async () => ({ message: 'Synthetic image unavailable.' }) });
+  page.byId('satelliteIndex').value = 'evi'; page.byId('satelliteIndex').events.change();
+  await page.submit(); await new Promise(resolve => setImmediate(resolve));
+  assert.equal(page.byId('satelliteMean').textContent, '1.200');
+  assert.equal(page.byId('satelliteScoreMeter').value, 1.2);
+  assert.equal(page.byId('satelliteScoreMeter').min, -1.1);
+  assert.equal(page.byId('satelliteScoreMeter').max, 1.4);
+  assert.match(page.byId('satelliteQuality').textContent, /outside the colour scale/);
+  assert.equal(page.byId('satelliteHistory').children[0].children[1].textContent, '1.200');
+  const svg = page.byId('satelliteChart').children[0];
+  const dot = svg.children.find(node => node.attributes.cy !== undefined);
+  assert.ok(Number(dot.attributes.cy) >= 16 && Number(dot.attributes.cy) <= 146);
+  page.events.get('pagehide')();
+});
+
+test('an image completing after an index switch cannot restore the old layer or legend', async () => {
+  let finish;
+  const page = satellitePage(async url => url === '/observations'
+    ? { ok: true, json: async () => ({ observations: [row] }) }
+    : new Promise(resolve => { finish = resolve; }));
+  await page.submit(); await new Promise(resolve => setImmediate(resolve));
+  page.byId('satelliteIndex').value = 'ndmi'; page.byId('satelliteIndex').events.change();
+  finish({ ok: true, headers: { get: () => 'image/png' }, blob: async () => new Blob(['synthetic png']) });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(page.byId('satelliteLegend').hidden, true);
+  assert.equal(page.byId('satellitePreview').hidden, true);
+  assert.equal(page.byId('satelliteOpacity').disabled, true);
+  assert.match(page.byId('satelliteImageCaption').textContent, /No NDMI observation/);
+  page.events.get('pagehide')();
 });

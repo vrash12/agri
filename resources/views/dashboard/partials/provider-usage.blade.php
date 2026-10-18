@@ -59,5 +59,6 @@
       <a class="ops-button ops-button-secondary" href="https://console.cloud.google.com/google/maps-apis/overview" target="_blank" rel="noopener noreferrer">Open Google Cloud usage <span aria-hidden="true">↗</span><span class="sr-only"> (opens a new tab)</span></a>
     </article>
   </div>
+  @include('dashboard.partials.application-usage')
   <p class="ops-provider-footer">Counters reset at UTC day/month boundaries and when the application cache is cleared. Recording is best-effort; provider reports remain the source for billing and quotas. No farmer details or API keys are shown.</p>
 </section>

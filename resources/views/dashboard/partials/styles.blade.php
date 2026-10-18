@@ -42,6 +42,15 @@
   .ops-provider-counts small { color: var(--ops-muted); font-size: 12px; line-height: 1.6; }
   .ops-provider-notice { padding: 10px 12px; border: 1px solid var(--ops-border); border-left: 3px solid var(--ops-amber); border-radius: 6px; background: var(--ops-subtle); font-size: 12px; line-height: 1.65; }
   .ops-provider-notice p { margin: 4px 0 0; }
+  .ops-application-usage { margin: 0 20px 20px; min-width: 0; }
+  .ops-application-usage details > summary { padding: 12px 0; cursor: pointer; font-weight: 600; }
+  .ops-application-usage details > summary:focus-visible { outline: 2px solid var(--ui-focus); }
+  .ops-application-usage .module-table-scroll { overflow-x: auto; margin: 14px 0; border: 1px solid var(--ops-border); border-radius: 6px; }
+  .ops-application-usage table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .ops-application-usage caption { padding: 12px; text-align: left; font-weight: 600; background: var(--ops-subtle); }
+  .ops-application-usage th, .ops-application-usage td { padding: 10px 12px; border-bottom: 1px solid var(--ops-border); text-align: left; }
+  .ops-application-usage td { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .ops-application-usage tbody th { font-weight: 500; }
   .ops-provider-footer { margin: 0; padding: 0 20px 20px; }
   @media (max-width: 900px) { .ops-provider-grid { grid-template-columns: minmax(0, 1fr); } }
   @media (max-width: 480px) { .ops-provider-grid { padding: 12px; } .ops-provider-card { padding: 14px; } .ops-provider-counts { grid-template-columns: minmax(0, 1fr); } }

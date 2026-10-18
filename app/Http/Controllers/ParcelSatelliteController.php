@@ -5,11 +5,13 @@ namespace App\Http\Controllers;
 use App\Exceptions\SatelliteUnavailable;
 use App\Models\FarmPlot;
 use App\Modules\Climate\Application\ParcelVegetationSnapshot;
+use App\Modules\Climate\Application\SatelliteIndex;
 use App\Modules\Climate\Application\SentinelImagery;
 use App\Modules\Climate\Application\SentinelParcel;
 use App\Support\AuditTrail;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
@@ -30,11 +32,12 @@ class ParcelSatelliteController extends Controller
 
         $view = $request->boolean('modal') ? 'farm_plots.satellite_modal' : 'farm_plots.satellite';
 
-        return view($view, [
+        return response()->view($view, [
             'plot' => $plot, 'parcel' => $parcel, 'geometryError' => $geometryError,
             'configured' => $this->imagery->configured(),
+            'indexes' => SatelliteIndex::definitions(),
             'from' => now()->utc()->subDays(30)->toDateString(), 'to' => now()->utc()->subDay()->toDateString(),
-        ]);
+        ])->header('Cache-Control', 'private, no-store');
     }
 
     public function analyse(Request $request, FarmPlot $plot)
@@ -44,15 +47,16 @@ class ParcelSatelliteController extends Controller
             'from' => ['required', 'date_format:Y-m-d', 'after_or_equal:2017-03-28', 'before_or_equal:today'],
             'to' => ['required', 'date_format:Y-m-d', 'after_or_equal:from', 'before_or_equal:today'],
             'max_cloud' => ['required', 'integer', 'min:0', 'max:100'],
+            'index' => ['sometimes', 'required', 'string', Rule::in(SatelliteIndex::IDS)],
         ]);
         if (CarbonImmutable::parse($data['from'])->diffInDays(CarbonImmutable::parse($data['to'])) > 30) {
             throw ValidationException::withMessages(['to' => 'Choose up to 31 days per request.']);
         }
         try {
-            $result = $this->imagery->statistics($plot, $data['from'], $data['to'], (int) $data['max_cloud']);
+            $result = $this->imagery->statistics($plot, $data['from'], $data['to'], (int) $data['max_cloud'], $data['index'] ?? 'ndvi');
             $this->vegetation->remember($plot, $result);
             AuditTrail::record('viewed', 'Satellite observations', 'Reviewed Sentinel-2 observations for a saved parcel.', [
-                'auditable' => $plot, 'metadata' => ['from' => $data['from'], 'to' => $data['to'], 'source' => 'Sentinel-2 L2A'],
+                'auditable' => $plot, 'metadata' => ['from' => $data['from'], 'to' => $data['to'], 'source' => 'Sentinel-2 L2A', 'index' => $result['index']],
             ]);
 
             return response()->json($result);
@@ -69,7 +73,7 @@ class ParcelSatelliteController extends Controller
         $data = $request->validate([
             'date' => ['required', 'date_format:Y-m-d', 'after_or_equal:2017-03-28', 'before_or_equal:today'],
             'max_cloud' => ['required', 'integer', 'min:0', 'max:100'],
-            'layer' => ['required', 'in:ndvi,true-color'],
+            'layer' => ['required', 'string', Rule::in([...SatelliteIndex::IDS, 'true-color'])],
         ]);
         try {
             $image = $this->imagery->image($plot, $data['date'], (int) $data['max_cloud'], $data['layer']);

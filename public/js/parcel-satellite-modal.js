@@ -15,9 +15,18 @@
   var currentUrl = '';
   var loadingTimer;
   var previousOverflow = '';
+  var retainedUrl = '';
+  var verification = null;
+  var generation = 0;
+
+  function discard() {
+    retainedUrl = '';
+    frame.src = 'about:blank';
+  }
 
   function fail(message, expired) {
     clearTimeout(loadingTimer);
+    discard();
     status.hidden = true;
     frame.hidden = true;
     errorPanel.hidden = false;
@@ -29,6 +38,7 @@
 
   function load() {
     clearTimeout(loadingTimer);
+    retainedUrl = '';
     status.textContent = 'Opening satellite field check…';
     status.hidden = false;
     frame.hidden = true;
@@ -43,8 +53,11 @@
 
   function cleanup() {
     clearTimeout(loadingTimer);
+    generation++;
+    verification?.abort(); verification = null;
+    try { frame.contentWindow.__pauseParcelSatellite?.(); } catch (_) {}
+    if (!retainedUrl) discard();
     currentUrl = '';
-    frame.src = 'about:blank';
     frame.hidden = true;
     status.hidden = false;
     errorPanel.hidden = true;
@@ -55,6 +68,41 @@
   }
 
   function close() { if (dialog.open) dialog.close(); }
+
+  async function reopen() {
+    const ticket = ++generation;
+    verification?.abort();
+    verification = new AbortController();
+    const controller = verification;
+    status.textContent = 'Checking parcel access…'; status.hidden = false;
+    frame.hidden = true; errorPanel.hidden = true;
+    dialog.setAttribute('aria-busy', 'true');
+    const timeout = setTimeout(function () { controller.abort(); }, 15000);
+    try {
+      // Reauthorize and compare the fresh workspace configuration before
+      // revealing retained content. This GET never starts NDVI processing.
+      const response = await fetch(currentUrl, {credentials:'same-origin', cache:'no-store',
+        signal:controller.signal, headers:{Accept:'text/html', 'X-Requested-With':'XMLHttpRequest'}});
+      const html = response.ok ? await response.text() : '';
+      if (ticket !== generation || !dialog.open) return;
+      if (response.status === 401 || response.status === 419 || new URL(response.url || currentUrl).pathname === new URL(login.href).pathname) {
+        fail('Your session has expired. Sign in again to view this parcel.', true); return;
+      }
+      if (!response.ok) { fail('You no longer have access to this parcel, or it is unavailable.'); return; }
+      const fresh = new DOMParser().parseFromString(html, 'text/html');
+      const config = fresh.getElementById('satelliteConfig')?.textContent;
+      const previous = frame.contentDocument?.getElementById('satelliteConfig')?.textContent;
+      if (!config || !fresh.getElementById('satellitePage')) { fail('The satellite workspace could not be verified. Try again.'); return; }
+      if (config !== previous) { load(); return; }
+      const child = frame.contentWindow;
+      if (child.__mapUsage) child.__mapUsage.token = fresh.querySelector('meta[name="csrf-token"]')?.content || child.__mapUsage.token;
+      child.__resumeParcelSatellite?.();
+      status.hidden = true; frame.hidden = false; errorPanel.hidden = true;
+      dialog.removeAttribute('aria-busy');
+    } catch (error) {
+      if (ticket === generation && dialog.open) fail('We could not verify parcel access. Check your connection and try again.');
+    } finally { clearTimeout(timeout); }
+  }
 
   window.__openParcelSatelliteModal = function (plotId, trigger) {
     if (!window.__parcelSatelliteUrl || !plotId) return false;
@@ -68,7 +116,8 @@
       document.body.style.overflow = 'hidden';
     }
     currentUrl = url.href;
-    load();
+    if (retainedUrl === currentUrl) reopen();
+    else { generation++; verification?.abort(); load(); }
     closeButton.focus();
     return true;
   };
@@ -89,6 +138,7 @@
         return;
       }
       clearTimeout(loadingTimer);
+      retainedUrl = currentUrl;
       status.hidden = true;
       errorPanel.hidden = true;
       frame.hidden = false;

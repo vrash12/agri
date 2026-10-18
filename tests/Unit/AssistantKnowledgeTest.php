@@ -174,6 +174,10 @@ final class AssistantKnowledgeTest extends TestCase
         $this->assertStringContainsString('31 days', $text);
         $this->assertStringContainsString('not a diagnosis', $text);
         $this->assertStringContainsString('not report complete Google billing', $text);
+        $this->assertStringContainsString('NDMI', $text);
+        $this->assertStringContainsString('L = 0.5', $text);
+        $this->assertStringContainsString('20 m', $text);
+        $this->assertStringContainsString('NDVI-only', $text);
     }
 
     #[DataProvider('invalidRequests')]

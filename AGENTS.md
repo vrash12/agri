@@ -1,5 +1,35 @@
 # Agriculture Information System — Developer Guide
 
+The October 19 satellite-index expansion is local, not deployed. The existing
+parcel field check now selects NDVI, NDMI, SAVI or EVI through the Climate
+Application `SatelliteIndex` allowlist. NDMI uses B08/B11 and an approximately
+20 m grid; the other indices use approximately 10 m grids (SCL remains 20 m).
+SAVI uses L = 0.5 and EVI uses harmonized reflectance. Index-specific scripts,
+grid, ownership and credentials distinguish caches. Never accept request text
+as an evalscript. Preserve raw finite SAVI/EVI values beyond the colour scale;
+mask undefined/near-zero divisions, not as zero. Selecting an index cancels and
+clears previous work without an automatic provider call; existing shared
+throttles, processing budgets and automatic-source settings stay unchanged.
+`ParcelVegetationSnapshot` remains NDVI-only. Release the Climate classes,
+controller, shared satellite views, versioned JS/CSS and reviewed Assistant
+guidance/aliases together with the pending refactor and efficiency work. No
+migration, new provider, general-cache clear or account change is needed.
+See [docs/SATELLITE_INDICES.md](docs/SATELLITE_INDICES.md).
+
+The October 18 cost/efficiency follow-up is local, not deployed. Shared aggregate
+metrics live in `App\Platform\Observability`, outside business modules and the
+ten Support helpers. They never retain SQL/bindings, URLs, credentials, messages
+or record/user IDs. Browser map counts are observations, not billable Google
+loads. Release visibility startup/crop-map reuse with `reusable-google-map.js`.
+Retained satellite views must reauthorize and compare fresh context before
+showing old content. Sentinel v2 keys include boundary/grid, dates, settings,
+script and ownership/credential identity: usable historical results retain
+30 days, recent/empty readings 12 hours. Existing budgets and automatic-provider
+settings stay unchanged. Release providers, middleware, routes, configs,
+modules, views and map assets with the pending refactor. No migration, new
+service or general-cache clear is needed. See
+[docs/COST_EFFICIENCY.md](docs/COST_EFFICIENCY.md).
+
 The October 16 modular-monolith refactor is implemented locally, not deployed.
 Business services now live under `App\Modules\{Farmers,Land,Agriculture,
 AnimalHealth,Climate,Assistant,Reporting}`. Use module Application APIs and the

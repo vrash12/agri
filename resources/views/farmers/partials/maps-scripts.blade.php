@@ -6,7 +6,9 @@ window.__parcelCropLayerUrl = @json(route('farm-plots.crop-layer'));
 window.__plantedAreaLayerUrl = @json(route('farm-plots.planted-area-layer'));
 window.__parcelCropEditUrl = @json(route('farm-plots.seasonal-crops.edit', ['plot' => '__ID__']));
 window.__parcelCropModalUrl = @json(route('farm-plots.seasonal-crops.edit', ['plot' => '__ID__']));
+window.__mapUsage = @json(['url' => route('usage.map-events'), 'token' => csrf_token()]);
 </script>
+<script src="{{ asset('js/reusable-google-map.js') }}?v={{ @filemtime(public_path('js/reusable-google-map.js')) ?: 1 }}"></script>
 <script src="{{ asset('js/parcel-crop-layer.js') }}?v={{ @filemtime(public_path('js/parcel-crop-layer.js')) ?: 1 }}"></script>
 <script src="{{ asset('js/planted-area-layer.js') }}?v={{ @filemtime(public_path('js/planted-area-layer.js')) ?: 1 }}"></script>
 <script src="{{ asset('js/crop-area-badges.js') }}?v={{ @filemtime(public_path('js/crop-area-badges.js')) ?: 1 }}"></script>

@@ -7,6 +7,7 @@ use App\Models\Farmer;
 use App\Models\FarmPlot;
 use App\Modules\Farmers\Application\FarmerWorkspace;
 use App\Modules\Land\Application\MunicipalityBoundaryGuard;
+use App\Platform\Observability\UsageMetrics;
 use App\Support\AuditTrail;
 use App\Support\ConcurrentWrite;
 use App\Support\MunicipalityAccess;
@@ -133,6 +134,7 @@ class FarmPlotController extends Controller
             .sha1(json_encode([$points, $color]));
 
         $map = Cache::get($cacheKey);
+        app(UsageMetrics::class)->cache('google-static', is_array($map));
 
         if (! is_array($map)) {
             try {

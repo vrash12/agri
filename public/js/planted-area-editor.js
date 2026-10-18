@@ -14,12 +14,14 @@
   const pointsFor = area => isLine(area) ? area.path : area.polygon;
   let areas = (config.areas || []).filter(a => a && Array.isArray(pointsFor(a)));
   let map, outline, draft = null, draftGuide = null, drawing = false, selected = -1, shapes = [], shades = [], badges = [], dirty = false;
-  const status = text => { byId('plantedMapStatus').textContent = text; };
+  let lease = null, disposed = false, mapClick = null;
+  const status = text => { if (!disposed) byId('plantedMapStatus').textContent = text; };
   const sections = list => window.CropAreaBadges?.sections?.(list,config.polygon) || {rings:[],conflicts:[]};
   const pathInside = path => window.CropAreaBadges?.containsPath ? window.CropAreaBadges.containsPath(path,config.polygon) : true;
   const outsidePathMessage = 'That crop line would leave the saved parcel. Add a point around the bend or along the white outline, then continue.';
   const overlapMessage = pairs => `Crop marks ${pairs[0][0]+1} and ${pairs[0][1]+1} cover the same land. Move the points so the sections sit beside each other. Shared edges are allowed.`;
   const sync = () => {
+    if (disposed) return;
     const input = byId('plantedAreasInput');
     if (input) input.value = JSON.stringify(areas);
     byId('plantedAreaCount').textContent = `${areas.length}/8`;
@@ -52,7 +54,7 @@
     setTimeout(() => shape.setOptions({strokeWeight:2,fillOpacity:.38}), 700);
   };
   function focus(index) {
-    if (drawing) return;
+    if (disposed || drawing) return;
     selected = index;
     if (config.canDraw) {
       byId('plantedCrop').value = areas[index].crop;
@@ -98,6 +100,7 @@
     if (!areas.length) list.textContent = config.canDraw ? 'Your crop marks will appear here after you finish a line.' : 'No crop marks recorded for this season.';
   }
   function render() {
+    if (disposed) return;
     badges.forEach(badge=>badge?.remove());badges=[];
     shapes.forEach(shape=>shape.setMap(null)); shapes=[];
     shades.forEach(shape=>shape?.setMap(null)); shades=[];
@@ -150,8 +153,11 @@
     status('Drawing cancelled. Existing crop areas are unchanged.');
   }
   function init() {
+    if (disposed || map) return;
     if (!Array.isArray(config.polygon) || config.polygon.length < 3 || config.polygon.length > 1000) {status('The parcel boundary needs office review before drawing crop marks.');return;}
-    map = new google.maps.Map(byId('plantedAreaMap'), {mapTypeId:'satellite',center:config.polygon[0],zoom:18,gestureHandling:'cooperative',streetViewControl:false});
+    const options = {mapTypeId:'satellite',center:config.polygon[0],zoom:18,gestureHandling:'cooperative',streetViewControl:false};
+    lease = window.ReusableGoogleMap?.acquire('crop-editor-2d', byId('plantedAreaMap'), options) || null;
+    map = lease ? lease.map : new google.maps.Map(byId('plantedAreaMap'), options);
     outline = new google.maps.Polygon({map,paths:config.polygon,fillOpacity:.02,strokeColor:'#FFFFFF',strokeWeight:3,clickable:false,zIndex:1});
     const bounds=new google.maps.LatLngBounds();config.polygon.forEach(p=>bounds.extend(p));map.fitBounds(bounds,30);
     const inside = point => {
@@ -165,7 +171,7 @@
       return included;
     };
     const addPoint=event=>{if(!drawing||!event.latLng)return;const point={lat:event.latLng.lat(),lng:event.latLng.lng()};if(!inside(event.latLng)){status('That point is outside the saved parcel. Click inside the white outline, or update the parcel boundary first.');return;}if(draft.getPath().getLength()>=50){status('This crop line already has 50 points. Finish it or undo a point.');return;}const next=draft.getPath().getArray().map(p=>({lat:p.lat(),lng:p.lng()}));next.push(point);if(next.length>1&&!pathInside(next)){status(outsidePathMessage);return;}draft.getPath().push(event.latLng);draftGuide?.update(draft.getPath().getArray());sync();status(draft.getPath().getLength()===1?'Point 1 marked in green. Click along the planted section to continue.':`${draft.getPath().getLength()} points connected. Finish after at least two.`);};
-    map.addListener('click',addPoint);outline.addListener('click',addPoint);
+    mapClick = map.addListener('click',addPoint);outline.addListener('click',addPoint);
     if(config.canDraw){
       ['crop', 'notes'].forEach(id => byId(id)?.addEventListener('input', () => { dirty = true; sync(); }));
       byId('plantedUpdate').addEventListener('click',()=>{
@@ -197,13 +203,28 @@
     }
     render();status('White outline: saved parcel. Colored lines: visual crop marks. Choose a mark to highlight it.');
   }
-  function failure(){status('The map could not load. Existing crop marks remain in the list. Reload to draw or adjust them.');renderList();}
+  function failure(){if(disposed)return;status('The map could not load. Existing crop marks remain in the list. Reload to draw or adjust them.');renderList();}
   renderList();sync();
-  if(window.google?.maps?.Map)init();
+  function releaseMap() {
+    drawing = false;
+    mapClick?.remove?.(); mapClick = null;
+    outline?.setMap(null); outline = null;
+    draftGuide?.remove(); draftGuide = null;
+    badges.forEach(badge => badge?.remove()); badges = [];
+    shapes.forEach(shape => shape.setMap(null)); shapes = [];
+    shades.forEach(shape => shape?.setMap(null)); shades = [];
+    draft?.setMap(null); draft = null;
+    lease?.release(); lease = null; map = null;
+  }
+  function initialize() {
+    try { init(); } catch (_) { releaseMap(); failure(); }
+  }
+  if(window.google?.maps?.Map)initialize();
+  else if(window.google?.maps?.importLibrary){window.google.maps.importLibrary('maps').then(initialize).catch(failure);}
   else if(!config.key)failure();
   else{
     const timer=setTimeout(failure,15000);
-    window.initPlantedAreaMap=()=>{clearTimeout(timer);init();};
+    window.initPlantedAreaMap=()=>{clearTimeout(timer);initialize();};
     const previous=window.gm_authFailure;window.gm_authFailure=()=>{failure();previous?.();};
     const script=document.createElement('script');script.src='https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(config.key)+'&v=weekly&loading=async&callback=initPlantedAreaMap';script.async=true;script.onerror=()=>{clearTimeout(timer);failure();};document.head.append(script);
   }
@@ -211,17 +232,9 @@
     isDrawing: () => drawing,
     sync,
     destroy: () => {
-      draftGuide?.remove();
-      badges.forEach(badge => badge?.remove());
-      shapes.forEach(shape => shape.setMap(null));
-      shades.forEach(shape => shape?.setMap(null));
-      draft?.setMap(null);
-      draftGuide = null;
-      badges = [];
-      shapes = [];
-      shades = [];
-      draft = null;
-      map = null;
+      if (disposed) return;
+      disposed = true;
+      releaseMap();
     }
   };
   }

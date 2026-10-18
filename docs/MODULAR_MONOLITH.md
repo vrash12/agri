@@ -35,6 +35,12 @@ not accumulate there again. Namespace moves update every repository consumer,
 including views, seeders, policies and isolated tests; no compatibility aliases
 or duplicate implementations are maintained.
 
+The October 18 local follow-up adds `App\Platform\Observability` for bounded
+usage/performance aggregates. It has no business-module dependencies and adds no
+domain helpers to Support. Its HTTP/database adapters are registered by
+`UsageMetricsServiceProvider`; see [COST_EFFICIENCY.md](COST_EFFICIENCY.md) for the
+combined release requirements.
+
 ## Two explicit module seams
 
 ```mermaid

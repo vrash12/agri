@@ -8,7 +8,7 @@ const source = fs.readFileSync(path.join(__dirname, '../../public/js/planted-are
 function editor(saved = [], scoped = false, shading = false, harvestUrl = null) {
   class Events {
     constructor() { this.listeners = {}; }
-    addListener(name, fn) { (this.listeners[name] ??= []).push(fn); }
+    addListener(name, fn) { (this.listeners[name] ??= []).push(fn); return {remove:()=>{this.listeners[name]=this.listeners[name].filter(listener=>listener!==fn);}}; }
     fire(name, event = {}) { for (const fn of this.listeners[name] || []) fn(event); }
   }
   class Element extends Events {
@@ -63,9 +63,11 @@ function editor(saved = [], scoped = false, shading = false, harvestUrl = null) 
   byId('plantedCrop').value = 'corn';
   const form = new Element(); byId('plantedAreasInput').form = form;
   const maps = { Map, Polygon, Polyline, MVCArray, LatLngBounds };
-  vm.runInNewContext(source, { document: { getElementById: byId, createElement: () => new Element() },
-    google: { maps }, window: { google: { maps }, CropAreaBadges:shading ? require('../../public/js/crop-area-badges.js') : null, matchMedia: () => ({ matches: true }) }, confirm: () => true, setTimeout });
-  return { byId, polygons, form, click: id => byId(id).fire('click'),
+  const window = { google: { maps }, CropAreaBadges:shading ? require('../../public/js/crop-area-badges.js') : null, matchMedia: () => ({ matches: true }) };
+  vm.runInNewContext(source, { document: { getElementById: id => id === 'plantedAreaEditor' ? null : byId(id), createElement: () => new Element() },
+    google: { maps }, window, confirm: () => true, setTimeout });
+  const instance = window.PlantedAreaEditor.mount(scoped ? elements.plantedAreaEditor : undefined);
+  return { byId, polygons, form, instance, listenerCount:()=>(map.listeners.click || []).length, click: id => byId(id).fire('click'),
     point: (lat, lng) => map.fire('click', { latLng: latLng({ lat, lng }) }),
     areas: () => JSON.parse(byId('plantedAreasInput').value) };
 }
@@ -172,4 +174,14 @@ test('saved crop sections offer a keyed direct harvest link', () => {
   const actions = e.byId('plantedAreaList').children[0].children[2];
   const link = actions.children.find(child => child.textContent === 'Record harvest');
   assert.equal(link.href, `/harvest-records/create?parcel_crop_season_id=4&planted_area_key=${encodeURIComponent(key)}`);
+});
+
+test('closing an editor releases its outline, drawings and map click listener before reuse', () => {
+  const e = editor([{crop:'corn',type:'line',path:[{lat:15.6,lng:120.47},{lat:15.6005,lng:120.4705}]}]);
+  e.click('plantedStart'); e.point(15.6,120.47);
+  assert.equal(e.listenerCount(),1);
+  e.instance.destroy(); e.instance.destroy();
+  assert.equal(e.listenerCount(),0);
+  assert.equal(e.polygons.every(shape=>shape.map===null),true);
+  assert.doesNotThrow(()=>e.point(15.6005,120.4705));
 });

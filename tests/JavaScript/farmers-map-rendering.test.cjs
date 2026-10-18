@@ -556,6 +556,7 @@ function connectedCropHarness() {
   context.window.CropAreaBadges = {...badges, markerContent: (_,crop) => crop, parcelMarkerContent: (_,crops) => crops.slice()};
   context.window.__parcelCropLayerUrl = '/classifications';
   context.window.__plantedAreaLayerUrl = '/drawings';
+  context.cropModalEpoch = 0;
   context.Marker3DElement = class {constructor(options) {Object.assign(this,options);} replaceChildren(content) {this.content=content;}};
   context.google = {maps:{CollisionBehavior:{REQUIRED:'required'}}};
   context.map3d.range = 2000;

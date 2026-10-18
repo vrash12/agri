@@ -139,6 +139,8 @@ class ProviderUsageTest extends TestCase
         $this->view('dashboard', ['providerUsage' => $data])->assertSee('Satellite &amp; map usage', false)
             ->assertSee('Allowance is nearly used')->assertSee('2 remaining')->assertSee('No tracked requests yet')
             ->assertSee('Full Google usage: not connected')->assertSee('Shared across eAgriLGU offices')
+            ->assertSee('Application efficiency')->assertSee('AI tokens:')->assertSee('Browser-reported map instances')
+            ->assertSee('Google Cloud Billing')->assertDontSee('private-cache-password')
             ->assertSee('aria-valuenow="80"', false)->assertDontSee('synthetic-');
         $this->actingAs($this->user(User::ROLE_MUNICIPAL_STAFF));
         $this->view('dashboard', ['providerUsage' => $data])->assertDontSee('id="providerUsageHeading"', false);

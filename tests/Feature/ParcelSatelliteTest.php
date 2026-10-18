@@ -4,7 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\FarmPlot;
 use App\Models\User;
+use App\Modules\Climate\Application\ParcelVegetationSnapshot;
+use App\Modules\Climate\Application\SentinelImagery;
 use App\Modules\Climate\Application\SentinelParcel;
+use App\Platform\Observability\UsageMetrics;
 use App\Support\ProviderUsage;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Client\ConnectionException;
@@ -59,6 +62,10 @@ class ParcelSatelliteTest extends TestCase
             ->assertSee('vegetation greenness score from')
             ->assertSee('Use this to plan a field check')
             ->assertSee('Sentinel-2 images with clouds')
+            ->assertSee('NDMI · Possible lack of water')
+            ->assertSee('SAVI · Young or widely spaced crops')
+            ->assertSee('EVI · Thick, leafy crops')
+            ->assertSee('Help me choose')
             ->assertDontSee('Back to parcel map');
 
         $this->actingAs(User::find(2))->get(route('farm-plots.satellite.show', ['plot' => 1, 'modal' => 1]))
@@ -70,6 +77,25 @@ class ParcelSatelliteTest extends TestCase
         $this->getJson(route('farm-plots.satellite.show', 1))->assertUnauthorized();
         $this->postJson($this->url(), $this->period())->assertUnauthorized();
         $this->getJson($this->imageUrl())->assertUnauthorized();
+        Http::assertNothingSent();
+    }
+
+    public function test_satellite_context_is_private_and_changes_when_visible_parcel_details_change(): void
+    {
+        $url = route('farm-plots.satellite.show', ['plot' => 1, 'modal' => 1]);
+        $read = function () use ($url): array {
+            $response = $this->actingAs(User::find(1))->get($url)->assertOk();
+            $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
+            preg_match('/id="satelliteConfig">(.*?)<\/script>/s', $response->getContent(), $config);
+
+            return json_decode($config[1], true, flags: JSON_THROW_ON_ERROR);
+        };
+        $first = $read();
+        $this->assertSame($first['contextVersion'], $read()['contextVersion']);
+        FarmPlot::withoutEvents(fn () => FarmPlot::find(1)->update(['name' => 'Updated synthetic parcel']));
+        $changed = $read();
+        $this->assertNotSame($first['contextVersion'], $changed['contextVersion']);
+        $this->assertSame($first['geometry'], $changed['geometry']);
         Http::assertNothingSent();
     }
 
@@ -127,12 +153,88 @@ class ParcelSatelliteTest extends TestCase
     {
         $this->actingAs(User::find(1));
         foreach ([['to' => '2026-09-01'], ['from' => '2026-08-04'], ['from' => '2015-01-01'],
-            ['to' => now()->addDay()->toDateString()], ['max_cloud' => 101], ['max_cloud' => 2.5], ['from' => 'not-a-date']] as $change) {
+            ['to' => now()->addDay()->toDateString()], ['max_cloud' => 101], ['max_cloud' => 2.5], ['from' => 'not-a-date'],
+            ['index' => 'arbitrary-script'], ['index' => null], ['index' => ['ndmi']], ['index' => 'true-color']] as $change) {
             Cache::flush();
             $this->postJson($this->url(), array_replace($this->period(), $change))->assertUnprocessable();
         }
         $this->getJson($this->imageUrl(['layer' => 'arbitrary-script']))->assertUnprocessable();
         Http::assertNothingSent();
+    }
+
+    #[DataProvider('supportedIndexes')]
+    public function test_selected_index_uses_its_own_output_grid_and_cache(string $index, int $resolution, float $mean): void
+    {
+        $plot = FarmPlot::findOrFail(1);
+        $before = $plot->getAttributes();
+        $parcel = app(SentinelParcel::class)->describe($plot, $resolution);
+        $png = $this->png($parcel['width'], $parcel['height']);
+        $this->fake(['status' => 'OK', 'data' => [$this->entry('2026-08-01', $mean, 20, $index)]], $png);
+        $this->actingAs(User::findOrFail(1));
+        $request = $this->period() + ['index' => $index];
+        $response = $this->postJson($this->url(), $request)->assertOk()
+            ->assertJsonPath('index', $index)->assertJsonPath('resolution_m', $resolution)
+            ->assertJsonPath('observations.0.mean', $mean);
+        $this->postJson($this->url(), $request)->assertOk()->assertExactJson($response->json());
+        $this->getJson($this->imageUrl(['layer' => $index]))->assertOk()->assertContent($png);
+        $this->getJson($this->imageUrl(['layer' => $index]))->assertOk()->assertContent($png);
+        Http::assertSentCount(3); // Token + one statistics + one image, shared limits unchanged.
+        Http::assertSent(fn ($r) => $r->url() === self::STATS && $r['aggregation']['resx'] === $parcel['resx']
+            && $r['aggregation']['resy'] === $parcel['resy']
+            && $r['aggregation']['evalscript'] === app(SentinelImagery::class)->statisticsScript($index));
+        Http::assertSent(fn ($r) => $r->url() === self::IMAGE && $r['output']['width'] === $parcel['width']
+            && $r['output']['height'] === $parcel['height']
+            && $r['input']['bounds']['geometry'] === $parcel['geometry']
+            && $r['evalscript'] === app(SentinelImagery::class)->imageScript($index));
+        $this->assertSame($before, FarmPlot::findOrFail(1)->getAttributes());
+        $usage = app(ProviderUsage::class)->forUser(User::findOrFail(4));
+        $this->assertSame(2, $usage['satellite']['periods']['day']['used']);
+    }
+
+    public static function supportedIndexes(): array
+    {
+        return ['ndvi' => ['ndvi', 10, 0.6], 'ndmi' => ['ndmi', 20, -0.2],
+            'savi' => ['savi', 10, 1.2], 'evi' => ['evi', 10, 1.2]];
+    }
+
+    public function test_index_caches_are_isolated_and_non_ndvi_checks_never_replace_climate_ndvi(): void
+    {
+        Http::fake([self::TOKEN => Http::response(['access_token' => 'synthetic-test-token', 'expires_in' => 3600]),
+            self::STATS => function ($request) {
+                preg_match('/id:"(ndvi|ndmi|savi|evi)"/', $request['aggregation']['evalscript'], $match);
+
+                return Http::response(['status' => 'OK', 'data' => [$this->entry('2026-08-01', 0.4, 20, $match[1])]]);
+            }]);
+        $plot = FarmPlot::findOrFail(1);
+        $snapshots = app(ParcelVegetationSnapshot::class);
+        $imagery = app(SentinelImagery::class);
+        $snapshots->remember($plot, ['index' => 'ndvi', 'observations' => [['date' => '2026-07-30', 'mean' => 0.8, 'valid_pixels' => 50, 'status' => 'available']]]);
+        $before = $snapshots->forPlot($plot);
+        foreach (['ndmi', 'savi', 'evi'] as $index) {
+            $result = $imagery->statistics($plot, '2026-08-01', '2026-08-03', 60, $index);
+            $this->assertSame($index, $result['index']);
+            $this->assertSame($result, $imagery->statistics($plot, '2026-08-01', '2026-08-03', 60, $index));
+            $snapshots->remember($plot, $result);
+            $this->assertSame($before, $snapshots->forPlot($plot));
+        }
+        $result = $imagery->statistics($plot, '2026-08-01', '2026-08-03', 60);
+        $snapshots->remember($plot, $result);
+        $this->assertSame(0.4, $snapshots->forPlot($plot)['mean']);
+        $this->assertSame('2026-08-01', $snapshots->forPlot($plot)['observed_on']);
+        Http::assertSentCount(5);
+    }
+
+    public function test_wrong_index_provider_output_fails_closed_and_new_layers_keep_account_scope(): void
+    {
+        $this->fake(); // A response labelled NDVI cannot be accepted as NDMI.
+        $this->actingAs(User::findOrFail(1))->postJson($this->url(), $this->period() + ['index' => 'ndmi'])
+            ->assertStatus(502)->assertJsonMissingPath('observations');
+        Http::assertSentCount(2);
+        foreach (['ndmi', 'savi', 'evi'] as $index) {
+            $this->actingAs(User::findOrFail(2))->postJson($this->url(), $this->period() + ['index' => $index])->assertForbidden();
+            $this->getJson($this->imageUrl(['layer' => $index]))->assertForbidden();
+        }
+        Http::assertSentCount(2);
     }
 
     public function test_invalid_huge_and_self_intersecting_parcels_never_reach_the_provider(): void
@@ -195,6 +297,10 @@ class ParcelSatelliteTest extends TestCase
         $usage = app(ProviderUsage::class)->forUser(User::find(4));
         $this->assertSame(1, $usage['google']['periods']['day']['used']);
         $this->assertSame(1, $usage['google']['periods']['month']['used']);
+        app(UsageMetrics::class)->flush();
+        $counts = app(UsageMetrics::class)->snapshot()['periods']['day'];
+        $this->assertEquals(1, $counts['cache.google-static.hits']);
+        $this->assertEquals(1, $counts['cache.google-static.misses']);
     }
 
     public function test_expired_oauth_tokens_are_refreshed_before_a_different_request(): void
@@ -205,6 +311,82 @@ class ParcelSatelliteTest extends TestCase
         $this->postJson($this->url(), array_replace($this->period(), ['max_cloud' => 100]))->assertOk();
         Http::assertSentCount(4);
         $this->travelBack();
+    }
+
+    public function test_historical_results_survive_the_old_twelve_hour_window_but_expire_after_thirty_days(): void
+    {
+        $this->travelTo(now()->utc()->setDate(2026, 10, 18)->setTime(12, 0));
+        $this->fake();
+        $imagery = app(SentinelImagery::class);
+        $plot = FarmPlot::find(1);
+        $first = $imagery->statistics($plot, '2026-08-01', '2026-08-03', 60);
+        $this->travel(13)->hours();
+        $this->assertSame($first, $imagery->statistics($plot, '2026-08-01', '2026-08-03', 60));
+        Http::assertSentCount(2);
+        $metrics = app(UsageMetrics::class);
+        $metrics->flush();
+        $this->assertEquals(1, $metrics->snapshot()['periods']['month']['cache.sentinel-statistics.hits']);
+        $this->travel(30)->days();
+        $imagery->statistics($plot, '2026-08-01', '2026-08-03', 60);
+        Http::assertSentCount(4);
+    }
+
+    public function test_recent_readings_keep_the_short_cache_lifetime(): void
+    {
+        $this->travelTo(now()->utc()->setDate(2026, 8, 5)->setTime(12, 0));
+        $this->fake();
+        $imagery = app(SentinelImagery::class);
+        $plot = FarmPlot::find(1);
+        $imagery->statistics($plot, '2026-08-01', '2026-08-03', 60);
+        $this->travel(13)->hours();
+        $imagery->statistics($plot, '2026-08-01', '2026-08-03', 60);
+        Http::assertSentCount(4);
+    }
+
+    public function test_empty_historical_readings_keep_the_short_cache_lifetime(): void
+    {
+        $this->travelTo(now()->utc()->setDate(2026, 10, 18)->setTime(12, 0));
+        Http::fake([self::TOKEN => Http::response(['access_token' => 'synthetic-test-token', 'expires_in' => 3600]),
+            self::STATS => Http::response(['status' => 'OK', 'data' => []])]);
+        $imagery = app(SentinelImagery::class);
+        $plot = FarmPlot::find(1);
+        $imagery->statistics($plot, '2026-08-01', '2026-08-03', 60);
+        $this->travel(13)->hours();
+        $imagery->statistics($plot, '2026-08-01', '2026-08-03', 60);
+        Http::assertSentCount(4);
+    }
+
+    public function test_historical_images_are_reused_but_a_new_layer_gets_a_new_result(): void
+    {
+        $this->travelTo(now()->utc()->setDate(2026, 10, 18)->setTime(12, 0));
+        $plot = FarmPlot::find(1);
+        $parcel = app(SentinelParcel::class)->describe($plot);
+        $png = $this->png($parcel['width'], $parcel['height']);
+        $this->fake(null, $png);
+        $imagery = app(SentinelImagery::class);
+        $this->assertSame($png, $imagery->image($plot, '2026-08-01', 60, 'ndvi'));
+        $this->travel(13)->hours();
+        $this->assertSame($png, $imagery->image($plot, '2026-08-01', 60, 'ndvi'));
+        Http::assertSentCount(2);
+        $imagery->image($plot, '2026-08-01', 60, 'true-color');
+        Http::assertSentCount(4);
+    }
+
+    public function test_browser_map_events_are_bounded_authorized_and_separate_from_satellite_limits(): void
+    {
+        $this->getJson(route('usage.map-events'))->assertStatus(405);
+        $this->postJson(route('usage.map-events'), ['map' => 'crop-editor-2d', 'event' => 'created'])->assertUnauthorized();
+        $this->actingAs(User::find(1))->postJson(route('usage.map-events'), ['map' => 'crop-editor-2d', 'event' => 'created', 'private' => 'discard-me'])->assertNoContent();
+        $this->postJson(route('usage.map-events'), ['map' => 'crop-editor-2d', 'event' => 'reused'])->assertNoContent();
+        $this->postJson(route('usage.map-events'), ['map' => 'private-name', 'event' => 'created'])->assertUnprocessable();
+        $this->actingAs(User::find(5))->postJson(route('usage.map-events'), ['map' => 'crop-editor-2d', 'event' => 'created'])->assertForbidden();
+        $metrics = app(UsageMetrics::class);
+        $metrics->flush();
+        $day = $metrics->snapshot()['periods']['day'];
+        $this->assertEquals(1, $day['map.crop-editor-2d.created']);
+        $this->assertEquals(1, $day['map.crop-editor-2d.reused']);
+        $this->assertStringNotContainsString('discard-me', json_encode($day));
+        Http::assertNothingSent();
     }
 
     public function test_provider_refusal_is_safe_and_does_not_poison_cache(): void
@@ -354,9 +536,9 @@ class ParcelSatelliteTest extends TestCase
         return ['status' => 'OK', 'data' => [$this->entry('2026-08-01', 0.6)]];
     }
 
-    private function entry(string $date, float $mean, int $masked = 20): array
+    private function entry(string $date, float $mean, int $masked = 20, string $index = 'ndvi'): array
     {
-        return ['interval' => ['from' => $date.'T00:00:00Z'], 'outputs' => ['ndvi' => ['bands' => ['B0' => ['stats' => ['sampleCount' => 100, 'noDataCount' => $masked, 'mean' => $masked === 100 ? 'NaN' : $mean, 'min' => $mean - 0.1, 'max' => $mean + 0.1]]]]]];
+        return ['interval' => ['from' => $date.'T00:00:00Z'], 'outputs' => [$index => ['bands' => ['B0' => ['stats' => ['sampleCount' => 100, 'noDataCount' => $masked, 'mean' => $masked === 100 ? 'NaN' : $mean, 'min' => $mean - 0.1, 'max' => $mean + 0.1]]]]]];
     }
 
     private function period(): array

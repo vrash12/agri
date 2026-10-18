@@ -60,6 +60,7 @@ final class AssistantIntentResolver
             || (bool) preg_match('/^(?:please\s+)?(?:describe|can\s+you\s+(?:explain|describe)|help\s+me\s+understand)\b/iu', $text)
             || (bool) preg_match('/^(?:does|do|is|are|can)\b.+\b(?:support|supported|available|implemented|feature|work|allowed)\b/iu', $text)
             || (bool) preg_match('/^(?:dashboard|weather|cooperatives?|machinery|backups?|audit\s+trail|geofences?|e?agrilgu|rag|assistant\s+privacy)[.!?\s]*$/iu', $text);
+        $workflow = $workflow || (bool) preg_match('/^(?:what\s+(?:is|does|are)|how\s+(?:is|are))\s+(?:(?:the|a|an)\s+)?(?:ndmi|savi|evi)\b|^(?:ndvi|ndmi|savi|evi)[.!?\s]*$/iu', $text);
         if ($workflow) {
             if (preg_match('/\b(?:and|also|then|at|pati|tsaka)\s+(?:summarize|show|report|count|buod|ibuod|ipakita|bilangin)\b/iu', $text)) {
                 return $this->clarify('Would you like system instructions or a records report first? I can handle one task at a time.', $year);
@@ -294,7 +295,7 @@ final class AssistantIntentResolver
             (bool) preg_match('/\b(audit|audit\s+trail|activity\s+history)\b/iu', $text) => 'audit',
             (bool) preg_match('/\b(geofence|geofences|municipality\s+boundar(?:y|ies)|administrative\s+boundar(?:y|ies))\b/iu', $text) => 'geofences',
             (bool) preg_match('/\b(data\s+quality|duplicate|duplicates|missing\s+(?:fields|information|details)|incomplete\s+(?:farmer|record|records))\b/iu', $text) => 'data-quality',
-            (bool) preg_match('/\b(ndvi|satellite)\b/iu', $text) => 'ndvi',
+            (bool) preg_match('/\b(ndvi|ndmi|savi|evi|satellite)\b/iu', $text) => 'ndvi',
             (bool) preg_match('/\b(?:assistance|release|releases|beneficiar(?:y|ies))\s+(?:coverage|map)\b|\bcoverage\s+map\b/iu', $text) => 'assistance-coverage',
             (bool) preg_match('/\b(harvest|harvests|ani)\b/iu', $text) => 'harvest-entry',
             (bool) preg_match('/\b(animal|animals|vaccination|vaccinations|deworming|dog|dogs|cow|cows|hayop)\b/iu', $text) => 'animals',

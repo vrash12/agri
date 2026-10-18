@@ -5,6 +5,7 @@ namespace App\Modules\Assistant\Application;
 use App\Exceptions\AssistantUnavailable;
 use App\Models\User;
 use App\Modules\Assistant\Infrastructure\OfficeHelpAgent;
+use App\Platform\Observability\UsageMetrics;
 use Illuminate\JsonSchema\JsonSchemaTypeFactory;
 use Illuminate\JsonSchema\Types\Type;
 use Illuminate\Support\Facades\Cache;
@@ -100,7 +101,9 @@ final class OfficeAssistant
         $lock = null;
         $acquired = false;
         try {
-            if ($cached = $this->cached($key, $evidence)) {
+            $cached = $this->cached($key, $evidence);
+            app(UsageMetrics::class)->cache('assistant-help', $cached !== null);
+            if ($cached) {
                 return $this->result($cached, $evidence, 'cache');
             }
             $lock = Cache::lock($key.':lock', max(30, min(90, (int) config('assistant.timeout_seconds') + 10)));
@@ -114,15 +117,24 @@ final class OfficeAssistant
             // Reservation failures deliberately propagate; inference cannot run
             // when the atomic allowance is exhausted or cannot be verified.
             $this->budget->reserve($user);
+            $started = hrtime(true);
+            $received = false;
+            app(UsageMetrics::class)->providerAttempt('openai');
             try {
                 $response = $agent->prompt($approved['question'], provider: 'openai',
                     model: (string) config('assistant.model'), timeout: (int) config('assistant.timeout_seconds'));
+                $received = true;
+                app(UsageMetrics::class)->providerFinished('openai', (hrtime(true) - $started) / 1000000, false);
+                app(UsageMetrics::class)->tokens($response->usage->inputTokens, $response->usage->outputTokens);
                 $output = $response instanceof StructuredAgentResponse ? $response->toArray() : null;
                 $validated = $this->grounding->validate($output, $evidence['passages']);
                 if ($validated === null) {
                     return $this->fallback($evidence, $language, $response->usage->inputTokens, $response->usage->outputTokens);
                 }
             } catch (Throwable $exception) {
+                if (! $received) {
+                    app(UsageMetrics::class)->providerFinished('openai', (hrtime(true) - $started) / 1000000, true);
+                }
                 // Provider messages, bodies and traces may carry credentials.
                 Log::warning('Assistant response could not be generated.', ['exception_type' => $exception::class]);
 

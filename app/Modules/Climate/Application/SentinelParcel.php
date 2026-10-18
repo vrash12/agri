@@ -9,12 +9,13 @@ use InvalidArgumentException;
 /** Preserve the saved polygon; never simplify a parcel for satellite measurement. */
 final class SentinelParcel
 {
-    public function __construct(private GeoGeometry $geometry)
-    {
-    }
+    public function __construct(private GeoGeometry $geometry) {}
 
-    public function describe(FarmPlot $plot): array
+    public function describe(FarmPlot $plot, int $resolution = 10): array
     {
+        if (! in_array($resolution, [10, 20], true)) {
+            throw new InvalidArgumentException('Unsupported satellite grid resolution.');
+        }
         $points = $plot->polygon_json;
         if (! is_array($points) || count($points) < 3 || count($points) > 500) {
             throw new InvalidArgumentException('Satellite analysis requires a saved boundary with 3–500 points.');
@@ -34,7 +35,7 @@ final class SentinelParcel
         $geometry = $this->geometry->fromLatLngRing($points);
         $bounds = $this->geometry->bounds($geometry);
         $lat = ($bounds['min_lat'] + $bounds['max_lat']) / 2;
-        $resY = 10 / 111320;
+        $resY = $resolution / 111320;
         $resX = $resY / cos(deg2rad($lat));
         $width = (int) ceil(($bounds['max_lng'] - $bounds['min_lng']) / $resX);
         $height = (int) ceil(($bounds['max_lat'] - $bounds['min_lat']) / $resY);

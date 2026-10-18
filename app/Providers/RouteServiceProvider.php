@@ -59,7 +59,7 @@ class RouteServiceProvider extends ServiceProvider
                 });
         });
 
-        foreach (['climate-risk-data' => 30, 'climate-risk-forecast' => 12] as $name => $maximum) {
+        foreach (['climate-risk-data' => 30, 'climate-risk-forecast' => 12, 'map-usage' => 60] as $name => $maximum) {
             RateLimiter::for($name, fn (Request $request) => Limit::perMinute($maximum)
                 ->by($request->user()?->getAuthIdentifier() ?? $request->ip()));
         }

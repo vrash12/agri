@@ -1,5 +1,10 @@
 # Satellite and map usage dashboard
 
+October 18 local follow-up: provider/cache/token, server/database and browser
+map-instance aggregates now supplement this panel. These are best-effort
+measurements, not billing totals. See [COST_EFFICIENCY.md](COST_EFFICIENCY.md) for
+privacy, retention, map reuse, historical NDVI caching and combined release steps.
+
 Status: local implementation, not pushed or deployed. No production data or credentials changed.
 
 ## What administrators see

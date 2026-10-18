@@ -208,12 +208,18 @@ if (btnDownloadAll) {
       bindButtons();
       var workspace = document.getElementById('farmerMapWorkspace');
       var startup = null;
+      var visibilityObserver = null;
+      var ready = false;
 
       // Start when the map is visible; reopening a disclosure reuses the same load.
       window.__startFarmerMap = function () {
-        if (startup) return startup;
+        if (startup) {
+          if (ready) window.ReusableGoogleMap?.report('farmers-3d', 'reused');
+          return startup;
+        }
+        if (visibilityObserver) visibilityObserver.disconnect();
         if (workspace) workspace.open = true;
-        startup = initFarmersMap3D().then(function () { return true; }).catch(function (error) {
+        startup = initFarmersMap3D().then(function () { ready = true; return true; }).catch(function (error) {
           console.error(error);
           var statusEl = document.getElementById('mapStatus');
           var statusSmall = document.getElementById('mapStatusSmall');
@@ -233,10 +239,18 @@ if (btnDownloadAll) {
         window.location.reload();
       });
       if (workspace) {
-        workspace.addEventListener('toggle', function () {
-          if (workspace.open) window.__startFarmerMap();
-        });
-        if (workspace.open) window.__startFarmerMap();
+        function startWhenVisible() {
+          if (!workspace.open) return;
+          if (startup) { window.__startFarmerMap(); return; }
+          if (!window.IntersectionObserver) { window.__startFarmerMap(); return; }
+          if (visibilityObserver) return;
+          visibilityObserver = new window.IntersectionObserver(function (entries) {
+            if (workspace.open && entries.some(function (entry) { return entry.isIntersecting; })) window.__startFarmerMap();
+          }, {rootMargin: '100px'});
+          visibilityObserver.observe(document.getElementById('farmersMap') || workspace);
+        }
+        workspace.addEventListener('toggle', startWhenVisible);
+        startWhenVisible();
       } else {
         window.__startFarmerMap();
       }
@@ -1286,6 +1300,7 @@ var PopoverElement = maps3d.PopoverElement;
       gestureHandling: "GREEDY"
     });
     host.appendChild(map3d);
+    window.ReusableGoogleMap?.report('farmers-3d', 'created');
 
     var mapLabelsButton = document.getElementById('toggleFarmerMapLabels');
     if (mapLabelsButton) {
@@ -1411,6 +1426,7 @@ var PopoverElement = maps3d.PopoverElement;
 
     var cropModalEditor = null;
     var cropModalRequest = null;
+    var cropModalEpoch = 0;
     function cropModalMessage(text, kind) {
       var status = document.getElementById('parcelCropModalStatus');
       if (!status) return;
@@ -1420,6 +1436,7 @@ var PopoverElement = maps3d.PopoverElement;
     function closeCropModal() {
       var modal = document.getElementById('parcelCropModal');
       if (!modal) return;
+      cropModalEpoch++;
       if (cropModalRequest) cropModalRequest.abort();
       cropModalRequest = null;
       cropModalEditor?.destroy?.();
@@ -1436,6 +1453,7 @@ var PopoverElement = maps3d.PopoverElement;
       return url + (url.indexOf('?') === -1 ? '?' : '&') + params.toString();
     }
     function submitCropModal(form) {
+      var submitEpoch = cropModalEpoch;
       var save = form.querySelector('[data-crop-modal-save]');
       if (save) save.disabled = true;
       cropModalMessage('Saving this season…');
@@ -1451,7 +1469,7 @@ var PopoverElement = maps3d.PopoverElement;
           var messages = data.errors ? Object.values(data.errors).flat() : [];
           throw new Error(messages.join(' ') || data.message || 'The crop season could not be saved.');
         }
-        cropModalMessage(data.message || 'Season saved. Updating the map…', 'success');
+        if (submitEpoch === cropModalEpoch) cropModalMessage(data.message || 'Season saved. Updating the map…', 'success');
         var context = {year: data.year, season: data.season};
         var updateChange = {silent: true};
         var cropUpdated = cropLayer?.upsert?.(data.crop_record, context, updateChange) || false;
@@ -1475,9 +1493,9 @@ var PopoverElement = maps3d.PopoverElement;
           schedulePlotDisplayRefresh({immediate: true});
         }
         var close = window.requestAnimationFrame || function (callback) { window.setTimeout(callback, 0); };
-        close(closeCropModal);
+        close(function () { if (submitEpoch === cropModalEpoch) closeCropModal(); });
       }).catch(function (error) {
-        if (error.name === 'AbortError') return;
+        if (error.name === 'AbortError' || submitEpoch !== cropModalEpoch) return;
         cropModalMessage(error.message || 'The crop season could not be saved. Check the form and try again.', 'error');
         if (save) save.disabled = false;
       });
@@ -1486,6 +1504,7 @@ var PopoverElement = maps3d.PopoverElement;
       var modal = document.getElementById('parcelCropModal');
       var body = document.getElementById('parcelCropModalBody');
       if (!modal || !body || !plotId) return false;
+      var epoch = ++cropModalEpoch;
       if (cropModalRequest) cropModalRequest.abort();
       cropModalEditor?.destroy?.();
       cropModalEditor = null;
@@ -1496,6 +1515,7 @@ var PopoverElement = maps3d.PopoverElement;
       fetch(cropModalUrl(plotId), {credentials: 'same-origin', signal: cropModalRequest.signal, headers: {'Accept': 'text/html', 'X-Requested-With': 'XMLHttpRequest'}})
         .then(function (response) { if (!response.ok) throw new Error(response.status === 401 || response.status === 403 ? 'You do not have access to edit this parcel.' : 'The crop workspace could not load.'); return response.text(); })
         .then(function (html) {
+          if (epoch !== cropModalEpoch || !modal.open) return;
           body.innerHTML = html;
           cropModalMessage('Draw each crop line inside the parcel, then save the season.');
           var root = body.querySelector('#plantedAreaEditor');
@@ -1508,7 +1528,7 @@ var PopoverElement = maps3d.PopoverElement;
           });
         })
         .catch(function (error) {
-          if (error.name === 'AbortError') return;
+          if (error.name === 'AbortError' || epoch !== cropModalEpoch || !modal.open) return;
           body.innerHTML = '<div class="module-alert module-alert-error" role="alert"><strong>Crop workspace unavailable.</strong><p>' + escapeHtml(error.message || 'Try again.') + '</p><button type="button" class="module-button" data-crop-modal-retry>Try again</button></div>';
           body.querySelector('[data-crop-modal-retry]')?.addEventListener('click', function () { openCropModal(plotId); });
           cropModalMessage('');

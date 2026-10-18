@@ -3,6 +3,7 @@
 namespace App\Modules\Climate\Infrastructure;
 
 use App\Models\Municipality;
+use App\Platform\Observability\UsageMetrics;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\Cache;
@@ -26,8 +27,11 @@ final class ChirpsRainfallService
 
         $key = 'climate.chirps.v1.'.(int) $municipality->getKey().'.'.hash('sha256', json_encode($coordinates));
         if (! $forceRefresh && is_array($cached = Cache::get($key))) {
+            app(UsageMetrics::class)->cache('chirps', true);
+
             return $cached;
         }
+        app(UsageMetrics::class)->cache('chirps', false);
 
         $lock = Cache::lock($key.':refresh-lock', 60);
         $locked = false;

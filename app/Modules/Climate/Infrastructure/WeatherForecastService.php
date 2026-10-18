@@ -3,6 +3,7 @@
 namespace App\Modules\Climate\Infrastructure;
 
 use App\Models\Municipality;
+use App\Platform\Observability\UsageMetrics;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Arr;
@@ -52,10 +53,15 @@ class WeatherForecastService
 
         if (! $forceRefresh) {
             $cached = Cache::get($cacheKey);
+            app(UsageMetrics::class)->cache('weather', is_array($cached));
 
             if (is_array($cached)) {
                 return $cached;
             }
+        }
+
+        if ($forceRefresh) {
+            app(UsageMetrics::class)->cache('weather', false);
         }
 
         $refreshLock = Cache::lock(

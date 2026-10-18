@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\User;
 use App\Modules\Climate\Application\SatelliteRequestBudget;
 use App\Modules\Climate\Application\SentinelImagery;
+use App\Platform\Observability\UsageMetrics;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -13,9 +14,7 @@ use Throwable;
 /** Aggregate infrastructure counters only: never store keys, URLs, geometry or identities. */
 final class ProviderUsage
 {
-    public function __construct(private SatelliteRequestBudget $satelliteBudget, private SentinelImagery $satellite)
-    {
-    }
+    public function __construct(private SatelliteRequestBudget $satelliteBudget, private SentinelImagery $satellite) {}
 
     public function visibleTo(User $user): bool
     {
@@ -54,6 +53,7 @@ final class ProviderUsage
                 'static_configured' => trim((string) config('services.google_maps.static_key')) !== '',
                 'periods' => $google,
             ],
+            'metrics' => app(UsageMetrics::class)->snapshot(),
         ];
     }
 

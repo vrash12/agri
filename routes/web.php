@@ -19,6 +19,7 @@ use App\Http\Controllers\FarmerPortalController;
 use App\Http\Controllers\FarmersCooperativeController;
 use App\Http\Controllers\FarmPlotController;
 use App\Http\Controllers\HarvestRecordController;
+use App\Http\Controllers\MapUsageController;
 use App\Http\Controllers\MunicipalityBoundaryController;
 use App\Http\Controllers\ParcelCropSeasonController;
 use App\Http\Controllers\ParcelSatelliteController;
@@ -129,6 +130,8 @@ Route::middleware([
     'visitor-scope',
     'synchronized',
 ])->group(function () {
+    Route::post('/usage/map-events', MapUsageController::class)
+        ->withoutMiddleware('synchronized')->middleware('throttle:map-usage')->name('usage.map-events');
     Route::post('/assistant/message', AssistantController::class)
         ->withoutMiddleware('synchronized')
         ->middleware(['throttle:5,1', SynchronizeAssistantRequests::class])->name('assistant.message');

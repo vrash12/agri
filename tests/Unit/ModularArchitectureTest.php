@@ -71,4 +71,14 @@ class ModularArchitectureTest extends TestCase
             $walk($module);
         }
     }
+
+    public function test_shared_observability_has_no_business_or_http_dependencies(): void
+    {
+        foreach (glob(dirname(__DIR__, 2).'/app/Platform/Observability/*.php') as $file) {
+            $source = file_get_contents($file);
+            foreach (['App\\Modules\\', 'App\\Models\\', 'App\\Http\\', 'App\\Providers\\'] as $dependency) {
+                $this->assertStringNotContainsString($dependency, $source);
+            }
+        }
+    }
 }
