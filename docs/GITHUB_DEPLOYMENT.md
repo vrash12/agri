@@ -1,5 +1,67 @@
 # GitHub-to-Hostinger deployment
 
+## Verified Hostinger release — October 19, 2026 — simple satellite checks and modular runtime
+
+Runtime `aeb8eb5076435c583184fdf03dc78258855f9525` was pushed to GitHub main
+and installed on Hostinger with a fast-forward pull from clean tracked baseline
+`47c25c2`. The release includes the module refactor `8f1eef4`, aggregate efficiency
+metrics, reusable map workspaces and NDVI/NDMI/SAVI/EVI parcel checks. The satellite
+screen has short explanations, **Help me choose**, guidance for higher/lower
+numbers and field checks, with formulas under **Technical details**.
+
+The verified private database backup contains **24 tables / 9,942 rows**,
+**3,409,201 compressed bytes**, SHA-256
+`e78901ad3e623bc8499c944b33b369bf5756c475c24b2859e4065a51aef0b741`.
+Recovery files are outside the document root under
+`/home/u330835917/.private/satellite-indices-20261019`: the verified dump,
+prior tracked runtime, generated autoloader/caches/environment, prior served
+assets and private preservation receipts. Existing untracked server files were
+retained. All existing row/schema fingerprints matched before and after the
+read-only checks. Effective private settings, environment checksum, session/cache
+namespaces and satellite daily/monthly counters matched. No migration, seeding,
+account/record edit, provider processing, dependency update or general-cache clear
+ran.
+
+Hostinger PHP **8.3.35** regenerated the optimized production autoloader and
+configuration/route/Blade caches. Composer retained and skipped the pre-existing
+untracked, misnamed `app/Models/FarmerPlot.php`; the tracked `FarmPlot` model
+resolved successfully. Six public assets were mirrored with 0644 permissions;
+source, served copies and versioned HTTPS responses have matching hashes.
+
+| Public asset | SHA-256 |
+| --- | --- |
+| `css/parcel-satellite.css` | `9edf3b4b5555a6680d638f7f9fee0ccc9ed877009884406bdd9213bcc5d0a82f` |
+| `js/farmers-maps.js` | `4e656dee1ae916b9d12f18b4b6ff3afb91373ed29baa78dc26f49bd586625858` |
+| `js/parcel-satellite-modal.js` | `991a2e2154b9ecdb6bea2d3a9a6913fd4e4a9977146eebb1b441adbfd1ebcab6` |
+| `js/parcel-satellite.js` | `5b76f7325dd1ee354140c90b33b36adf90ebf50ae92041be3bad36480b6443ce` |
+| `js/planted-area-editor.js` | `c3ece61b03872467d070b10ea1fd018c17266fefe6a0125f57a1fd7ff062f8e5` |
+| `js/reusable-google-map.js` | `968c7a0377c2600abdfc8bf3debc9be4a092196eab4010719fde5e84d46c20ed` |
+
+Local verification completed **282 JavaScript tests**, **529 Unit checks /
+5,530 assertions**, and **637 selected Feature checks / 7,418 assertions**,
+without failures. Existing missing `.env.testing` warning marks remain (186
+Unit and 637 Feature cases). The Feature selection excludes legacy suites
+requiring an imported disposable schema and named reference/sample population
+suites, as documented in `MODULAR_MONOLITH.md`. Focused Pint, whitespace,
+secret-pattern review, PHP syntax and Blade checks passed.
+
+Read-only production checks resolved **54 public Application services**, both
+module contracts, authorized satellite modal/full-page renders for an existing
+Ramos parcel, three municipal-scope farmer/harvest/assistance reports, veterinary
+and evaluator parcel denials, and the owner-only usage panel. Named satellite
+throttles remain present. The private verifier needed a fresh database connection
+after the legacy backup snapshot, JSON-normalized percentage comparisons and a
+production-safe HTTP recording check; these checker corrections changed no
+runtime or live data.
+
+The application left maintenance successfully. Homepage, office sign-in and
+`/farmer-portal/login` returned **HTTP 200**. Anonymous NDMI image access returned
+**HTTP 401**. Signed-in browser drawing/fullscreen acceptance and live Copernicus
+imagery remain pending; server renders and synthetic provider tests are not
+visual or live-imagery acceptance. Existing tabs need one reload to receive the
+versioned assets. Documentation status updates follow in a separate receipt
+commit without further runtime or data changes.
+
 ## Verified Hostinger release — October 15, 2026 — complete crop shading
 
 Runtime `1bc08da` includes whole-parcel crop tints and immediate saved-parcel

@@ -1,7 +1,10 @@
 # Parcel satellite indices
 
-Status: implemented locally on October 19, 2026; not pushed or deployed.
-Release with the pending modular-monolith and cost/efficiency work.
+Status: deployed October 19, 2026 in runtime `aeb8eb5` through GitHub main and
+Hostinger fast-forward pull, with the modular-monolith and cost/efficiency work.
+Authorized modal/full-page renders, module/report checks, data/configuration/
+budget preservation and six public asset hashes passed. Signed-in browser and
+live Copernicus imagery acceptance remain pending. See [the release receipt](GITHUB_DEPLOYMENT.md).
 
 ## Using the feature
 
@@ -19,7 +22,8 @@ EVI suits thick, leafy crops. Simple text explains higher/lower numbers and a
 practical next step. No-data and few-pixel messages avoid implying crop damage
 or a percentage of clear land. Formulas, resolution limits and calculation
 details remain under the closed **Technical details** disclosure. This copy
-follow-up remains local and does not change calculations or provider budgets.
+follow-up is included in the deployed release and changes neither calculations
+nor provider budgets.
 
 | Index | Purpose | Sentinel-2 formula (harmonized reflectance) | Approximate output grid |
 | --- | --- | --- | --- |

@@ -1,7 +1,10 @@
 # Modular monolith
 
-Status: implemented locally on `codex/modular-monolith`, October 16, 2026.
-The deployed October 15 runtime remains unchanged until this refactor is released.
+Status: deployed October 19, 2026 in runtime `aeb8eb5`, with the map-efficiency
+and satellite-index work, through GitHub main and Hostinger fast-forward pull.
+The optimized autoloader and configuration/route/Blade caches were rebuilt.
+All 54 public Application services, both module ports and three scoped reports
+passed read-only production checks. See [the release receipt](GITHUB_DEPLOYMENT.md).
 
 ## Structure and ownership
 

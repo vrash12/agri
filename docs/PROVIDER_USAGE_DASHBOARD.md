@@ -1,19 +1,21 @@
 # Satellite and map usage dashboard
 
-October 18 local follow-up: provider/cache/token, server/database and browser
+October 18 follow-up (deployed October 19 in runtime `aeb8eb5`): provider/cache/token, server/database and browser
 map-instance aggregates now supplement this panel. These are best-effort
 measurements, not billing totals. See [COST_EFFICIENCY.md](COST_EFFICIENCY.md) for
 privacy, retention, map reuse, historical NDVI caching and combined release steps.
 
-Status: local implementation, not pushed or deployed. No production data or credentials changed.
+Status: deployed. Read-only production checks confirmed owner visibility,
+staff exclusion and rendering; private configuration and existing counters
+were preserved. See the October 19 [release receipt](GITHUB_DEPLOYMENT.md).
 
 ## What administrators see
 
 Active, scoped Super Admins and the System Owner see a **Satellite & map usage** panel on the operations dashboard. It shows shared infrastructure activity across offices, rather than provincial operational records. Regional Heads, municipal/provincial staff, evaluators, farmers and restricted visitors receive no provider data. No new route is introduced; dashboard authentication and scope middleware remain in force.
 
-The current local panel labels use the AgriLGU application name; see [branding deployment requirements](AGRILGU_BRANDING.md), especially preserving cache namespaces and existing NDVI budget counters.
+The panel uses the current eAgriLGU branding. Existing cache namespaces and satellite budget counters remain unchanged.
 
-NDVI satellite checks show the local daily/monthly request ceilings configured by `SENTINEL_DAILY_REQUESTS` and `SENTINEL_MONTHLY_REQUESTS`, counts consumed, remaining requests and UTC reset times. Near-limit warnings begin at 80%; a zero ceiling pauses new processing. `SatelliteRequestBudget` uses the existing Sentinel cache keys and atomic reservation lock, so existing allowance consumption is retained. Statistical, NDVI image and true-color image attempts share these ceilings. OAuth calls and cached results do not consume them; failed processing attempts do. NDVI authorization, geometry limits and upstream requests remain unchanged.
+Satellite checks show the local daily/monthly request ceilings configured by `SENTINEL_DAILY_REQUESTS` and `SENTINEL_MONTHLY_REQUESTS`, counts consumed, remaining requests and UTC reset times. Near-limit warnings begin at 80%; a zero ceiling pauses new processing. `SatelliteRequestBudget` uses the existing Sentinel cache keys and atomic reservation lock, so existing allowance consumption is retained. Statistics and images across NDVI, NDMI, SAVI, EVI and true-color share these ceilings. OAuth calls and cached results do not consume them; failed processing attempts do. Parcel authorization and processing limits remain in force.
 
 Google Maps displays daily/monthly outgoing Maps Static API attempts made by the authorized parcel-image and municipality-snapshot proxies. Failed attempts count, cached image responses and denied/unconfigured requests do not. The first recorded timestamp is shown for each period. Tracking begins with this release and does not reconstruct earlier traffic. Logging these aggregates is best-effort under a shared cache lock and cannot block an image export on a recording failure.
 

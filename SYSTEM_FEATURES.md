@@ -1,6 +1,6 @@
 # eAgriLGU — Complete Feature Catalog
 
-October 19 satellite-index expansion (local, not deployed): the existing parcel
+October 19 satellite-index expansion (deployed in runtime `aeb8eb5`): the existing parcel
 field check adds NDMI for investigating vegetation water stress, SAVI for sparse
 crop cover and EVI for dense vegetation alongside NDVI. Each explicit search
 processes one selected index with its own map, measurements, legend and history.
@@ -9,12 +9,12 @@ The climate dashboard remains NDVI-only; no risk levels are inferred from an
 index. Shared request allowances and provider settings remain unchanged.
 See [satellite indices](docs/SATELLITE_INDICES.md).
 
-October 18 efficiency follow-up (local, not deployed): owner/admin aggregate
+October 18 efficiency follow-up (deployed in runtime `aeb8eb5`): owner/admin aggregate
 usage and server/database metrics, viewport-triggered map startup, reusable crop
 and reauthorized satellite views, and longer historical NDVI caching. Actual
 Google billing remains in Google Cloud. See [cost and efficiency](docs/COST_EFFICIENCY.md).
 
-October 16 internal architecture refactor (local, not deployed): business
+October 16 internal architecture refactor (deployed in runtime `aeb8eb5`): business
 workflows are grouped into Farmers, Land, Agriculture, Animal Health, Climate,
 Assistant and Reporting modules within the existing Laravel application.
 Local reports and crop-to-harvest checks use explicit module interfaces.
@@ -508,7 +508,7 @@ Implementation status and remaining staff/staging checks are documented in [DESI
 - In the Farmers map, saved Land Plots appear as compact expandable cards. The card header keeps the plot name, date, area and color marker visible; opening it reveals map focus, satellite field check, seasonal crops, edit, download, print and delete actions according to the user's existing permissions.
 - High-resolution parcel PNG export.
 - Same-origin Google Static Maps proxy for satellite exports.
-- Authorized Sentinel-2 parcel monitoring through Copernicus Data Space. The local October 19 expansion lets staff select NDVI, NDMI, SAVI or EVI, choose a date range, compare cloud-masked index colours with true-color imagery and review usable-pixel summaries inside a saved parcel. The Farmers map action is labeled **Satellite field check** and opens the analysis in an accessible in-page modal with a three-step flow, plain-language controls, a colour guide and expandable technical details; a full-page fallback remains available. Cloudy/no-data states explain that no reading is not crop damage. Indices are field-check signals rather than diagnoses, soil-moisture percentages, yield estimates, ownership proof or eligibility decisions.
+- Authorized Sentinel-2 parcel monitoring through Copernicus Data Space. The deployed October 19 expansion lets staff select NDVI, NDMI, SAVI or EVI, choose a date range, compare cloud-masked index colours with true-color imagery and review usable-pixel summaries inside a saved parcel. The Farmers map action is labeled **Satellite field check** and opens the analysis in an accessible in-page modal with a three-step flow, plain-language controls, a colour guide and expandable technical details; a full-page fallback remains available. Cloudy/no-data states explain that no reading is not crop damage. Indices are field-check signals rather than diagnoses, soil-moisture percentages, yield estimates, ownership proof or eligibility decisions.
 
 ## 8. Official municipality geofencing
 

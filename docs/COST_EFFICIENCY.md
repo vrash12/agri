@@ -1,7 +1,10 @@
 # Cost and efficiency follow-up
 
-Status: implemented locally, October 18, 2026; not deployed. Release with the
-complete pending modular-monolith refactor.
+Status: deployed October 19, 2026 in runtime `aeb8eb5`, with the complete
+modular-monolith refactor and satellite-index expansion. Public map assets
+match the live HTTPS copies. Read-only owner/staff visibility, module/report
+and data/configuration/budget-preservation checks passed. Browser performance
+and provider billing were not benchmarked. See [the release receipt](GITHUB_DEPLOYMENT.md).
 
 ## Measurements
 
