@@ -1,7 +1,7 @@
 # Agriculture Information System — Developer Guide
 
-The October 19 satellite/selection/climate follow-up is implemented locally,
-awaiting release. Satellite search and results form one clear workflow; hidden
+The October 19 satellite/selection/climate follow-up is deployed in runtime
+`504025d` through GitHub main and Hostinger fast-forward pull. Satellite search and results form one clear workflow; hidden
 results cannot display a prior check after an index/date search changes. A
 reusable red parcel outline with an outside halo marks selection only; stored
 colors/geometry and crop overlays remain intact. Automatic monitoring uses
@@ -12,8 +12,12 @@ complete reference periods. Source refreshes use occupied municipalities,
 bounded work, pending job reuse and a command lock. Sentinel remains opt-in
 with unchanged quotas. Release command/config/module/view/assets together,
 rebuild autoload and config/route/view caches, and verify hosting cron separately.
-No migration or general-cache clear. See docs/CLIMATE_AUTOMATED_SOURCES.md and
-docs/SATELLITE_INDICES.md. Synthetic browser checks are not live provider proof.
+No migration or general-cache clear. Ramos weather and CHIRPS were refreshed
+with complete coverage; hosting cron invocation is still unverified. The
+heartbeat reflects manual runs, not proof of cron. All 9,505 operational rows
+and provider allowances were preserved; only two source snapshots were added.
+See docs/CLIMATE_AUTOMATED_SOURCES.md and docs/SATELLITE_INDICES.md. Synthetic
+browser checks are not live Maps/Copernicus proof.
 
 The October 19 Assistant-understanding follow-up is deployed on Hostinger in
 runtime `2a9ab66`. `AssistantUtterance` applies finite, anchored

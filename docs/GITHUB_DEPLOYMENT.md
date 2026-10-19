@@ -1,5 +1,69 @@
 # GitHub-to-Hostinger deployment
 
+## Verified Hostinger release — October 19, 2026 — satellite clarity and climate monitoring
+
+Runtime `504025d3d958632d4c65ab12c52f582e8d529b14` was pushed to GitHub
+main and installed by fast-forward pull from clean tracked baseline `9efbcd6`.
+Satellite checks now use a single search/results flow with simple explanations,
+optional details and stale-result suppression. A reusable red parcel outline
+and outside halo mark click/Focus selection while retaining crop fills/icons.
+The selected-area climate dashboard leads with dated automatic monitoring and
+transparent heat/rainfall field-check prompts; verified office levels and
+reported-parcel links remain independent.
+
+A private verified backup contains **24 tables / 9,946 rows**, **3,409,288
+compressed bytes**, SHA-256
+`fb806e0c8b81e89d165b9c7506c2689ba9c21d4be5dc2f2a6c6523b2daf4d0b8`.
+Recovery artifacts are outside the document root in
+`/home/u330835917/.private/satellite-climate-20261019`. Deployment verification
+matched all pre-existing rows and schemas, the environment, namespaces,
+credentials and provider allowances. Approved configuration deltas are bounded
+runtime/monitoring defaults and the default ClimateSERV API path; explicit
+private settings stay intact. No migration, account operation, dependency
+update or general-cache clear ran. Existing untracked files were preserved.
+
+After the preservation check, two explicit scoped commands refreshed only
+Ramos (municipality 12). **Open-Meteo: 14.5 mm for October 19–25**, complete
+seven-day coverage, fetched `2026-10-19T02:52:37Z`. **CHIRPS: 528.07 mm for
+September 1–30**, complete 30-day coverage and all three reference years,
+fetched `2026-10-19T02:53:16Z`. The returned dataset identifier is
+`climateserv-chirps-0`; no unsupported v3 claim is made. Monitoring reported
+**2 of 2 sources ready**, no inspection trigger. This is a dated observation,
+not a promise of later availability or an official drought finding.
+The source table grew from 441 to 443 rows. All **9,505 other rows and their
+schemas**, the private environment and satellite counters remained unchanged.
+No satellite or OpenAI request ran; Sentinel automation remains false.
+
+The Laravel schedule lists weather every six hours and CHIRPS daily at 03:15.
+**Hosting cron invocation remains unverified**: this SSH account exposes no
+crontab command, and hPanel was not available. The new heartbeat records the
+two manual runs above; it does not establish recurring execution. The remaining
+hosting step is a once-per-minute cron entry (do not duplicate an existing one):
+
+```text
+/usr/bin/php /home/u330835917/domains/agritarlac.online/artisan schedule:run
+```
+
+Local verification passed **240 focused PHP tests / 1,620 assertions** and
+**294 JavaScript tests**, Pint, syntax, Blade compilation and whitespace checks.
+An attempted broader legacy weather-access suite has four pre-existing fixture
+errors because its SQLite database lacks the `provinces` table; the scoped
+weather service, climate authorization and satellite checks above pass.
+Synthetic browser checks covered satellite initial/search/result/index-switch
+states, desktop and 388-CSS-pixel layout, plus the climate monitor desktop/mobile
+layout and its daily-forecast disclosure (no horizontal overflow or console
+errors in the sample page). They used no real records or provider images.
+Actual signed-in Google Maps halo and Copernicus imagery acceptance is pending.
+
+Hostinger regenerated optimized production autoloading and config/route/view
+caches. All **five** changed public CSS/JS assets match source, served files and
+HTTPS SHA-256 hashes. Homepage, office sign-in and farmer sign-in returned 200.
+Production read-only checks rendered the climate panel, checked agriculture and
+veterinary access, and retained seven guide-role renders and canonical-help
+routing. Provider calls were blocked during these checks. Existing pages need
+one reload for new assets. This receipt is a separate documentation commit.
+
+
 ## Verified Hostinger release — October 19, 2026 — farm guide understanding
 
 Runtime `2a9ab6619d12b460fa568297aa7df902a4faff37` was pushed to GitHub main
