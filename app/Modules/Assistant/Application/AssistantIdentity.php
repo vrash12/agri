@@ -7,7 +7,7 @@ use App\Models\User;
 /** Application-owned introductions never need inference or operational queries. */
 final class AssistantIdentity
 {
-    public function answer(User $user, string $kind, string $language = 'en', string $module = 'other', string $guide = AssistantGuide::DEFAULT): string
+    public function answer(User $user, string $kind, string $language = 'en', string $module = 'other', string $guide = AssistantGuide::DEFAULT, ?string $subjectGuide = null): string
     {
         $name = AssistantGuide::get($guide)['name'];
         $veterinary = $user->isProvincialVeterinaryOffice();
@@ -23,13 +23,14 @@ final class AssistantIdentity
         $capabilities = $filipino
             ? ($veterinary
                 ? 'Matutulungan kitang gamitin ang Animal Health at maintindihan ang pinapayagang ulat. Maaari ko ring ipaliwanag ang access at privacy ng Assistant.'
-                : 'Tumutulong ako sa mga feature ng eAgriLGU lamang: farmer registry, parcels, crop plotting, assistance, harvests, Animal Health, cooperatives, machinery, dashboard, weather, geofences, accounts, backups at audit tools.')
+                : 'Tumutulong ako sa mga feature ng eAgriLGU lamang: farmer registry, parcels, crop plotting, satellite indices, El Niño readiness, assistance, harvests, Animal Health, cooperatives, machinery, dashboard, weather, geofences, accounts, backups at audit tools.')
             : ($veterinary
                 ? 'I can help you use Animal Health and understand permitted reports. I can also explain Assistant access and privacy.'
-                : 'I help with eAgriLGU features only: farmer registry, parcels, crop plotting, assistance, harvests, Animal Health, cooperatives, machinery, dashboard, weather, geofences, accounts, backups and audit tools.');
+                : 'I help with eAgriLGU features only: farmer registry, parcels, crop plotting, satellite indices, El Niño readiness, assistance, harvests, Animal Health, cooperatives, machinery, dashboard, weather, geofences, accounts, backups and audit tools.');
         $pageContext = $this->pageContext($module, $filipino);
 
         return match ($kind) {
+            'guide' => $this->guideDescription($subjectGuide ?? $guide, $filipino).' '.$limits,
             'greeting' => ($filipino ? 'Kumusta! Ako si '.$name.', ang digital na gabay mo sa eAgriLGU. Ano ang maitutulong ko?' : 'Hello! I’m '.$name.', your digital farm guide. How can I help with eAgriLGU?').' '.$limits,
             'thanks' => $filipino ? 'Walang anuman! Sabihin lang kung may iba ka pang tanong tungkol sa eAgriLGU.' : 'You’re welcome! Let me know if you have another question about eAgriLGU.',
             'capabilities' => $capabilities.' '.$pageContext.' '.$limits.' '.$this->fileLimits($filipino),
@@ -43,6 +44,21 @@ final class AssistantIdentity
         };
     }
 
+    private function guideDescription(string $id, bool $filipino): string
+    {
+        $guide = AssistantGuide::get($id);
+        $character = match ($guide['id']) {
+            'ka-kaloy' => $filipino ? 'mascot na kalabaw na magsasaka na may salakot' : 'carabao farmer mascot wearing a salakot',
+            'aling-maya' => $filipino ? 'mascot na magsasakang Pilipina na may basket ng gulay' : 'Filipina farmer mascot carrying a basket of vegetables',
+            'kiko' => $filipino ? 'mascot na kabataang Pilipinong gabay sa pagsasaka na may clipboard' : 'young Filipino farm-guide mascot holding a clipboard',
+            default => $filipino ? 'mascot na kayumangging bakang magsasaka na may salakot' : 'brown cow farmer mascot wearing a salakot',
+        };
+
+        return $filipino
+            ? 'Si '.$guide['name'].' ang '.$character.' ng eAgriLGU. Iba-ibang anyo lang ng iisang helper ang apat na gabay; pareho ang kanilang kakayahan at access ayon sa iyong account. Para pumili ng gabay, pindutin ang larawan sa header ng chat. Mananatili ang usapan mo. Software mascot ito, hindi totoong tao o opisyal na gumagawa ng pasya. Gumagamit ng OpenAI ang sinuring gabay sa sistema. Lokal ang paliwanag na ito at walang AI request.'
+            : $guide['name'].' is the eAgriLGU '.$character.'. All four guides are appearances of the same helper, with the same abilities and access allowed by your account. To choose a guide, select the portrait in the chat header. Your conversation stays in place. This is a software mascot, not a person or an official decision-maker. Reviewed system guidance uses OpenAI. This description is local and makes no AI request.';
+    }
+
     private function pageContext(string $module, bool $filipino): string
     {
         $label = match ($module) {
@@ -50,6 +66,7 @@ final class AssistantIdentity
             'farmers' => $filipino ? 'farmer registry at farmer records' : 'Farmers and farmer registry',
             'crops' => $filipino ? 'crop at parcel mapping' : 'Crop and parcel mapping',
             'satellite' => 'Satellite / NDVI',
+            'climate-risk' => 'El Niño Readiness',
             'assistance' => $filipino ? 'agriculture assistance at seed releases' : 'Assistance and seed releases',
             'coverage' => $filipino ? 'assistance coverage' : 'Assistance coverage',
             'harvests' => $filipino ? 'harvest records' : 'Harvest records',

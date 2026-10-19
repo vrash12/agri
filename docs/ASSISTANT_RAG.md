@@ -1,5 +1,19 @@
 # Assistant retrieval and grounded help
 
+October 19 understanding follow-up (local, awaiting release verification): the
+manifest now contains **32 reviewed passages / 29 canonical topics**. Existing
+satellite passages support focused NDMI, SAVI, EVI and index-choice questions;
+the new `climate-readiness` passage explains the implemented El Niño dashboard,
+verified assessments, missing evidence and source limitations. This supersedes
+the historical 31-passage / 24-topic counts below. All five new topics exclude
+veterinary accounts. The existing 32-passage ceiling, 2,400 characters per
+passage, corpus byte limits and 7,000-character retrieval bound remain unchanged.
+Corpus/topic identity separates cached help without clearing general cache.
+Polite normalization and person lookups run locally; raw questions, named
+farmers, prior replies and page fields never become retrieval or provider text.
+No vector service, autonomous tool, private-document ingestion or fresh data
+fetch is added. See [Office Assistant](OFFICE_ASSISTANT.md).
+
 Local workflow follow-up, October 11 (not deployed): deterministic next prompts
 use approved reply/reference types rather than model text or record snippets.
 Bounded encrypted scope/year hints complete report clarifications with selected

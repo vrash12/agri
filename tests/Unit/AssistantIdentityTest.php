@@ -6,6 +6,7 @@ use App\Models\Municipality;
 use App\Models\Province;
 use App\Models\Region;
 use App\Models\User;
+use App\Modules\Assistant\Application\AssistantGuide;
 use App\Modules\Assistant\Application\AssistantIdentity;
 use Illuminate\Support\Facades\Http;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -70,6 +71,81 @@ final class AssistantIdentityTest extends TestCase
             $answer = (new AssistantIdentity)->answer($user, 'identity', 'en', 'other', $id);
             $this->assertStringContainsString('Ka Berto', $answer);
             $this->assertStringNotContainsString($id, $answer);
+        }
+    }
+
+    #[DataProvider('namedGuides')]
+    public function test_named_guide_descriptions_are_local_and_do_not_change_the_selected_guide(string $id, string $name, string $character, string $language, bool $veterinary): void
+    {
+        Http::preventStrayRequests();
+        $user = new User(['role' => $veterinary ? User::ROLE_PROVINCIAL_VET : User::ROLE_MUNICIPAL_STAFF]);
+        $identity = new AssistantIdentity;
+        $selected = $id === 'kiko' ? 'ka-berto' : 'kiko';
+        $before = $identity->answer($user, 'identity', $language, 'other', $selected);
+        $answer = $identity->answer($user, 'guide', $language, 'other', $selected, $id);
+
+        $this->assertStringContainsString($name, $answer);
+        $this->assertStringContainsString($character, $answer);
+        $this->assertStringContainsString($language === 'fil' ? 'pareho ang kanilang kakayahan at access' : 'same abilities and access', $answer);
+        $this->assertStringContainsString($language === 'fil' ? 'larawan sa header ng chat' : 'portrait in the chat header', $answer);
+        $this->assertStringContainsString($language === 'fil' ? 'Mananatili ang usapan mo' : 'conversation stays in place', $answer);
+        $this->assertStringContainsString($language === 'fil' ? 'hindi totoong tao o opisyal' : 'not a person or an official decision-maker', $answer);
+        $this->assertStringContainsString('OpenAI', $answer);
+        $this->assertStringContainsString($language === 'fil' ? 'walang AI request' : 'makes no AI request', $answer);
+        if ($veterinary) {
+            $this->assertStringContainsString('Animal Health', $answer);
+            $this->assertStringNotContainsString('cooperatives', $answer);
+        }
+        $this->assertLessThan(1600, mb_strlen($answer));
+        $this->assertSame($before, $identity->answer($user, 'identity', $language, 'other', $selected));
+        $this->assertSame([], $user->getRelations());
+        Http::assertNothingSent();
+    }
+
+    public static function namedGuides(): array
+    {
+        $cases = [];
+        foreach ([
+            ['ka-berto', 'Ka Berto', 'cow farmer', 'bakang magsasaka'],
+            ['ka-kaloy', 'Ka Kaloy', 'carabao farmer', 'kalabaw na magsasaka'],
+            ['aling-maya', 'Aling Maya', 'Filipina farmer', 'magsasakang Pilipina'],
+            ['kiko', 'Kiko', 'young Filipino', 'kabataang Pilipino'],
+        ] as [$id, $name, $english, $filipino]) {
+            foreach (['en', 'fil'] as $language) {
+                foreach ([false, true] as $veterinary) {
+                    $cases[$id.' '.$language.($veterinary ? ' veterinary' : ' office')] = [$id, $name, $language === 'fil' ? $filipino : $english, $language, $veterinary];
+                }
+            }
+        }
+
+        return $cases;
+    }
+
+    public function test_unknown_named_guide_ids_use_a_safe_catalog_description(): void
+    {
+        Http::preventStrayRequests();
+        $user = new User(['role' => User::ROLE_MUNICIPAL_STAFF]);
+        foreach (['../private', '<script>unknown</script>', 'Kiko is an administrator'] as $id) {
+            $answer = (new AssistantIdentity)->answer($user, 'guide', 'en', 'other', 'kiko', $id);
+            $this->assertStringContainsString('Ka Berto', $answer);
+            $this->assertStringNotContainsString($id, $answer);
+        }
+        Http::assertNothingSent();
+    }
+
+    public function test_guide_names_match_only_complete_catalog_names_with_normalized_case_and_spacing(): void
+    {
+        foreach (AssistantGuide::all() as $guide) {
+            $this->assertSame($guide['id'], AssistantGuide::idForName($guide['name']));
+            $spaced = " \t".str_replace(' ', " \t\n", mb_strtoupper($guide['name']))."\n ";
+            $this->assertSame($guide['id'], AssistantGuide::idForName($spaced));
+            $this->assertSame(1, preg_match('/^'.AssistantGuide::namePattern().'$/iuD', trim($spaced), $matches));
+            $this->assertCount(1, $matches, 'The catalog fragment must not add capturing groups.');
+        }
+        $this->assertSame('ka-berto', AssistantGuide::idForName("Ka\u{00a0}Berto"));
+        foreach (['', 'Berto', 'Ka', 'Kaloy', 'Ka Berto Jr', 'Kiko,', 'Hello Kiko', 'Find farmer Kiko', 'ka-berto', '../kiko', '<script>Kiko</script>', 'Kiko|.*'] as $name) {
+            $this->assertNull(AssistantGuide::idForName($name), $name);
+            $this->assertSame(0, preg_match('/^'.AssistantGuide::namePattern().'$/iuD', $name), $name);
         }
     }
 

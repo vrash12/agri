@@ -46,12 +46,12 @@ final class AssistantConversation
         if ($intent['task'] === 'identity') {
             // Polite interludes should not discard a validated report/help
             // reference. They still carry no prior reply text into inference.
-            $replyContext = in_array($intent['kind'], ['greeting', 'thanks', 'context', 'account'], true) && $context !== []
+            $replyContext = in_array($intent['kind'], ['greeting', 'thanks', 'context', 'account', 'guide'], true) && $context !== []
                 ? $contextToken
                 : $this->token($user, $sessionId, ['task' => 'identity', 'year' => $intent['year'], 'farmer_id' => $context['farmer_id'] ?? null]);
 
             return $this->withNextSteps($user, [
-                'answer' => $this->identity->answer($user, $intent['kind'], $intent['language'] ?? 'en', $module, $guide),
+                'answer' => $this->identity->answer($user, $intent['kind'], $intent['language'] ?? 'en', $module, $guide, $intent['subject_guide'] ?? null),
                 'source' => 'conversation', 'report' => 'identity', 'year' => null,
                 'scope' => $this->scope($user), 'actions' => [], 'links' => [],
                 'context' => $replyContext,

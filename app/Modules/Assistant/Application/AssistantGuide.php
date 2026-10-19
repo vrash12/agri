@@ -20,6 +20,27 @@ final class AssistantGuide
         return array_keys(self::CHARACTERS);
     }
 
+    /** Regex fragment only; callers supply anchors, boundaries and modifiers. */
+    public static function namePattern(): string
+    {
+        $names = array_map(fn (array $guide) => str_replace(' ', '\\s+', preg_quote($guide['name'], '/')), self::CHARACTERS);
+
+        return '(?:'.implode('|', $names).')';
+    }
+
+    /** A complete catalog name, never a substring, ID or arbitrary addressee. */
+    public static function idForName(string $name): ?string
+    {
+        $normalized = mb_strtolower(trim(preg_replace('/\\s+/u', ' ', $name) ?? ''), 'UTF-8');
+        foreach (self::CHARACTERS as $id => $guide) {
+            if ($normalized === mb_strtolower($guide['name'], 'UTF-8')) {
+                return $id;
+            }
+        }
+
+        return null;
+    }
+
     /** @return list<array{id:string,name:string,alt:string,avatar:string,portrait:string}> */
     public static function all(): array
     {

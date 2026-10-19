@@ -16,7 +16,7 @@ use Throwable;
 
 final class OfficeAssistant
 {
-    public const MODULES = ['dashboard', 'farmers', 'crops', 'satellite', 'assistance', 'coverage', 'harvests', 'animal-health', 'cooperatives', 'machinery', 'accounts', 'geofences', 'backups', 'audit', 'other'];
+    public const MODULES = ['dashboard', 'farmers', 'crops', 'satellite', 'climate-risk', 'assistance', 'coverage', 'harvests', 'animal-health', 'cooperatives', 'machinery', 'accounts', 'geofences', 'backups', 'audit', 'other'];
 
     /** Provider questions are application-owned; the visible chat never becomes a prompt. */
     public const TOPICS = [
@@ -24,6 +24,11 @@ final class OfficeAssistant
         'parcel-drawing' => ['module' => 'farmers', 'question' => 'How do authorized office staff select a farmer and draw or import a whole farm parcel boundary?'],
         'seed-import' => ['module' => 'assistance', 'question' => 'How do authorized office staff import rice seed releases and correct a workbook validation error?'],
         'ndvi' => ['module' => 'crops', 'question' => 'What does the parcel Satellite / NDVI feature show, and what are its coverage and interpretation limits?'],
+        'ndmi' => ['module' => 'satellite', 'question' => 'How do authorized office users use NDMI in the satellite field check, and what can vegetation water-content readings tell them and not tell them?'],
+        'savi' => ['module' => 'satellite', 'question' => 'How do authorized office users use SAVI for sparse or newly planted vegetation, and what are its soil-background and coverage limits?'],
+        'evi' => ['module' => 'satellite', 'question' => 'How do authorized office users use EVI for dense vegetation, and what are its interpretation and coverage limits?'],
+        'satellite-indices' => ['module' => 'satellite', 'question' => 'How do authorized office users choose between NDVI, NDMI, SAVI and EVI in the satellite field check, and what can these indices measure and not measure?'],
+        'climate-readiness' => ['module' => 'climate-risk', 'question' => 'How do authorized office users read the El Niño readiness dashboard, understand missing assessments and automated evidence, and record a verified office assessment when their role permits?'],
         'animals' => ['module' => 'animal-health', 'question' => 'How do authorized office staff record multiple animals or groups and their Animal Health services for one owner?'],
         'access' => ['module' => 'accounts', 'question' => 'What can this office role access, and how are municipality, province and regional permissions enforced?'],
         'farmer-login' => ['module' => 'farmers', 'question' => 'How do authorized office staff issue or recover farmer portal access, and how do farmers sign in?'],

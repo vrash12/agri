@@ -5,6 +5,7 @@
     str_starts_with($assistantRoute, 'farm-plots.satellite.') => 'satellite',
     str_starts_with($assistantRoute, 'farm-plots.') => 'crops',
     str_starts_with($assistantRoute, 'assistance-coverage.') => 'coverage',
+    str_starts_with($assistantRoute, 'climate-risk.') => 'climate-risk',
     str_starts_with($assistantRoute, 'rice-') => 'assistance',
     str_starts_with($assistantRoute, 'harvest') => 'harvests',
     str_starts_with($assistantRoute, 'anti-rabies') => 'animal-health',

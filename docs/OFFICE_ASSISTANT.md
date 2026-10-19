@@ -1,5 +1,42 @@
 # Office Assistant
 
+## Natural questions and current feature help — October 19, 2026
+
+Implemented locally; release verification is pending. The bounded local router
+now accepts “Please find farmer Juan Dela Cruz”, “Who is Juan Dela Cruz?”,
+“Sino si Juan Dela Cruz?” and “Show me farmer Juan Dela Cruz”. Lookups return
+only permitted matches; choose a matching record before asking for its crops,
+plots, assistance or harvests. Names with accents, initials, apostrophes and
+hyphens remain literal. The existing explicit name/ID + reporting-year lookup
+continues to work. A mixed person lookup, unsupported location filter or private
+field request clarifies and clears pending references instead of showing broader
+office totals. Polite mutation requests such as “Can you delete this farmer?”
+explain the read-only limit without reading an unrelated report.
+
+Catalog guide names work in greetings and as addressees. “Who is Kiko?” describes
+Kiko even if Ka Berto is selected. “Find farmer Kiko” remains a record lookup.
+Named-guide explanations preserve validated help/report references. “Can you
+make it simpler?”, “Can you explain it more?” and “More” reuse only an approved
+help topic; private record replies never become model history or translation
+input. These finite rules improve supported phrasing, not unrestricted language
+understanding or autonomous actions.
+
+NDMI, SAVI and EVI each have a canonical help question; “Compare NDMI and NDVI”
+explains index purposes rather than requesting an unsupported year comparison.
+El Niño Readiness help explains office priorities, missing/expired assessments,
+zero counts, dated source evidence and authorized assessment entry. The climate
+page supplies only its allowlisted module name, not filters or assessment fields.
+The guide cannot fetch fresh climate/satellite observations or diagnose a parcel.
+Veterinary accounts retain Animal Health-only help and records.
+
+The reviewed corpus now has 32 passages and 29 canonical topics. Evidence-size
+limits, canonical-only provider inputs, accepted-help caching, budgets, five-per-
+minute chat throttle, encrypted context lifetime and all policies remain in force.
+No new service, model, dependency, schema or paid operation is introduced.
+Release the Assistant PHP, curated climate passage and shared view together;
+regenerate optimized autoloading and config/route/view caches without a general
+cache clear. See [the deployment receipt](GITHUB_DEPLOYMENT.md) for runtime status.
+
 ## Farm guide characters — October 19, 2026
 
 Deployed on Hostinger in runtime `11d1a1f` through GitHub main and a fast-forward

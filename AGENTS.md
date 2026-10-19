@@ -1,5 +1,21 @@
 # Agriculture Information System — Developer Guide
 
+The October 19 Assistant-understanding follow-up is implemented locally and
+awaiting release verification. `AssistantUtterance` applies finite, anchored
+polite/vocative rules and a shared literal farmer-lookup parser. Natural
+English/Filipino person questions stay local, reauthorize the account scope and
+cannot fall through to broader reports when mixed with unsupported requests.
+Explicit mutation requests remain read-only clarifications. Named-guide
+descriptions use the catalog and preserve validated conversation references;
+the selected appearance never grants access. Index help has distinct NDMI,
+SAVI, EVI and comparison topics; El Niño Readiness has reviewed guidance and an
+allowlisted page hint. The manifest has 32 passages / 29 canonical topics within
+the existing evidence limits. No raw questions, transcripts or farmer records
+are sent to OpenAI. Release all Assistant PHP, the new curated passage and shared
+view together; rebuild optimized autoloading and config/route/view caches.
+No dependency, migration, account, environment, provider-budget change or
+general-cache clear is required. See [docs/OFFICE_ASSISTANT.md](docs/OFFICE_ASSISTANT.md).
+
 The October 19 farm-guide presentation is deployed on Hostinger in runtime
 `11d1a1f` through GitHub main and a fast-forward pull. The office
 chat offers Ka Berto (default), Ka Kaloy, Aling Maya and Kiko through
