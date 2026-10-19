@@ -71,7 +71,7 @@ test('hover motion batches pointer events and measures the card only when its co
 });
 
 function harness(plots = []) {
-  const metrics = { constructed: 0, frames: 0, mounts: 0, clears: 0 };
+  const metrics = { constructed: 0, selectionConstructed: 0, frames: 0, mounts: 0, clears: 0 };
   const mounted = new Set();
   let clock = 0;
   const toggle = { checked: true };
@@ -100,9 +100,17 @@ function harness(plots = []) {
     },
     // Any accidental restoration of the invisible line doubles the map workload.
     Polyline3DInteractiveElement: class { constructor() { throw new Error('Unexpected duplicate outline'); } },
+    Polyline3DElement: class {
+      constructor(options) {
+        assert.ok(options.outerWidth >= 0 && options.outerWidth <= 1, 'Selection halo uses a valid outer stroke ratio');
+        Object.assign(this, options);
+        metrics.selectionConstructed++;
+      }
+    },
     AltitudeMode: { CLAMP_TO_GROUND: 'ground' },
     savedPlotOverlays: [], renderedPlotDataByFarmerId: new Map(), plotsCacheByFarmerId: new Map(),
     savedPlotsHiddenForEditing: false, focusedParcelFarmerId: null, selectedFarmerId: null, editingPlotId: null,
+    selectedPlotId: null, selectedPlotOverlay: null, selectedPlotHalo: null, parcelOpenRevision: 0, plotMode: false,
     cropLayer: null, queueCropLayer: () => {}, plantedAreaLayer: null, refreshPlantedAreas: () => {},
     cropSettings: {enabled:false,year:2026,season:'dry',filter:'all'}, plantedAreaOverlays: [], schedulePlotDisplayRefresh: () => {},
     plantedAreaRenderedRecords: new Map(), plantedAreaRenderRevision: 0, plantedAreaRetryTimer: null, plantedAreaRefreshPending: false,
@@ -118,7 +126,8 @@ function harness(plots = []) {
     fetch: async () => ({ ok: true, json: async () => ({ plots, total: plots.length, returned: plots.length, truncated: false }) }),
   });
   const functions = ['toLatLng', 'setOverlayVisible', 'nextPlotFrame', 'shouldShowSavedPlot', 'needsFullPlotDetail',
-    'refreshSavedPlotDisplay', 'clearPlotsForFarmer', 'renderPlotsForFarmer', 'loadAllMunicipalPlots', 'applyCropStyle', 'applyParcelCropBadge', 'buildPlantedCropOverlays', 'showPlantedCropOverlay'];
+    'refreshSavedPlotDisplay', 'clearPlotsForFarmer', 'renderPlotsForFarmer', 'loadAllMunicipalPlots', 'applyCropStyle', 'applyParcelCropBadge', 'buildPlantedCropOverlays', 'showPlantedCropOverlay',
+    'sameLatLng', 'applySavedPlotAppearance', 'selectSavedPlot', 'syncSavedPlotSelection'];
   vm.runInContext(functions.map(declaration).join('\n'), context);
   const clear = context.clearPlotsForFarmer;
   context.clearPlotsForFarmer = id => { metrics.clears++; clear(id); };
@@ -147,6 +156,146 @@ test('white parcel styling reuses overlays without changing saved colors, geomet
   assert.equal(overlay.poly.fillColor, '#FFFFFF');
   assert.equal(overlay.savedColor, '#123456');
   assert.equal(JSON.stringify(plot), original);
+});
+
+test('parcel selection uses one red boundary and dark halo while keeping crop fills and saved geometry', async () => {
+  const {context, metrics} = harness();
+  const plots = [{id:1,farmer_id:1,color:'#123456',polygon_json:ring()}, {id:2,farmer_id:1,color:'#789ABC',polygon_json:ring(.01)}];
+  const original = JSON.stringify(plots);
+  context.renderPlotsForFarmer('1',plots);
+  context.cropLayer = {record:()=>({crop:'corn',color:'#D4A017',has_planted_areas:false}),visible:()=>true};
+  await context.refreshSavedPlotDisplay();
+  const [first, second] = context.savedPlotOverlays;
+  context.selectSavedPlot(1);
+  const halo = context.selectedPlotHalo;
+  assert.equal(first.poly.strokeColor,'#EF4444');
+  assert.equal(first.poly.fillColor,'#D4A017','Selection cannot replace the crop tint');
+  assert.equal(second.poly.strokeColor,'#FFFFFF');
+  assert.equal(halo.isConnected,true);
+  assert.equal(halo.outerColor,'#0F172A66');
+  assert.equal(halo.strokeColor,'#EF4444');
+  assert.equal(halo.path.length,first.ring.length+1,'An open canonical ring gets a display-only closing segment');
+  assert.deepEqual(halo.path[0],halo.path.at(-1));
+  context.map3d.range=300;
+  context.cropLayer.record=()=>({crop:'rice',color:'#219653',has_planted_areas:false});
+  await context.refreshSavedPlotDisplay();
+  assert.equal(first.poly.strokeColor,'#EF4444','Camera and crop updates preserve selection');
+  assert.equal(first.poly.fillColor,'#219653');
+  context.selectSavedPlot(2);
+  assert.equal(first.poly.strokeColor,'#FFFFFF');
+  assert.equal(second.poly.strokeColor,'#EF4444');
+  assert.equal(context.selectedPlotHalo,halo);
+  assert.equal(halo.path[0],second.ring[0]);
+  assert.equal(metrics.constructed,2,'Selection reuses the parcel polygons');
+  assert.equal(metrics.selectionConstructed,1,'Only the selected parcel has an extra GPU object');
+  context.selectSavedPlot(null);
+  assert.equal(second.poly.strokeColor,'#FFFFFF');
+  assert.equal(halo.isConnected,false);
+  assert.equal(JSON.stringify(plots),original,'Selection cannot change stored colors or ring coordinates');
+});
+
+test('selection follows visibility and refreshed parcel geometry, and clears after deletion', async () => {
+  const {context, toggle, metrics} = harness();
+  const plot={id:1,farmer_id:1,polygon_json:ring()};
+  context.renderPlotsForFarmer('1',[plot]);
+  context.selectSavedPlot(1);
+  const halo=context.selectedPlotHalo;
+  const hideAndRestore=async (hide,restore)=>{
+    hide(); await context.refreshSavedPlotDisplay(); assert.equal(halo.isConnected,false);
+    restore(); await context.refreshSavedPlotDisplay(); assert.equal(halo.isConnected,true);
+  };
+  await hideAndRestore(()=>toggle.checked=false,()=>toggle.checked=true);
+  await hideAndRestore(()=>context.cropLayer={visible:()=>false},()=>context.cropLayer=null);
+  await hideAndRestore(()=>context.focusedParcelFarmerId='2',()=>context.focusedParcelFarmerId=null);
+  await hideAndRestore(()=>context.savedPlotsHiddenForEditing=true,()=>context.savedPlotsHiddenForEditing=false);
+  await hideAndRestore(()=>context.plotMode=true,()=>context.plotMode=false);
+  await hideAndRestore(()=>context.editingPlotId='1',()=>context.editingPlotId=null);
+  context.renderPlotsForFarmer('1',[{...plot,polygon_json:ring(.02)}]);
+  assert.equal(context.selectedPlotId,'1');
+  assert.equal(context.selectedPlotOverlay,context.savedPlotOverlays[0]);
+  assert.equal(halo.path[0].lng,120.02,'A saved boundary change updates the shared halo');
+  assert.equal(metrics.selectionConstructed,1);
+  context.renderPlotsForFarmer('1',[]);
+  assert.equal(context.selectedPlotId,null);
+  assert.equal(context.selectedPlotOverlay,null);
+  assert.equal(halo.isConnected,false);
+});
+
+test('hover remains white and native duplicate clicks select the exact parcel only once', () => {
+  const {context, metrics} = harness();
+  const openings=[];
+  Object.assign(context,{
+    positionParcelHoverCard(){},showParcelHoverCard(){},hideParcelHoverCard(){},setPlotHoverCursor(){},
+    farmersById:new Map(),formatName:()=> 'Synthetic owner',
+  });
+  context.window.__openFarmer3d=(id,opts)=>openings.push({id,opts});
+  vm.runInContext(declaration('bindClickablePlotOverlay'),context);
+  context.renderPlotsForFarmer('1',[{id:1,polygon_json:ring()},{id:2,polygon_json:ring(.01)}]);
+  const [first,second]=context.savedPlotOverlays;
+  first.poly.events.mouseenter({});
+  assert.equal(first.poly.strokeColor,'#FFFFFF');
+  assert.equal(context.selectedPlotId,null);
+  assert.equal(metrics.selectionConstructed,0,'Hover never creates a selection halo');
+  first.poly.events['gmp-click']({stopPropagation(){}});
+  first.poly.events.click({stopPropagation(){}});
+  assert.equal(openings.length,1);
+  assert.equal(openings[0].opts.plotId,1);
+  assert.equal(openings[0].opts.focusParcels,true);
+  first.poly.events.mouseleave();
+  assert.equal(first.poly.strokeColor,'#EF4444','Leaving the selected parcel retains its red outline');
+  second.poly.events.mouseenter({});
+  assert.equal(second.poly.strokeColor,'#FFFFFF','Hovering another parcel cannot look selected');
+  second.poly.events['gmp-click']({stopPropagation(){}});
+  assert.equal(first.poly.strokeColor,'#FFFFFF');
+  assert.equal(second.poly.strokeColor,'#EF4444');
+  assert.equal(metrics.selectionConstructed,1);
+});
+
+test('selection still works when the optional non-interactive halo API is unavailable',()=>{
+  const {context}=harness();
+  context.Polyline3DElement=null;
+  context.renderPlotsForFarmer('1',[{id:1,polygon_json:ring()}]);
+  context.selectSavedPlot(1);
+  assert.equal(context.savedPlotOverlays[0].poly.strokeColor,'#EF4444');
+  assert.equal(context.selectedPlotHalo,null);
+});
+
+test('late farmer responses and background clicks cannot restore an older parcel selection',async()=>{
+  const {context}=harness();
+  const pending=new Map();
+  const plots=new Map([
+    ['1',[{id:1,polygon_json:ring()}]],
+    ['2',[{id:2,polygon_json:ring(.01)}]],
+  ]);
+  for(const [id,rows] of plots)context.renderPlotsForFarmer(id,rows);
+  Object.assign(context,{
+    ensureFarmerData:id=>new Promise(resolve=>pending.set(id,resolve)),
+    loadPlotsForSelectedFarmer:id=>Promise.resolve(plots.get(id)),
+    highlightRow(){},syncSelectedPanel(){},syncParcelFocusUi(){},zoomToPlots(){},syncSuggestedPlotName(){},
+    hintEl:null,popover:{open:false},selectedVertexIndex:-1,formatName:()=> 'Synthetic owner',
+  });
+  const start=source.indexOf('window.__openFarmer3d = function');
+  const end=source.indexOf('\n};',start)+4;
+  vm.runInContext(source.slice(start,end)+'\n'+declaration('handleParcelMapClick'),context);
+  context.selectSavedPlot(1);
+  const first=context.window.__openFarmer3d('1',{focusParcels:true,plotId:1});
+  context.selectSavedPlot(2);
+  const second=context.window.__openFarmer3d('2',{focusParcels:true,plotId:2});
+  pending.get('2')({id:2}); await second;
+  pending.get('1')({id:1}); await first;
+  assert.equal(context.selectedFarmerId,'2');
+  assert.equal(context.selectedPlotId,'2');
+  assert.equal(context.savedPlotOverlays[0].poly.strokeColor,'#FFFFFF');
+  assert.equal(context.savedPlotOverlays[1].poly.strokeColor,'#EF4444');
+  const reopening=context.window.__openFarmer3d('1',{focusParcels:true,plotId:1});
+  context.handleParcelMapClick({});
+  pending.get('1')({id:1}); await reopening;
+  assert.equal(context.selectedPlotId,null,'A blank-map click clears the selection even during a pending owner load');
+  assert.equal(context.selectedFarmerId,'2','The old request cannot reopen its owner after clearing');
+  assert.equal(context.selectedPlotHalo.isConnected,false);
+  const directory=context.window.__openFarmer3d('1',{});
+  pending.get('1')({id:1}); await directory;
+  assert.equal(context.selectedPlotId,null,'Selecting a farmer from the directory does not arbitrarily mark one parcel');
 });
 
 test('whole-parcel crop classifications tint immediately while keeping white outlines and saved data', async () => {

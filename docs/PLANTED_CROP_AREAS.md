@@ -1,5 +1,18 @@
 # Planted crop areas inside a parcel
 
+## October 19 selected parcel feedback
+
+Clicking a saved parcel, its crop section, or Focus marks that parcel with a
+red border and dark outer halo. The legend identifies this as Selected parcel;
+it does not indicate crop health. Saved white bases, crop colors, geometry,
+hectares and exports are unchanged. One non-interactive Maps 3D polyline is
+reused, with outerWidth within the API's 0–1 ratio. Background click, owner
+change, reset, deletion, editing and hidden/filter states clear or hide the
+selection. Delayed farmer requests cannot override a newer parcel click.
+Five renderer lifecycle regressions cover selection and geometry preservation;
+real signed-in Google Maps appearance still requires live acceptance.
+
+
 October 16 local architecture follow-up: crop-season and geometry services now
 live in `App\Modules\Land\Application`. The Agriculture `RecordHarvest` action
 uses Land's `HarvestSectionGuard` contract to lock and reauthorize its linked

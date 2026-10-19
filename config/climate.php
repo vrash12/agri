@@ -2,6 +2,14 @@
 
 return [
     'refresh_batch_size' => min(200, max(10, (int) env('CLIMATE_REFRESH_BATCH_SIZE', 100))),
+    'refresh_runtime_seconds' => min(600, max(30, (int) env('CLIMATE_REFRESH_RUNTIME_SECONDS', 240))),
+
+    // Transparent inspection prompts, not official drought classifications.
+    'monitoring' => [
+        'high_temperature_c' => 35,
+        'low_forecast_rain_mm' => 10,
+        'rainfall_deficit_percent' => 30,
+    ],
 
     /*
     |--------------------------------------------------------------------------
@@ -21,7 +29,7 @@ return [
             'enabled' => (bool) env('CLIMATE_CHIRPS_ENABLED', true),
             'refresh_hours' => max(6, (int) env('CLIMATE_CHIRPS_REFRESH_HOURS', 24)),
             'baseline_years' => min(5, max(1, (int) env('CLIMATE_CHIRPS_BASELINE_YEARS', 3))),
-            'endpoint' => env('CLIMATE_CHIRPS_ENDPOINT', 'https://climateserv.servirglobal.net/chirps'),
+            'endpoint' => env('CLIMATE_CHIRPS_ENDPOINT', 'https://climateserv.servirglobal.net/api'),
             'timeout_seconds' => max(5, (int) env('CLIMATE_CHIRPS_TIMEOUT_SECONDS', 20)),
             'poll_seconds' => max(1, (int) env('CLIMATE_CHIRPS_POLL_SECONDS', 20)),
         ],

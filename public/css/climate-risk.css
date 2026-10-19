@@ -1,4 +1,32 @@
 .climate-risk{--climate-muted:var(--module-muted,#607269)}
+.climate-risk.module-page{gap:18px}
+.climate-risk .climate-section-heading{font-size:18px;margin:8px 0 0}
+.climate-risk .climate-monitor{border-top:4px solid #82978a;margin:0}
+.climate-risk .climate-monitor-attention{border-top-color:#b66c19}
+.climate-risk .climate-monitor-monitoring{border-top-color:#36724d}
+.climate-risk .climate-monitor-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;padding:22px 20px 18px}
+.climate-risk .climate-monitor-heading>div{min-width:0}
+.climate-risk .climate-monitor-heading .climate-source-note{flex-shrink:0;max-width:100%;box-sizing:border-box;white-space:normal}
+.climate-risk .climate-monitor-heading h2{font-size:24px;line-height:1.3;margin:7px 0 8px}
+.climate-risk .climate-monitor-heading p,.climate-risk .climate-monitor-footer p{font-size:14px;line-height:1.6;margin:0;color:var(--climate-muted)}
+.climate-risk .climate-monitor-signals{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:0;padding:0 20px 20px;list-style:none}
+.climate-risk .climate-monitor-signals li{padding:14px 16px;border:1px solid #ead6b8;border-radius:10px;background:#fff9ef}
+.climate-risk .climate-monitor-signals strong{font-size:15px;color:#754714}
+.climate-risk .climate-monitor-signals p{font-size:14px;line-height:1.5;margin:6px 0}
+.climate-risk .climate-monitor-footer{padding:0 20px 20px}
+.climate-risk .climate-monitor-footer details{margin-top:14px;padding-top:12px;border-top:1px solid #dbe6df}
+.climate-risk .climate-monitor-footer details p{margin:10px 0}
+.climate-risk .climate-monitor summary{cursor:pointer;font-size:14px;font-weight:600;min-height:32px}
+.climate-risk .climate-forecast-details{margin-top:auto}
+.climate-risk .climate-forecast-details[open]{grid-column:1/-1}
+.climate-risk .climate-forecast-details button{margin:8px 0}
+.climate-risk .climate-monitor .climate-source-card strong span{font-size:13px;font-weight:500}
+.climate-risk .climate-monitor .climate-source-empty{font-size:18px;line-height:1.4}
+.climate-risk .climate-monitor .climate-inline-label{display:inline;font-size:inherit;color:inherit}
+.climate-risk .climate-monitor .climate-rain-days{grid-template-columns:repeat(auto-fit,minmax(60px,1fr))}
+.climate-risk .climate-monitor .climate-source-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,245px),1fr))}
+.climate-risk .climate-monitor .climate-source-card{min-width:0;overflow-wrap:anywhere}
+@media(max-width:650px){.climate-risk .climate-monitor-heading{flex-direction:column;gap:12px}.climate-risk .climate-monitor-heading h2{font-size:21px}.climate-risk .climate-monitor-signals{grid-template-columns:1fr}}
 .climate-risk .climate-filters{display:flex;align-items:end;flex-wrap:wrap;gap:16px;padding:20px}
 .climate-risk .climate-filters>div{flex:1;min-width:220px}
 .climate-risk label{display:block;margin-bottom:6px;font-weight:500}

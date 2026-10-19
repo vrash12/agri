@@ -86,19 +86,34 @@ final class ClimateRiskDashboard
     public function automatedEvidence(User $user, Municipality $municipality): array
     {
         if (! Schema::hasTable('climate_risk_source_readings')
-            || ! $this->access->scopeMunicipalities(Municipality::query()->active(), $user)->whereKey($municipality->getKey())->exists()) {
+            || ! $this->access->scopeMunicipalities(Municipality::query()->active()
+                ->whereHas('supervisingProvince', fn (Builder $query) => $query->active()), $user)->whereKey($municipality->getKey())->exists()) {
             return ['open_meteo' => null, 'chirps' => null, 'sentinel2' => null];
         }
 
-        $rows = ClimateRiskSourceReading::query()->where('municipality_id', $municipality->getKey())
-            ->whereIn('provider', array_keys(ClimateRiskSourceReading::PROVIDERS))
-            ->orderByDesc('fetched_at')->get()->groupBy('provider');
         $result = [];
-        foreach (array_keys(ClimateRiskSourceReading::PROVIDERS) as $provider) {
-            $result[$provider] = $rows->get($provider)?->sortByDesc('fetched_at')->first()?->only([
+        $context = ClimateEvidenceContext::municipality($municipality);
+        foreach (['open_meteo' => 'forecast_7d', 'chirps' => 'rainfall_30d', 'sentinel2' => 'ndvi'] as $provider => $metric) {
+            // Each source reads one bounded row. Moved/deleted plots cannot
+            // leave their former office a stale vegetation snapshot.
+            $query = ClimateRiskSourceReading::query()->where('municipality_id', $municipality->getKey())
+                ->where('provider', $provider)->where('metric', $metric)->orderByDesc('fetched_at')->orderByDesc('id');
+            if ($provider === 'sentinel2') {
+                $query->whereHas('farmPlot.farmer', fn (Builder $q) => $q->where('municipality_id', $municipality->id))
+                    ->with('farmPlot.farmer:id,municipality_id');
+            } else {
+                $query->whereNull('farm_plot_id');
+            }
+            $row = $query->first();
+            $result[$provider] = $row?->only([
                 'provider', 'metric', 'observed_on', 'period_start', 'period_end', 'value', 'baseline_value',
                 'anomaly_percent', 'unit', 'status', 'source_label', 'source_url', 'metadata', 'fetched_at',
             ]);
+            if ($row) {
+                $expected = $provider === 'sentinel2'
+                    ? ($row->farmPlot ? ClimateEvidenceContext::plot($row->farmPlot) : null) : $context;
+                $result[$provider]['context_current'] = $expected !== null && hash_equals($expected, (string) ($row->metadata['context_fingerprint'] ?? ''));
+            }
         }
 
         return $result;

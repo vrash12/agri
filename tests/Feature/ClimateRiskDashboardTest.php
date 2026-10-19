@@ -5,7 +5,10 @@ namespace Tests\Feature;
 use App\Models\ClimateRiskAssessment;
 use App\Models\Farmer;
 use App\Models\FarmPlot;
+use App\Models\Municipality;
 use App\Models\User;
+use App\Modules\Climate\Application\ClimateRiskDashboard;
+use App\Modules\Climate\Application\ClimateRiskSourceRecorder;
 use App\Modules\Climate\Application\ParcelVegetationSnapshot;
 use App\Support\ConcurrentWrite;
 use Illuminate\Database\Schema\Blueprint;
@@ -39,6 +42,67 @@ class ClimateRiskDashboardTest extends TestCase
         $data = $this->getJson(route('climate-risk.map'))->assertOk();
         $data->assertJsonPath('features.0.properties.level', 'unassessed')->assertJsonPath('features.0.properties.affected_count', 0);
         Http::assertNothingSent();
+    }
+
+    public function test_automatic_prompts_use_current_local_evidence_without_creating_office_assessments(): void
+    {
+        $this->sourceSchema();
+        $recorder = app(ClimateRiskSourceRecorder::class);
+        $recorder->municipality(Municipality::findOrFail(1), 'open_meteo', 'forecast_7d', $this->weatherReading());
+        $recorder->municipality(Municipality::findOrFail(2), 'open_meteo', 'forecast_7d', $this->weatherReading(['value' => 9876]));
+        $this->actingAs(User::findOrFail(1))->get(route('climate-risk.index'))->assertOk()
+            ->assertSee('Check field conditions')->assertSee('Hot weather ahead')->assertSee('Little rain forecast')
+            ->assertSee('0.0')->assertSee('1 of 2 rainfall sources ready')->assertSee('Verified office assessments')
+            ->assertDontSee('9,876')->assertDontSee('Foreign private farmer');
+        $this->assertDatabaseCount('climate_risk_assessments', 0);
+        $this->assertDatabaseCount('climate_risk_assessment_plots', 0);
+        $this->getJson(route('climate-risk.map'))->assertOk()->assertJsonPath('features.0.properties.level', 'unassessed')
+            ->assertJsonPath('features.0.properties.affected_count', 0);
+        Http::assertNothingSent();
+    }
+
+    public function test_changed_reference_point_invalidates_automatic_prompts_until_refreshed(): void
+    {
+        $this->sourceSchema();
+        app(ClimateRiskSourceRecorder::class)->municipality(Municipality::findOrFail(1), 'open_meteo', 'forecast_7d', $this->weatherReading());
+        DB::table('municipality_boundaries')->where('municipality_id', 1)->update(['centroid_lat' => 15.69]);
+        $this->actingAs(User::findOrFail(1))->get(route('climate-risk.index'))->assertOk()
+            ->assertSee('Waiting for current readings')->assertSee('Needs a fresh complete reading')
+            ->assertDontSee('Hot weather ahead')->assertSee('0 of 2 rainfall sources ready');
+        Http::assertNothingSent();
+    }
+
+    public function test_automated_satellite_evidence_rechecks_parcel_ownership_and_geometry(): void
+    {
+        $this->sourceSchema();
+        app(ClimateRiskSourceRecorder::class)->plot(FarmPlot::findOrFail(1), 'sentinel2', 'ndvi', [
+            'observed_on' => '2026-10-12', 'status' => 'available', 'value' => .5,
+            'source_label' => 'Sentinel-2', 'source_url' => 'https://dataspace.copernicus.eu/',
+        ]);
+        $dashboard = app(ClimateRiskDashboard::class);
+        $user = User::findOrFail(1);
+        $area = Municipality::findOrFail(1);
+        $this->assertTrue($dashboard->automatedEvidence($user, $area)['sentinel2']['context_current']);
+        DB::table('farm_plots')->where('id', 1)->update(['polygon_json' => json_encode([['lat' => 15.6, 'lng' => 120.6]])]);
+        $this->assertFalse($dashboard->automatedEvidence($user, $area)['sentinel2']['context_current']);
+        DB::table('farmers')->where('id', 1)->update(['municipality_id' => 2]);
+        $this->assertNull($dashboard->automatedEvidence($user, $area)['sentinel2']);
+        $this->assertNull($dashboard->automatedEvidence(User::findOrFail(2), $area)['sentinel2']);
+        Http::assertNothingSent();
+    }
+
+    private function sourceSchema(): void
+    {
+        (require database_path('migrations/2026_10_15_000300_create_climate_risk_source_readings.php'))->up();
+    }
+
+    private function weatherReading(array $changes = []): array
+    {
+        return array_replace([
+            'observed_on' => '2026-10-14', 'period_start' => '2026-10-14', 'period_end' => '2026-10-20',
+            'value' => 0, 'status' => 'available', 'source_label' => 'Open-Meteo forecast', 'source_url' => 'https://open-meteo.com/',
+            'metadata' => ['coverage_complete' => true, 'forecast_days' => 7, 'rain_days' => 7, 'temperature_days' => 7, 'temperature_max_c' => 36],
+        ], $changes);
     }
 
     public function test_dated_assessment_maps_the_area_and_explicit_parcels_only(): void

@@ -6,6 +6,36 @@ Authorized modal/full-page renders, module/report checks, data/configuration/
 budget preservation and six public asset hashes passed. Signed-in browser and
 live Copernicus imagery acceptance remain pending. See [the release receipt](GITHUB_DEPLOYMENT.md).
 
+## October 19 interface cleanup
+
+The follow-up interface is implemented locally for the combined satellite,
+parcel-selection and climate-automation release. It presents two clear steps:
+**Choose a check and dates**, then **View the picture and result**. The modal
+header names the feature once; the compact parcel header identifies the land
+and mapped area. Search help and cloud settings remain optional disclosures.
+The initial screen shows the saved boundary without an empty result card,
+disabled picture controls or empty history table. A successful search reveals
+its summary and available dates; image visibility controls appear only after
+an image loads. An empty search gives one clear explanation and next action,
+without presenting a zero measurement. Starting a new search or changing the
+index hides previous results so stale measurements cannot look current.
+
+Repeated instructions, cautions and technical captions are reduced. The result
+keeps a simple reading explanation and next step; measurement details and
+**How satellite checks work** preserve the units, cloud/grid limitations and
+formulas behind closed disclosures. The result column sizes to its content;
+forms and results stack on narrow screens without horizontal overflow.
+
+This presentation reuses the existing map instance and does not initiate a
+provider search, change index calculations, bypass a cooldown or alter cached
+results. Focused verification: 25 JavaScript tests, including actual screen
+state transitions and retained-modal checks, and 41 satellite feature tests /
+336 assertions passed. Synthetic browser inspection covered initial and loaded
+views, an index change, and a 388 CSS-pixel narrow layout. It did not use Google
+or Copernicus imagery and is not a live-provider acceptance check. Release both
+shared satellite partials, both satellite stylesheets and `parcel-satellite.js`
+together; rebuild Blade and mirror public assets without clearing general cache.
+
 ## Using the feature
 
 Open Farmers → Parcel map, select a farmer, expand a saved parcel and choose
@@ -21,7 +51,7 @@ NDMI looks for possible lack of water; SAVI suits young/widely spaced crops;
 EVI suits thick, leafy crops. Simple text explains higher/lower numbers and a
 practical next step. No-data and few-pixel messages avoid implying crop damage
 or a percentage of clear land. Formulas, resolution limits and calculation
-details remain under the closed **Technical details** disclosure. This copy
+details remain under the closed **How satellite checks work** disclosure. This copy
 follow-up is included in the deployed release and changes neither calculations
 nor provider budgets.
 

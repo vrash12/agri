@@ -963,6 +963,7 @@
           <span><i class="parcel-legend-line parcel-legend-geofence"></i> Official municipality boundary</span>
         @endif
         <span><i class="parcel-legend-line parcel-legend-saved"></i> Saved parcel</span>
+        <span><i class="parcel-legend-line parcel-legend-selected"></i> Selected parcel</span>
         <span><i class="parcel-legend-line parcel-legend-draft"></i> Draft</span>
       </div>
 
@@ -1949,6 +1950,11 @@
 
   #farmersMapModule .parcel-legend-draft {
     background: #2563eb;
+  }
+
+  #farmersMapModule .parcel-legend-selected {
+    background: #ef4444;
+    box-shadow: 0 0 3px 1px rgba(15, 23, 42, .5);
   }
 
   @media (max-width: 1250px) {

@@ -188,6 +188,76 @@ function satellitePage(fetcher) {
   return {byId,events,timers,advance:ms=>{clock+=ms;const pending=[...timers.entries()];for(const [id,fn] of pending){if(timers.has(id)){timers.delete(id);fn();}}},submit:()=>byId('satelliteForm').events.submit({preventDefault(){}})};
 }
 
+test('the initial satellite screen has no empty result, image controls or history and starts no search', () => {
+  let calls = 0;
+  const page = satellitePage(() => { calls++; throw new Error('An explicit search is required'); });
+  assert.equal(page.byId('satelliteWorkspace').dataset.hasResult, 'false');
+  assert.equal(page.byId('satelliteSummary').hidden, true);
+  assert.equal(page.byId('satelliteMapControls').hidden, true);
+  assert.equal(page.byId('satelliteHistoryPanel').hidden, true);
+  assert.equal(calls, 0);
+});
+
+test('a returned period reveals its result and date controls; switching checks hides the old result', async () => {
+  let calls = 0;
+  const page = satellitePage(async url => {
+    calls++;
+    return url === '/observations'
+      ? { ok: true, json: async () => ({ observations: [row] }) }
+      : { ok: false, status: 502, headers: { get: () => null }, json: async () => ({ message: 'Synthetic image unavailable.' }) };
+  });
+  await page.submit(); await new Promise(resolve => setImmediate(resolve));
+  assert.equal(page.byId('satelliteWorkspace').dataset.hasResult, 'true');
+  assert.equal(page.byId('satelliteSummary').hidden, false);
+  assert.equal(page.byId('satelliteMapControls').hidden, false);
+  assert.equal(page.byId('satelliteHistoryPanel').hidden, false);
+  assert.equal(page.byId('satelliteScore').hidden, false);
+  assert.equal(page.byId('satelliteDisplayOptions').hidden, true, 'Image-only controls stay hidden if the image fails');
+  assert.match(page.byId('satelliteStatus').textContent, /1 usable picture found/);
+  assert.equal(calls, 2, 'One explicit statistics search and one image request');
+  page.byId('satelliteIndex').value = 'ndmi'; page.byId('satelliteIndex').events.change();
+  assert.equal(page.byId('satelliteSummary').hidden, true);
+  assert.equal(page.byId('satelliteMapControls').hidden, true);
+  assert.equal(page.byId('satelliteHistoryPanel').hidden, true);
+  assert.equal(calls, 2, 'Changing checks never starts provider work');
+});
+
+test('an empty search explains what to try without exposing a zero score or unusable controls', async () => {
+  let calls = 0;
+  const page = satellitePage(async () => { calls++; return { ok: true, json: async () => ({ observations: [] }) }; });
+  await page.submit();
+  assert.equal(page.byId('satelliteSummary').hidden, false);
+  assert.equal(page.byId('satelliteResult').dataset.state, 'no-data');
+  assert.match(page.byId('satelliteResultTitle').textContent, /No pictures found/);
+  assert.match(page.byId('satelliteNextStep').textContent, /nearby dates.*All scenes/);
+  assert.equal(page.byId('satelliteScore').hidden, true);
+  assert.equal(page.byId('satelliteMean').textContent, '—');
+  assert.equal(page.byId('satelliteMapControls').hidden, true);
+  assert.equal(page.byId('satelliteHistoryPanel').hidden, true);
+  assert.equal(calls, 1, 'No image request or automatic retry when the search is empty');
+});
+
+test('a failed replacement search cannot leave the previous measurements on screen', async () => {
+  let searches = 0, finish;
+  const page = satellitePage(async url => {
+    if (url !== '/observations') return { ok: false, status: 502, headers: { get: () => null }, json: async () => ({ message: 'Synthetic image unavailable.' }) };
+    searches++;
+    if (searches === 1) return { ok: true, json: async () => ({ observations: [row] }) };
+    return new Promise(resolve => { finish = resolve; });
+  });
+  await page.submit(); await new Promise(resolve => setImmediate(resolve));
+  const pending = page.submit();
+  assert.equal(page.byId('satelliteSummary').hidden, true);
+  assert.equal(page.byId('satelliteHistoryPanel').hidden, true);
+  assert.equal(page.byId('satelliteScore').hidden, true);
+  finish({ ok: false, status: 503, headers: { get: () => null }, json: async () => ({ message: 'Satellite access is unavailable.' }) });
+  await pending;
+  assert.equal(page.byId('satelliteSummary').hidden, true);
+  assert.equal(page.byId('satelliteMapControls').hidden, true);
+  assert.match(page.byId('satelliteStatus').textContent, /unavailable/);
+  assert.equal(page.byId('satelliteLoad').disabled, false);
+});
+
 test('the real search controls suppress duplicate requests and pause only until Retry-After expires',async()=>{
   let resolve,calls=0;
   const page=satellitePage(()=>{calls++;return new Promise(r=>{resolve=r;});});
@@ -285,6 +355,6 @@ test('an image completing after an index switch cannot restore the old layer or 
   assert.equal(page.byId('satelliteLegend').hidden, true);
   assert.equal(page.byId('satellitePreview').hidden, true);
   assert.equal(page.byId('satelliteOpacity').disabled, true);
-  assert.match(page.byId('satelliteImageCaption').textContent, /No NDMI observation/);
+  assert.match(page.byId('satelliteImageCaption').textContent, /No NDMI picture/);
   page.events.get('pagehide')();
 });

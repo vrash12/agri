@@ -32,6 +32,12 @@
       </select></div>
       <button type="submit" class="module-button module-button-primary">Show area</button>
     </form>
+    @if($selected)
+      @include('climate_risk._monitoring')
+    @else
+      <p class="climate-explanation">Choose a municipality above to see automatic rainfall and heat checks.</p>
+    @endif
+    <h2 class="climate-section-heading">Verified office assessments</h2>
     <div class="climate-metrics" aria-label="Current municipality status counts">
       @foreach(\App\Models\ClimateRiskAssessment::LEVELS + ['unassessed' => 'Not assessed'] as $key => $label)
         <a class="module-panel climate-metric" href="{{ route('climate-risk.index', ['risk' => $key]) }}"><span class="climate-status climate-{{ $key }}">{{ $label }}</span><strong>{{ number_format($totals->get($key, 0)) }}</strong><small>municipalities in your office scope</small></a>
@@ -48,60 +54,6 @@
       </div>
     </section>
     @if($selected)
-      @php($openMeteo = $automatedEvidence['open_meteo'] ?? null)
-      @php($chirps = $automatedEvidence['chirps'] ?? null)
-      @php($sentinelEvidence = $automatedEvidence['sentinel2'] ?? null)
-      <section class="module-panel climate-source-panel" aria-labelledby="automatedEvidenceTitle">
-        <div class="module-panel-head"><div><h2 id="automatedEvidenceTitle">Automated evidence</h2><p>Provider snapshots are refreshed by the scheduled worker. They support review and never create an office risk level automatically.</p></div><span class="climate-source-note">No parcel impact is inferred</span></div>
-        <div class="climate-source-grid">
-          <article class="climate-source-card">
-            <span class="climate-source-kicker">Open-Meteo</span><h3>Forecast rainfall</h3>
-            @if($openMeteo)
-              <strong>{{ $openMeteo['value'] !== null ? number_format((float) $openMeteo['value'], 1).' mm' : 'No value' }}</strong>
-              <p>{{ $openMeteo['period_start'] ?? '—' }} to {{ $openMeteo['period_end'] ?? '—' }} · {{ $openMeteo['metadata']['forecast_days'] ?? '—' }} days</p>
-              <small>Fetched {{ optional($openMeteo['fetched_at'] ?? null)->format('M j, Y g:i A') ?? '—' }} · forecast guidance</small>
-            @else
-              <strong>Not synced yet</strong><p>The scheduled refresh will add the latest seven-day forecast.</p>
-            @endif
-            <a href="https://open-meteo.com/en/docs" target="_blank" rel="noopener noreferrer">Source documentation</a>
-          </article>
-          <article class="climate-source-card">
-            <span class="climate-source-kicker">CHIRPS v3</span><h3>Recent rainfall vs reference</h3>
-            @if($chirps && ($chirps['status'] ?? 'available') !== 'available')
-              <strong>Waiting for update</strong><p>CHIRPS has a short reporting delay; no recent rainfall value is available yet.</p>
-              <small>Last checked {{ optional($chirps['fetched_at'] ?? null)->format('M j, Y g:i A') ?? '—' }}</small>
-            @elseif($chirps)
-              <strong>{{ $chirps['value'] !== null ? number_format((float) $chirps['value'], 1).' mm' : 'No value' }}</strong>
-              <p>{{ $chirps['period_start'] ?? '—' }} to {{ $chirps['period_end'] ?? '—' }}</p>
-              @if($chirps['anomaly_percent'] !== null)<small>{{ number_format((float) $chirps['anomaly_percent'], 1) }}% vs {{ $chirps['metadata']['baseline_years'] ?? 0 }}-year rolling reference</small>@else<small>Reference comparison is not available yet.</small>@endif
-            @else
-              <strong>Not synced yet</strong><p>CHIRPS updates arrive after its short reporting delay.</p>
-            @endif
-            <a href="https://chc.ucsb.edu/data/chirps3" target="_blank" rel="noopener noreferrer">Source documentation</a>
-          </article>
-          <article class="climate-source-card">
-            <span class="climate-source-kicker">Copernicus Sentinel-2</span><h3>Parcel vegetation</h3>
-            @if($sentinelEvidence)
-              <strong>Saved NDVI evidence</strong><p>Use the parcel satellite check for a new observation; cloud masking and crop stage affect availability.</p>
-              <small>Latest snapshot {{ optional($sentinelEvidence['observed_on'] ?? null)->format('M j, Y') ?? '—' }}</small>
-            @else
-              <strong>On-demand</strong><p>Satellite checks stay on-demand to protect the account processing quota.</p>
-            @endif
-            <a href="https://documentation.dataspace.copernicus.eu/Quotas.html" target="_blank" rel="noopener noreferrer">Quota guide</a>
-          </article>
-        </div>
-      </section>
-      <div class="climate-evidence">
-        <section class="module-panel" aria-labelledby="rainTitle">
-          <div class="module-panel-head"><div><h2 id="rainTitle">Rainfall outlook</h2><p>Seven-day forecast at {{ $selected->name }}'s saved boundary reference point.</p></div><button type="button" class="module-button" id="loadClimateRainfall">Load forecast</button></div>
-          <div class="climate-panel-body" id="climateRainfall" role="status">Load the forecast to see rainfall amounts and dates.</div>
-          <p class="climate-explanation">Forecast rainfall supports planning. Drought and seasonal rainfall categories below come from the dated office assessment.</p>
-        </section>
-        <section class="module-panel" aria-labelledby="ndviTitle">
-          <div class="module-panel-head"><div><h2 id="ndviTitle">Vegetation checks · NDVI</h2><p>Latest saved satellite reading for each reported parcel.</p></div></div>
-          <div class="climate-panel-body"><strong>{{ $plotSummaries->filter(fn($plot) => $plot['ndvi'] !== null)->count() }} of {{ $plotSummaries->count() }}</strong> parcels on this page have a saved reading.<p>Use Satellite field check beside a parcel to obtain a reading. Observation dates and older readings stay visible. A greenness reading needs crop-stage and field context.</p></div>
-        </section>
-      </div>
       <section class="module-panel" aria-labelledby="areaTitle">
         <div class="module-panel-head"><div><h2 id="areaTitle">{{ $selected->name }} · Dated assessments</h2><p>Rainfall and drought categories as recorded from a source or local field review.</p></div></div>
         <div class="module-table-wrap"><table class="module-table"><thead><tr><th>Area</th><th>Office level</th><th>Drought / rainfall outlook</th><th>Observed / review by</th><th>Evidence</th><th>Action</th></tr></thead><tbody>

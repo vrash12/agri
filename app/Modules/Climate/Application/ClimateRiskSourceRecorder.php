@@ -47,7 +47,8 @@ final class ClimateRiskSourceRecorder
         $sourceKey = hash('sha256', implode('|', [
             $municipality->getKey(), $plot?->getKey() ?? 'municipality', $provider, $metric, $observedOn,
         ]));
-        $metadata = is_array($reading['metadata'] ?? null) ? $this->metadata($reading['metadata']) : null;
+        $metadata = $this->metadata(is_array($reading['metadata'] ?? null) ? $reading['metadata'] : []);
+        $metadata['context_fingerprint'] = $plot ? ClimateEvidenceContext::plot($plot) : ClimateEvidenceContext::municipality($municipality);
 
         return ClimateRiskSourceReading::query()->updateOrCreate(
             ['source_key' => $sourceKey],
@@ -64,7 +65,7 @@ final class ClimateRiskSourceRecorder
                 'anomaly_percent' => $this->number($reading['anomaly_percent'] ?? null, 2),
                 'unit' => isset($reading['unit']) ? substr((string) $reading['unit'], 0, 24) : null,
                 'status' => in_array($reading['status'] ?? 'available', ['available', 'partial', 'unavailable'], true)
-                    ? $reading['status'] : 'unavailable',
+                    ? ($reading['status'] ?? 'available') : 'unavailable',
                 'source_label' => substr((string) $reading['source_label'], 0, 180),
                 'source_url' => substr((string) $reading['source_url'], 0, 500),
                 'metadata' => $metadata,
@@ -76,7 +77,8 @@ final class ClimateRiskSourceRecorder
     /** @param array<string, mixed> $metadata */
     private function metadata(array $metadata): array
     {
-        $allowed = ['forecast_days', 'daily_rain_mm', 'temperature_max_c', 'rain_probability', 'period_days', 'baseline_years', 'days_available', 'is_stale', 'message'];
+        $allowed = ['forecast_days', 'rain_days', 'temperature_days', 'daily_rain_mm', 'temperature_max_c', 'rain_probability', 'period_days',
+            'baseline_years', 'baseline_years_requested', 'days_available', 'coverage_complete', 'reference_point', 'dataset', 'is_stale', 'message'];
         $safe = [];
         foreach ($allowed as $key) {
             if (array_key_exists($key, $metadata) && (is_scalar($metadata[$key]) || $metadata[$key] === null)) {

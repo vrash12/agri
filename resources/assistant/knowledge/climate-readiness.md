@@ -8,7 +8,7 @@ To record one, authorized provincial agriculture staff or Municipal Head/Staff s
 
 Zero counts can mean no matching current assessments or no explicitly linked parcels. Check area/level filters and dates. Do not enter invented conditions just to fill the dashboard.
 
-Automated evidence shows dated Open-Meteo forecast snapshots and delayed CHIRPS rainfall/reference snapshots. They support review; they never set office levels, declare drought or link affected parcels. Load forecast uses the municipality reference point, not each farm. The scheduled refresh needs the administrator's scheduler; unavailable evidence is not zero rainfall.
+Automatic monitoring shows dated forecasts and delayed CHIRPS rainfall. Complete recent readings can suggest a field check for heat, little forecast rain or a rainfall deficit. These prompts never set office levels, declare drought or link affected parcels. Daily forecast uses a municipality reference point, not each farm. Refresh requires the hosting scheduler; unavailable evidence is not zero rainfall. Old readings need a refresh.
 
 Saved parcel NDVI checks show observation dates and usable pixels. Satellite checks are on-demand by default; NDMI, SAVI and EVI do not populate the NDVI summary. Crop stage, cloud cover, rainfall, irrigation and field inspection matter. For a parcel, open Satellite field check. Use official PAGASA sources for declarations.
 

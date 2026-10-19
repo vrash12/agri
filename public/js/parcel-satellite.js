@@ -169,6 +169,17 @@
       'This count is not the percentage of your field that is clear. The natural-colour picture uses about 10 m squares.';
     byId('satelliteFormula').textContent = code + ': ' + index.formula + ' · Harmonized surface reflectance.';
   }
+  function resultVisibility() {
+    const hasResult = period !== null;
+    const workspace = byId('satelliteWorkspace');
+    const changed = workspace.dataset.hasResult !== String(hasResult);
+    workspace.dataset.hasResult = String(hasResult);
+    byId('satelliteSummary').hidden = !hasResult;
+    byId('satelliteMapControls').hidden = !rows.length;
+    byId('satelliteHistoryPanel').hidden = !rows.length;
+    // Reuse the existing reference map when the result column appears.
+    if (changed && map) window.requestAnimationFrame?.(() => google.maps.event?.trigger(map, 'resize'));
+  }
   function clearImage() {
     imageRequest.cancel();
     if (overlay) overlay.setMap(null);
@@ -180,6 +191,7 @@
     opacity.disabled = true;
     retry.hidden = true;
     byId('satelliteLegend').hidden = true;
+    byId('satelliteDisplayOptions').hidden = true;
   }
   function mountImage() {
     if (!objectUrl) return;
@@ -251,6 +263,7 @@
   };
 
   function metrics(row) {
+    resultVisibility();
     const available = row && row.status === 'available';
     const index = selectedIndex(), code = index.id.toUpperCase();
     const scale = indexScale(available ? [row] : []);
@@ -260,20 +273,20 @@
     byId('satellitePixels').textContent = row ? row.valid_pixels.toLocaleString() : '—';
     byId('satelliteDay').textContent = row ? row.date : '—';
     byId('satelliteScore').hidden = !available;
-    byId('satelliteResult').dataset.state = !row ? 'empty' : available ? 'available' : 'no-data';
-    byId('satelliteResultTitle').textContent = !row ? 'Your result will appear here' : !available ? 'No clear reading for this day' : code + ' result';
+    byId('satelliteResult').dataset.state = !period ? 'empty' : available ? 'available' : 'no-data';
+    byId('satelliteResultTitle').textContent = !row ? 'No pictures found in this period' : !available ? 'No clear reading for this day' : index.name;
     byId('satelliteScoreMeter').min = scale.min;
     byId('satelliteScoreMeter').max = scale.max;
     byId('satelliteScoreMeter').setAttribute('aria-label', 'Average ' + code + ', numeric scale from ' + scale.min + ' to ' + scale.max);
     byId('satelliteScoreMeter').value = available ? row.mean : 0;
     byId('satelliteScaleLow').textContent = scale.min.toLocaleString() + ' · Lower number';
     byId('satelliteScaleHigh').textContent = scale.max.toLocaleString() + ' · Higher number';
-    byId('satelliteQuality').textContent = !row ? 'Select Find pictures to see the ' + code + ' result.' : !available ?
-      'The picture could not give a clear reading. This does not mean the crops are damaged.' : unusual ?
+    byId('satelliteQuality').textContent = !row ? 'No satellite observation was available for these dates.' : !available ?
+      'Clouds or missing data prevented a reading. This does not mean the crops are damaged.' : unusual ?
         'Some numbers fall outside the colour scale. Check the natural-colour picture and try another clear date.' : row.valid_pixels < 25 ?
-        'Only a few picture squares could be used. Check the field before acting on this result.' :
-        'This result uses the clear parts of the picture. Compare it with what you see in the field.';
-    byId('satelliteNextStep').textContent = !row ? 'Choose dates and select Find pictures.' : !available ?
+        'Only a few picture squares could be used, so this result has limited detail.' :
+        'Based on the clear parts of the picture.';
+    byId('satelliteNextStep').textContent = !row ? 'Try nearby dates, or choose All scenes under Search options.' : !available ?
       'Try another date. Clouds may be hiding the field.' : row.valid_pixels < 25 ?
         'Compare another clear date and check the field.' :
         index.next_step;
@@ -284,12 +297,12 @@
     metrics(row);
     layerSelect.disabled = !row || row.status !== 'available';
     if (!row || row.status !== 'available') {
-      byId('satelliteImageCaption').textContent = row ? 'No clear picture was available for ' + row.date + ' (UTC).' : 'Find pictures to load a satellite view.';
+      byId('satelliteImageCaption').textContent = row ? 'No clear picture for ' + row.date + ' (UTC). The outline is your saved parcel.' : 'Your saved parcel boundary. No satellite picture loaded.';
       return;
     }
     const index = selectedIndex();
     const layer = layerSelect.value === 'true-color' ? 'true-color' : index.id;
-    const caption = row.date + ' (UTC) · ' + (layer === 'true-color' ? 'True color · ~10 m' : layer.toUpperCase() + ' · ~' + index.resolution_m + ' m') + ' · Daily Sentinel-2 mosaic';
+    const caption = row.date + ' (UTC) · ' + (layer === 'true-color' ? 'Natural-colour picture' : index.name + ' · ' + layer.toUpperCase());
     if (imageCooldown.remaining() > 0) {
       byId('satelliteImageCaption').textContent = 'Picture loading is paused. Retry in ' + imageCooldown.remaining() + ' seconds.';
       retry.hidden = false; return;
@@ -309,8 +322,9 @@
       objectUrl = URL.createObjectURL(result.value);
       mountImage();
       opacity.disabled = false;
+      byId('satelliteDisplayOptions').hidden = false;
       byId('satelliteLegend').hidden = layer === 'true-color';
-      byId('satelliteImageCaption').textContent = caption + ' · Clipped to saved parcel';
+      byId('satelliteImageCaption').textContent = caption;
     } catch (error) {
       byId('satelliteImageCaption').textContent = caption + ' · ' + (error.message || 'Image unavailable. Please retry.');
       retry.hidden = false;
@@ -319,6 +333,7 @@
   }
 
   function history() {
+    resultVisibility();
     const body = byId('satelliteHistory');
     const availableCount = rows.filter(row => row.status === 'available').length;
     byId('satelliteHistorySummary').textContent = rows.length ? availableCount + ' usable picture' + (availableCount === 1 ? '' : 's') + ' in this period' : 'Find pictures to see past readings';
@@ -379,10 +394,10 @@
     byId('satelliteHistory').replaceChildren();
     daySelect.replaceChildren(new Option('Loading observations…', ''));
     daySelect.disabled = true; layerSelect.disabled = true;
-    byId('satelliteImageCaption').textContent = 'No satellite observation loaded.';
+    byId('satelliteImageCaption').textContent = 'Your saved parcel boundary. Searching for a picture…';
     statsPending = true; loadButton.disabled = true; loadButton.textContent = 'Loading…';
     form.setAttribute('aria-busy', 'true');
-    status('Requesting cloud-masked ' + next.index.toUpperCase() + ' observations for ' + next.from + ' to ' + next.to + '…');
+    status('Finding usable pictures for ' + next.from + ' to ' + next.to + '…');
     try {
       const result = await statsRequest.run(form.action, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json',
         'X-CSRF-TOKEN': form.querySelector('input[name="_token"]').value }, body: JSON.stringify(next) }, async function (response) {
@@ -398,11 +413,11 @@
       daySelect.disabled = !rows.length;
       const usable = rows.filter(row => row.status === 'available');
       daySelect.value = (usable[usable.length - 1] || rows[rows.length - 1] || {}).date || '';
-      status(usable.length + ' usable day(s) found · ' + period.index.toUpperCase() + ' · ' + period.from + ' to ' + period.to + ' (UTC) · Cloud filter ' + period.max_cloud + '%.' +
-        (usable.length ? ' Select a picture date to view the map and reading.' : ' Try different dates or use More search options.'));
+      status(usable.length ? usable.length + ' usable picture' + (usable.length === 1 ? '' : 's') + ' found. Showing the latest.' : 'No usable pictures found. See the result below for what to try.');
       loadImage();
     } catch (error) {
       daySelect.replaceChildren(new Option('No observations loaded', ''));
+      byId('satelliteImageCaption').textContent = 'Your saved parcel boundary. No satellite picture loaded.';
       status(error.message || 'Unable to load observations. Check the connection and retry.', true);
       if (error.retryAfterSeconds) statsCooldown.start(error.retryAfterSeconds);
     } finally {
@@ -415,8 +430,8 @@
     daySelect.replaceChildren(new Option('Find pictures for ' + selectedIndex().id.toUpperCase(), ''));
     daySelect.disabled = true; layerSelect.disabled = true;
     form.removeAttribute('aria-busy'); searchControl();
-    byId('satelliteImageCaption').textContent = 'No ' + selectedIndex().id.toUpperCase() + ' observation loaded.';
-    if (!statsCooldown.remaining()) status('Select Find pictures to load ' + selectedIndex().id.toUpperCase() + '. Changing the index does not start a provider request.');
+    byId('satelliteImageCaption').textContent = 'Your saved parcel boundary. No ' + selectedIndex().id.toUpperCase() + ' picture loaded.';
+    if (!statsCooldown.remaining()) status('Check changed to ' + selectedIndex().name.toLowerCase() + '. Select Find pictures when ready.');
   });
   daySelect.addEventListener('change', loadImage);
   layerSelect.addEventListener('change', loadImage);
@@ -431,4 +446,5 @@
   });
   byId('satelliteLegend').hidden = true;
   indexLabels();
+  resultVisibility();
 }());

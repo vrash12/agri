@@ -1,5 +1,15 @@
 # El Niño readiness dashboard
 
+## October 19 automatic monitoring follow-up
+
+Automatic monitoring now leads the selected-area view, with dated weather and
+rainfall cards, simple inspection prompts and explicit missing/stale states.
+The former duplicate forecast/source panels are consolidated. The official
+assessment map and reported parcels still require verified office records;
+zero assessment counts do not hide available automatic evidence. Planning
+thresholds, data coverage and refresh receipts are described in
+[automated climate evidence](CLIMATE_AUTOMATED_SOURCES.md).
+
 ## Deployed release — October 14, 2026
 
 Runtime `166cdcb` was pushed to GitHub main and installed on Hostinger through
@@ -39,7 +49,7 @@ The module combines four kinds of evidence:
   outlook. PAGASA references require a direct HTTPS PAGASA URL; field reviews are
   labeled separately. A seven-day forecast never establishes a seasonal rainfall
   category or official drought declaration.
-- **Forecast rainfall:** explicit **Load forecast** uses the existing Open-Meteo
+- **Forecast rainfall:** explicit **Daily forecast → Load daily forecast** uses the existing Open-Meteo
   service at the selected municipality's saved active-boundary reference point.
   Geometry-specific cache keys prevent sharing forecasts after that point
   changes. Existing weather pages and their cache keys are retained. Retrieval
@@ -52,7 +62,7 @@ The module combines four kinds of evidence:
   launches a Copernicus analysis or interprets greenness as confirmed damage.
 
 Automated source snapshots now complement these office records. Open-Meteo
-forecast summaries refresh every six hours and CHIRPS v3 area-average rainfall
+forecast summaries refresh every six hours and CHIRPS reference-area rainfall
 with a rolling reference refreshes daily through `climate:refresh-sources`.
 Copernicus automation remains opt-in and capped because it consumes the existing
 processing allowance; saved NDVI readings continue to appear immediately. These

@@ -7,6 +7,8 @@ use App\Models\ClimateRiskAssessment;
 use App\Models\FarmPlot;
 use App\Models\Municipality;
 use App\Models\MunicipalityBoundary;
+use App\Modules\Climate\Application\ClimateAutomaticMonitor;
+use App\Modules\Climate\Application\ClimateRefreshStatus;
 use App\Modules\Climate\Application\ClimateRiskDashboard;
 use App\Modules\Climate\Application\ClimateRiskRecords;
 use App\Modules\Climate\Infrastructure\WeatherForecastService;
@@ -35,10 +37,13 @@ class ClimateRiskController extends Controller
         $paginator = new LengthAwarePaginator($visible->forPage($page, 30)->values(), $visible->count(), 30, $page, ['path' => $request->url(), 'query' => $request->query()]);
         $assessments = $installed && $selected ? $this->dashboard->assessments($request->user())->where('municipality_id', $selected->id)->orderBy('barangay')->paginate(15, ['*'], 'areas_page')->withQueryString() : null;
         $plots = $installed && $selected ? $this->dashboard->affectedPlots($request->user(), $selected->id)->orderBy('id')->paginate(15, $this->plotColumns(), 'plots_page')->withQueryString() : null;
+        $automatedEvidence = $selected ? $this->dashboard->automatedEvidence($request->user(), $selected) : ['open_meteo' => null, 'chirps' => null, 'sentinel2' => null];
 
         return view('climate_risk.index', compact('choices', 'selected', 'filter', 'installed', 'rows', 'totals', 'paginator', 'assessments', 'plots') + [
             'plotSummaries' => $plots?->getCollection()->map(fn (FarmPlot $plot) => $this->dashboard->plotSummary($plot))->keyBy('id') ?? collect(),
-            'automatedEvidence' => $selected ? $this->dashboard->automatedEvidence($request->user(), $selected) : ['open_meteo' => null, 'chirps' => null, 'sentinel2' => null],
+            'automatedEvidence' => $automatedEvidence,
+            'monitoring' => app(ClimateAutomaticMonitor::class)->summarize($automatedEvidence),
+            'refreshStatus' => ['open_meteo' => app(ClimateRefreshStatus::class)->read('open-meteo'), 'chirps' => app(ClimateRefreshStatus::class)->read('chirps')],
             'mapConfig' => ['mapUrl' => route('climate-risk.map', ['municipality_id' => $selected?->id, 'risk' => $filter]),
                 'rainfallUrl' => $selected ? route('climate-risk.rainfall', ['municipality_id' => $selected->id]) : null,
                 'areaUrl' => route('climate-risk.index'), 'mapsKey' => config('services.google_maps.key'), 'municipalityId' => $selected?->id],
