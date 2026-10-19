@@ -1,5 +1,33 @@
 # GitHub-to-Hostinger deployment
 
+## Hostinger scheduler activated — October 19, 2026
+
+The owner opened hPanel access to complete the remaining automation setup.
+The agritarlac.online Cron Jobs page initially contained three jobs for other
+applications and no eAgriLGU scheduler. Those entries were preserved. Exactly
+one PHP job was added with every-minute cadence (`* * * * *`):
+
+```text
+/usr/bin/php /home/u330835917/domains/agritarlac.online/artisan schedule:run
+```
+
+After saving, the list showed the exact command once. Its **View Output**
+returned Laravel's `INFO No scheduled commands are ready to run.` without a
+manual schedule invocation. This confirms Hostinger actually invoked Laravel;
+it is separate from merely listing the schedule or reading provider heartbeats.
+The verification was observed around 12:30 UTC+8 on October 19. Local proof is
+`output/hostinger-scheduler-verified-20261019.png` (ignored, not a public asset).
+
+A read-only `artisan schedule:list` confirmed the existing jobs. With the
+application scheduler in UTC, Open-Meteo runs at **02:00, 08:00, 14:00 and 20:00
+UTC+8**; CHIRPS runs daily at **11:15 UTC+8**. Existing scheduled backups are also
+handled by this scheduler. Sentinel remains opt-in and was not enabled.
+No forced provider refresh, extra background service, credential change,
+migration, application cache clear or duplicate cron job was introduced.
+The next due provider refresh will use its existing freshness checks and limits.
+This follow-up changes deployment documentation only.
+
+
 ## Verified Hostinger release — October 19, 2026 — satellite clarity and climate monitoring
 
 Runtime `504025d3d958632d4c65ab12c52f582e8d529b14` was pushed to GitHub
@@ -35,10 +63,10 @@ schemas**, the private environment and satellite counters remained unchanged.
 No satellite or OpenAI request ran; Sentinel automation remains false.
 
 The Laravel schedule lists weather every six hours and CHIRPS daily at 03:15.
-**Hosting cron invocation remains unverified**: this SSH account exposes no
-crontab command, and hPanel was not available. The new heartbeat records the
-two manual runs above; it does not establish recurring execution. The remaining
-hosting step is a once-per-minute cron entry (do not duplicate an existing one):
+**At this initial release, hosting cron invocation was unverified** because
+SSH exposed no crontab command and hPanel was unavailable. The later scheduler
+activation receipt above closes that setup step. The two provider heartbeats
+here record manual runs only. The installed every-minute cron command is:
 
 ```text
 /usr/bin/php /home/u330835917/domains/agritarlac.online/artisan schedule:run

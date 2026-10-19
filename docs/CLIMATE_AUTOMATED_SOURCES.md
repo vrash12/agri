@@ -31,6 +31,12 @@ shows each provider's last completed command run, retained seven days; this is
 a run heartbeat, not proof of an installed cron job or successful data for each
 area. Deployment receipts distinguish manual refreshes from scheduler proof.
 
+Hostinger hPanel was configured on October 19 with exactly one every-minute
+eAgriLGU scheduler job. Its output confirmed a successful Laravel invocation.
+The configured UTC schedule means weather refreshes at 02:00, 08:00, 14:00 and
+20:00 UTC+8; CHIRPS is checked at 11:15 UTC+8 daily. The other applications’ cron
+entries were preserved. See the scheduler activation deployment receipt.
+
 Unscoped runs cover active municipalities with farmers, an active nonvisitor
 municipal office account, or an assessment, under an active province. A rotating
 batch defaults to 100 areas with a 240-second runtime allowance. A shared

@@ -13,8 +13,11 @@ bounded work, pending job reuse and a command lock. Sentinel remains opt-in
 with unchanged quotas. Release command/config/module/view/assets together,
 rebuild autoload and config/route/view caches, and verify hosting cron separately.
 No migration or general-cache clear. Ramos weather and CHIRPS were refreshed
-with complete coverage; hosting cron invocation is still unverified. The
-heartbeat reflects manual runs, not proof of cron. All 9,505 operational rows
+with complete coverage. Hostinger hPanel now has exactly one eAgriLGU
+`artisan schedule:run` entry every minute; its View Output confirmed a successful
+Laravel invocation on October 19. Weather runs every six hours and CHIRPS at
+03:15 UTC / 11:15 UTC+8 daily. Provider heartbeats still do not independently
+prove cron execution. All 9,505 operational rows
 and provider allowances were preserved; only two source snapshots were added.
 See docs/CLIMATE_AUTOMATED_SOURCES.md and docs/SATELLITE_INDICES.md. Synthetic
 browser checks are not live Maps/Copernicus proof.
