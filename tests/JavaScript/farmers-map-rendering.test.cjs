@@ -109,6 +109,8 @@ function harness(plots = []) {
     },
     AltitudeMode: { CLAMP_TO_GROUND: 'ground' },
     savedPlotOverlays: [], renderedPlotDataByFarmerId: new Map(), plotsCacheByFarmerId: new Map(),
+    completePlotFarmers: new Set(), plotFetchPromisesByFarmerId: new Map(),
+    parcelStatsState: {farmerId:null,landStatus:'empty',plots:[]}, parcelStatsRevision: 0,
     savedPlotsHiddenForEditing: false, focusedParcelFarmerId: null, selectedFarmerId: null, editingPlotId: null,
     selectedPlotId: null, selectedPlotOverlay: null, selectedPlotHalo: null, parcelOpenRevision: 0, plotMode: false,
     cropLayer: null, queueCropLayer: () => {}, plantedAreaLayer: null, refreshPlantedAreas: () => {},
@@ -127,7 +129,7 @@ function harness(plots = []) {
   });
   const functions = ['toLatLng', 'setOverlayVisible', 'nextPlotFrame', 'shouldShowSavedPlot', 'needsFullPlotDetail',
     'refreshSavedPlotDisplay', 'clearPlotsForFarmer', 'renderPlotsForFarmer', 'loadAllMunicipalPlots', 'applyCropStyle', 'applyParcelCropBadge', 'buildPlantedCropOverlays', 'showPlantedCropOverlay',
-    'sameLatLng', 'applySavedPlotAppearance', 'selectSavedPlot', 'syncSavedPlotSelection'];
+    'sameLatLng', 'applySavedPlotAppearance', 'selectSavedPlot', 'syncSavedPlotSelection', 'refreshSelectedParcelStats'];
   vm.runInContext(functions.map(declaration).join('\n'), context);
   const clear = context.clearPlotsForFarmer;
   context.clearPlotsForFarmer = id => { metrics.clears++; clear(id); };
@@ -693,7 +695,7 @@ test('parcel clicks show the first dot, connect each next corner and continue pa
 
 // Exercise the actual layer subscriptions, not just the renderer in isolation.
 // A failure in this callback can prevent every crop request before rendering starts.
-function connectedCropHarness() {
+function connectedCropHarness(options = {}) {
   const result = harness();
   const {context, toggle} = result;
   const status = {textContent:''};
@@ -722,6 +724,7 @@ function connectedCropHarness() {
   const requests = [];
   context.window.fetch = async url => {
     requests.push(url);
+    if (options.fetch) return options.fetch(url);
     return {ok:true,json:async()=>({available:true,year:2026,season:'dry',records:[url.startsWith('/classifications') ? crop : planted]})};
   };
   vm.runInContext(['loadCropLayer','refreshPlantedAreas','renderPlantedAreas','schedulePlotDisplayRefresh'].map(declaration).join('\n'), context);
@@ -811,4 +814,168 @@ test('whole-parcel crop saves paint their color and icon before the modal closes
   assert.deepEqual(errors,[]);
   assert.equal(closed,true);
   assert.equal(requests.length,0);
+});
+
+function attachParcelStatistics(context) {
+  const statistics = require('../../public/js/farmer-parcel-stats.js');
+  const frames = [];
+  const root = {};
+  const originalGetElement = context.document.getElementById;
+  context.document.getElementById = id => id === 'farmerParcelStats' ? root : originalGetElement(id);
+  context.window.FarmerParcelStats = {
+    render: (element, input) => {
+      assert.equal(element, root);
+      frames.push(statistics.summarize(input));
+    }
+  };
+  return {frames, latest: () => frames.at(-1)};
+}
+
+function parcelLoadingHarness(plots = []) {
+  const result = harness(plots);
+  const {context} = result;
+  const statistics = attachParcelStatistics(context);
+  const panelUpdates = [];
+  Object.assign(context, {
+    updatePlotCount: value => panelUpdates.push(['count', value]),
+    updatePlotTotalArea: value => panelUpdates.push(['area', value]),
+    updatePlotList: rows => panelUpdates.push(['plots', rows.map(row => row.id)]),
+    sumPlotAreas: rows => rows.reduce((sum, row) => sum + Number(row.area_ha || 0), 0),
+    zoomToPlots: rows => panelUpdates.push(['zoom', rows.map(row => row.id)]),
+  });
+  vm.runInContext(['fetchPlotsForFarmer', 'loadPlotsForSelectedFarmer'].map(declaration).join('\n'), context);
+  return {...result, ...statistics, panelUpdates};
+}
+
+test('a truncated overview cannot become a complete farmer land chart, and a complete read is reused', async () => {
+  const first = {id:1,farmer_id:1,area_ha:1.5,polygon_json:ring()};
+  const second = {id:2,farmer_id:1,area_ha:2.5,polygon_json:ring(.01)};
+  const {context, latest} = parcelLoadingHarness();
+  context.fetch = async () => ({ok:true,json:async()=>({plots:[first],total:2,returned:1,truncated:true})});
+  await context.loadAllMunicipalPlots();
+  assert.equal(context.completePlotFarmers.has('1'),false);
+  assert.equal(context.plotsCacheByFarmerId.get('1').length,1,'The incomplete overview is still useful for map drawing');
+  let requests = 0;
+  context.fetch = async url => {
+    requests++;
+    assert.equal(url,'/farmers/1/plots');
+    return {ok:true,json:async()=>({plots:[first,second]})};
+  };
+  context.selectedFarmerId = '1';
+  await context.loadPlotsForSelectedFarmer('1');
+  assert.equal(latest().totalParcels,2);
+  assert.equal(latest().totalAreaHa,4);
+  assert.equal(context.completePlotFarmers.has('1'),true);
+  await context.loadPlotsForSelectedFarmer('1');
+  assert.equal(requests,1,'Reopening an unchanged farmer reuses their complete authorized records');
+});
+
+test('failed and malformed parcel responses cannot become zero-parcel charts or cached empty successes', async () => {
+  const {context, latest} = parcelLoadingHarness();
+  context.selectedFarmerId = '1';
+  context.fetch = async () => ({ok:false,status:500});
+  await assert.rejects(context.loadPlotsForSelectedFarmer('1'),/Could not load/);
+  assert.equal(latest().landStatus,'error');
+  assert.equal(latest().totalParcels,null,'Unavailable land must not be reported as zero saved parcels');
+  assert.equal(context.plotsCacheByFarmerId.has('1'),false);
+  assert.equal(context.completePlotFarmers.has('1'),false);
+  assert.equal(context.plotFetchPromisesByFarmerId.has('1'),false);
+  context.fetch = async () => ({ok:true,json:async()=>({plots:null})});
+  await assert.rejects(context.loadPlotsForSelectedFarmer('1'),/Could not read/);
+  assert.equal(context.plotsCacheByFarmerId.has('1'),false);
+  const plot = {id:7,farmer_id:1,area_ha:3,polygon_json:ring()};
+  context.fetch = async () => ({ok:true,json:async()=>({plots:[plot]})});
+  await context.loadPlotsForSelectedFarmer('1',{force:true});
+  assert.equal(latest().landStatus,'ready');
+  assert.equal(latest().totalParcels,1);
+  assert.equal(latest().totalAreaHa,3);
+});
+
+test('a slow previous farmer cannot overwrite the current farmer charts, plot list or camera', async () => {
+  const {context, latest, panelUpdates} = parcelLoadingHarness();
+  const pending = new Map();
+  context.fetch = url => new Promise(resolve => pending.set(url,resolve));
+  context.selectedFarmerId = '1';
+  const first = context.loadPlotsForSelectedFarmer('1',{autoZoom:true});
+  assert.equal(latest().landStatus,'loading');
+  context.selectedFarmerId = '2';
+  const second = context.loadPlotsForSelectedFarmer('2',{autoZoom:true});
+  const secondPlots = [{id:20,farmer_id:2,area_ha:2,polygon_json:ring(.01)}];
+  pending.get('/farmers/2/plots')({ok:true,json:async()=>({plots:secondPlots})});
+  await second;
+  const updatesAfterSelection = panelUpdates.length;
+  pending.get('/farmers/1/plots')({ok:true,json:async()=>({plots:[{id:10,farmer_id:1,area_ha:99,polygon_json:ring()}]})});
+  await first;
+  assert.equal(context.parcelStatsState.farmerId,'2');
+  assert.equal(latest().totalAreaHa,2);
+  assert.deepEqual(latest().landRows.map(row=>row.id),['20']);
+  assert.equal(panelUpdates.length,updatesAfterSelection,'An old response cannot touch the latest farmer panel or camera');
+  assert.deepEqual(Array.from(context.savedPlotOverlays,overlay=>String(overlay.plotId)),['20']);
+});
+
+test('an older forced parcel refresh cannot overwrite a newer accepted cache or clear its pending request', async () => {
+  const {context} = parcelLoadingHarness();
+  const pending = [];
+  context.fetch = () => new Promise(resolve=>pending.push(resolve));
+  const first = context.fetchPlotsForFarmer('1');
+  const second = context.fetchPlotsForFarmer('1',{force:true});
+  pending[0]({ok:true,json:async()=>({plots:[{id:1}]})});
+  await first;
+  assert.equal(context.plotsCacheByFarmerId.has('1'),false);
+  assert.equal(context.plotFetchPromisesByFarmerId.get('1'),second,'An old finally block cannot drop the newer request');
+  pending[1]({ok:true,json:async()=>({plots:[{id:2}]})});
+  await second;
+  assert.equal(context.plotsCacheByFarmerId.get('1')[0].id,2);
+  assert.equal(context.plotFetchPromisesByFarmerId.has('1'),false);
+});
+
+test('real crop save subscriptions update selected farmer crop charts before closing without another request', async () => {
+  const {context,requests,crop,planted} = connectedCropHarness();
+  const {latest} = attachParcelStatistics(context);
+  context.selectedFarmerId = '1';
+  context.parcelStatsState = {farmerId:'1',landStatus:'ready',plots:[{id:1,area_ha:6.62}]};
+  Object.assign(context.cropLayer.state,{status:'ready',year:2026,season:'dry'});
+  context.FormData = class {};
+  context.fetch = async () => ({ok:true,json:async()=>({year:2026,season:'dry',crop_record:crop,planted_record:planted})});
+  const errors = [];
+  context.cropModalMessage = (text,kind) => { if (kind==='error') errors.push(text); };
+  let closed = false;
+  context.closeCropModal = () => {
+    assert.equal(latest().coverage.recorded,1);
+    assert.deepEqual(latest().cropRows.map(row=>row.code).sort(),['corn','rice']);
+    assert.equal(latest().totalAreaHa,6.62,'Two visual crop marks cannot double the mapped land total');
+    closed = true;
+  };
+  vm.runInContext(declaration('submitCropModal'),context);
+  context.submitCropModal({action:'/save-crops',querySelector:()=>({disabled:false})});
+  for (let i=0; i<10; i++) await new Promise(resolve=>setImmediate(resolve));
+  assert.deepEqual(errors,[]);
+  assert.equal(closed,true);
+  assert.equal(requests.length,0,'Charts reuse the validated save response');
+});
+
+test('real crop period changes clear prior chart counts and distinguish loading from explicitly unrecorded crops', async () => {
+  let resolveWet;
+  const corn = {plot_id:1,crop:'corn',color:'#D4A017',area_crops:[],has_planted_areas:false};
+  const {context} = connectedCropHarness({fetch:url=>{
+    if (url.includes('season=wet')) return new Promise(resolve=>{resolveWet=resolve;});
+    return {ok:true,json:async()=>({year:2026,season:'dry',records:[corn]})};
+  }});
+  const {latest} = attachParcelStatistics(context);
+  context.selectedFarmerId = '1';
+  context.parcelStatsState = {farmerId:'1',landStatus:'ready',plots:[{id:1,area_ha:2}]};
+  await context.loadCropLayer(false);
+  assert.equal(latest().coverage.recorded,1);
+  context.cropSettings = {...context.cropSettings,season:'wet'};
+  const changing = context.loadCropLayer(false);
+  assert.equal(latest().periodLabel,'2026 · Wet season');
+  assert.equal(latest().cropStatus,'loading');
+  assert.equal(latest().cropRows.length,0,'The previous season cannot remain in the new chart');
+  assert.equal(latest().coverage.unknown,1);
+  assert.equal(latest().coverage.notRecorded,0,'Pending records are not absent crop registrations');
+  resolveWet({ok:true,json:async()=>({year:2026,season:'wet',records:[{...corn,crop:'not_recorded',color:'#8A9299'}]})});
+  await changing;
+  assert.equal(latest().coverage.unknown,0);
+  assert.equal(latest().coverage.notRecorded,1);
+  assert.equal(latest().coverage.percentage,0);
 });

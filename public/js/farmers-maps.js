@@ -1329,7 +1329,10 @@ var PopoverElement = maps3d.PopoverElement;
     var focusedParcelFarmerId = null;
 
     var plotsCacheByFarmerId = new Map();
+    var completePlotFarmers = new Set();
     var plotFetchPromisesByFarmerId = new Map();
+    var parcelStatsState = { farmerId: null, landStatus: 'empty', plots: [] };
+    var parcelStatsRevision = 0;
     var savedPlotOverlays = [];
     var renderedPlotDataByFarmerId = new Map();
     var plotDisplayRevision = 0;
@@ -1367,6 +1370,7 @@ var PopoverElement = maps3d.PopoverElement;
         }
         hideParcelHoverCard();
         schedulePlotDisplayRefresh();
+        refreshSelectedParcelStats();
         if (!change || !change.skipPlanted) refreshPlantedAreas(false);
       }
     }) : null;
@@ -1694,6 +1698,7 @@ var PopoverElement = maps3d.PopoverElement;
       selectedPlotId = plotId == null ? null : String(plotId);
       if (selectedPlotOverlay) applySavedPlotAppearance(selectedPlotOverlay);
       syncSavedPlotSelection();
+      refreshSelectedParcelStats();
     }
 
     function syncSavedPlotSelection() {
@@ -1919,6 +1924,8 @@ var PopoverElement = maps3d.PopoverElement;
             if (typeof window.__applyPlotVisibility === "function") {
               window.__applyPlotVisibility();
             }
+          }).catch(function () {
+            // Preserve accepted map overlays; selecting this farmer offers retry.
           }).finally(function () {
             plotInFlight--;
             runPlotQueue();
@@ -1931,7 +1938,7 @@ var PopoverElement = maps3d.PopoverElement;
       opts = opts || {};
       farmerId = String(farmerId);
 
-      if (!opts.force && plotsCacheByFarmerId.has(farmerId)) {
+      if (!opts.force && completePlotFarmers.has(farmerId) && plotsCacheByFarmerId.has(farmerId)) {
         return Promise.resolve(plotsCacheByFarmerId.get(farmerId));
       }
 
@@ -1943,17 +1950,21 @@ var PopoverElement = maps3d.PopoverElement;
         method: "GET",
         headers: { "Accept": "application/json" }
       }).then(function (r) {
-        if (!r.ok) return { plots: [] };
+        if (!r.ok) throw new Error('Could not load this farmer’s parcels. Please try again.');
         return r.json();
       }).then(function (json) {
-        var plots = (json && json.plots) ? json.plots : [];
-        plotsCacheByFarmerId.set(farmerId, plots);
+        if (!json || !Array.isArray(json.plots)) throw new Error('Could not read the saved parcels. Please try again.');
+        var plots = json.plots;
+        if (plotFetchPromisesByFarmerId.get(farmerId) === req) {
+          plotsCacheByFarmerId.set(farmerId, plots);
+          completePlotFarmers.add(farmerId);
+        }
         return plots;
-      }).catch(function () {
-        plotsCacheByFarmerId.set(farmerId, []);
-        return [];
+      }).catch(function (error) {
+        if (plotFetchPromisesByFarmerId.get(farmerId) === req) completePlotFarmers.delete(farmerId);
+        throw error;
       }).finally(function () {
-        plotFetchPromisesByFarmerId.delete(farmerId);
+        if (plotFetchPromisesByFarmerId.get(farmerId) === req) plotFetchPromisesByFarmerId.delete(farmerId);
       });
 
       plotFetchPromisesByFarmerId.set(farmerId, req);
@@ -2456,6 +2467,7 @@ map3d.addEventListener('gmp-animationend', function () { schedulePlotDisplayRefr
   savedPlotOverlays = [];
   renderedPlotDataByFarmerId.clear();
   plotsCacheByFarmerId.clear();
+  completePlotFarmers.clear();
 
   var grouped = new Map();
 
@@ -2469,6 +2481,7 @@ map3d.addEventListener('gmp-animationend', function () { schedulePlotDisplayRefr
 
   grouped.forEach(function (items, fid) {
     plotsCacheByFarmerId.set(String(fid), items);
+    if (!json.truncated) completePlotFarmers.add(String(fid));
   });
   var groups = Array.from(grouped.entries());
   var groupIndex = 0;
@@ -2539,6 +2552,9 @@ function zoomToAllLoadedPlots() {
 
 function syncSelectedPanel(f) {
   var avatarEl = document.getElementById('selAvatar');
+  parcelStatsRevision++;
+  parcelStatsState = {farmerId: f ? String(f.id) : null, landStatus: f ? 'loading' : 'empty', plots: []};
+  refreshSelectedParcelStats();
 
   if (!f) {
     window.dispatchEvent(new CustomEvent('farmers:selection-changed', {
@@ -4083,11 +4099,41 @@ window.__handleDownloadAllPlots = handleDownloadAllPlots;
   }
 }
 
+    function refreshSelectedParcelStats() {
+      var root = document.getElementById('farmerParcelStats');
+      if (!root || !window.FarmerParcelStats) return;
+      var active = selectedFarmerId != null && parcelStatsState.farmerId === String(selectedFarmerId);
+      var plots = active ? parcelStatsState.plots : [];
+      window.FarmerParcelStats.render(root, {
+        plots: plots,
+        records: cropLayer ? plots.map(function (plot) { return cropLayer.record(plot.id); }).filter(Boolean) : [],
+        landStatus: active ? parcelStatsState.landStatus : 'empty',
+        cropStatus: cropLayer ? cropLayer.state.status : 'off',
+        year: cropSettings.year, season: cropSettings.season, selectedPlotId: selectedPlotId
+      });
+    }
+
+    var parcelStatsRetry = document.querySelector('[data-parcel-stats-retry]');
+    if (parcelStatsRetry) parcelStatsRetry.addEventListener('click', function () {
+      if (selectedFarmerId == null) return;
+      if (parcelStatsState.landStatus === 'error') {
+        loadPlotsForSelectedFarmer(selectedFarmerId, {force: true, autoZoom: false}).catch(function () {});
+      } else {
+        loadCropLayer(true);
+      }
+    });
+
     function loadPlotsForSelectedFarmer(farmerId, opts) {
       opts = opts || {};
       farmerId = String(farmerId);
+      var revision = ++parcelStatsRevision;
+      if (String(selectedFarmerId || '') === farmerId) {
+        parcelStatsState = {farmerId: farmerId, landStatus: 'loading', plots: []};
+        refreshSelectedParcelStats();
+      }
 
       return fetchPlotsForFarmer(farmerId, opts).then(function (plots) {
+        if (revision !== parcelStatsRevision || String(selectedFarmerId || '') !== farmerId) return plots;
         renderPlotsForFarmer(farmerId, plots);
 
         if (typeof window.__applyPlotVisibility === "function") {
@@ -4102,10 +4148,19 @@ window.__handleDownloadAllPlots = handleDownloadAllPlots;
           updatePlotCount(plots.length || 0);
           updatePlotTotalArea(sumPlotAreas(plots));
           updatePlotList(plots);
+          parcelStatsState = {farmerId: farmerId, landStatus: 'ready', plots: plots};
+          refreshSelectedParcelStats();
         }
 
 
         return plots;
+      }).catch(function (error) {
+        if (revision === parcelStatsRevision && String(selectedFarmerId || '') === farmerId) {
+          parcelStatsState = {farmerId: farmerId, landStatus: 'error', plots: []};
+          updatePlotList([]);
+          refreshSelectedParcelStats();
+        }
+        throw error;
       });
     }
 

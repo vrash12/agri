@@ -12,6 +12,7 @@ window.__mapUsage = @json(['url' => route('usage.map-events'), 'token' => csrf_t
 <script src="{{ asset('js/parcel-crop-layer.js') }}?v={{ @filemtime(public_path('js/parcel-crop-layer.js')) ?: 1 }}"></script>
 <script src="{{ asset('js/planted-area-layer.js') }}?v={{ @filemtime(public_path('js/planted-area-layer.js')) ?: 1 }}"></script>
 <script src="{{ asset('js/crop-area-badges.js') }}?v={{ @filemtime(public_path('js/crop-area-badges.js')) ?: 1 }}"></script>
+<script src="{{ asset('js/farmer-parcel-stats.js') }}?v={{ @filemtime(public_path('js/farmer-parcel-stats.js')) ?: 1 }}"></script>
 <script src="{{ asset('js/map-drawing-guide.js') }}?v={{ @filemtime(public_path('js/map-drawing-guide.js')) ?: 1 }}"></script>
 <script src="{{ asset('js/planted-area-editor.js') }}?v={{ @filemtime(public_path('js/planted-area-editor.js')) ?: 1 }}"></script>
 @php($parcelDisplayScriptVersion = @filemtime(public_path('js/parcel-display-geometry.js')) ?: 1)

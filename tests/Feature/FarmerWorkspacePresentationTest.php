@@ -45,6 +45,24 @@ class FarmerWorkspacePresentationTest extends TestCase
         $view->assertDontSee('Edit profile')->assertDontSee('Delete profile')->assertDontSee('Add farmer')->assertDontSee('Import workbook');
     }
 
+    public function test_parcel_charts_wait_for_a_selected_farmer_and_use_local_assets_for_staff_and_oversight(): void
+    {
+        foreach ([User::ROLE_MUNICIPAL_STAFF, User::ROLE_SUPER_ADMIN] as $role) {
+            $view = $this->view('farmers.index', $this->fixture($role));
+            $html = (string) $view;
+            $xpath = $this->xpath($html);
+
+            $this->assertSame(1, $xpath->query('//*[@id="farmerParcelStats"]')->length);
+            $this->assertSame(1, $xpath->query('//*[@data-parcel-stats-content and @hidden]')->length);
+            $this->assertSame(1, $xpath->query('//*[@data-parcel-stats-status and @role="status"]')->length);
+            $this->assertSame(1, $xpath->query('//button[@data-parcel-stats-retry and @type="button" and @hidden]')->length);
+            $view->assertSee('Choose a farmer to see their saved parcels and crops.')
+                ->assertSee('Land by parcel')->assertSee('Crops on these parcels')
+                ->assertSee('css/farmer-parcel-stats.css')->assertSee('js/farmer-parcel-stats.js');
+            $this->assertLessThan(strpos($html, 'js/farmers-maps.js'), strpos($html, 'js/farmer-parcel-stats.js'));
+        }
+    }
+
     public function test_profile_navigation_keeps_the_farmer_municipality_when_returning_to_registry_or_map(): void
     {
         $data = $this->fixture(User::ROLE_SYSTEM_OWNER);

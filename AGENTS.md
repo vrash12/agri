@@ -1,5 +1,16 @@
 # Agriculture Information System — Developer Guide
 
+The October 19 farmer parcel statistics follow-up adds selected-farmer land/crop
+charts using existing authorized plots and seasonal metadata. Keep mapped
+hectares separate from crop parcel counts; missing classification data is
+unavailable, never an absent crop. Incomplete overview caches require a complete
+farmer fetch. Failed requests must not become cached empty lists, and revision
+guards prevent older selections from replacing current statistics. Crop saves
+refresh charts before the modal closes; no-op updates preserve expanded tables.
+Release the helper, map script, stylesheet and views together. No schema,
+provider or data change, and no general-cache clear. See
+[docs/FARMER_PARCEL_STATISTICS.md](docs/FARMER_PARCEL_STATISTICS.md).
+
 The October 19 satellite/selection/climate follow-up is deployed in runtime
 `504025d` through GitHub main and Hostinger fast-forward pull. Satellite search and results form one clear workflow; hidden
 results cannot display a prior check after an index/date search changes. A

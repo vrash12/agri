@@ -17,6 +17,7 @@
 @endphp
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('css/farmer-parcel-stats.css') }}?v={{ @filemtime(public_path('css/farmer-parcel-stats.css')) ?: 1 }}">
 <link rel="stylesheet" href="{{ asset('css/parcel-satellite-modal.css') }}?v={{ @filemtime(public_path('css/parcel-satellite-modal.css')) ?: 1 }}">
 <link rel="stylesheet" href="{{ asset('css/parcel-crop-modal.css') }}?v={{ @filemtime(public_path('css/parcel-crop-modal.css')) ?: 1 }}">
 <link rel="stylesheet" href="{{ asset('css/planted-area-editor.css') }}?v={{ @filemtime(public_path('css/planted-area-editor.css')) ?: 1 }}">
@@ -1204,46 +1205,7 @@
       {{-- Land plot management --}}
       <section class="fd-card">
         <div class="fd-card-body">
-          <div class="fd-section-head">
-            <div class="fd-section-title-wrap">
-              <div class="fd-section-icon amber">
-                <svg viewBox="0 0 24 24">
-                  <path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z"></path>
-                  <path d="M9 3v15"></path>
-                  <path d="M15 6v15"></path>
-                </svg>
-              </div>
-
-              <div>
-                <h4 class="fd-section-title">Land Plots</h4>
-                <p class="fd-section-subtitle">
-                  Open a plot below to see its actions.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div class="fd-plot-summary" id="plotMeta">
-            <div class="fd-plot-summary-item">
-              <div class="fd-plot-summary-label">Saved Plots</div>
-              <div
-                class="fd-plot-summary-value"
-                id="plotCountPill"
-              >
-                0 plots
-              </div>
-            </div>
-
-            <div class="fd-plot-summary-item">
-              <div class="fd-plot-summary-label">Total Mapped Area</div>
-              <div
-                class="fd-plot-summary-value"
-                id="plotAreaTotalPill"
-              >
-                0.00 ha total
-              </div>
-            </div>
-          </div>
+          @include('farmers._parcel_statistics')
 
           {{-- Draft status --}}
           <div
