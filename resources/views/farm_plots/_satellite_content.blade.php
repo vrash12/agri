@@ -77,6 +77,7 @@
         <div class="satellite-next-step"><h3>What to do next</h3><p id="satelliteNextStep">Choose dates and select Find pictures.</p></div>
         <details class="satellite-options satellite-result-details"><summary>Measurement details</summary><dl class="satellite-metrics"><div><dt>Picture date (UTC)</dt><dd id="satelliteDay">—</dd></div><div><dt>Lowest / highest number</dt><dd id="satelliteRange">—</dd></div><div><dt>Picture squares used (pixels)</dt><dd id="satellitePixels">—</dd></div></dl><p class="satellite-note" id="satelliteResolution">Each picture square is about 10 metres across. This count is not the percentage of your field that is clear.</p></details>
         <p class="satellite-caution">Use this to plan a field check. The number is not a health grade or proof of drought.</p>
+        <a class="module-button" href="{{ route('farm-plots.agronomy.show', $plot) }}">Compare checks &amp; record a field visit</a>
       </div>
     </section>
   </div>

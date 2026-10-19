@@ -159,6 +159,17 @@
 
       if (debounce) window.clearTimeout(debounce);
 
+      var selected = entries.filter(function (entry) {
+        return entry.label.toLowerCase() === term.toLowerCase();
+      });
+      if (selected.length === 1) {
+        // Selecting a datalist option is not a new server search for its formatted label.
+        inFlight = null;
+        syncLocateState();
+        setHelp('Ready to locate ' + selected[0].name + '.');
+        return;
+      }
+
       if (term.length < MIN_QUERY) {
         entries = [];
         renderOptions();

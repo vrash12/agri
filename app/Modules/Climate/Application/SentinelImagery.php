@@ -37,7 +37,7 @@ final class SentinelImagery
         $parcel = $this->parcels->describe($plot, $definition['resolution_m']);
         $key = $this->key($plot, ['statistics', $parcel, $from, $to, $maxCloud, $index, $this->statisticsScript($index)]);
 
-        return $this->cached($key, 'sentinel-statistics', $to, function () use ($parcel, $from, $to, $maxCloud, $index, $definition): array {
+        $result = $this->cached($key, 'sentinel-statistics', $to, function () use ($parcel, $from, $to, $maxCloud, $index, $definition): array {
             $response = $this->post(self::STATISTICS_URL, [
                 'input' => $this->input($parcel, $maxCloud),
                 'aggregation' => [
@@ -93,6 +93,9 @@ final class SentinelImagery
                 'method' => strtoupper($index).' '.$definition['formula'].'; harmonized reflectance; daily UTC least-cloud mosaics; SCL mask (20 m); approximately '.$definition['resolution_m'].' m geographic output grid.',
                 'generated_at' => now()->utc()->toIso8601String(), 'scene_cloud_limit' => $maxCloud];
         });
+        app(ParcelSatelliteHistory::class)->remember($plot, $result);
+
+        return $result;
     }
 
     public function image(FarmPlot $plot, string $date, int $maxCloud, string $layer): string

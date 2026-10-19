@@ -154,3 +154,26 @@ test('typing in the finder preserves the page geography in its server request', 
     }
   }
 });
+
+test('choosing a returned datalist label enables Locate without searching the formatted label', async () => {
+  const listeners = {}, clicks = {}, requests = [];
+  const input = { value: '', addEventListener: (event, handler) => { listeners[event] = handler; } };
+  const button = { disabled: true, addEventListener: (event, handler) => { clicks[event] = handler; } };
+  let opened;
+  const context = vm.createContext({
+    document: { readyState: 'complete', querySelectorAll: () => [],
+      getElementById: id => id === 'mapFarmerSearch' ? input : id === 'mapFarmerLocateBtn' ? button : null },
+    window: { __farmerLookupUrl: '/lookup', setTimeout: callback => callback(), clearTimeout() {},
+      __openFarmer3d: id => { opened = id; } },
+    fetch: url => { requests.push(url); return Promise.resolve({ ok: true, json: async () => ({
+      farmers: [{ id: 7, first_name: 'Test', last_name: 'Farmer', agri_gov_id: 'AGRI-F-000007' }], total: 1 }) }); },
+  });
+  vm.runInContext(source, context);
+  input.value = 'Farmer'; listeners.input();
+  await new Promise(resolve => setImmediate(resolve));
+  input.value = 'Test Farmer — AGRI-F-000007'; listeners.input(); listeners.change();
+  assert.equal(button.disabled, false);
+  clicks.click();
+  assert.equal(opened, '7');
+  assert.equal(requests.length, 1);
+});

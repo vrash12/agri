@@ -5,6 +5,7 @@
 window.__parcelCropLayerUrl = @json(route('farm-plots.crop-layer'));
 window.__plantedAreaLayerUrl = @json(route('farm-plots.planted-area-layer'));
 window.__parcelCropEditUrl = @json(route('farm-plots.seasonal-crops.edit', ['plot' => '__ID__']));
+window.__parcelAgronomyUrl = @json(route('farm-plots.agronomy.show', ['plot' => '__ID__']));
 window.__parcelCropModalUrl = @json(route('farm-plots.seasonal-crops.edit', ['plot' => '__ID__']));
 window.__mapUsage = @json(['url' => route('usage.map-events'), 'token' => csrf_token()]);
 </script>

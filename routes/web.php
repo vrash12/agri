@@ -21,6 +21,7 @@ use App\Http\Controllers\FarmPlotController;
 use App\Http\Controllers\HarvestRecordController;
 use App\Http\Controllers\MapUsageController;
 use App\Http\Controllers\MunicipalityBoundaryController;
+use App\Http\Controllers\ParcelAgronomyController;
 use App\Http\Controllers\ParcelCropSeasonController;
 use App\Http\Controllers\ParcelSatelliteController;
 use App\Http\Controllers\RiceDistributionBatchController;
@@ -291,6 +292,10 @@ Route::middleware([
         ->name('farm-plots.crop-layer');
     Route::get('/farm-plots/planted-area-layer', [ParcelCropSeasonController::class, 'plantedLayer'])
         ->middleware('throttle:planted-crop-layer')->name('farm-plots.planted-area-layer');
+    Route::get('/farm-plots/{plot}/agronomy', [ParcelAgronomyController::class, 'show'])
+        ->whereNumber('plot')->name('farm-plots.agronomy.show');
+    Route::post('/farm-plots/{plot}/agronomy', [ParcelAgronomyController::class, 'store'])
+        ->whereNumber('plot')->name('farm-plots.agronomy.store');
     Route::get('/farm-plots/{plot}/satellite', [ParcelSatelliteController::class, 'show'])
         ->whereNumber('plot')->name('farm-plots.satellite.show');
     Route::post('/farm-plots/{plot}/satellite/observations', [ParcelSatelliteController::class, 'analyse'])

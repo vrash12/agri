@@ -1406,6 +1406,10 @@ var PopoverElement = maps3d.PopoverElement;
         link.href = (window.__parcelCropEditUrl || '').replace('__ID__', encodeURIComponent(link.dataset.plotCropId))
           + '?year=' + cropSettings.year + '&season=' + cropSettings.season;
       });
+      document.querySelectorAll('[data-plot-agronomy-id]').forEach(function (link) {
+        link.href = (window.__parcelAgronomyUrl || '').replace('__ID__', encodeURIComponent(link.dataset.plotAgronomyId))
+          + '?year=' + cropSettings.year + '&season=' + cropSettings.season;
+      });
       loadCropLayer(false);
       refreshPlantedAreas(false);
     });
@@ -3988,6 +3992,7 @@ window.__handleDownloadAllPlots = handleDownloadAllPlots;
         '<div class="map-plot-actions">' +
           '<button type="button" class="btn btn-soft btn-sm" data-action="focusPlot" data-plot-id="' + escapeHtml(pl.id) + '">Focus</button>' +
           (window.__parcelSatelliteUrl ? '<a class="btn btn-soft btn-sm" data-action="openSatellite" data-plot-id="' + escapeHtml(pl.id) + '" aria-haspopup="dialog" aria-controls="parcelSatelliteModal" href="' + escapeHtml(window.__parcelSatelliteUrl.replace('__ID__', encodeURIComponent(pl.id))) + '">Satellite field check</a>' : '') +
+          (window.__parcelAgronomyUrl ? '<a class="btn btn-soft btn-sm" data-plot-agronomy-id="' + escapeHtml(pl.id) + '" href="' + escapeHtml(window.__parcelAgronomyUrl.replace('__ID__', encodeURIComponent(pl.id)) + '?year=' + cropSettings.year + '&season=' + cropSettings.season) + '">Crop guidance &amp; field checks</a>' : '') +
           '<a class="btn btn-soft btn-sm" data-action="openCropModal" data-plot-crop-id="' + escapeHtml(pl.id) + '" aria-haspopup="dialog" aria-controls="parcelCropModal" href="' + escapeHtml((window.__parcelCropEditUrl || '').replace('__ID__', encodeURIComponent(pl.id)) + '?year=' + cropSettings.year + '&season=' + cropSettings.season) + '">Crop areas / season</a>' +
           (window.__canManageOperationalData ? '<button type="button" class="btn btn-soft btn-sm" data-action="editPlot" data-plot-id="' + escapeHtml(pl.id) + '">Edit</button>' : '') +
           '<button type="button" class="btn btn-soft btn-sm" data-action="downloadPlot" data-plot-id="' + escapeHtml(pl.id) + '">Download</button>' +

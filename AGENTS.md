@@ -1,5 +1,19 @@
 # Agriculture Information System — Developer Guide
 
+The October 19 parcel agronomy workflow adds sourced, append-only field checks,
+rice/corn/mungbean reference comparisons and inspection follow-ups. Climate owns
+the application services. Missing or outdated evidence remains unavailable;
+municipality forecasts are never parcel measurements or official drought levels.
+Completed NDVI/NDMI/SAVI/EVI checks feed a bounded, context-isolated history;
+opening guidance never calls a provider. Keep planting dates, stage, boundary,
+ownership, settings and grid identities in comparison guards. Field notes stay
+internal. The new `parcel_field_assessments` migration is additive and requires a
+verified backup; run only that targeted migration. Deploy services, adapters,
+config, routes, views and three public assets together; rebuild autoload and
+configuration/route/view caches without clearing the general cache. Preserve
+provider schedules and budgets. See [docs/PARCEL_AGRONOMY.md](docs/PARCEL_AGRONOMY.md)
+and its primary-source companion for interpretation limits and acceptance.
+
 The October 19 farmer parcel statistics follow-up is deployed in runtime
 `f92132e` through GitHub main and Hostinger fast-forward pull. It adds selected-farmer land/crop
 charts using existing authorized plots and seasonal metadata. Keep mapped
