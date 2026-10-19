@@ -1,5 +1,9 @@
 # Farmer land and crop statistics
 
+Deployed to Hostinger on October 19, 2026 in runtime `f92132e` through GitHub
+main. Six production office-role view renders and all three served asset
+comparisons passed; 24 tables / 9,954 rows and provider allowances were preserved.
+
 The office Farmers parcel map includes **Land & crops** in the selected farmer's
 details. Choose a farmer or click a parcel, then scroll to the land section.
 The season comes from **Crops on the map**. Changing it updates the crop charts;

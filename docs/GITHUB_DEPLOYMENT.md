@@ -1,5 +1,43 @@
 # GitHub-to-Hostinger deployment
 
+## Verified Hostinger release — October 19, 2026 — farmer land and crop charts
+
+Runtime `f92132e7276c0b7f639d2fd6d8f58ebe8ee169c0` was pushed to GitHub main
+and installed by fast-forward pull from clean tracked baseline `d3c7221`.
+Selected-farmer statistics now show parcel-area bars, saved crop counts and
+seasonal crop-record coverage. Incomplete overview caches cannot masquerade as
+complete farmer land; failed requests remain errors rather than zero parcels.
+Crop saves update charts before closing the modal. Crop-only updates preserve
+expanded parcel tables and keyboard focus.
+
+The private verified backup contains **24 tables / 9,954 rows**, **3,410,094
+compressed bytes**, SHA-256
+`c46929b7b1f405c2891ec1be74d6948e7886eaa2abae23a8c85bba7771a3fc13`.
+Recovery files are outside the document root at
+`/home/u330835917/.private/parcel-statistics-20261019`.
+All pre-existing row/schema fingerprints, environment values, namespaces and
+provider counters matched before and after verification. No migration,
+dependency installation, provider call, account operation or general-cache clear
+ran. The existing scheduler and provider settings remain unchanged.
+
+Both scripts and the stylesheet were mirrored to `public_html` with 0644
+permissions. Optimized autoloading and configuration/route/view caches were
+rebuilt. The existing untracked `app/Models/FarmerPlot.php` PSR-4 warning remains;
+its file was preserved. The private CLI render check initially needed its
+synthetic route bound to the request; that verifier-only correction completed
+all six office-role renders before maintenance mode was lifted.
+
+Verification: 317 JavaScript tests, six Farmers presentation tests / 52 assertions
+(existing missing `.env.testing` warnings), Pint, syntax and Blade compilation.
+Synthetic browser checks exercised the actual partial/helper/styles at compact,
+wide and narrow widths, including long names, expanded tables and error states;
+there was no horizontal overflow or console error. Production view renders
+confirmed the new panel for six office roles and existing access restrictions.
+Public HTTP checks returned 200 for login and all three changed assets, whose
+content matched the release. Signed-in live map interaction was not repeated
+for this release; synthetic Maps regression checks cover save, period and
+selection lifecycle behavior. See [farmer parcel statistics](FARMER_PARCEL_STATISTICS.md).
+
 ## Hostinger scheduler activated — October 19, 2026
 
 The owner opened hPanel access to complete the remaining automation setup.

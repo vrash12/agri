@@ -1,6 +1,7 @@
 # Agriculture Information System — Developer Guide
 
-The October 19 farmer parcel statistics follow-up adds selected-farmer land/crop
+The October 19 farmer parcel statistics follow-up is deployed in runtime
+`f92132e` through GitHub main and Hostinger fast-forward pull. It adds selected-farmer land/crop
 charts using existing authorized plots and seasonal metadata. Keep mapped
 hectares separate from crop parcel counts; missing classification data is
 unavailable, never an absent crop. Incomplete overview caches require a complete
