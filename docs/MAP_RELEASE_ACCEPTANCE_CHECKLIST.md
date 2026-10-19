@@ -5,6 +5,41 @@ parcel satellite work. It records what can be verified with synthetic fixtures
 and what still needs an authorized signed-in browser/provider check. It does
 not authorize a production deployment, a migration or a provider-budget reset.
 
+## Signed-in live acceptance — October 19, 2026
+
+The following checks ran against Hostinger runtime `fe05f03`, using an authorized
+Ramos Municipal Staff session and working Google Maps/Copernicus access. These
+are live browser results, separate from the synthetic Maps adapters used in the
+automated suite.
+
+| Workflow | Observed result |
+| --- | --- |
+| Municipality map | All 1,245 Ramos parcels loaded. Saved rice/corn sections reopened with their crop display. |
+| Existing farmer statistics | Three saved plots and 8.57 mapped hectares appeared in the land/crop charts. Crop counts remained separate from hectares. |
+| Boundary import | A clearly labeled synthetic farmer and parcel were created through the UI, and a KML boundary was imported successfully. |
+| Crop drawing and save | Actual 2D crop-line drawing, saving and reopening passed on the synthetic parcel. Corn fill and icon appeared immediately on the parcel map, and recorded-crop chart coverage updated to 100%. This is record coverage, not measured planted area. |
+| Field checks and follow-up | Two sourced synthetic field checks produced limited-water/wilting inspection guidance, then a completed follow-up. Both entries remained in immutable history. No current field observations were fabricated for an operational farm. |
+| Live satellite checks | NDVI, NDMI, SAVI and EVI each returned six usable observations. The latest date was 2026-10-18; latest means were 0.764, 0.264, 0.524 and 0.584, respectively. Dated history charts displayed the accepted observations. Index values alone do not diagnose drought or crop health. |
+
+**Still unverified:** manual 3D boundary corner drawing. The map's closed shadow
+root prevented the automated browser from placing those corners. Successful KML
+import and 2D crop drawing do not establish that separate interaction. This run
+also does not replace every role, geometry and failure-path check listed below;
+six server role renders (three editable, three read-only) and two excluded-role
+denials supplement, rather than substitute for, browser acceptance.
+
+The owner explicitly authorized the synthetic test records. After verification,
+cleanup privately backed up and removed exactly farmer `4245`, plot `4020`, one
+crop season and two field assessments. Fingerprints confirmed preservation of
+non-target rows across 25 tables and existing audit history; three cleanup audit
+rows were added.
+The private cleanup backup is
+`synthetic-cleanup-4245-4020-20261019-061253.json` (6,051 bytes), SHA-256
+`25cbe3613737fee196d6afbd77f5e5414e71383d976f9fb75a7ddb2d41d3330b`.
+It is not a public asset. Provider limits/configuration were unchanged and no
+general-cache clear ran. The [release receipt](GITHUB_DEPLOYMENT.md) records the
+deployment backup, targeted migration and overlapping automated test suites.
+
 ## Local gates (no credentials or provider calls)
 
 Run these from a disposable local checkout. Keep any existing `.env.testing`
@@ -72,8 +107,10 @@ do not capture credentials or personal records in screenshots.
 1. Open the Farmers map and wait for the parcel collection to reach its ready
    state. Confirm the map request is scoped to the selected office scope and
    that a partial response displays its truncation warning.
-2. Confirm every parcel base has a white outline and pale white fill,
-   including a classification-only parcel. Confirm the stored color is still
+2. Confirm every parcel base has a white outline. Unrecorded parcels keep a
+   pale white fill; a known saved crop with explicitly no drawn sections uses
+   its crop-color tint. Sectioned, pending and review-required drawings must
+   not gain a whole-parcel crop fill. Confirm the stored import color is still
    shown in edit/export data and does not recolor the base. Toggle crop
    visibility, filters, hover, focus and hide controls; edit mode must hide
    overlays without changing geometry.
@@ -127,9 +164,10 @@ use production credentials solely for this check.
    the policy denial without a provider request.
 
 Record status codes, `Retry-After` behavior, request count, selected layer/date,
-and whether the provider returned a real image. Actual Copernicus generation is
-currently the remaining live provider check; synthetic HTTP fakes do not close
-that item.
+and whether the provider returned a real image. The October 19 live acceptance
+above verified usable Copernicus imagery for all four indices; synthetic HTTP
+fakes alone cannot establish that result. Keep scope, invalid-input and
+rate-limit checks distinct from successful imagery acceptance.
 
 ## Release evidence and stop conditions
 

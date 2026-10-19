@@ -1,18 +1,29 @@
 # Agriculture Information System — Developer Guide
 
-The October 19 parcel agronomy workflow adds sourced, append-only field checks,
-rice/corn/mungbean reference comparisons and inspection follow-ups. Climate owns
-the application services. Missing or outdated evidence remains unavailable;
-municipality forecasts are never parcel measurements or official drought levels.
+The October 19 parcel agronomy workflow is deployed in runtime `fe05f03`
+through GitHub main and a Hostinger fast-forward pull from `b1fb61f`. It adds
+sourced, append-only field checks, rice/corn/mungbean reference comparisons and
+inspection follow-ups. Climate owns the application services. Missing or
+outdated evidence remains unavailable; municipality forecasts are never parcel
+measurements or official drought levels.
 Completed NDVI/NDMI/SAVI/EVI checks feed a bounded, context-isolated history;
 opening guidance never calls a provider. Keep planting dates, stage, boundary,
 ownership, settings and grid identities in comparison guards. Field notes stay
-internal. The new `parcel_field_assessments` migration is additive and requires a
-verified backup; run only that targeted migration. Deploy services, adapters,
-config, routes, views and three public assets together; rebuild autoload and
-configuration/route/view caches without clearing the general cache. Preserve
-provider schedules and budgets. See [docs/PARCEL_AGRONOMY.md](docs/PARCEL_AGRONOMY.md)
-and its primary-source companion for interpretation limits and acceptance.
+internal. Only the targeted additive `parcel_field_assessments` migration ran,
+after a verified 24-table / 9,962-row backup; existing rows and schemas were
+preserved apart from its migration receipt. Three public assets were mirrored
+and autoload/configuration/route/view caches rebuilt. No general-cache clear ran;
+provider configuration, schedules and limits are unchanged. Signed-in live checks
+loaded all 1,245 Ramos parcels, verified existing land/crop charts and saved
+rice/corn sections, and returned six usable observations per satellite index
+with dated history charts. An explicitly authorized synthetic farmer/parcel
+verified KML boundary import, actual 2D crop-line drawing/save/reopen, immediate
+crop fill/icon/chart updates and two append-only field checks through a completed
+follow-up. Those test records were privately backed up and removed; existing
+audit history and non-target rows across 25 tables were preserved. Manual 3D
+boundary corner drawing remains unverified because of a closed shadow root. See
+[docs/PARCEL_AGRONOMY.md](docs/PARCEL_AGRONOMY.md), its primary-source companion,
+and the dated acceptance/release receipts for interpretation limits and evidence.
 
 The October 19 farmer parcel statistics follow-up is deployed in runtime
 `f92132e` through GitHub main and Hostinger fast-forward pull. It adds selected-farmer land/crop

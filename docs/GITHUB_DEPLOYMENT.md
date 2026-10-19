@@ -1,5 +1,57 @@
 # GitHub-to-Hostinger deployment
 
+## Verified Hostinger release — October 19, 2026 — parcel agronomy and live acceptance
+
+Runtime `fe05f036a546415ceb47b4c20aa2361a39174b69` was pushed to GitHub main
+and deployed by fast-forward pull from
+`b1fb61f159b15d1f14c657b7d04a48052d8ea3dd`. It adds sourced, append-only parcel
+field checks, rice/corn/mungbean suitability reference comparisons, crop-stress
+inspection prompts and follow-ups, and dated histories of completed satellite
+checks. Missing evidence remains unavailable; reference comparisons are not
+planting recommendations or official drought classifications.
+
+The verified private backup contains **24 tables / 9,962 rows**, **3,410,793
+compressed bytes**, SHA-256
+`9ae6dc13cda7a9cb91dbfe012d75598567ac84ccc0c04043e7efebd4446a4e02`.
+Recovery files are outside the document root at
+`/home/u330835917/.private/parcel-agronomy-20261019`. Only
+`2026_10_19_000400_create_parcel_field_assessments_table.php` was migrated.
+All pre-existing row and schema fingerprints matched, apart from the exact new
+migration receipt; the additive assessment table started empty. Six office-role
+renders passed (three editable, three read-only), with two excluded-role denials.
+The agronomy stylesheet, Farmers map script and farmer finder script were
+mirrored to `public_html`; optimized autoloading and configuration/route/view
+caches were rebuilt. Provider limits, configuration and schedules are unchanged;
+no general-cache clear ran.
+
+Verification passed **318 JavaScript tests**, **117 focused PHP tests / 738
+assertions**, and the broader **152 PHP tests / 991 assertions**. The PHP suites
+overlap and must not be added together. Existing missing `.env.testing` warnings
+remain. Signed-in live Maps checks loaded all **1,245 Ramos parcels**, confirmed
+an existing farmer's **three plots / 8.57 mapped hectares** in the charts, and
+reopened saved rice/corn sections. NDVI, NDMI, SAVI and EVI each returned six usable
+observations, latest **2026-10-18**, with latest means **0.764, 0.264, 0.524 and
+0.584**, respectively, and dated history charts. These are observed index values,
+not diagnoses of farm conditions.
+
+With explicit owner authorization, synthetic farmer `4245` and plot `4020` were
+created through the UI. KML boundary import and actual 2D crop-line drawing,
+saving and reopening passed; the corn fill, icon and 100% recorded-crop chart
+coverage appeared immediately. Two clearly sourced synthetic field checks
+exercised limited-water/wilting inspection guidance, then a completed follow-up,
+while preserving both history entries. No current field observations were
+invented for an operational farm. Manual 3D boundary corner drawing remains
+**unverified** because its closed shadow root prevented the browser interaction.
+
+After verification, a separate private cleanup backup preserved the exact test
+rows: `synthetic-cleanup-4245-4020-20261019-061253.json`, **6,051 bytes**, SHA-256
+`25cbe3613737fee196d6afbd77f5e5414e71383d976f9fb75a7ddb2d41d3330b`.
+Cleanup removed exactly **one synthetic farmer, one plot, one crop season and
+two field assessments**. Fingerprints protected non-target rows across 25 tables;
+existing audit history remained intact and three cleanup audit rows were added. See the
+[dated live acceptance record](MAP_RELEASE_ACCEPTANCE_CHECKLIST.md) and
+[parcel agronomy guide](PARCEL_AGRONOMY.md).
+
 ## Verified Hostinger release — October 19, 2026 — farmer land and crop charts
 
 Runtime `f92132e7276c0b7f639d2fd6d8f58ebe8ee169c0` was pushed to GitHub main
