@@ -10,6 +10,7 @@ use App\Models\Province;
 use App\Models\Region;
 use App\Models\User;
 use App\Modules\Assistant\Application\AssistantConversationContext;
+use App\Modules\Assistant\Application\AssistantGuide;
 use App\Modules\Assistant\Application\AssistantIntentResolver;
 use App\Modules\Assistant\Application\AssistantKnowledge;
 use App\Modules\Assistant\Application\OfficeAssistant;
@@ -148,9 +149,9 @@ class AssistantConversationTest extends TestCase
     public static function localIntroductionCases(): array
     {
         return [
-            ['Who are you?', 'eAgriLGU Assistant'], ['Hello!', 'How can I help with eAgriLGU?'],
+            ['Who are you?', 'Ka Berto'], ['Hello!', 'How can I help with eAgriLGU?'],
             ['What can you do?', 'eAgriLGU features only'], ['What AI are you using?', 'Laravel AI SDK'],
-            ['Are you ChatGPT?', 'OpenAI'], ['Sino ka?', 'Ako ang eAgriLGU Assistant'],
+            ['Are you ChatGPT?', 'OpenAI'], ['Sino ka?', 'Ako si Ka Berto'],
             ['Kumusta!', 'Kumusta!'], ['Salamat!', 'Walang anuman!'],
             ['Do you know eAgriLGU?', 'reviewed system guidance'],
             ['Are you self-aware?', 'not a conscious person'],
@@ -158,6 +159,41 @@ class AssistantConversationTest extends TestCase
             ['What is my role?', 'Municipal Staff'],
             ['Ano ang saklaw ko?', 'Own municipality'],
         ];
+    }
+
+    #[DataProvider('guideChoices')]
+    public function test_chosen_guide_introduces_itself_locally_and_keeps_report_scope(string $id, string $name): void
+    {
+        config(['ai.providers.openai.key' => '']);
+        DB::enableQueryLog();
+        $this->ask('Who are you?', ['guide' => $id])->assertOk()->assertJsonPath('source', 'conversation')
+            ->assertSee($name)->assertSee('software mascot, not a person')->assertSee('not an official decision-maker');
+        $this->assertSame(0, $this->operationalQueries());
+        $report = $this->ask('Show assistance for 2025', ['guide' => $id])->assertOk()
+            ->assertJsonPath('year', 2025)->assertSee('15.000 kg')->assertDontSee('ForeignSecret');
+        $this->ask('Hello!', ['guide' => 'kiko', 'context' => $report->json('context')])->assertOk()
+            ->assertSee('Kiko')->assertJsonPath('context', $report->json('context'));
+        $this->ask('What about harvests for the same year?', ['guide' => 'aling-maya', 'context' => $report->json('context')])
+            ->assertOk()->assertJsonPath('source', 'records')->assertJsonPath('year', 2025)->assertSee('200.000')->assertDontSee('400.000');
+        OfficeHelpAgent::assertNeverPrompted();
+        Http::assertNothingSent();
+        $this->assertNull(Cache::get('assistant:requests:day:'.now('UTC')->format('Ymd')));
+    }
+
+    public static function guideChoices(): array
+    {
+        return array_map(fn (array $guide) => [$guide['id'], $guide['name']], AssistantGuide::all());
+    }
+
+    public function test_unknown_or_nonstring_guide_choices_are_rejected_before_any_record_or_provider_read(): void
+    {
+        DB::enableQueryLog();
+        foreach (['../private', '<script>unknown</script>', ['ka-berto']] as $guide) {
+            $this->ask('Who are you?', ['guide' => $guide])->assertStatus(422)->assertJsonValidationErrors('guide');
+        }
+        $this->assertSame(0, $this->operationalQueries());
+        OfficeHelpAgent::assertNeverPrompted();
+        Http::assertNothingSent();
     }
 
     public function test_page_and_account_awareness_preserve_a_validated_report_reference(): void
@@ -210,7 +246,7 @@ class AssistantConversationTest extends TestCase
             ->assertSee('role and office scope still control access')->assertSee('limited to Animal Health');
         $this->ask('What is my role?', ['module' => 'farmers'])->assertOk()->assertJsonPath('source', 'conversation')
             ->assertSee('Provincial Veterinary Office')->assertSee('Own province')->assertDontSee($this->staff->name);
-        $this->ask('Show our farmers', ['module' => 'farmers'])->assertOk()->assertJsonPath('source', 'clarification');
+        $this->ask('Show our farmers', ['module' => 'farmers', 'guide' => 'kiko'])->assertOk()->assertJsonPath('source', 'clarification');
         $this->assertSame(0, $this->operationalQueries());
         OfficeHelpAgent::assertNeverPrompted();
         Http::assertNothingSent();

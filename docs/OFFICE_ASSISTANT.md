@@ -1,5 +1,35 @@
 # Office Assistant
 
+## Farm guide characters — October 19, 2026
+
+The shared office chat now offers **Ka Berto** (default cow), **Ka Kaloy**
+(carabao), **Aling Maya** and **Kiko**. Open the portrait in the chat header to
+switch. The launcher, header, welcome image, composer and new reply labels use
+the selected guide. Existing replies keep their original guide, and Retry
+keeps the appearance captured for that request. Switching preserves the chat,
+draft and opaque reference and never calls a provider. New chat still clears
+the conversation. In-flight requests and expired sessions block switching.
+
+Only the allowlisted appearance ID is stored at
+`eagrilgu.assistant-guide.v1` in optional browser local storage. No message,
+record, account ID or session reference is stored there. Missing/blocked
+storage works in memory; unknown values fall back to Ka Berto. The optional
+`guide` request field uses `AssistantGuide::ids()` validation; older clients
+default to Ka Berto. This field affects only local identity text, not intent,
+authorization, report scope, provider context, budgets or encrypted references.
+The four characters are appearances of the same helper, not separate agents
+or real staff. About your guide and local introductions retain truthful
+software/AI, privacy and official-decision limits. Reviewed help uses a shared
+generic farm-guide voice; no appearance preference is sent to OpenAI.
+
+All eight 160px/384px WebP files in `public/images/mascots` are local transparent
+delivery images from the four approved concepts. Release the catalog, request,
+controller, identity/conversation, reviewed guidance, agent, view, CSS/JS and
+images together. Regenerate optimized autoloading and Blade; preserve existing
+general cache and provider allowances. No migration, dependency, account,
+environment change or additional service is required. Runtime release status
+is recorded in [the deployment receipt](GITHUB_DEPLOYMENT.md).
+
 October 16 local architecture follow-up: conversation/help services now live in
 `App\Modules\Assistant`, while local record reads live in
 `App\Modules\Reporting\Application\AssistantRecords`. The conversation depends

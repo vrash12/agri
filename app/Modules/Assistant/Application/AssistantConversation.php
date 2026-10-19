@@ -20,7 +20,7 @@ final class AssistantConversation
         private AssistantNextSteps $nextSteps,
     ) {}
 
-    public function answer(User $user, string $message, string $module, string $sessionId, ?string $contextToken = null, ?string $choiceToken = null): array
+    public function answer(User $user, string $message, string $module, string $sessionId, ?string $contextToken = null, ?string $choiceToken = null, string $guide = AssistantGuide::DEFAULT): array
     {
         Gate::forUser($user)->authorize('use', OfficeAssistant::class);
         if (! config('assistant.enabled')) {
@@ -51,7 +51,7 @@ final class AssistantConversation
                 : $this->token($user, $sessionId, ['task' => 'identity', 'year' => $intent['year'], 'farmer_id' => $context['farmer_id'] ?? null]);
 
             return $this->withNextSteps($user, [
-                'answer' => $this->identity->answer($user, $intent['kind'], $intent['language'] ?? 'en', $module),
+                'answer' => $this->identity->answer($user, $intent['kind'], $intent['language'] ?? 'en', $module, $guide),
                 'source' => 'conversation', 'report' => 'identity', 'year' => null,
                 'scope' => $this->scope($user), 'actions' => [], 'links' => [],
                 'context' => $replyContext,

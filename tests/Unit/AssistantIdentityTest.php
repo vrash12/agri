@@ -63,6 +63,16 @@ final class AssistantIdentityTest extends TestCase
         $this->assertStringNotContainsString('fixture-private-value-do-not-echo', $answer);
     }
 
+    public function test_unknown_guide_never_becomes_identity_text_or_an_asset_path(): void
+    {
+        $user = new User(['role' => User::ROLE_MUNICIPAL_STAFF]);
+        foreach (['../private', '<script>unknown</script>'] as $id) {
+            $answer = (new AssistantIdentity)->answer($user, 'identity', 'en', 'other', $id);
+            $this->assertStringContainsString('Ka Berto', $answer);
+            $this->assertStringNotContainsString($id, $answer);
+        }
+    }
+
     #[DataProvider('pageContexts')]
     public function test_page_awareness_uses_only_a_bounded_display_label(string $module, string $label): void
     {
@@ -138,7 +148,7 @@ final class AssistantIdentityTest extends TestCase
         $user = new User(['role' => User::ROLE_MUNICIPAL_STAFF]);
         foreach (['en', 'fil'] as $language) {
             $answer = (new AssistantIdentity)->answer($user, 'awareness', $language, 'dashboard');
-            $this->assertStringContainsString('eAgriLGU Assistant', $answer);
+            $this->assertStringContainsString('Ka Berto', $answer);
             $this->assertStringContainsString('Dashboard', $answer);
             $this->assertStringContainsString($language === 'fil' ? 'wala akong kamalayan' : 'not a conscious person', $answer);
             $this->assertStringContainsString($language === 'fil' ? 'sinuring gabay' : 'reviewed system guidance', $answer);

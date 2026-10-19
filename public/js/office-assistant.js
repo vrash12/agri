@@ -9,6 +9,15 @@
   const status = find('status'), count = find('count'), jump = find('jump');
   const cooldown = find('cooldown');
   if (!dialog || typeof dialog.showModal !== 'function') return;
+  const guidePicker = find('guide-picker');
+  const guideButtons = [...root.querySelectorAll('[data-assistant-guide]')];
+  const guides = new Map(guideButtons.map(button => [button.dataset.assistantGuide, {
+    id: button.dataset.assistantGuide, name: button.dataset.name,
+    avatar: button.dataset.avatar, portrait: button.dataset.portrait, alt: button.dataset.alt
+  }]));
+  const defaultGuide = guides.get(root.dataset.guide) || { id: 'ka-berto', name: 'Ka Berto' };
+  let activeGuide = defaultGuide;
+  const guidePreference = 'eagrilgu.assistant-guide.v1';
   let context = null, busy = false, controller = null, serial = 0, pending = null;
   let composing = false, sessionExpired = false;
   let cooldownUntil = 0, cooldownTimer = null;
@@ -21,12 +30,37 @@
   const coolingDown = () => cooldownUntil > Date.now();
 
   function announce(text) { status.textContent = text; }
+  function selectGuide(id, persist = true) {
+    if (busy || sessionExpired || !guides.has(id)) return;
+    activeGuide = guides.get(id);
+    root.dataset.guide = id;
+    root.querySelectorAll('[data-assistant-avatar]').forEach(image => { image.src = activeGuide.avatar; });
+    root.querySelectorAll('[data-assistant-guide-name]').forEach(label => { label.textContent = activeGuide.name; });
+    const launcherName = find('launcher-name'), portrait = find('portrait');
+    if (launcherName) launcherName.textContent = 'Ask ' + activeGuide.name;
+    if (portrait) { portrait.src = activeGuide.portrait; portrait.alt = activeGuide.alt; }
+    open.setAttribute('aria-label', 'Chat with ' + activeGuide.name);
+    messages.setAttribute('aria-label', 'Conversation with ' + activeGuide.name);
+    input.setAttribute('placeholder', 'Ask ' + activeGuide.name + '…');
+    guideButtons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.assistantGuide === id)));
+    if (guidePicker) guidePicker.open = false;
+    if (persist) {
+      // Only an allowlisted appearance preference is retained, never chat or records.
+      try { window.localStorage.setItem(guidePreference, id); } catch (_) { /* Storage is optional. */ }
+      announce(activeGuide.name + ' is your guide. Your conversation is unchanged.');
+      input.focus();
+    }
+  }
+  function replyLabel(guide, source) {
+    return guide.name + (source === 'records' ? ' · Office records' : source === 'help' ? ' · System guide' : '');
+  }
   function updateCount() { count.textContent = input.value.length + ' / 800'; }
   function refreshControls() {
     const blocked = busy || sessionExpired || coolingDown();
     send.disabled = blocked;
     input.disabled = sessionExpired;
     form.setAttribute('aria-busy', String(busy));
+    guideButtons.forEach(button => { button.disabled = busy || sessionExpired; });
     messages.querySelectorAll('button').forEach((button) => {
       button.disabled = blocked || (suggestionControls.has(button) && !latestSuggestions.has(button));
     });
@@ -81,20 +115,21 @@
       jump.hidden = false;
     }
   }
-  function message(role, text, source) {
+  function message(role, text, source, guideId = activeGuide.id) {
     const atBottom = nearBottom();
+    const guide = guides.get(guideId) || defaultGuide;
     const entry = document.createElement('div');
     entry.className = 'assistant-message' + (role === 'user' ? ' is-user' : '');
+    if (role !== 'user') entry.setAttribute('data-guide', guide.id);
     const label = document.createElement('strong');
-    label.textContent = role === 'user' ? 'You' : source === 'records' ? 'Office records'
-      : source === 'help' ? 'System guide' : 'Assistant';
+    label.textContent = role === 'user' ? 'You' : replyLabel(guide, source);
     const content = document.createElement('p');
     content.textContent = text;
     entry.append(label, content);
     messages.append(entry);
     welcome.hidden = true;
     keepReading(atBottom);
-    return { entry, label, content };
+    return { entry, label, content, guide };
   }
   function setThinking(reply) {
     // Keep the pending turn in the conversation while the server works. The
@@ -104,8 +139,8 @@
     reply.content.classList.add('assistant-thinking');
     reply.content.setAttribute('role', 'status');
     reply.content.setAttribute('aria-live', 'polite');
-    reply.content.setAttribute('aria-label', 'Assistant is thinking');
-    reply.content.textContent = 'Thinking…';
+    reply.content.setAttribute('aria-label', reply.guide.name + ' is checking your question');
+    reply.content.textContent = 'Checking…';
   }
   function clearThinking(reply) {
     reply.content.classList.remove('assistant-thinking');
@@ -141,8 +176,7 @@
     clearThinking(reply);
     reply.entry.classList.remove('is-pending', 'is-error');
     reply.entry.removeAttribute('aria-busy');
-    reply.label.textContent = data?.source === 'records' ? 'Office records'
-      : data?.source === 'help' ? 'System guide' : 'Assistant';
+    reply.label.textContent = replyLabel(reply.guide, data?.source);
     reply.content.textContent = text;
     reply.entry.replaceChildren(reply.label, reply.content);
     if (data) {
@@ -257,7 +291,7 @@
     reset();
     sessionExpired = true;
     setBusy(false);
-    const text = 'Your session has ended. Sign in again, then reopen the Assistant.';
+    const text = 'Your session has ended. Sign in again, then reopen your farm guide.';
     message('assistant', text);
     announce(text);
   }
@@ -284,7 +318,8 @@
       return;
     }
     const draftContext = suggestedDraft?.message === question ? suggestedDraft.context : context;
-    const outgoing = request || { question, visible: question, context: draftContext, choice: null };
+    const outgoing = request ? { ...request, guide: guides.has(request.guide) ? request.guide : activeGuide.id }
+      : { question, visible: question, context: draftContext, choice: null, guide: activeGuide.id };
     if ((outgoing.context !== null && outgoing.context !== undefined && !validToken(outgoing.context))
       || (outgoing.choice && !validToken(outgoing.choice))) {
       localError('That reply choice is no longer available. Ask your question again.');
@@ -292,8 +327,8 @@
     }
     const requestId = ++serial;
     if (!existingReply) message('user', outgoing.visible || question);
-    const reply = existingReply || message('assistant', 'Thinking…');
-    showReply(reply, 'Thinking…');
+    const reply = existingReply || message('assistant', 'Checking…', null, outgoing.guide);
+    showReply(reply, 'Checking…');
     setThinking(reply);
     reply.entry.classList.add('is-pending');
     reply.entry.setAttribute('aria-busy', 'true');
@@ -305,7 +340,7 @@
 
     // The visible conversation stays in browser memory. Only opaque reference hints
     // accompany this turn; no transcript, client-selected mode or farmer ID is sent.
-    const payload = { message: question, module: root.dataset.module };
+    const payload = { message: question, module: root.dataset.module, guide: outgoing.guide };
     if (outgoing.context) payload.context = outgoing.context;
     if (outgoing.choice) payload.choice = outgoing.choice;
     try {
@@ -327,7 +362,7 @@
         const expected = [403, 404, 409, 422, 429, 503].includes(response.status);
         const error = data.errors?.message?.[0] || data.message;
         const safeText = expected && typeof error === 'string' && error.length <= 800
-          ? error : 'The Assistant could not answer. Please try again shortly.';
+          ? error : 'Your guide could not answer. Please try again shortly.';
         if (response.status === 403) {
           const draft = input.value;
           reset();
@@ -369,6 +404,18 @@
     }
   }
 
+  // Reading a stale or tampered preference cannot add a fifth guide or asset URL.
+  let savedGuide;
+  try { savedGuide = window.localStorage.getItem(guidePreference); } catch (_) { /* Storage is optional. */ }
+  selectGuide(guides.has(savedGuide) ? savedGuide : defaultGuide.id, false);
+  guideButtons.forEach(button => button.addEventListener('click', () => selectGuide(button.dataset.assistantGuide)));
+  if (guidePicker) guidePicker.addEventListener('keydown', event => {
+    if (event.key !== 'Escape' || !guidePicker.open) return;
+    event.preventDefault();
+    event.stopPropagation();
+    guidePicker.open = false;
+    guidePicker.querySelector('summary')?.focus();
+  });
   open.hidden = false;
   open.addEventListener('click', () => {
     refreshCooldown();
@@ -378,7 +425,8 @@
   });
   find('close').addEventListener('click', () => dialog.close());
   dialog.addEventListener('close', () => {
-    cancel('Message canceled. You can retry when you reopen the Assistant.', true);
+    if (guidePicker) guidePicker.open = false;
+    cancel('Message canceled. You can retry when you reopen your farm guide.', true);
     open.setAttribute('aria-expanded', 'false');
     open.focus();
   });

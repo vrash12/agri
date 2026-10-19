@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Exceptions\AssistantUnavailable;
 use App\Http\Requests\AssistantMessageRequest;
 use App\Modules\Assistant\Application\AssistantConversation;
+use App\Modules\Assistant\Application\AssistantGuide;
 use App\Support\AuditTrail;
 use Illuminate\Http\JsonResponse;
 
@@ -16,7 +17,8 @@ final class AssistantController extends Controller
         try {
             $started = hrtime(true);
             $result = $conversation->answer($request->user(), $data['message'], $data['module'],
-                $request->hasSession() ? $request->session()->getId() : '', $data['context'] ?? null, $data['choice'] ?? null);
+                $request->hasSession() ? $request->session()->getId() : '', $data['context'] ?? null, $data['choice'] ?? null,
+                $data['guide'] ?? AssistantGuide::DEFAULT);
             $metadata = $result['_audit'];
             $metadata['latency_ms'] = (int) round((hrtime(true) - $started) / 1000000);
             unset($result['_audit']);

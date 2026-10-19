@@ -1,5 +1,29 @@
 # Design and UX implementation record
 
+## Four farm guide mascots — October 19, 2026
+
+The owner selected concepts 1, 4, 6 and 7: Ka Berto, Ka Kaloy, Aling Maya and
+Kiko. The shared signed-in office chat uses Ka Berto by default and a native
+details picker in the header portrait for the other three. Character changes
+retain the one conversation and draft. The launcher, welcome portrait,
+composer and reply badges use the chosen character. This is a cosmetic choice,
+not four different agents or staff identities. Brief privacy copy and About
+your guide explain AI-assisted help and read-only limits.
+
+Artwork was generated with built-in image generation on October 19 using a
+cartoon Filipino agriculture brief, green/gold clothing and genuinely
+transparent backgrounds. Original 1254px PNGs and the complete prompt set remain
+in the workspace's ignored `output/mascot-concepts/2026-10-19` folder. Delivery
+files are noncreative WebP transcodes at 160px (avatars) and 384px (portraits),
+with full alpha preserved; each avatar is under 13 KB and each portrait under
+42 KB. They are served locally without an image host or new provider request.
+The picker uses small avatars, while the welcome view uses a single portrait.
+
+Native disclosure controls, explicit button names/pressed states, keyboard
+Escape, focus restoration, reduced-motion handling and narrow-screen sizing
+remain available. See [Office Assistant](docs/OFFICE_ASSISTANT.md) for state,
+privacy, testing and combined release requirements.
+
 ## Shared Inter typography — October 15, 2026
 
 Office pages, login, homepage, farmer portal, public parcel page and crop SVG

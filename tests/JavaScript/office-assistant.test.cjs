@@ -8,7 +8,7 @@ const source = fs.readFileSync(path.join(__dirname, '../../public/js/office-assi
 class Element {
   constructor(tagName = 'div') {
     this.tagName = tagName; this.listeners = {}; this.children = []; this.attributes = {};
-    this.hidden = false; this.value = ''; this.textContent = ''; this.disabled = false; this.className = '';
+    this.hidden = false; this.value = ''; this.textContent = ''; this.disabled = false; this.className = ''; this.dataset = {};
     this.scrollTop = 0; this.scrollHeight = 400; this.clientHeight = 400;
     const classes = () => new Set(this.className.split(/\s+/).filter(Boolean));
     this.classList = {
@@ -55,30 +55,44 @@ class Element {
   }
 }
 
-function setup(fetcher) {
+function setup(fetcher, { savedGuide = null, storageBlocked = false } = {}) {
   const names = ['dialog', 'open', 'input', 'form', 'send', 'clear', 'welcome',
-    'messages', 'body', 'status', 'count', 'close', 'jump', 'cooldown'];
+    'messages', 'body', 'status', 'count', 'close', 'jump', 'cooldown', 'guide-picker', 'launcher-name', 'portrait'];
   const elements = Object.fromEntries(names.map(name => [name, new Element()]));
   elements.jump.hidden = true;
-  const root = { dataset: { endpoint: '/assistant/message', module: 'crops' },
-    querySelector: selector => elements[selector.slice(16, -1)], querySelectorAll: () => [] };
+  const guideButtons = [['ka-berto', 'Ka Berto'], ['ka-kaloy', 'Ka Kaloy'], ['aling-maya', 'Aling Maya'], ['kiko', 'Kiko']].map(([id, name]) => {
+    const button = new Element('button');
+    button.dataset = { assistantGuide: id, name, avatar: '/images/mascots/' + id + '-avatar-v1.webp',
+      portrait: '/images/mascots/' + id + '-portrait-v1.webp', alt: name + ' mascot' };
+    return button;
+  });
+  const avatars = [new Element('img'), new Element('img')], guideNames = [new Element('h2'), new Element('span')];
+  const root = { dataset: { endpoint: '/assistant/message', module: 'crops', guide: 'ka-berto' },
+    querySelector: selector => elements[selector.slice(16, -1)],
+    querySelectorAll: selector => selector === '[data-assistant-guide]' ? guideButtons
+      : selector === '[data-assistant-avatar]' ? avatars : selector === '[data-assistant-guide-name]' ? guideNames : [] };
   const document = { body: new Element('body'),
     querySelector: selector => selector === '[data-office-assistant]' ? root : { content: 'synthetic-csrf' },
     createElement(tagName) { const element = new Element(tagName); element.ownerDocument = document; return element; } };
   document.activeElement = document.body;
-  Object.values(elements).forEach(element => { element.ownerDocument = document; });
+  [...Object.values(elements), ...guideButtons, ...avatars, ...guideNames].forEach(element => { element.ownerDocument = document; });
   const listeners = {};
   let now = Date.UTC(2026, 9, 11, 2), nextTimer = 0;
   const timers = new Map();
   class ClockDate extends Date { static now() { return now; } }
-  const window = { setTimeout(fn, delay) { const id = ++nextTimer; timers.set(id, { fn, at: now + delay, delay }); return id; },
+  const stored = new Map(savedGuide === null ? [] : [['eagrilgu.assistant-guide.v1', savedGuide]]), storageWrites = [];
+  const window = { localStorage: {
+      getItem(key) { if (storageBlocked) throw new Error('Storage blocked'); return stored.get(key) ?? null; },
+      setItem(key, value) { if (storageBlocked) throw new Error('Storage blocked'); stored.set(key, value); storageWrites.push([key, value]); }
+    },
+    setTimeout(fn, delay) { const id = ++nextTimer; timers.set(id, { fn, at: now + delay, delay }); return id; },
     clearTimeout(id) { timers.delete(id); },
     addEventListener(name, fn) { listeners[name] = fn; },
     location: { href: 'https://example.test/farmers', origin: 'https://example.test' } };
   const requests = [];
   const fetch = async (url, options) => { requests.push({ url, options }); return fetcher(url, options); };
   vm.runInNewContext(source, { document, window, fetch, AbortController, URL, Date: ClockDate });
-  return { ...elements, document, requests, listeners, now: () => now,
+  return { ...elements, document, requests, listeners, root, guideButtons, avatars, guideNames, stored, storageWrites, now: () => now,
     timeout() { const timer = [...timers.entries()].find(([, entry]) => entry.delay === 30000); if (timer) timer[1].fn(); },
     advance(milliseconds) {
       const until = now + milliseconds;
@@ -114,7 +128,7 @@ test('follow-up suggestions stage an editable message with its reply reference a
   assert.equal(ui.document.activeElement, ui.input);
   assert.match(ui.status.textContent, /Edit it or send/);
   await ui.form.fire('submit');
-  assert.deepEqual(payload(ui), { message: 'Show me the steps', module: 'crops', context: 'crop-reference' });
+  assert.deepEqual(payload(ui), { message: 'Show me the steps', module: 'crops', guide: 'ka-berto', context: 'crop-reference' });
   assert.equal(ui.input.value, '');
 });
 
@@ -144,7 +158,7 @@ test('a staged follow-up retains its own context after a farmer choice changes t
   await choice.fire('click');
   assert.equal(ui.input.value, 'Show me the steps');
   await ui.form.fire('submit');
-  assert.deepEqual(payload(ui), { message: 'Show me the steps', module: 'crops', context: 'guide-reference' });
+  assert.deepEqual(payload(ui), { message: 'Show me the steps', module: 'crops', guide: 'ka-berto', context: 'guide-reference' });
 });
 
 test('editing a staged follow-up releases its captured reference and uses the current conversation', async () => {
@@ -157,7 +171,7 @@ test('editing a staged follow-up releases its captured reference and uses the cu
   const choice = ui.messages.children.at(-1).querySelectorAll('button')[0];
   await followups(ui)[0].fire('click'); await choice.fire('click');
   ui.input.value = 'His assistance'; await ui.input.fire('input'); await ui.form.fire('submit');
-  assert.deepEqual(payload(ui), { message: 'His assistance', module: 'crops', context: 'farmer-reference' });
+  assert.deepEqual(payload(ui), { message: 'His assistance', module: 'crops', guide: 'ka-berto', context: 'farmer-reference' });
 });
 
 test('a staged null-reference follow-up never borrows a newer farmer context', async () => {
@@ -169,7 +183,7 @@ test('a staged null-reference follow-up never borrows a newer farmer context', a
   ui.input.value = 'Guide'; await ui.form.fire('submit');
   const choice = ui.messages.children.at(-1).querySelectorAll('button')[0];
   await followups(ui)[0].fire('click'); await choice.fire('click'); await ui.form.fire('submit');
-  assert.deepEqual(payload(ui), { message: 'How do I use this page?', module: 'crops' });
+  assert.deepEqual(payload(ui), { message: 'How do I use this page?', module: 'crops', guide: 'ka-berto' });
 });
 
 test('old suggestions become inactive on another pending request and stay inactive after recovery', async () => {
@@ -232,7 +246,7 @@ test('New chat clears a staged reference and old suggestions cannot recreate it'
   await old.fire('click'); await ui.clear.fire('click'); await old.fire('click');
   assert.equal(ui.input.value, '');
   ui.input.value = 'Show me the steps'; await ui.form.fire('submit');
-  assert.deepEqual(payload(ui), { message: 'Show me the steps', module: 'crops' });
+  assert.deepEqual(payload(ui), { message: 'Show me the steps', module: 'crops', guide: 'ka-berto' });
 });
 
 test('session expiry erases a staged follow-up and blocks detached suggestion controls', async () => {
@@ -251,10 +265,10 @@ test('application-owned conversational replies display and retain only an opaque
   const ui = setup(async () => reply('I am the eAgriLGU Assistant.', { source: 'conversation', context: 'identity-reference' }));
   ui.input.value = 'Who are you?'; await ui.form.fire('submit');
   assert.equal(content(ui), 'I am the eAgriLGU Assistant.');
-  assert.equal(ui.messages.children.at(-1).children[0].textContent, 'Assistant');
+  assert.equal(ui.messages.children.at(-1).children[0].textContent, 'Ka Berto');
   assert.equal(ui.input.value, '');
   ui.input.value = 'Tell me more'; await ui.form.fire('submit');
-  assert.deepEqual(payload(ui), { message: 'Tell me more', module: 'crops', context: 'identity-reference' });
+  assert.deepEqual(payload(ui), { message: 'Tell me more', module: 'crops', guide: 'ka-berto', context: 'identity-reference' });
   assert.doesNotMatch(ui.requests.at(-1).options.body, /history|general_context|I am the/);
 });
 
@@ -285,13 +299,13 @@ test('one conversation renders untrusted text safely and sends only current mess
   ui.input.value = 'How do I draw a crop area?'; await ui.form.fire('submit');
   assert.equal(ui.requests[0].options.headers['X-CSRF-TOKEN'], 'synthetic-csrf');
   assert.equal(ui.requests[0].options.credentials, 'same-origin');
-  assert.deepEqual(payload(ui, 0), { message: 'Find farmer AGRI-F-000012', module: 'crops' });
-  assert.deepEqual(payload(ui), { message: 'How do I draw a crop area?', module: 'crops', context: 'opaque-record-reference' });
+  assert.deepEqual(payload(ui, 0), { message: 'Find farmer AGRI-F-000012', module: 'crops', guide: 'ka-berto' });
+  assert.deepEqual(payload(ui), { message: 'How do I draw a crop area?', module: 'crops', guide: 'ka-berto', context: 'opaque-record-reference' });
   assert.doesNotMatch(ui.requests[1].options.body, /Farmer Fixture|AGRI-F|history|transcript|mode|year|farmer_id/);
   assert.equal(content(ui), '<script>untrusted()</script>');
   assert.equal(ui.messages.children.at(-1).innerHTML, undefined);
-  assert.equal(ui.messages.children[1].children[0].textContent, 'Office records');
-  assert.equal(ui.messages.children.at(-1).children[0].textContent, 'System guide');
+  assert.equal(ui.messages.children[1].children[0].textContent, 'Ka Berto · Office records');
+  assert.equal(ui.messages.children.at(-1).children[0].textContent, 'Ka Berto · System guide');
   assert.equal(ui.messages.children.length, 4);
 });
 
@@ -306,7 +320,7 @@ test('choices use opaque tokens and local visible labels without sending names o
   assert.equal(actions[0].textContent, '<script>Fixture 0</script>');
   assert.equal(actions[6].href, 'https://example.test/farmers');
   await actions[0].fire('click');
-  assert.deepEqual(payload(ui), { message: 'Continue with my choice.', module: 'crops',
+  assert.deepEqual(payload(ui), { message: 'Continue with my choice.', module: 'crops', guide: 'ka-berto',
     context: 'choice-context', choice: 'encrypted-choice-0' });
   assert.doesNotMatch(ui.requests[1].options.body, /Fixture|farmer_id|history/);
   assert.equal(content(ui, -2), '<script>Fixture 0</script>');
@@ -335,12 +349,12 @@ test('a pending send cannot duplicate; close cancels and keeps a retryable messa
   assert.equal(ui.requests.length, 1);
   assert.equal(ui.send.disabled, true);
   assert.equal(ui.clear.disabled, false);
-  assert.equal(content(ui), 'Thinking…');
+  assert.equal(content(ui), 'Checking…');
   const pendingContent = ui.messages.children.at(-1).children[1];
   assert.match(pendingContent.className, /assistant-thinking/);
   assert.equal(pendingContent.attributes.role, 'status');
   assert.equal(pendingContent.attributes['aria-live'], 'polite');
-  assert.equal(pendingContent.attributes['aria-label'], 'Assistant is thinking');
+  assert.equal(pendingContent.attributes['aria-label'], 'Ka Berto is checking your question');
   await ui.close.fire('click');
   assert.equal(ui.requests[0].options.signal.aborted, true);
   resolve(reply('Late answer')); await pending;
@@ -379,7 +393,7 @@ test('New chat cancels work immediately and clears text and opaque context befor
   assert.equal(ui.input.value, '');
   assert.equal(ui.welcome.hidden, false);
   ui.input.value = 'New question'; await ui.form.fire('submit');
-  assert.deepEqual(payload(ui), { message: 'New question', module: 'crops' });
+  assert.deepEqual(payload(ui), { message: 'New question', module: 'crops', guide: 'ka-berto' });
 });
 
 test('validation and allowance failures appear in the conversation, preserve input and retry without duplicate user turns', async () => {
@@ -441,7 +455,7 @@ test('Retry-After pauses Send, choices and Retry while keeping the draft and cap
   assert.equal(retry.disabled, false);
   assert.equal(ui.status.textContent, 'You can try sending again.');
   await retry.fire('click');
-  assert.deepEqual(payload(ui), { message: 'Our assistance', module: 'crops', context: 'choice-context' });
+  assert.deepEqual(payload(ui), { message: 'Our assistance', module: 'crops', guide: 'ka-berto', context: 'choice-context' });
   assert.equal(ui.input.value, 'Next unsent draft');
   assert.equal(ui.messages.children.length, 4);
 });
@@ -578,7 +592,7 @@ test('permission denials clear private context but keep a veterinary account abl
   assert.equal(ui.input.value, 'Farmers');
   assert.equal(ui.send.disabled, false);
   ui.input.value = 'Animal Health again'; await ui.form.fire('submit');
-  assert.deepEqual(payload(ui), { message: 'Animal Health again', module: 'crops' });
+  assert.deepEqual(payload(ui), { message: 'Animal Health again', module: 'crops', guide: 'ka-berto' });
 });
 
 test('page exit clears the conversation and cancels pending work before browser restoration', async () => {
@@ -679,7 +693,8 @@ test('a typed draft during a request survives its response, and New chat leaves 
   ui.input.value = 'Next unsent question';
   resolve(reply('Reply', { context: 'short-lived-context' })); await pending;
   assert.equal(ui.input.value, 'Next unsent question');
-  assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB/);
+  assert.equal(ui.storageWrites.length, 0);
+  assert.doesNotMatch(source, /sessionStorage|indexedDB/);
 });
 
 test('provider timeout restores send and leaves a retryable question', async () => {
@@ -694,6 +709,76 @@ test('provider timeout restores send and leaves a retryable question', async () 
   assert.equal(controls(ui)[0].textContent, 'Retry');
 });
 
+test('switching guides keeps the conversation, draft and reference and stores only an appearance key', async () => {
+  const ui = setup(async () => reply('Local office summary.', { source: 'records', context: 'protected-reference' }));
+  await ui.open.fire('click');
+  ui.input.value = 'Show our farmers'; await ui.form.fire('submit');
+  const oldReply = ui.messages.children.at(-1);
+  ui.input.value = 'My unfinished follow-up';
+  for (const button of ui.guideButtons) {
+    await button.fire('click');
+    assert.equal(ui.requests.length, 1);
+    assert.equal(ui.input.value, 'My unfinished follow-up');
+    assert.equal(ui.messages.children.length, 2);
+    assert.equal(ui.dialog.open, true);
+    assert.equal(ui.guideNames[0].textContent, button.dataset.name);
+    assert.equal(ui.avatars[0].src, button.dataset.avatar);
+    assert.equal(ui.portrait.src, button.dataset.portrait);
+    assert.equal(button.attributes['aria-pressed'], 'true');
+    assert.equal(ui.guideButtons.filter(item => item.attributes['aria-pressed'] === 'true').length, 1);
+  }
+  await ui.form.fire('submit');
+  assert.deepEqual(payload(ui), { message: 'My unfinished follow-up', module: 'crops', guide: 'kiko', context: 'protected-reference' });
+  assert.equal(oldReply.children[0].textContent, 'Ka Berto · Office records');
+  assert.equal(oldReply.attributes['data-guide'], 'ka-berto');
+  assert.equal(ui.messages.children.at(-1).children[0].textContent, 'Kiko · Office records');
+  assert.equal(ui.messages.children.at(-1).attributes['data-guide'], 'kiko');
+  assert.deepEqual(ui.storageWrites, ui.guideButtons.map(button => ['eagrilgu.assistant-guide.v1', button.dataset.assistantGuide]));
+  assert.equal(ui.stored.size, 1);
+  await ui.clear.fire('click');
+  assert.equal(ui.messages.children.length, 0);
+  assert.equal(ui.guideNames[0].textContent, 'Kiko');
+  assert.equal(ui.stored.get('eagrilgu.assistant-guide.v1'), 'kiko');
+});
+
+test('saved guide preferences are allowlisted and unavailable browser storage never breaks chat', async () => {
+  for (const savedGuide of ['ka-kaloy', 'aling-maya', 'kiko', '../../private', 'https://other.test/image.png', '<script>']) {
+    const ui = setup(async () => reply('Ready.'), { savedGuide });
+    const expected = ui.guideButtons.some(button => button.dataset.assistantGuide === savedGuide) ? savedGuide : 'ka-berto';
+    assert.equal(ui.root.dataset.guide, expected);
+    assert.equal(ui.requests.length, 0);
+    ui.input.value = 'Who are you?'; await ui.form.fire('submit');
+    assert.equal(payload(ui).guide, expected);
+    assert.equal(ui.storageWrites.length, 0);
+    assert.doesNotMatch(ui.avatars[0].src, /other\.test|private|script/);
+  }
+  const ui = setup(async () => reply('Ready.'), { storageBlocked: true });
+  await ui.guideButtons[2].fire('click');
+  assert.equal(ui.guideNames[0].textContent, 'Aling Maya');
+  ui.input.value = 'Hello'; await ui.form.fire('submit');
+  assert.equal(payload(ui).guide, 'aling-maya');
+  assert.equal(content(ui), 'Ready.');
+});
+
+test('a pending turn keeps its guide and Retry retains that guide after an appearance switch', async () => {
+  let resolve, turn = 0;
+  const ui = setup(() => ++turn === 1 ? new Promise(done => { resolve = done; }) : Promise.resolve(reply('Verified reply.')));
+  await ui.guideButtons[1].fire('click');
+  ui.input.value = 'How do I use this page?';
+  const pending = ui.form.fire('submit');
+  assert.ok(ui.guideButtons.every(button => button.disabled));
+  await ui.guideButtons[3].fire('click');
+  assert.equal(ui.root.dataset.guide, 'ka-kaloy');
+  assert.equal(ui.messages.children.at(-1).children[1].attributes['aria-label'], 'Ka Kaloy is checking your question');
+  resolve(response(503, { message: 'Try again shortly.' })); await pending;
+  await ui.guideButtons[2].fire('click');
+  assert.equal(ui.root.dataset.guide, 'aling-maya');
+  await controls(ui)[0].fire('click');
+  assert.equal(payload(ui).guide, 'ka-kaloy');
+  assert.equal(ui.messages.children.at(-1).children[0].textContent, 'Ka Kaloy · System guide');
+  assert.equal(ui.messages.children.length, 2);
+});
+
 test('unified dialog has no mode or year selectors and uses the shared visual system', () => {
   const blade = fs.readFileSync(path.join(__dirname, '../../resources/views/partials/office-assistant.blade.php'), 'utf8');
   const css = fs.readFileSync(path.join(__dirname, '../../public/css/office-assistant.css'), 'utf8');
@@ -705,7 +790,7 @@ test('unified dialog has no mode or year selectors and uses the shared visual sy
   assert.match(blade, /Office records stay in eAgriLGU/);
   assert.match(blade, /officeAssistantPrivacy officeAssistantCount officeAssistantCooldown/);
   assert.match(blade, /data-assistant-cooldown hidden/);
-  assert.match(blade, /assistant-presence-dot/);
+  assert.match(blade, /data-assistant-guide-picker/);
   assert.doesNotMatch(blade, /assistant-cooldown[^>]*aria-live/);
   assert.match(css, /var\(--ui-primary\)/);
   assert.match(css, /prefers-reduced-motion/);

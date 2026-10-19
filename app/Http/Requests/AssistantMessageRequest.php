@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Modules\Assistant\Application\AssistantGuide;
 use App\Modules\Assistant\Application\OfficeAssistant;
 use Illuminate\Contracts\Validation\Validator as ValidatorContract;
 use Illuminate\Foundation\Http\FormRequest;
@@ -23,6 +24,7 @@ final class AssistantMessageRequest extends FormRequest
         return [
             'message' => ['required', 'string', 'max:800'],
             'module' => ['required', Rule::in(OfficeAssistant::MODULES)],
+            'guide' => ['sometimes', 'string', Rule::in(AssistantGuide::ids())],
             'context' => ['nullable', 'string', 'max:4096'],
             'choice' => ['nullable', 'string', 'max:4096'],
         ];

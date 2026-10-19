@@ -7,8 +7,9 @@ use App\Models\User;
 /** Application-owned introductions never need inference or operational queries. */
 final class AssistantIdentity
 {
-    public function answer(User $user, string $kind, string $language = 'en', string $module = 'other'): string
+    public function answer(User $user, string $kind, string $language = 'en', string $module = 'other', string $guide = AssistantGuide::DEFAULT): string
     {
+        $name = AssistantGuide::get($guide)['name'];
         $veterinary = $user->isProvincialVeterinaryOffice();
         $filipino = $language === 'fil';
         $limits = $filipino
@@ -29,16 +30,16 @@ final class AssistantIdentity
         $pageContext = $this->pageContext($module, $filipino);
 
         return match ($kind) {
-            'greeting' => ($filipino ? 'Kumusta! Ako ang eAgriLGU Assistant. Ano ang maitutulong ko sa eAgriLGU?' : 'Hello! I’m the eAgriLGU Assistant. How can I help with eAgriLGU?').' '.$limits,
+            'greeting' => ($filipino ? 'Kumusta! Ako si '.$name.', ang digital na gabay mo sa eAgriLGU. Ano ang maitutulong ko?' : 'Hello! I’m '.$name.', your digital farm guide. How can I help with eAgriLGU?').' '.$limits,
             'thanks' => $filipino ? 'Walang anuman! Sabihin lang kung may iba ka pang tanong tungkol sa eAgriLGU.' : 'You’re welcome! Let me know if you have another question about eAgriLGU.',
             'capabilities' => $capabilities.' '.$pageContext.' '.$limits.' '.$this->fileLimits($filipino),
             'context' => $pageContext.' '.$limits,
             'account' => $this->accountContext($user, $filipino).' '.$limits,
-            'awareness' => $this->awareness($filipino).' '.$pageContext.' '.$limits,
+            'awareness' => $this->awareness($filipino, $name).' '.$pageContext.' '.$limits,
             'technology' => $this->technology($filipino).' '.$limits,
             default => ($filipino
-                ? 'Ako ang eAgriLGU Assistant, isang software assistant na gumagamit ng OpenAI para sa sinuring gabay ng eAgriLGU. Ang pagpapakilalang ito ay lokal at walang AI request. Hindi ako opisyal na gumagawa ng pasya o kapalit ng iyong agriculture office.'
-                : 'I’m the eAgriLGU Assistant, a software assistant using OpenAI for reviewed eAgriLGU guidance. This introduction is local and makes no AI request. I am not an official decision-maker or a replacement for your agriculture office.').' '.$pageContext.' '.$limits,
+                ? 'Ako si '.$name.', ang digital na gabay mo sa eAgriLGU. Isa akong mascot ng software, hindi totoong tao. Gumagamit ang sinuring gabay sa sistema ng OpenAI. Lokal ang pagpapakilalang ito at walang AI request. Hindi ako opisyal na gumagawa ng pasya o kapalit ng iyong agriculture office.'
+                : 'I’m '.$name.', your eAgriLGU digital farm guide. I’m a software mascot, not a person. Reviewed system guidance uses OpenAI. This introduction is local and makes no AI request. I am not an official decision-maker or a replacement for your agriculture office.').' '.$pageContext.' '.$limits,
         };
     }
 
@@ -86,11 +87,11 @@ final class AssistantIdentity
             : 'Your signed-in role is '.$role.'. Your office scope is '.$scope.'. This is your account assignment, not a current page filter.';
     }
 
-    private function awareness(bool $filipino): string
+    private function awareness(bool $filipino, string $name): string
     {
         return $filipino
-            ? 'Ako ang eAgriLGU Assistant, isang software helper; wala akong kamalayan o sariling pag-iisip tulad ng tao. Ginagamit ko ang sinuring gabay ng sistema, page context at pinapayagang follow-up references. Ang “Thinking” ay palatandaan lang na pinoproseso ang request. Hindi ko iniimbak ang buong chat o binabasa ang server directories.'
-            : 'I’m the eAgriLGU Assistant, a software helper, not a conscious person. I use reviewed system guidance, page context and permitted follow-up references. “Thinking” means a request is being processed. I do not store the full conversation or read server directories.';
+            ? 'Ako si '.$name.', isang software helper; wala akong kamalayan o sariling pag-iisip tulad ng tao. Ginagamit ko ang sinuring gabay ng sistema, page context at pinapayagang follow-up references. Ang “Checking” ay palatandaan lang na pinoproseso ang request. Hindi ko iniimbak ang buong chat o binabasa ang server directories.'
+            : 'I’m '.$name.', a software helper, not a conscious person. I use reviewed system guidance, page context and permitted follow-up references. “Checking” means a request is being processed. I do not store the full conversation or read server directories.';
     }
 
     private function technology(bool $filipino): string

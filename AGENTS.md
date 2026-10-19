@@ -1,5 +1,19 @@
 # Agriculture Information System — Developer Guide
 
+The October 19 farm-guide presentation is implemented for release. The office
+chat offers Ka Berto (default), Ka Kaloy, Aling Maya and Kiko through
+`AssistantGuide`; all four are appearances of the same helper with identical
+access. The optional allowlisted `guide` request field changes local identity
+text only. Keep chat/draft/context on switching and the original guide on Retry;
+never put messages or record references into browser storage. Only the cosmetic
+ID uses `eagrilgu.assistant-guide.v1`, with storage failures handled in memory.
+Retain truthful software/AI disclosure and role/office scope. Deploy all catalog,
+request/controller, conversation/identity, agent/knowledge, shared view, CSS/JS
+and eight transparent WebP assets together; rebuild optimized autoloading and
+Blade without clearing the general cache. No migration, new service, dependency,
+provider/account/environment change is required. See
+[docs/OFFICE_ASSISTANT.md](docs/OFFICE_ASSISTANT.md).
+
 The October 19 satellite-index expansion and simple explanations are deployed
 on Hostinger in runtime `aeb8eb5` through GitHub main and a fast-forward pull.
 The existing
