@@ -2,6 +2,10 @@
 
 ## Farm guide characters — October 19, 2026
 
+Deployed on Hostinger in runtime `11d1a1f` through GitHub main and a fast-forward
+pull. The release preserved all 24 tables / 9,946 existing rows, private settings
+and provider allowances; no schema or operational record write ran.
+
 The shared office chat now offers **Ka Berto** (default cow), **Ka Kaloy**
 (carabao), **Aling Maya** and **Kiko**. Open the portrait in the chat header to
 switch. The launcher, header, welcome image, composer and new reply labels use

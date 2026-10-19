@@ -1,5 +1,57 @@
 # GitHub-to-Hostinger deployment
 
+## Verified Hostinger release — October 19, 2026 — four farm guide mascots
+
+Runtime `11d1a1fbec3d8073da29d53a6bcedaa7e87de8c2` was pushed to GitHub main
+and installed with a fast-forward pull from clean tracked baseline `4dcb6fb`.
+The shared office chat now offers the owner's selected **Ka Berto**, **Ka Kaloy**,
+**Aling Maya** and **Kiko**, with Ka Berto as default. Select the header portrait
+to switch. The launcher, welcome portrait, composer, local introduction and new
+reply labels follow the selection. Existing conversation/drafts/references and
+the original guide on Retry are retained. The four appearances share the same
+permissions and workflow; they are not separate agents or real officers.
+
+A verified private backup contains **24 tables / 9,946 rows**, **3,409,288
+compressed bytes**, SHA-256
+`263fc8757a207f5f566c246323edd12fb43415c8901b0709bd03fa9fd75f42c7`.
+Recovery files, the prior tracked runtime, generated autoloader/caches/private
+environment, prior served assets and preservation receipts remain outside the
+document root in `/home/u330835917/.private/farm-guides-20261019`.
+Existing row/schema fingerprints, environment/configuration, session/cache
+namespaces, Assistant day/month counters and satellite allowance counters
+matched before and after verification. Existing untracked server files were
+preserved. No migration, dependency update, seeding, account/record edit,
+provider request, budget reset or general-cache clear ran.
+
+Hostinger regenerated optimized production autoloading and configuration,
+route and Blade caches. Both Assistant assets and all eight transparent WebP
+images were mirrored with 0644 permissions; source, served and HTTPS copies
+match SHA-256 for all **10 public assets**. The eight images total 201,848 bytes.
+The previous unrelated untracked `FarmerPlot.php` still produces its existing
+PSR-4 skip warning; it was preserved and the actual `FarmPlot` class remains
+unchanged.
+
+Local verification passed **285 JavaScript tests** and **648 focused PHP tests /
+5,247 assertions**, including guide switching/storage/retry, unknown guide
+rejection, identity/privacy/RAG, scoped records, architecture and shared page
+presentation. Focused Pint, syntax, whitespace and Blade checks passed. The
+first expanded knowledge draft exceeded the existing 2,400-character passage
+limit; it was shortened to preserve the bound and all retrieval tests pass.
+No retrieval limit was relaxed. Interactive synthetic browser checks confirmed
+all four guide images/names and switching. Narrow wrapper checks exercised the
+launchers; the browser viewport override did not change the actual viewport,
+so a phone conversation is not claimed as visually verified.
+
+Read-only production checks passed **seven authorized shared-chat renders**,
+**56 local English/Filipino introductions**, four conversation introductions,
+guide validation, reviewed knowledge retrieval and the veterinary Animal Health
+boundary. No provider request was made. Homepage, office sign-in and farmer
+sign-in returned HTTP 200; an anonymous chat POST without CSRF was rejected with
+HTTP 419. A signed-in live browser conversation was not performed; server renders
+and synthetic browser checks are recorded separately. Existing office tabs
+need one reload to receive the versioned CSS/JavaScript. Documentation status
+is recorded in the subsequent receipt commit without further runtime changes.
+
 ## Verified Hostinger release — October 19, 2026 — simple satellite checks and modular runtime
 
 Runtime `aeb8eb5076435c583184fdf03dc78258855f9525` was pushed to GitHub main

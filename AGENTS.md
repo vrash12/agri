@@ -1,6 +1,7 @@
 # Agriculture Information System — Developer Guide
 
-The October 19 farm-guide presentation is implemented for release. The office
+The October 19 farm-guide presentation is deployed on Hostinger in runtime
+`11d1a1f` through GitHub main and a fast-forward pull. The office
 chat offers Ka Berto (default), Ka Kaloy, Aling Maya and Kiko through
 `AssistantGuide`; all four are appearances of the same helper with identical
 access. The optional allowlisted `guide` request field changes local identity
