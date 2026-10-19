@@ -1,7 +1,7 @@
 # Agriculture Information System — Developer Guide
 
-The October 19 Assistant-understanding follow-up is implemented locally and
-awaiting release verification. `AssistantUtterance` applies finite, anchored
+The October 19 Assistant-understanding follow-up is deployed on Hostinger in
+runtime `2a9ab66`. `AssistantUtterance` applies finite, anchored
 polite/vocative rules and a shared literal farmer-lookup parser. Natural
 English/Filipino person questions stay local, reauthorize the account scope and
 cannot fall through to broader reports when mixed with unsupported requests.

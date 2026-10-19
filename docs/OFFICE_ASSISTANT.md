@@ -2,7 +2,7 @@
 
 ## Natural questions and current feature help — October 19, 2026
 
-Implemented locally; release verification is pending. The bounded local router
+Deployed on Hostinger in runtime `2a9ab66`. The bounded local router
 now accepts “Please find farmer Juan Dela Cruz”, “Who is Juan Dela Cruz?”,
 “Sino si Juan Dela Cruz?” and “Show me farmer Juan Dela Cruz”. Lookups return
 only permitted matches; choose a matching record before asking for its crops,

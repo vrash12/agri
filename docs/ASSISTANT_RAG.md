@@ -1,6 +1,6 @@
 # Assistant retrieval and grounded help
 
-October 19 understanding follow-up (local, awaiting release verification): the
+October 19 understanding follow-up (deployed in runtime `2a9ab66`): the
 manifest now contains **32 reviewed passages / 29 canonical topics**. Existing
 satellite passages support focused NDMI, SAVI, EVI and index-choice questions;
 the new `climate-readiness` passage explains the implemented El Niño dashboard,

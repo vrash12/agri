@@ -1,5 +1,54 @@
 # GitHub-to-Hostinger deployment
 
+## Verified Hostinger release — October 19, 2026 — farm guide understanding
+
+Runtime `2a9ab6619d12b460fa568297aa7df902a4faff37` was pushed to GitHub main
+and installed by fast-forward pull from clean tracked baseline `cc86967`.
+The guides accept finite polite English/Filipino farmer questions, introduce
+named characters independently of the selected appearance, preserve approved
+context through guide interludes and handle natural simpler/more-detail
+follow-ups. Selected-farmer plot/pananim requests use parcel/crop reads. Mixed
+lookups, unsupported affected/climate reports, mutations and invalid years
+clarify without returning broader totals or broken references. Existing record
+policies and reauthorization remain authoritative.
+
+Focused NDMI, SAVI, EVI and index-comparison help joins reviewed El Niño
+Readiness help and its allowlisted page hint. The manifest now contains
+**32 passages / 29 canonical topics** within existing size limits. Raw questions,
+transcripts, names and record content remain excluded from provider inputs.
+This is bounded application help, not autonomous climate reporting or tools.
+
+A verified private backup contains **24 tables / 9,946 rows**, **3,409,288
+compressed bytes**, SHA-256
+`ac583a4d158755d0820c42383dac422f0a633de70798220979cff19ce5dc9bd9`.
+Recovery files, prior tracked runtime, generated autoloader/caches/environment
+and preservation receipts remain outside the document root under
+`/home/u330835917/.private/assistant-understanding-20261019`.
+Existing row/schema fingerprints, environment/configuration, session/cache
+namespaces, Assistant day/month counters and satellite allowances matched
+before and after read-only checks. Existing untracked server files were retained.
+No migration, dependency update, account/record edit, provider call, budget reset
+or general-cache clear ran. This release changes no public assets.
+
+Hostinger PHP 8.3.35 regenerated optimized production autoloading and
+configuration/route/Blade caches. The pre-existing untracked, misnamed
+`FarmerPlot.php` produced its existing PSR-4 skip warning and was preserved.
+Local verification passed **769 focused PHP tests / 6,293 assertions** and
+**285 JavaScript tests**, plus scoped Pint, PHP syntax, Blade and whitespace
+checks. Feature tests use synthetic scoped records and SDK-faked generation,
+forbid outbound HTTP and cover foreign/moved farmer denial, opaque choices,
+veterinary limits, canonical-only prompts and named-guide follow-up continuity.
+
+Read-only production checks passed seven shared-chat role renders, 56 local
+English/Filipino introductions, four conversation introductions, 19 natural
+routing cases, all five new help-topic retrievals, veterinary restrictions,
+named-guide reference continuity and the climate page hint. Provider calls were
+blocked throughout verification. Homepage, office sign-in and farmer sign-in
+returned HTTP 200; anonymous chat without CSRF returned HTTP 419. No signed-in
+live browser conversation or fresh paid model/satellite request is claimed.
+Existing office pages need a reload to receive the climate page hint. This
+receipt is committed separately without further runtime changes.
+
 ## Verified Hostinger release — October 19, 2026 — four farm guide mascots
 
 Runtime `11d1a1fbec3d8073da29d53a6bcedaa7e87de8c2` was pushed to GitHub main
