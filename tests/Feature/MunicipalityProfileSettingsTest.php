@@ -306,6 +306,8 @@ class MunicipalityProfileSettingsTest extends TestCase
             ->assertSessionHasErrors('slug');
         $this->asRole(User::ROLE_MUNICIPAL_HEAD)->put(route('settings.lgu.website.update', 1), array_replace($this->websiteData(1), ['slug' => 'admin']))
             ->assertSessionHasErrors('slug');
+        $this->asRole(User::ROLE_MUNICIPAL_HEAD)->put(route('settings.lgu.website.update', 1), array_replace($this->websiteData(1), ['slug' => 'demo']))
+            ->assertSessionHasErrors('slug');
     }
 
     public function test_subdomain_hosts_render_only_the_matching_published_page_and_never_office_routes(): void
@@ -317,6 +319,18 @@ class MunicipalityProfileSettingsTest extends TestCase
         $this->get('http://ramos-tarlac-1.example.test/')->assertOk()->assertSee('Welcome to Ramos');
         $this->get('http://ramos-tarlac-1.example.test/login')->assertNotFound();
         $this->get('http://other.example.test/')->assertNotFound();
+    }
+
+    public function test_website_editor_shows_the_configured_tenant_address(): void
+    {
+        config(['lgu_websites.domain' => 'agritarlac.online']);
+        $this->asRole(User::ROLE_MUNICIPAL_HEAD)->put(route('settings.lgu.update', 1), $this->data())->assertRedirect();
+        $this->asRole(User::ROLE_MUNICIPAL_HEAD)->put(route('settings.lgu.website.update', 1), $this->websiteData(1))->assertRedirect();
+
+        $this->get(route('settings.lgu.website.edit', 1))
+            ->assertOk()
+            ->assertSee('ramos-tarlac-1.agritarlac.online')
+            ->assertSee('The matching Hostinger hostname and HTTPS certificate must exist before publishing.');
     }
 
     public function test_public_media_requires_publication_and_uses_restricted_headers(): void

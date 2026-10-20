@@ -59,7 +59,7 @@
         <section class="module-form-section" aria-labelledby="websiteAddressHeading">
           <div class="module-form-section-head"><span class="module-step">1</span><div><h2 id="websiteAddressHeading">Address &amp; publication</h2><p>Fields marked <span class="module-required">*</span> are required. Choose an address that identifies the LGU and province.</p></div></div>
           <div class="module-form-body"><div class="module-form-grid">
-            <x-module.field name="slug" label="Website address" :required="true" :full="true" :hint="$website->exists ? 'The address is fixed to keep shared links working.' : 'Lowercase letters, numbers and hyphens; 3–63 characters. It cannot be changed after the first save.'">
+            <x-module.field name="slug" label="LGU subdomain" :required="true" :full="true" :hint="$website->exists ? 'The subdomain is fixed to keep shared links working.' : 'Use a short lowercase address such as ramos-mao. It cannot be changed after the first save.'">
               <div class="lgu-set-address">
                 <span aria-hidden="true">{{ $addressPrefix }}</span>
                 <input id="slug" name="slug" value="{{ old('slug', $website->slug) }}" minlength="3" maxlength="63" pattern="[a-z0-9]+(-[a-z0-9]+)*" required autocapitalize="none" spellcheck="false" @readonly($website->exists) aria-describedby="slug_hint slug_url slug_error" @error('slug') aria-invalid="true" @enderror>
@@ -77,7 +77,11 @@
               @error('is_published')<span class="module-hint module-required" id="is_published_error">{{ $message }}</span>@enderror
             </fieldset>
           </div>
-          @unless($domain)<p class="lgu-set-note">@include('public-lgu.partials.icon', ['name' => 'globe', 'size' => 18])<span>The website publishes at the path above. Subdomains become available after the platform domain, DNS and HTTPS are configured.</span></p>@endunless
+          @if($domain)
+            <p class="lgu-set-note">@include('public-lgu.partials.icon', ['name' => 'globe', 'size' => 18])<span>This office will use <strong>{{ old('slug', $website->slug) ?: '[slug]' }}.{{ $domain }}</strong>. The matching Hostinger hostname and HTTPS certificate must exist before publishing.</span></p>
+          @else
+            <p class="lgu-set-note">@include('public-lgu.partials.icon', ['name' => 'globe', 'size' => 18])<span>The website currently uses the central <code>/lgus/{slug}</code> address. Subdomains become available after the platform domain, DNS and HTTPS are configured.</span></p>
+          @endif
           </div>
         </section>
 

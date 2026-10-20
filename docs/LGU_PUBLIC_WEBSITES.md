@@ -18,18 +18,18 @@ Cover uploads are private local PNG/JPEG/WebP files, at most 4 MB and 320 × 180
 
 A hostname selects public content only and never replaces office ownership/policies. `ResolveLguWebsiteHost` accepts GET/HEAD root/media paths on a matching tenant hostname and denies sign-in, API, office and mutation routes there. Unpublished, unknown and reserved tenants fail closed.
 
-## Optional subdomain hosting
+## Subdomain hosting on agritarlac.online
 
-Leave `LGU_WEBSITE_DOMAIN` blank to publish at central paths. To serve `https://{slug}.{domain}/`, configure a bare parent hostname only after the DNS provider and web server are ready. Example placeholders:
+The selected public domain is `agritarlac.online`. Leave `LGU_WEBSITE_DOMAIN` blank while hosting is being prepared; the central `/lgus/{slug}` links remain safe and usable. After an LGU hostname has been created and its HTTPS certificate is working, set the production value to `agritarlac.online` so its public address becomes `https://{slug}.agritarlac.online/`.
 
 ```dotenv
-APP_URL=https://app.example.test
-LGU_WEBSITE_DOMAIN=example.test
+APP_URL=https://agritarlac.online
+LGU_WEBSITE_DOMAIN=agritarlac.online
 SESSION_DOMAIN=
 SESSION_SECURE_COOKIE=true
 ```
 
-Wildcard DNS must target the same Laravel public root, and HTTPS needs a certificate covering `*.example.test`. Keep `APP_URL` on the central sign-in host and session cookies host-only (`SESSION_DOMAIN` blank). Tenant pages need no office session. Confirm trusted proxy/HTTPS settings before changing HSTS. Settings and migrations do not create DNS records, certificates or hosting virtual hosts. A blank tenant domain requires none of that hosting work.
+Hostinger documents that wildcard subdomains are not created automatically on shared hosting. Create each requested LGU subdomain in hPanel/DNS and point it to the same Laravel public root, then install and verify HTTPS for that hostname. If the hosting plan supports a wildcard virtual host and certificate, a wildcard DNS record may be used instead; verify that separately before enabling the application setting. Keep `APP_URL` on the central sign-in host and session cookies host-only (`SESSION_DOMAIN` blank). Tenant pages need no office session. The existing `demo.agritarlac.online` staff demo is reserved and must continue using its isolated document root. Settings and migrations do not create DNS records, certificates or hosting virtual hosts.
 
 ## Deployment and verification
 
@@ -42,7 +42,7 @@ php artisan migrate --path=database/migrations/2026_10_19_000200_create_municipa
 
 The migrations create empty additive tables without changing existing operational records/accounts or publishing pages. Release the modular services, scoped adapters, middleware/routes, views, shared branding and `lgu-website.css` together. Mirror public assets with 0644 permissions and rebuild optimized autoload/configuration/route/view caches. Preserve private environment/session/cache namespaces and provider counters; do not clear the general application cache. Ensure writable private storage and include `lgu-logos`/`lgu-covers` bytes in backups.
 
-`MunicipalityProfileSettingsTest` contains isolated coverage for unpublished/published behavior, preview, role scope, unique/reserved slugs, tenant isolation and restricted media delivery. Integrated results and live acceptance are recorded in [the October 20 receipt](EAGRILGU_LGU_DEPLOYMENT_2026_10_20.md). Central-path publication is ready for approved office setup; optional subdomain hosting remains unconfigured. Populate profiles/content only from approved office information, review before publishing and verify optional subdomains separately from central-path publication.
+`MunicipalityProfileSettingsTest` contains isolated coverage for unpublished/published behavior, preview, role scope, unique/reserved slugs, tenant isolation and restricted media delivery. Integrated results and live acceptance are recorded in [the October 20 receipt](EAGRILGU_LGU_DEPLOYMENT_2026_10_20.md). Central-path publication is ready for approved office setup; the `agritarlac.online` tenant setting remains disabled until each required hostname and HTTPS certificate are verified. Populate profiles/content only from approved office information, review before publishing and verify optional subdomains separately from central-path publication.
 
 ## Interface refresh — October 20, 2026
 

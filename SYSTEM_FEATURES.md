@@ -1,5 +1,9 @@
 # AgriLGU — Complete Feature Catalog
 
+October 21 Assistant refinement (local source; not deployed): the Assistant remains limited to agriculture, related farm topics and permitted AgriLGU help/records. The proposed General questions mode was withdrawn and removed; arbitrary questions stay local and are declined. Improved prompts, first-question numbered steps and the gradual typing effect remain. See [agriculture scope and typing](docs/ASSISTANT_AGRICULTURE_TYPING.md).
+
+October 21, 2026: an isolated staff demonstration is live at `https://demo.agritarlac.online`, using synthetic records and normal municipal-staff permissions. It has a separate database, credentials, application key, sessions and storage. Following explicit owner authorization, AI, satellite and Google Maps use the existing provider accounts. Demo limits are 20 AI requests/day (200/month) and 10 satellite requests/day (100/month); automatic satellite refresh remains disabled. Production visitor permissions are unchanged. See [the demo operations note](docs/STAFF_DEMO.md).
+
 October 20 AgriLGU rename (deployed in runtime `e804e57`): visible application branding
 now reads AgriLGU. The wordmark removes the e and uses the original A mark plus
 Poppins Bold green griLGU; `agrilgu-wordmark-v2.svg` is 306 x 104 and its PNG is
@@ -491,7 +495,7 @@ System Owners, scoped provincial Super Administrators and municipal heads mainta
 
 Profiles supply office name, logo, public website/contact details, address/location, description and optional printed ID signatory. PNG/JPEG/WebP uploads are validated and privately stored. Stale saves are rejected and administrative changes are audited. Existing printed/downloaded IDs retain their original details.
 
-Public websites add a fixed slug, welcome message, services, announcements, office hours and cover photograph. Active offices with saved profiles can publish; unpublished pages remain staff-preview only. Published pages appear in `/lgus` and `/lgus/{slug}`. Optional subdomains require hosting setup, with sign-in and operational records on the central host. No farmer or parcel data appears publicly. The feature requires two additive migrations and official office content to be supplied; it creates no accounts, profiles or published pages automatically.
+Public websites add a fixed slug, welcome message, services, announcements, office hours and cover photograph. Active offices with saved profiles can publish; unpublished pages remain staff-preview only. Published pages appear in `/lgus` and `/lgus/{slug}`. The selected tenant domain is `agritarlac.online`, so a configured LGU becomes `https://{slug}.agritarlac.online/` after its Hostinger hostname and HTTPS certificate are verified. Hostinger shared hosting requires each requested subdomain to be created; sign-in and operational records remain on the central host. The existing `demo.agritarlac.online` host is reserved. No farmer or parcel data appears publicly. The feature requires two additive migrations and official office content to be supplied; it creates no accounts, profiles, DNS records or published pages automatically.
 
 ## 6. Farmer ID and digital identification
 

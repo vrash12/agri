@@ -7,7 +7,9 @@ use InvalidArgumentException;
 
 final class LguWebsiteAddress
 {
-    public const RESERVED = ['www', 'app', 'admin', 'api', 'mail', 'webmail', 'smtp', 'ftp', 'cpanel', 'autodiscover', 'localhost', 'test', 'staging', 'dev', 'support', 'assets', 'cdn', 'login', 'settings', 'lgus'];
+    // These names belong to the central application, hosting controls or the
+    // isolated staff demo. They must never be claimed by an LGU website.
+    public const RESERVED = ['www', 'app', 'admin', 'api', 'mail', 'webmail', 'smtp', 'ftp', 'cpanel', 'autodiscover', 'localhost', 'test', 'staging', 'dev', 'support', 'assets', 'cdn', 'login', 'settings', 'lgus', 'demo'];
 
     public static function domain(): ?string
     {
