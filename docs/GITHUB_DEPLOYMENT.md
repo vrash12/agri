@@ -1,13 +1,15 @@
 # GitHub-to-Hostinger deployment
 
-## Pending local AgriLGU rename
+## Verified AgriLGU name and LGU interface release - October 20, 2026
 
-Deploy all changed views, Assistant copy/corpus, and PHP services together with
-the new `agrilgu-wordmark-v2.svg` and PNG. Mirror these assets, the changed farmer
-finder/picker and municipality-boundaries scripts, and photo-credits.html to
-public_html. Rebuild compiled views and optimized autoloading. No migrations,
-private APP_NAME changes or general-cache clearing are required. Preserve
-existing session/cache namespaces and provider counters.
+Runtime `e804e575fa9cf07e227b494fb95893298736d569` was pushed to GitHub main
+and installed by Hostinger fast-forward pull from `248cb43`. It includes the
+AgriLGU wordmark/name and the newer LGU Settings/public website design from
+`8d5b497`. Seven public assets were mirrored; optimized autoloading and compiled
+views were rebuilt. All 27 tables / 10,008 rows, schemas, environment,
+session/cache namespaces and provider counters were preserved. No migration,
+dependency installation or general-cache clear ran. Live HTTPS pages and scoped
+read-only renders passed. See [the deployment receipt](AGRILGU_NAME_DEPLOYMENT_2026_10_20.md).
 
 ## Verified full-field farmer-card release - October 20, 2026
 

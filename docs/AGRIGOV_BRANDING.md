@@ -1,15 +1,17 @@
 # AgriLGU identity
 
-October 20 AgriLGU rename (local, not deployed): visible application branding
+October 20 AgriLGU rename (deployed in runtime `e804e57`): visible application branding
 now reads AgriLGU. The wordmark removes the e and uses the original A mark plus
 Poppins Bold green griLGU; `agrilgu-wordmark-v2.svg` is 306 x 104 and its PNG is
 1,224 x 416. The shared component, titles, navigation, public LGU pages, farmer
 portal, identifier labels and Assistant copy use the new name. Existing farmer
 IDs, QR destinations, routes, stored namespaces, private APP_NAME, provider
 headers and original compact mark remain compatible. Both old/new names still
-resolve in the Assistant. Cards retain their standalone front mark.
+resolve in the Assistant. Cards retain their standalone front mark. The release
+also preserves the LGU Settings/public-site design from `8d5b497`. See
+[the verified deployment receipt](AGRILGU_NAME_DEPLOYMENT_2026_10_20.md).
 
-The October 20, 2026 revision is **deployed and verified** in runtime `fed7289`. Eleven source/served public assets match; HTTP text/SVG assets match byte-for-byte, while the hosting CDN losslessly recompresses the two PNGs with identical decoded RGBA pixels and dimensions. Welcome, office/farmer sign-in, the LGU directory and scoped card renders passed. Existing operational data, environment/session/cache namespaces and provider counters were preserved. See [the deployment receipt](EAGRILGU_LGU_DEPLOYMENT_2026_10_20.md) for test and acceptance evidence.
+The earlier October 20, 2026 LGU/Poppins revision deployed in runtime `fed7289`. Eleven source/served public assets match; HTTP text/SVG assets match byte-for-byte, while the hosting CDN losslessly recompresses the two PNGs with identical decoded RGBA pixels and dimensions. Welcome, office/farmer sign-in, the LGU directory and scoped card renders passed. Existing operational data, environment/session/cache namespaces and provider counters were preserved. See [the deployment receipt](EAGRILGU_LGU_DEPLOYMENT_2026_10_20.md) for test and acceptance evidence.
 
 The application wordmark reads **AgriLGU**: the owner's supplied corn-and-field mark replacing **A**, then agriculture-green **griLGU**. The owner selected Poppins Bold (700). Use `<x-brand />` for this full lockup and `<x-brand compact />` for the supplied square mark. Accessible alternative text is AgriLGU. Shared sizing lives in `public/css/branding.css`; standalone documents include `partials.branding-head`.
 
@@ -47,7 +49,8 @@ identifier workflow failed with a missing audit_logs fixture. Both failure types
 were reproduced using the pre-rename test files in the same disposable SQLite
 environment. The identifier test's outdated card caption now expects Registry
 ID. This is not claimed as a fully passing PHP run. No live provider evaluation
-or production deployment was performed.
+was performed during that local test run. The subsequent authorized production
+deployment and combined 47-test verification are recorded in the receipt above.
 
 ## Compatibility and deployment
 

@@ -47,3 +47,6 @@ The migrations create empty additive tables without changing existing operationa
 ## Interface refresh — October 20, 2026
 
 The Settings directory, office-profile form, website editor and public directory/page were redesigned without changing routes, fields, validation, permissions, scope or storage. Settings screens share `resources/views/settings/lgu/partials/styles.blade.php` and `partials/scripts.blade.php`; public pages use `resources/views/public-lgu/partials/icon.blade.php` and the rewritten, readable `public/css/lgu-website.css`. Release is view/CSS only: no migration, configuration, dependency or data change. Mirror `public/css/lgu-website.css` to both public directories (0644) and rebuild the view cache. See the matching `DESIGN_IMPLEMENTATION.md` entry for behaviour and verification.
+
+The interface refresh is deployed in combined runtime `e804e57`, including the
+AgriLGU rename. See [the verified receipt](AGRILGU_NAME_DEPLOYMENT_2026_10_20.md).
