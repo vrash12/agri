@@ -1,6 +1,6 @@
 # eAgriLGU — Complete Feature Catalog
 
-October 20 full-field farmer-card revision (local, not deployed): the landscape
+October 20 full-field farmer-card revision (deployed in runtime `ddcc8d8`): the landscape
 extends to every edge on both sides without boxed information panels. Dark
 forest-green text sits over a continuous warm wash in the shared background;
 the QR keeps a small opaque cream scan area. Logo white margins blend into
