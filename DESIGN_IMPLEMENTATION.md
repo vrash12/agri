@@ -1,5 +1,12 @@
 # Design and UX implementation record
 
+October 20 homepage feature catalog (local, not deployed): System features replaces
+the six-tool panel with 28 native disclosures in seven workflow groups, category
+anchors, and farmer/LGU entry links. The original hero, service guidance, collages
+and official resources remain. Shared colors and typography continue; the green
+intro and light feature panels keep context-appropriate focus outlines. See
+[implementation and verification](docs/HOMEPAGE_FEATURE_CATALOG.md).
+
 October 20 AgriLGU rename (deployed in runtime `e804e57`): visible application branding
 now reads AgriLGU. The wordmark removes the e and uses the original A mark plus
 Poppins Bold green griLGU; `agrilgu-wordmark-v2.svg` is 306 x 104 and its PNG is

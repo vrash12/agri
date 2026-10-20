@@ -1,5 +1,15 @@
 # GitHub-to-Hostinger deployment
 
+## Pending local homepage feature catalog
+
+Release `resources/views/welcome.blade.php`, the new
+`resources/views/partials/welcome-features.blade.php` and
+`public/css/welcome.css` together. Mirror the stylesheet to `public_html/css/`
+with 0644 permissions and rebuild compiled views. The existing filemtime query
+versions the stylesheet. No migration, environment/dependency change or general
+cache clear is needed. Keep the authenticated homepage redirects and static,
+query-free public catalog. See [verification](HOMEPAGE_FEATURE_CATALOG.md).
+
 ## Verified AgriLGU name and LGU interface release - October 20, 2026
 
 Runtime `e804e575fa9cf07e227b494fb95893298736d569` was pushed to GitHub main

@@ -331,8 +331,8 @@ An explicit System Owner demonstration import can populate four clearly labeled 
 - Mobile navigation and keyboard-accessible service disclosures work alongside a separate office sign-in entry.
 - Credited Philippine agriculture photographs illustrate the services, including rice farming, fisheries, livestock, and machinery.
 - Twenty photographs show Philippine farming, fishing, crops and livestock in five different collages, with four photos per view and wrapping Previous/Next arrows. The first four photos work without JavaScript; later collages load when visited.
-- About AgriLGU explains farmer records, parcel maps and dry/wet seasonal crops, assistance releases, animal-health services, cooperatives/machinery, and reports. The DA seal accompanies official DA resource links.
-- Inside AgriLGU groups these six capabilities in an expandable office-tools panel, with short benefits and an office sign-in button. Tool descriptions open by click or keyboard without requiring JavaScript; the layout stacks on phones.
+- System features now describes 28 areas across seven groups: farmer records/access; land/crops/maps; weather/field decisions; assistance/harvests; everyday office work; connected offices/guidance; and access/accountability/data. It includes the portal, IDs/QR, satellite indices, El Niño readiness, field checks, Assistant, LGU websites, protected files, accounts, audit and import/export tools alongside the core modules.
+- Category shortcuts lead to native expandable descriptions with concise bullet lists, office/farmer sign-in and a public LGU directory link. All descriptions remain available without JavaScript and the layout adapts to phones. The catalog is static public information; tools remain subject to the existing permissions. See [homepage catalog](docs/HOMEPAGE_FEATURE_CATALOG.md). The DA seal continues to accompany official resource links.
 - The page displays no private records or operational totals and does not offer public applications, account registration, or equipment bookings.
 - Signed-in users keep their existing dashboard or Animal Health destination.
 

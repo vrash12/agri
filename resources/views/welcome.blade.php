@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Explore AgriLGU's farmer records, parcel maps, assistance tracking, and reports. Find local agriculture services and official DA resources.">
+    <meta name="description" content="Explore AgriLGU's farmer registry, GIS maps, harvests, satellite and climate tools, Assistant, farmer portal, LGU websites and office services.">
     <meta name="theme-color" content="#236344">
     <title>Farmer services | AgriLGU</title>
     @include('partials.design-tokens')
@@ -29,7 +29,7 @@
             <button class="welcome-menu" type="button" aria-expanded="false" aria-controls="welcome-navigation" hidden>Menu <span aria-hidden="true">☰</span></button>
             <nav id="welcome-navigation" aria-label="Main navigation">
                 <a href="#services">Services</a>
-                <a href="#system">About AgriLGU</a>
+                <a href="#system">System features</a>
                 <a href="#initiatives">DA initiatives</a>
                 <a href="{{ route('farmer-portal.login') }}">Farmer sign in</a>
                 <a class="welcome-button welcome-office-link" href="{{ route('login') }}">Office sign in</a>
@@ -91,51 +91,7 @@
             <p class="welcome-service-footnote">Services are coordinated by the responsible local office. Confirm current requirements and schedules before travelling.</p>
         </section>
 
-        <section class="welcome-system welcome-section" id="system" aria-labelledby="system-title">
-            <div class="welcome-container welcome-system-layout">
-                <div class="welcome-system-intro">
-                    <p class="welcome-section-label"><span class="welcome-section-number" aria-hidden="true">02</span> Inside AgriLGU</p>
-                    <h2 id="system-title" data-welcome-reveal>Your records.<br><span>A clearer picture</span><br>of the field.</h2>
-                    <div class="welcome-system-copy">
-                        <p>Keep farmer information, farm maps, and service records together. Plan your office’s work and follow up with the people you serve.</p>
-                        <a class="welcome-button welcome-system-entry" href="{{ route('login') }}">Enter your office workspace <span aria-hidden="true">→</span></a>
-                        <p class="welcome-system-note">Your role and assigned area determine which records and tools you can use.</p>
-                    </div>
-                </div>
-                <div class="welcome-toolkit" aria-labelledby="toolkit-title">
-                    <div class="welcome-toolkit-heading">
-                        <h3 id="toolkit-title">Your everyday office tools</h3>
-                        <p>Select a tool to see what it includes.</p>
-                    </div>
-                    <div class="welcome-feature-list">
-                        <details class="welcome-tool">
-                            <summary><span class="welcome-tool-number" aria-hidden="true">01</span><span><strong>Farmer records</strong><small>Know the people you serve.</small></span><span class="welcome-plus" aria-hidden="true"></span></summary>
-                            <div class="welcome-tool-body"><p>Keep profiles, FFRS/RSBSA details, registry cards, and service history together.</p></div>
-                        </details>
-                        <details class="welcome-tool">
-                            <summary><span class="welcome-tool-number" aria-hidden="true">02</span><span><strong>Parcel maps &amp; seasons</strong><small>See what grows, where and when.</small></span><span class="welcome-plus" aria-hidden="true"></span></summary>
-                            <div class="welcome-tool-body"><p>Map farm parcels, review boundaries, and record crops by year and dry or wet season.</p></div>
-                        </details>
-                        <details class="welcome-tool">
-                            <summary><span class="welcome-tool-number" aria-hidden="true">03</span><span><strong>Assistance releases</strong><small>Follow the support already given.</small></span><span class="welcome-plus" aria-hidden="true"></span></summary>
-                            <div class="welcome-tool-body"><p>Track seeds, fertilizer, fingerlings, feed, and fishing gear, with recipient and quantity details.</p></div>
-                        </details>
-                        <details class="welcome-tool">
-                            <summary><span class="welcome-tool-number" aria-hidden="true">04</span><span><strong>Animal-health services</strong><small>Keep each service on record.</small></span><span class="welcome-plus" aria-hidden="true"></span></summary>
-                            <div class="welcome-tool-body"><p>Record vaccination, deworming, vitamins, and treatment by species and municipality.</p></div>
-                        </details>
-                        <details class="welcome-tool">
-                            <summary><span class="welcome-tool-number" aria-hidden="true">05</span><span><strong>Cooperatives &amp; machinery</strong><small>Keep track of groups and equipment.</small></span><span class="welcome-plus" aria-hidden="true"></span></summary>
-                            <div class="welcome-tool-body"><p>Maintain membership records and monitor equipment condition and availability.</p></div>
-                        </details>
-                        <details class="welcome-tool">
-                            <summary><span class="welcome-tool-number" aria-hidden="true">06</span><span><strong>Reports &amp; oversight</strong><small>Turn recorded activity into a plan.</small></span><span class="welcome-plus" aria-hidden="true"></span></summary>
-                            <div class="welcome-tool-body"><p>Review service trends, mapping coverage, and municipality reports for office planning.</p></div>
-                        </details>
-                    </div>
-                </div>
-            </div>
-        </section>
+        @include('partials.welcome-features')
 
         <section class="welcome-initiatives welcome-section" id="initiatives" aria-labelledby="initiatives-title">
             <div class="welcome-container">

@@ -925,7 +925,7 @@ When adding a new municipality-owned module, reuse these components instead of c
 
 Route: `GET /` (`welcome`). Guests receive a public farmer-services guide in `resources/views/welcome.blade.php`; signed-in users retain the dashboard or Animal Health redirect. `/login` remains the staff sign-in entry. The page provides native service disclosures, an office-visit checklist, and links to official DA, RSBSA Finder, PhilRice, ATI, BFAR, and PAGASA resources. It does not query operational records or publish counts, accept farmer registrations/applications, or create bookings. Keep availability and eligibility inquiries with the responsible office.
 
-The page consumes `partials.design-tokens` and its scoped `public/css/welcome.css` / `public/js/welcome.js`. `partials.welcome-slideshow` and `public/js/welcome-slideshow.js` add 20 Philippine agriculture photographs in five distinct four-photo collages. The gallery uses manual Previous/Next arrow buttons that wrap between collages; the controls have labelled 44px targets, keyboard arrow support, and a live status announcement. Only the first collage loads before interaction; each other collage hydrates when visited. Navigation, the first collage, and service guidance remain usable without JavaScript. The About AgriLGU section explains six office capabilities without querying operational records. The unmodified existing DA seal identifies the linked DA resources separately from application branding. Preserve the footer photo credits and link to `public/photo-credits.html`; service thumbnails remain lazy-loaded. See `docs/WELCOME_PAGE.md`, `docs/WELCOME_PHOTO_SOURCES.md`, and `docs/WELCOME_COLLAGE_PHOTOS.md` for design, asset provenance, and verification. No migration or new configuration is required. Deploy the slideshow script before rebuilding views; mirror public assets to both Hostinger public directories.
+The page consumes `partials.design-tokens` and its scoped `public/css/welcome.css` / `public/js/welcome.js`. `partials.welcome-slideshow` and `public/js/welcome-slideshow.js` add 20 Philippine agriculture photographs in five distinct four-photo collages. The gallery uses manual Previous/Next arrow buttons that wrap between collages; the controls have labelled 44px targets, keyboard arrow support, and a live status announcement. Only the first collage loads before interaction; each other collage hydrates when visited. Navigation, the first collage, and service guidance remain usable without JavaScript. The System features section uses `partials.welcome-features` to describe 28 areas in seven workflow groups without querying operational records. The unmodified existing DA seal identifies the linked DA resources separately from application branding. Preserve the footer photo credits and link to `public/photo-credits.html`; service thumbnails remain lazy-loaded. See `docs/WELCOME_PAGE.md`, `docs/WELCOME_PHOTO_SOURCES.md`, and `docs/WELCOME_COLLAGE_PHOTOS.md` for design, asset provenance, and verification. No migration or new configuration is required. Deploy the slideshow script before rebuilding views; mirror public assets to both Hostinger public directories.
 
 The homepage redesign uses a neobrutalist photo collage with page-scoped
 square borders and offset shadows, retaining the shared green/yellow colors,
@@ -943,11 +943,15 @@ their destination without replacing native scrolling/history. Content stays visi
 without the observer or animation APIs. Respect reduced motion for decorative
 transitions; do not add continuous decorative movement or automatic gallery playback.
 
-Inside AgriLGU presents six office capabilities in a numbered, expandable toolkit
-beside its introduction and office sign-in action. Keep these as native
-`details`/`summary` elements with visible benefit text, optional explanatory
-content and decorative plus/minus indicators. The light toolkit uses green focus
-outlines inside the dark section; retain keyboard access and reduced-motion rules.
+Inside AgriLGU now presents 28 feature areas across farmer records, maps/crops,
+weather/field decisions, assistance/harvests, office operations, connected LGU
+services and administration. Category anchors lead to native `details`/`summary`
+elements, with descriptive benefits and explanatory bullet lists. Keep this
+catalog descriptive and static: no database queries, provider calls or public
+operational totals. Preserve the read-only portal, limited QR information,
+role scope and evidence limitations in its copy. The green introduction retains
+yellow focus outlines; light feature panels use green focus. Local implementation
+and verification are recorded in `docs/HOMEPAGE_FEATURE_CATALOG.md`.
 
 ### 5.1 Dashboard
 
