@@ -1,6 +1,6 @@
 # Design and UX implementation record
 
-October 20 homepage feature catalog (local, not deployed): System features replaces
+October 20 homepage feature catalog (deployed in runtime `95e831a`): System features replaces
 the six-tool panel with 28 native disclosures in seven workflow groups, category
 anchors, and farmer/LGU entry links. The original hero, service guidance, collages
 and official resources remain. Shared colors and typography continue; the green

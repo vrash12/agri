@@ -1,14 +1,17 @@
 # GitHub-to-Hostinger deployment
 
-## Pending local homepage feature catalog
+## Verified homepage feature catalog release - October 20, 2026
 
-Release `resources/views/welcome.blade.php`, the new
-`resources/views/partials/welcome-features.blade.php` and
-`public/css/welcome.css` together. Mirror the stylesheet to `public_html/css/`
-with 0644 permissions and rebuild compiled views. The existing filemtime query
-versions the stylesheet. No migration, environment/dependency change or general
-cache clear is needed. Keep the authenticated homepage redirects and static,
-query-free public catalog. See [verification](HOMEPAGE_FEATURE_CATALOG.md).
+Runtime `95e831a661370f223d17c059d2f5d025370a5030` was pushed to GitHub main
+and installed by Hostinger fast-forward pull from `4623873`. The public homepage
+now describes 28 feature areas across seven workflow groups. The new partial,
+homepage view and stylesheet deployed together; welcome.css was mirrored with
+0644 permissions and compiled views rebuilt. All 27 tables / 10,013 rows,
+schemas, environment, session/cache namespaces and provider counters matched
+the verified private backup. No migrations, dependencies, environment changes
+or general-cache clear ran. The public catalog renders without database queries;
+four in-memory role redirects and live HTTPS pages passed. See
+[the implementation and release receipt](HOMEPAGE_FEATURE_CATALOG.md).
 
 ## Verified AgriLGU name and LGU interface release - October 20, 2026
 

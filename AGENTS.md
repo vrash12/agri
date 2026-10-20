@@ -950,8 +950,8 @@ elements, with descriptive benefits and explanatory bullet lists. Keep this
 catalog descriptive and static: no database queries, provider calls or public
 operational totals. Preserve the read-only portal, limited QR information,
 role scope and evidence limitations in its copy. The green introduction retains
-yellow focus outlines; light feature panels use green focus. Local implementation
-and verification are recorded in `docs/HOMEPAGE_FEATURE_CATALOG.md`.
+yellow focus outlines; light feature panels use green focus. The catalog deployed in runtime `95e831a`; implementation and verification
+are recorded in `docs/HOMEPAGE_FEATURE_CATALOG.md`.
 
 ### 5.1 Dashboard
 
