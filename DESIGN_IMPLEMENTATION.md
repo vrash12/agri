@@ -1,6 +1,6 @@
 # Design and UX implementation record
 
-October 20 green-e and compact-spacing follow-up (deployment pending): the shared v4 wordmark uses
+October 20 green-e and compact-spacing follow-up (deployed in runtime `eeb9ed9`): the shared v4 wordmark uses
 `#12633F` for the lowercase e, matching griLGU. Poppins Bold, the supplied A mark,
 transparent background are preserved. The A mark and griLGU sit closer to the e;
 the wordmark canvas is 350 ? 104 (PNG 1,400 ? 416). The shared brand component and

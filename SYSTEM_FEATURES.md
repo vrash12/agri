@@ -1,5 +1,7 @@
 # eAgriLGU — Complete Feature Catalog
 
+October 20 compact green wordmark follow-up is deployed in runtime `eeb9ed9`. The e uses agriculture green; the A mark and griLGU sit closer together. The shared v4 asset supplies site and farmer-card screen/print/canvas branding. All 27 tables / 9,987 rows and environment/provider settings were preserved. See [the deployment receipt](docs/GREEN_WORDMARK_DEPLOYMENT_2026_10_20.md).
+
 October 20 Assistant update (deployed in runtime `80166f4`): reviewed general agriculture
 questions now use ten canonical topics alongside existing system help, with
 local unrelated-question refusal. Raw chat and records stay local. General

@@ -1,5 +1,15 @@
 # GitHub-to-Hostinger deployment
 
+## Verified Hostinger release ? October 20, 2026 ? compact green wordmark
+
+Runtime `eeb9ed97ed8afc68f024da904bc1a58a8d04f058` was pushed to main and
+installed by fast-forward pull from `3915849`. The e is green and spacing around
+the A mark is tighter across the shared site/card wordmark. Both new v4 assets
+were mirrored and compiled views rebuilt. All 27 tables / 9,987 rows, schemas,
+environment, namespaces and provider counters were preserved. Scoped renders,
+public HTTPS pages and served logo pixels passed. No migrations or general-cache
+clear ran. See [the receipt](GREEN_WORDMARK_DEPLOYMENT_2026_10_20.md).
+
 ## Verified Hostinger release — October 20, 2026 — Assistant agriculture help
 
 Runtime `80166f41804b58ca3823878ebbb6841804801f45` was pushed to main and
