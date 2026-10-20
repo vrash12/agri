@@ -1,5 +1,14 @@
 # Design and UX implementation record
 
+October 20 AgriLGU rename (local, not deployed): visible application branding
+now reads AgriLGU. The wordmark removes the e and uses the original A mark plus
+Poppins Bold green griLGU; `agrilgu-wordmark-v2.svg` is 306 x 104 and its PNG is
+1,224 x 416. The shared component, titles, navigation, public LGU pages, farmer
+portal, identifier labels and Assistant copy use the new name. Existing farmer
+IDs, QR destinations, routes, stored namespaces, private APP_NAME, provider
+headers and original compact mark remain compatible. Both old/new names still
+resolve in the Assistant. Cards retain their standalone front mark.
+
 October 20 full-field farmer-card revision (deployed in runtime `ddcc8d8`): the landscape
 extends to every edge on both sides without boxed information panels. Dark
 forest-green text sits over a continuous warm wash in the shared background;

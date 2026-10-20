@@ -1,5 +1,14 @@
 # GitHub-to-Hostinger deployment
 
+## Pending local AgriLGU rename
+
+Deploy all changed views, Assistant copy/corpus, and PHP services together with
+the new `agrilgu-wordmark-v2.svg` and PNG. Mirror these assets, the changed farmer
+finder/picker and municipality-boundaries scripts, and photo-credits.html to
+public_html. Rebuild compiled views and optimized autoloading. No migrations,
+private APP_NAME changes or general-cache clearing are required. Preserve
+existing session/cache namespaces and provider counters.
+
 ## Verified full-field farmer-card release - October 20, 2026
 
 Runtime `ddcc8d829e709a54d56569bf66024ce3a9683c4d` deployed through GitHub main

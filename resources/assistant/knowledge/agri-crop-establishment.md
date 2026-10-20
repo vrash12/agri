@@ -1,4 +1,4 @@
-Planting a real crop is different from drawing its area on the eAgriLGU map. Before planting rice, corn or vegetables, consider these general planning steps:
+Planting a real crop is different from drawing its area on the AgriLGU map. Before planting rice, corn or vegetables, consider these general planning steps:
 
 1. Choose a crop and variety suited to the season, soil, available water and intended use.
 2. Assess field conditions, drainage and soil constraints with local agricultural guidance.

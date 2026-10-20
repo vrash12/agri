@@ -21,8 +21,8 @@ final class AssistantAgriculture
     public static function refusal(string $language): string
     {
         return $language === 'fil'
-            ? 'Para sa agrikultura at eAgriLGU ang gabay na ito. Hindi ako makakasagot ng tanong na walang kaugnayan dito. Maaari kang magtanong tungkol sa pananim, lupa, patubig, peste, alagang hayop, palaisdaan o mga feature ng sistema.'
-            : 'I can help with agriculture and eAgriLGU. I cannot answer unrelated questions. Ask about crops, soil, irrigation, pests, farm animals, fish farming or the system’s features.';
+            ? 'Para sa agrikultura at AgriLGU ang gabay na ito. Hindi ako makakasagot ng tanong na walang kaugnayan dito. Maaari kang magtanong tungkol sa pananim, lupa, patubig, peste, alagang hayop, palaisdaan o mga feature ng sistema.'
+            : 'I can help with agriculture and AgriLGU. I cannot answer unrelated questions. Ask about crops, soil, irrigation, pests, farm animals, fish farming or the system’s features.';
     }
 
     /** @return array<string, mixed>|null */

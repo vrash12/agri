@@ -108,7 +108,7 @@
     <div>
       <p class="lgu-eyebrow">Connected to your LGU</p>
       <h2 id="farmer-id-title">Your farmer registry ID</h2>
-      <p>Your LGU's agriculture office maintains farmer registration and issues eAgriLGU farmer cards carrying its logo and office details. Contact the office for registration, corrections or card issuance.</p>
+      <p>Your LGU's agriculture office maintains farmer registration and issues AgriLGU farmer cards carrying its logo and office details. Contact the office for registration, corrections or card issuance.</p>
       <p class="lgu-id-note">@include('public-lgu.partials.icon', ['name' => 'card', 'size' => 18])<span>The farmer registry card is a local agriculture registry card. It is not a national government ID.</span></p>
       <a class="lgu-button" href="#contact">Contact the issuing office @include('public-lgu.partials.icon', ['name' => 'arrow-right', 'size' => 18])</a>
     </div>

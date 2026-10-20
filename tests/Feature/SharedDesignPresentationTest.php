@@ -39,8 +39,8 @@ class SharedDesignPresentationTest extends TestCase
             $this->assertSame($visible, str_contains($html, 'href="'.route($route).'"'), $route);
         }
         $this->assertStringContainsString('Skip to content', $html);
-        $this->assertStringContainsString('alt="eAgriLGU"', $html);
-        $this->assertStringContainsString(asset('images/branding/eagrilgu-wordmark-v4.png'), $html);
+        $this->assertStringContainsString('alt="AgriLGU"', $html);
+        $this->assertStringContainsString(asset('images/branding/agrilgu-wordmark-v2.png'), $html);
         $this->assertStringContainsString(asset('images/branding/eagrilgu-system-mark.png'), $html);
         $this->assertStringNotContainsString('AgriGOV', $html);
         $this->assertStringContainsString('Unsaved changes may be lost', $html);
@@ -85,10 +85,10 @@ class SharedDesignPresentationTest extends TestCase
         $view = $this->withViewErrors(['email' => 'These credentials do not match our records.'])->view('auth.login');
 
         $view->assertSee('These credentials do not match our records.')
-            ->assertSee('<title>Office sign in | eAgriLGU</title>', false)
-            ->assertSee('alt="eAgriLGU"', false)
+            ->assertSee('<title>Office sign in | AgriLGU</title>', false)
+            ->assertSee('alt="AgriLGU"', false)
             ->assertSee(asset('images/branding/eagrilgu-system-mark.png'), false)
-            ->assertSee(asset('images/branding/eagrilgu-wordmark-v4.png'), false)
+            ->assertSee(asset('images/branding/agrilgu-wordmark-v2.png'), false)
             ->assertDontSee('AgriGOV')
             ->assertSee('autocomplete="current-password"', false)
             ->assertSee('autocomplete="email"', false)

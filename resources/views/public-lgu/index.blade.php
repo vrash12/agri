@@ -15,7 +15,7 @@
       <ol>
         <li><span aria-hidden="true">01</span><div><strong>Choose your LGU</strong><p>Search by municipality, city or province.</p></div></li>
         <li><span aria-hidden="true">02</span><div><strong>Explore local services</strong><p>Check information and office requirements.</p></div></li>
-        <li><span aria-hidden="true">03</span><div><strong>Connect with your office</strong><p>Find contact details or sign in to eAgriLGU.</p></div></li>
+        <li><span aria-hidden="true">03</span><div><strong>Connect with your office</strong><p>Find contact details or sign in to AgriLGU.</p></div></li>
       </ol>
     </aside>
   </div>
@@ -49,7 +49,7 @@
         @include('public-lgu.partials.icon', ['name' => $search ? 'search' : 'building'])
         <h3>{{ $search ? 'No LGU websites match your search.' : 'LGU websites are being prepared.' }}</h3>
         <p>{{ $search ? 'Try another name or clear your search.' : 'Participating offices will appear here when their websites are published.' }}</p>
-        @if($search)<a class="lgu-link" href="{{ route('lgu.index', [], false) }}#directory">Clear search @include('public-lgu.partials.icon', ['name' => 'arrow-right', 'size' => 16])</a>@else<a class="lgu-link" href="{{ \App\Modules\LocalGovernment\Application\LguWebsiteAddress::centralUrl('welcome') }}">Explore eAgriLGU services @include('public-lgu.partials.icon', ['name' => 'arrow-right', 'size' => 16])</a>@endif
+        @if($search)<a class="lgu-link" href="{{ route('lgu.index', [], false) }}#directory">Clear search @include('public-lgu.partials.icon', ['name' => 'arrow-right', 'size' => 16])</a>@else<a class="lgu-link" href="{{ \App\Modules\LocalGovernment\Application\LguWebsiteAddress::centralUrl('welcome') }}">Explore AgriLGU services @include('public-lgu.partials.icon', ['name' => 'arrow-right', 'size' => 16])</a>@endif
       </div>
     @endforelse
   </div>

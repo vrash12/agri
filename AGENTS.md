@@ -1,5 +1,14 @@
 # Agriculture Information System — Developer Guide
 
+October 20 AgriLGU rename (local, not deployed): visible application branding
+now reads AgriLGU. The wordmark removes the e and uses the original A mark plus
+Poppins Bold green griLGU; `agrilgu-wordmark-v2.svg` is 306 x 104 and its PNG is
+1,224 x 416. The shared component, titles, navigation, public LGU pages, farmer
+portal, identifier labels and Assistant copy use the new name. Existing farmer
+IDs, QR destinations, routes, stored namespaces, private APP_NAME, provider
+headers and original compact mark remain compatible. Both old/new names still
+resolve in the Assistant. Cards retain their standalone front mark.
+
 October 20 full-field farmer-card revision (deployed in runtime `ddcc8d8`): the landscape
 extends to every edge on both sides without boxed information panels. Dark
 forest-green text sits over a continuous warm wash in the shared background;
@@ -592,7 +601,7 @@ The Farmers map Land Plots list uses native `details`/`summary` cards: name, dat
 
 Farmer registry cards use `FarmerCardLocations` to join distinct non-delisted, same-municipality imported `PARCEL ADDRESS 1–3` values with ` / `. Residence fields and mapped-plot names are never substituted for parcel addresses. Missing addresses are explicitly labeled. The front shows the registry municipality separately; the back and PNG/digital rendering wrap parcel addresses. The full address list is also printed on the sheet; oversized card text explicitly refers to that list, and oversized digital/PNG backs fail with guidance instead of dropping addresses. No new parcel-address geocoding or database mutation is performed. See `docs/FARMER_CARD_PARCEL_ADDRESSES.md` for checks and deployment status.
 
-eAgriLGU is the application identity. Use `<x-brand />` for the integrated wordmark and `<x-brand compact />` for the owner's supplied square corn-and-field mark. The shared wordmark uses outlined Poppins Bold (700): an agriculture-green lowercase **e**, the supplied mark replacing **A**, and green `griLGU`. `eagrilgu-wordmark-v4.png` (1,400 x 416) and its SVG source (350 x 104) supply the compact site wordmark (cards use the standalone front mark in the local full-field revision); browser icons use `eagrilgu-system-mark.png`. Existing `agrilgu-*` CSS hooks remain. Standalone documents include `partials.branding-head`, and the shared layout handles office modules. Body/form/table typography stays on the existing Inter tokens. Agency seals and identifiers remain distinct. Keep `AGRI-F-######`, portal IDs, `agri_gov_id`/`agriGovId`, `X-AgriGOV-Crop-Modal`, private `APP_NAME` and effective session/cache prefixes unchanged. See [docs/AGRIGOV_BRANDING.md](docs/AGRIGOV_BRANDING.md); dated AgriLGU/AgriGOV notes record earlier releases.
+AgriLGU is the application identity. Use `<x-brand />` for the integrated wordmark and `<x-brand compact />` for the owner's supplied square corn-and-field mark. The shared wordmark uses outlined Poppins Bold (700): the supplied mark replacing **A** and green `griLGU`. `agrilgu-wordmark-v2.png` (1,224 x 416) and its SVG source (306 x 104) supply the compact site wordmark (cards use the standalone front mark in the local full-field revision); browser icons use `eagrilgu-system-mark.png`. Existing `agrilgu-*` CSS hooks remain. Standalone documents include `partials.branding-head`, and the shared layout handles office modules. Body/form/table typography stays on the existing Inter tokens. Agency seals and identifiers remain distinct. Keep `AGRI-F-######`, portal IDs, `agri_gov_id`/`agriGovId`, `X-AgriGOV-Crop-Modal`, private `APP_NAME` and effective session/cache prefixes unchanged. See [docs/AGRIGOV_BRANDING.md](docs/AGRIGOV_BRANDING.md); dated AgriLGU/AgriGOV notes record earlier releases.
 
 ## Unified Assistant — deployed October 11, 2026
 

@@ -62,7 +62,7 @@ final class AssistantKnowledge
         'backup-folder' => ['title' => 'Protected Backup Folder files', 'topics' => ['backups'], 'primary' => ['backups'], 'audience' => 'office'],
         'audit-trail' => ['title' => 'Scoped audit history and exports', 'topics' => ['audit'], 'primary' => ['audit'], 'audience' => 'office'],
         'municipality-geofences' => ['title' => 'Municipality geofence references', 'topics' => ['geofences'], 'primary' => ['geofences'], 'audience' => 'office'],
-        'system-overview' => ['title' => 'eAgriLGU system overview', 'topics' => ['system-overview'], 'primary' => ['system-overview'], 'audience' => 'office'],
+        'system-overview' => ['title' => 'AgriLGU system overview', 'topics' => ['system-overview'], 'primary' => ['system-overview'], 'audience' => 'office'],
         'assistant-ai-technology' => ['title' => 'Assistant AI technology and retrieval', 'topics' => ['ai-technology'], 'primary' => ['ai-technology'], 'audience' => 'all'],
         'assistant-identity-privacy' => ['title' => 'Assistant identity and privacy boundaries', 'topics' => ['assistant-privacy', 'ai-technology'], 'primary' => ['assistant-privacy'], 'audience' => 'all'],
         'farmer-data-quality' => ['title' => 'Missing information and duplicate review', 'topics' => ['data-quality'], 'primary' => ['data-quality'], 'audience' => 'office'],

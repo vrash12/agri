@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex,nofollow,noarchive">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <title>{{ $farmer->agri_gov_id }} · Interactive land map | eAgriLGU</title>
+  <title>{{ $farmer->agri_gov_id }} · Interactive land map | AgriLGU</title>
   @include('partials.design-tokens')
   <style>
     :root{--ink:#14231a;--muted:#64736a;--green:#0f6b38;--green-2:#17864a;--soft:#edf7f0;--line:#dbe6de;--gold:#efbb22;--white:#fff;--shadow:0 18px 45px rgba(11,45,25,.12)}
@@ -80,7 +80,7 @@
       </article>
 
       <aside class="registry-card">
-        <div class="registry-card-top"><div class="registry-mark">{{ $initials }}</div><div><h2>eAgriLGU ID</h2><div class="registry-id">{{ $farmer->agri_gov_id }}</div></div></div>
+        <div class="registry-card-top"><div class="registry-mark">{{ $initials }}</div><div><h2>AgriLGU ID</h2><div class="registry-id">{{ $farmer->agri_gov_id }}</div></div></div>
         <div class="registry-lines">
           <div class="registry-line"><span>Farm location</span><strong>{{ $farmer->farm_location ?: 'Not recorded' }}</strong></div>
           <div class="registry-line"><span>Municipality / province</span><strong>{{ $municipality }}, {{ $province }}</strong></div>

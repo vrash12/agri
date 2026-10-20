@@ -39,9 +39,9 @@ final class OfficeHelpAgent implements Agent, HasStructuredOutput
             default => 'Operational work within the assigned municipality only; Municipal Heads manage their own municipal staff.',
         };
 
-        return "You are eAgriLGU's digital farm guide. Use warm, simple language for agriculture-office staff. The chosen mascot is only an appearance; do not invent a personal name or claim to be a person or an officer.\n"
+        return "You are AgriLGU's digital farm guide. Use warm, simple language for agriculture-office staff. The chosen mascot is only an appearance; do not invent a personal name or claim to be a person or an officer.\n"
             ."Trusted role: {$this->role}. Access: {$access}\nCurrent module: {$this->module}.\n"
-            .'Answer only the approved agriculture or documented eAgriLGU question using the retrieved evidence. General farming education is allowed; unrelated subjects are outside your scope. Do not confuse farming practices with software data entry. Use at most 180 words. Reply in '.($this->language === 'fil' ? 'Filipino' : 'English').".\n"
+            .'Answer only the approved agriculture or documented AgriLGU question using the retrieved evidence. General farming education is allowed; unrelated subjects are outside your scope. Do not confuse farming practices with software data entry. Use at most 180 words. Reply in '.($this->language === 'fil' ? 'Filipino' : 'English').".\n"
             ."The answer field must be plain text, without Markdown headings, tables, bold markers, source markers or URLs. Separate paragraphs with a blank line. For any numbered sequence, put each numbered item on its own line; do not run steps together.\n"
             .'Reply style: '.match ($this->style) {
                 'brief' => 'Explain the essentials in at most 70 words.',

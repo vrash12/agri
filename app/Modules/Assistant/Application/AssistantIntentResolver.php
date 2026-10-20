@@ -22,7 +22,7 @@ final class AssistantIntentResolver
                 return ['task' => 'help', 'topic' => $context['help_topic'], 'style' => in_array($context['help_style'] ?? null, OfficeAssistant::STYLES, true) ? $context['help_style'] : 'plain', 'year' => $year, 'language' => $language];
             }
 
-            return $this->clarify('I can explain an eAgriLGU feature in English or Filipino. Ask about a feature first. Private record replies are not sent to AI for translation.', $year);
+            return $this->clarify('I can explain an AgriLGU feature in English or Filipino. Ask about a feature first. Private record replies are not sent to AI for translation.', $year);
         }
         if ($kind = $this->identityKind($text)) {
             return ['task' => 'identity', 'kind' => $kind, 'year' => $year, 'language' => $language];
@@ -33,7 +33,7 @@ final class AssistantIntentResolver
         if (($lookup = AssistantUtterance::farmerLookup($text)) !== null) {
             return isset($lookup['search'])
                 ? ['task' => 'farmer-search', 'search' => $lookup['search'], 'year' => $lookup['year'] ?? $year]
-                : $this->clarify('Ask for one farmer by name or eAgriLGU ID first. I cannot combine a person lookup with other requests, private fields or location filters. After choosing the matching record, ask for their permitted summary, parcels, crops, assistance or harvests.', $year) + ['reset_context' => true];
+                : $this->clarify('Ask for one farmer by name or AgriLGU ID first. I cannot combine a person lookup with other requests, private fields or location filters. After choosing the matching record, ask for their permitted summary, parcels, crops, assistance or harvests.', $year) + ['reset_context' => true];
         }
         if ($agriculture = $this->agriculture->resolve($text, $year, $language)) {
             return $agriculture;
@@ -89,7 +89,7 @@ final class AssistantIntentResolver
                 : $this->clarify(AssistantAgriculture::refusal($language), $year) + ['reset_context' => true];
         }
         if ($languageRequest['explicit'] || preg_match('/^(?:please\s+)?(?:translate|isalin)\b/iu', $text)) {
-            return $this->clarify('I can explain an eAgriLGU feature in English or Filipino. Private record replies are not sent to AI for translation. Ask your records question without a translation request, or name a feature you want explained.', $year);
+            return $this->clarify('I can explain an AgriLGU feature in English or Filipino. Private record replies are not sent to AI for translation. Ask your records question without a translation request, or name a feature you want explained.', $year);
         }
         if (preg_match('/^(?:delete|remove|update|edit|change|create|reset|issue|approve|assign|send|add|save|record|register|unlock|activate|deactivate|grant|revoke|burahin|baguhin|magtala)\b/iu', $text)) {
             return $this->clarify('This chat reads records and explains system steps. It cannot change records, issue accounts, send messages or approve requests. Use the authorized module for that action.', $year) + ['reset_context' => true];
@@ -169,7 +169,7 @@ final class AssistantIntentResolver
         }
         if ($personal) {
             if (empty($context['farmer_id'])) {
-                return $this->clarify('Which farmer do you mean? Type “Find farmer” followed by their name or eAgriLGU ID, then choose the matching record.', $year);
+                return $this->clarify('Which farmer do you mean? Type “Find farmer” followed by their name or AgriLGU ID, then choose the matching record.', $year);
             }
             if (in_array('animal-health', $tasks, true) || (! $tasks && ! preg_match('/\b(summary|profile|record|records|info|information|details|buod)\b/iu', $text))) {
                 return $this->clarify('For the selected farmer, I can show their recorded summary, saved parcels and crops, assistance or harvests. Which would you like?', $year);
@@ -203,7 +203,7 @@ final class AssistantIntentResolver
             return ['task' => $context['task'], 'year' => $year, 'farmer_id' => $context['farmer_id'] ?? null];
         }
 
-        return $this->clarify('I help with agriculture, eAgriLGU features and permitted office records. I cannot answer unrelated general questions or inspect server files. Ask about crops, soil, irrigation, pests, livestock or fish farming, or name the system feature you need.', $year);
+        return $this->clarify('I help with agriculture, AgriLGU features and permitted office records. I cannot answer unrelated general questions or inspect server files. Ask about crops, soil, irrigation, pests, livestock or fish farming, or name the system feature you need.', $year);
     }
 
     private function reportClarification(string $text, int $year): ?array

@@ -8,7 +8,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>@yield('title', 'LGU Agriculture Information and GIS Management System') | eAgriLGU</title>
+  <title>@yield('title', 'LGU Agriculture Information and GIS Management System') | AgriLGU</title>
   @auth
     <script src="{{ asset('js/session-history.js') }}?v={{ filemtime(public_path('js/session-history.js')) }}"></script>
   @endauth

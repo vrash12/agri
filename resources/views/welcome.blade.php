@@ -3,9 +3,9 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Explore eAgriLGU's farmer records, parcel maps, assistance tracking, and reports. Find local agriculture services and official DA resources.">
+    <meta name="description" content="Explore AgriLGU's farmer records, parcel maps, assistance tracking, and reports. Find local agriculture services and official DA resources.">
     <meta name="theme-color" content="#236344">
-    <title>Farmer services | eAgriLGU</title>
+    <title>Farmer services | AgriLGU</title>
     @include('partials.design-tokens')
     <link rel="stylesheet" href="{{ asset('css/welcome.css') }}?v={{ filemtime(public_path('css/welcome.css')) }}">
     <script src="{{ asset('js/welcome.js') }}?v={{ filemtime(public_path('js/welcome.js')) }}" defer></script>
@@ -22,14 +22,14 @@
     </div>
     <header class="welcome-header">
         <div class="welcome-container welcome-nav-wrap">
-            <a class="welcome-brand" href="{{ route('welcome') }}" aria-label="eAgriLGU, LGU Agriculture Information and GIS Management System home">
+            <a class="welcome-brand" href="{{ route('welcome') }}" aria-label="AgriLGU, LGU Agriculture Information and GIS Management System home">
                 <x-brand />
                 <span class="welcome-brand-name">LGU Agriculture<br>Information &amp; GIS System</span>
             </a>
             <button class="welcome-menu" type="button" aria-expanded="false" aria-controls="welcome-navigation" hidden>Menu <span aria-hidden="true">☰</span></button>
             <nav id="welcome-navigation" aria-label="Main navigation">
                 <a href="#services">Services</a>
-                <a href="#system">About eAgriLGU</a>
+                <a href="#system">About AgriLGU</a>
                 <a href="#initiatives">DA initiatives</a>
                 <a href="{{ route('farmer-portal.login') }}">Farmer sign in</a>
                 <a class="welcome-button welcome-office-link" href="{{ route('login') }}">Office sign in</a>
@@ -94,7 +94,7 @@
         <section class="welcome-system welcome-section" id="system" aria-labelledby="system-title">
             <div class="welcome-container welcome-system-layout">
                 <div class="welcome-system-intro">
-                    <p class="welcome-section-label"><span class="welcome-section-number" aria-hidden="true">02</span> Inside eAgriLGU</p>
+                    <p class="welcome-section-label"><span class="welcome-section-number" aria-hidden="true">02</span> Inside AgriLGU</p>
                     <h2 id="system-title" data-welcome-reveal>Your records.<br><span>A clearer picture</span><br>of the field.</h2>
                     <div class="welcome-system-copy">
                         <p>Keep farmer information, farm maps, and service records together. Plan your office’s work and follow up with the people you serve.</p>

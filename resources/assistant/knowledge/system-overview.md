@@ -1,6 +1,6 @@
-eAgriLGU system overview
+AgriLGU system overview
 
-eAgriLGU is an agriculture information and GIS management application for local government agriculture offices. It combines municipality-owned farmer registry records and cards, farm-parcel maps, dry/wet seasonal crop sections, agriculture/fisheries assistance, harvest records, Animal Health, cooperatives, machinery, protected documents, dashboards, reports and authorized administration.
+AgriLGU is an agriculture information and GIS management application for local government agriculture offices. It combines municipality-owned farmer registry records and cards, farm-parcel maps, dry/wet seasonal crop sections, agriculture/fisheries assistance, harvest records, Animal Health, cooperatives, machinery, protected documents, dashboards, reports and authorized administration.
 
 Office users sign in to an assigned role and active region, province or municipality. Municipal roles work within their municipality; provincial and regional roles remain within their assigned scope; System Owner oversight covers configured provinces. Oversight is read-only for routine operational records. Veterinary accounts are Animal Health-only. Server policies enforce these limits even when a URL or filter is changed.
 

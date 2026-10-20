@@ -194,7 +194,7 @@
     <div class="farmer-digital-shell">
       <header class="farmer-digital-header">
         <div>
-          <span class="farmer-digital-kicker">eAgriLGU farmer registry card</span>
+          <span class="farmer-digital-kicker">AgriLGU farmer registry card</span>
           <h2 id="farmerDigitalIdTitle">{{ $fullName ?: 'Farmer' }}'s digital ID</h2>
         </div>
         <button class="farmer-digital-icon-button" type="button" data-close-digital-id aria-label="Close digital ID">&times;</button>
