@@ -1,5 +1,13 @@
 # Design and UX implementation record
 
+## LGU settings, public pages and Poppins brand — October 20, 2026 (prepared)
+
+This revision is prepared for the owner's explicitly authorized deployment; final integrated tests and live acceptance are still pending. Existing Laravel 12 modules and body/form/table Inter typography are preserved. The shared wordmark uses outlined Poppins Bold (700), the owner's corn-and-field mark as A, a blue/red lowercase e and green griLGU. The versioned v3 PNG supplies site and ID screen/print/canvas output; the supplied compact mark supplies browser and collapsed-navigation icons. No runtime font download is added.
+
+The farmer ID uses a visible green-field illustration, readable panels, one wordmark per side and a centered title bounded between branding and the issuing logo. The back keeps office details, wrapped parcel addresses, classification labels, white QR area and ink-signature footer. Configured profiles supply the office logo/details/signatory. Active Ramos, Tarlac keeps its supplied seal as fallback; other unconfigured offices use the DA logo. Republic emblem/heading are removed. Shared artwork sources, complete-text failure behavior, QR destination, municipality scope and physical card dimensions remain intact.
+
+Settings uses the existing scoped operation forms, field errors and save feedback for profiles and websites. Public pages use green primary actions, restrained yellow, white surfaces, responsive office/service/contact sections and central sign-in links. Website text is escaped; unpublished pages support authorized preview. Tenant hosts remain public-only. See [LGU profiles](docs/LGU_PROFILE_SETTINGS.md), [LGU websites](docs/LGU_PUBLIC_WEBSITES.md), [branding](docs/AGRIGOV_BRANDING.md) and [farmer IDs](docs/AGRIGOV_FARMER_IDS.md). Earlier dated card/brand sections below record their release stage and are superseded by this prepared revision.
+
 ## Four farm guide mascots — October 19, 2026
 
 The owner selected concepts 1, 4, 6 and 7: Ka Berto, Ka Kaloy, Aling Maya and

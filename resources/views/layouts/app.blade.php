@@ -1204,6 +1204,17 @@
         ];
       }
 
+      if ($user->can('viewAny', \App\Models\MunicipalityProfile::class) && Route::has('settings.lgu.index')) {
+        $navigationGroups['settings'] = ['label' => 'Settings', 'items' => [[
+          'label' => 'LGU profiles, websites & IDs',
+          'description' => 'Logos, office details, and ID issuer',
+          'icon' => 'users',
+          'route' => 'settings.lgu.index',
+          'patterns' => ['settings.lgu.*'],
+          'badge' => null,
+        ]]];
+      }
+
       if (! $user->isProvincialVeterinaryOffice() && Route::has('municipality-boundaries.index')) {
         $navigationGroups['administration'] = $navigationGroups['administration'] ?? [
           'label' => 'Administration',

@@ -11,15 +11,19 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\MessageBag;
 use Illuminate\Support\ViewErrorBag;
+use Tests\Support\PresentationProvinceSchema;
 use Tests\TestCase;
 
 class FarmerWorkspacePresentationTest extends TestCase
 {
+    use PresentationProvinceSchema;
+
     protected function setUp(): void
     {
         parent::setUp();
         config(['database.default' => 'sqlite', 'database.connections.sqlite.database' => ':memory:', 'services.google_maps.key' => '', 'services.google_maps.map_id' => '']);
         DB::purge('sqlite');
+        $this->createPresentationScope();
     }
 
     public function test_directory_has_five_columns_and_preserves_direct_record_actions(): void

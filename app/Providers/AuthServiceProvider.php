@@ -12,6 +12,8 @@ use App\Models\FarmersCooperative;
 use App\Models\FarmPlot;
 use App\Models\HarvestRecord;
 use App\Models\MunicipalityBoundary;
+use App\Models\MunicipalityProfile;
+use App\Models\MunicipalityWebsite;
 use App\Models\ParcelCropSeason;
 use App\Models\RiceDistributionBatch;
 use App\Models\RiceSeedDistribution;
@@ -28,6 +30,8 @@ use App\Policies\FarmersCooperativePolicy;
 use App\Policies\FarmPlotPolicy;
 use App\Policies\HarvestRecordPolicy;
 use App\Policies\MunicipalityBoundaryPolicy;
+use App\Policies\MunicipalityProfilePolicy;
+use App\Policies\MunicipalityWebsitePolicy;
 use App\Policies\OfficeAssistantPolicy;
 use App\Policies\ParcelCropSeasonPolicy;
 use App\Policies\RiceDistributionBatchPolicy;
@@ -43,6 +47,8 @@ class AuthServiceProvider extends ServiceProvider
      * @var array<class-string, class-string>
      */
     protected $policies = [
+        MunicipalityProfile::class => MunicipalityProfilePolicy::class,
+        MunicipalityWebsite::class => MunicipalityWebsitePolicy::class,
         ClimateRiskAssessment::class => ClimateRiskAssessmentPolicy::class,
         OfficeAssistant::class => OfficeAssistantPolicy::class,
         OfficeRecordReader::class => OfficeAssistantPolicy::class,

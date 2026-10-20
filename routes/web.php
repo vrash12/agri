@@ -21,9 +21,12 @@ use App\Http\Controllers\FarmPlotController;
 use App\Http\Controllers\HarvestRecordController;
 use App\Http\Controllers\MapUsageController;
 use App\Http\Controllers\MunicipalityBoundaryController;
+use App\Http\Controllers\MunicipalityProfileController;
+use App\Http\Controllers\MunicipalityWebsiteController;
 use App\Http\Controllers\ParcelAgronomyController;
 use App\Http\Controllers\ParcelCropSeasonController;
 use App\Http\Controllers\ParcelSatelliteController;
+use App\Http\Controllers\PublicLguWebsiteController;
 use App\Http\Controllers\RiceDistributionBatchController;
 use App\Http\Controllers\RiceSeedDistributionController;
 use App\Http\Controllers\WeatherAdvisoryController;
@@ -39,7 +42,10 @@ use Illuminate\Support\Facades\Route;
 | ROOT
 |--------------------------------------------------------------------------
 */
-Route::get('/', function () {
+Route::get('/', function (Request $request) {
+    if ($request->attributes->has('lgu_website_slug')) {
+        return app(PublicLguWebsiteController::class)->subdomain($request);
+    }
     if (! auth()->check()) {
         return view('welcome');
     }
@@ -51,7 +57,14 @@ Route::get('/', function () {
     return auth()->user()->isGisEvaluator()
         ? redirect()->route('municipality-boundaries.index')
         : redirect()->route('dashboard');
-})->name('welcome');
+})->middleware('throttle:120,1')->name('welcome');
+
+Route::middleware('throttle:120,1')->group(function () {
+    Route::get('/lgus', [PublicLguWebsiteController::class, 'index'])->name('lgu.index');
+    Route::get('/lgus/{slug}', [PublicLguWebsiteController::class, 'show'])->where('slug', '[a-z0-9-]{3,63}')->name('lgu.show');
+    Route::get('/lgus/{slug}/media/{kind}', [PublicLguWebsiteController::class, 'media'])->where(['slug' => '[a-z0-9-]{3,63}', 'kind' => 'logo|cover'])->name('lgu.media');
+    Route::get('/lgu-media/{kind}', [PublicLguWebsiteController::class, 'subdomainMedia'])->where('kind', 'logo|cover')->name('lgu.subdomain-media');
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -148,6 +161,15 @@ Route::middleware([
     */
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->name('dashboard');
+
+    Route::get('/settings/lgu', [MunicipalityProfileController::class, 'index'])->name('settings.lgu.index');
+    Route::get('/settings/lgu/{municipality}', [MunicipalityProfileController::class, 'edit'])->name('settings.lgu.edit');
+    Route::put('/settings/lgu/{municipality}', [MunicipalityProfileController::class, 'update'])->name('settings.lgu.update');
+    Route::get('/settings/lgu/{municipality}/logo', [MunicipalityProfileController::class, 'logo'])->name('settings.lgu.logo');
+    Route::get('/settings/lgu/{municipality}/website', [MunicipalityWebsiteController::class, 'edit'])->name('settings.lgu.website.edit');
+    Route::put('/settings/lgu/{municipality}/website', [MunicipalityWebsiteController::class, 'update'])->name('settings.lgu.website.update');
+    Route::get('/settings/lgu/{municipality}/website/preview', [MunicipalityWebsiteController::class, 'preview'])->name('settings.lgu.website.preview');
+    Route::get('/settings/lgu/{municipality}/website/media/{kind}', [MunicipalityWebsiteController::class, 'media'])->where('kind', 'logo|cover')->name('settings.lgu.website.media');
 
     Route::get('/assistance-coverage', [AssistanceCoverageController::class, 'index'])
         ->name('assistance-coverage.index');

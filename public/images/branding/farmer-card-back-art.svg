@@ -1,25 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1011" height="638" viewBox="0 0 1011 638">
-  <defs>
-    <linearGradient id="band" x2="1" y2="0"><stop stop-color="#173e2d"/><stop offset="1" stop-color="#236344"/></linearGradient>
-    <pattern id="rows" width="110" height="42" patternUnits="userSpaceOnUse">
-      <path d="M-20 33Q40-5 130 20M-20 43Q40 5 130 30" fill="none" stroke="#ffffff" stroke-width="1" opacity=".13"/>
-    </pattern>
-    <g id="leaf" fill="none" stroke="#d8bb59" stroke-width="1.5">
-      <path d="M0 26C11 7 29-3 46-5C38 15 22 26 0 26ZM0 26L32 3"/>
-    </g>
-  </defs>
-  <rect width="1011" height="114" fill="url(#band)"/>
-  <rect width="1011" height="114" fill="url(#rows)"/>
-  <rect y="114" width="1011" height="5" fill="#d8bb59"/>
-  <use href="#leaf" transform="translate(291 49)"/>
-  <use href="#leaf" transform="translate(720 49) scale(-1 1)"/>
-  <rect x="35" y="134" width="470" height="383" rx="14" fill="#ffffff" fill-opacity=".95" stroke="#ceddca" stroke-width="1"/>
-  <rect x="520" y="134" width="443" height="72" rx="12" fill="#ffffff" fill-opacity=".95" stroke="#ceddca" stroke-width="1"/>
-  <!-- Opaque quiet area surrounds the entire QR frame; no landscape enters the code panel. -->
-  <rect x="600" y="211" width="290" height="310" rx="17" fill="#ffffff"/>
-  <path d="M52 216H488M52 371H488M52 446H488" stroke="#e3eae0" stroke-width="1"/>
-  <!-- The pale ink area is shared by both signatures and the national-ID disclaimer. -->
-  <rect x="24" y="532" width="963" height="98" rx="10" fill="#ffffff" fill-opacity=".97"/>
-  <path d="M39 526H972" stroke="#d8bb59" stroke-width="1.5"/>
-  <path d="M0 637H1011" stroke="#173e2d" stroke-width="2"/>
+  <defs><linearGradient id="header" x2="1" y2="0"><stop stop-color="#eaf3ed"/><stop offset=".5" stop-color="#fff"/><stop offset="1" stop-color="#f6f3e5"/></linearGradient></defs>
+  <path d="M0 0h1011v115H0z" fill="url(#header)"/>
+  <path d="M0 115h1011v4H0z" fill="#d6b550"/>
+  <rect x="36" y="139" width="469" height="382" rx="16" fill="#fff" fill-opacity=".86" stroke="#dce7de"/>
+  <path d="M52 213h437M52 372h437M52 447h437" fill="none" stroke="#dce7de"/>
+  <path d="M0 533h1011v105H0z" fill="#fff" fill-opacity=".94"/>
+  <path d="M42 533h927" fill="none" stroke="#c7d9cc"/>
+  <path d="M0 633h1011v5H0z" fill="#236344"/>
 </svg>

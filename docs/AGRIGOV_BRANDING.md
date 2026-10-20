@@ -1,25 +1,30 @@
 # eAgriLGU identity
 
-The current application identity is **eAgriLGU**, a local-government agriculture platform with a corn-and-leaf emblem. This document records the visible branding surfaces, compatibility rules and deployment requirements for the October 15, 2026 rebrand.
+The October 20, 2026 revision is **prepared for explicitly authorized deployment**. Final integrated verification and live deployment acceptance remain pending. Earlier dated branding checks describe their original release, not this revision.
 
-The visible name is eAgriLGU across the welcome page, office login, shared navigation, dashboards, farmer portal, Assistant, public parcel pages and digital farmer IDs. Internal compatibility identifiers such as `agri_gov_id`, `agriGovId`, `AGRI-F-######`, legacy CSS hooks and request headers remain unchanged so existing records, integrations and links continue to work. The private production `APP_NAME` value is also preserved to avoid changing session/cache namespaces; visible templates use the new brand assets directly.
+The application wordmark reads **eAgriLGU**: a blue/red lowercase **e**, the owner's supplied corn-and-field mark replacing **A**, then agriculture-green **griLGU**. The owner selected Poppins Bold (700). Use `<x-brand />` for this full lockup and `<x-brand compact />` for the supplied square mark. Accessible alternative text is eAgriLGU. Shared sizing lives in `public/css/branding.css`; standalone documents include `partials.branding-head`.
 
-The application wordmark reads **eAgriLGU**, with a gold lowercase “e” followed by the green AgriLGU name and corn-and-leaf emblem. Use `x-brand` for the wordmark and `x-brand compact` for the square mark. Accessible alternative text is eAgriLGU. Shared sizing lives in `public/css/branding.css`; each standalone document includes `partials.branding-head` for the stylesheet and browser icons.
+The same identity covers welcome/about pages, office and farmer sign-in, navigation, dashboards, Assistant, farmer portal, public parcel pages, LGU public websites, browser icons and farmer IDs. The sign-in card uses the full wordmark. Collapsed navigation/browser icons use the compact mark. Body text, forms and tables retain the existing local Inter typography and shared tokens.
 
-The identity appears on the welcome page, office login, shared desktop/mobile navigation, collapsed navigation, public QR parcel page, and browser titles/icons. Farmer card attribution names eAgriLGU in both HTML and PNG exports. Actual agency seals and registry identifiers remain unchanged.
+## Source assets and provenance
 
-The login card uses only the compact A emblem at 96 pixels wide; other page headers retain the full wordmark.
+- `public/images/branding/eagrilgu-wordmark-v3.svg`: 365 × 104 source artwork with Poppins Bold lettering converted to paths and the owner's mark embedded unchanged as A.
+- `public/images/branding/eagrilgu-wordmark-v3.png`: 4× rasterization, 1,460 × 416, shared by site and farmer-card screen/print/canvas output. Versioned filenames refresh earlier cached logos, and the raster avoids canvas implementations omitting an SVG's embedded image.
+- `public/images/branding/eagrilgu-system-mark.png`: the owner's supplied 236 × 236 corn-and-field mark; source resolution is limited by the supplied screenshot.
+- `public/images/branding/licenses/Poppins-OFL.txt`: retained SIL Open Font License.
 
-## Assets and provenance
+Poppins Bold comes from [`Poppins-Bold.ttf` in Google Fonts](https://github.com/google/fonts/blob/main/ofl/poppins/Poppins-Bold.ttf), SHA-256 `983676516167748b74de6f4771fb384c664fd913acb8b471122ecacf5da5ea6c`. Outlined lettering needs no installed client font or runtime font request. The e uses blue `#1D5EB8` and red `#D63942`; griLGU uses green `#12633F`. The supplied eGovPH reference informed compactness only; its letter shapes and PH badge are not copied. Small card logos omit tiny tagline lettering; office details occupy their own readable columns.
 
-- `public/images/branding/eagrilgu-wordmark-v1.svg`: responsive transparent wordmark.
-- `public/images/branding/eagrilgu-mark-v1.png`: matching transparent square emblem.
-- `output/branding/agrigov-logo-v1.png`: original concept, retained for reference.
+Older wordmarks remain historical assets where already committed. Active views consume v3 and the supplied compact mark. Agency seals remain separate: configured LGU logos take precedence on IDs; active Ramos, Tarlac retains its municipal seal as an unconfigured fallback, and other unconfigured offices use the DA logo. Cards no longer print the Republic emblem/heading. See [farmer ID rendering](AGRIGOV_FARMER_IDS.md).
 
-Created with the built-in ImageGen tool on September 18, 2026. Edit brief: replace the ordinary A in AgriGOV with the original leaf-and-field A; keep forest green, harvest gold, clean typography, and transparent background. The compact asset extracts the same emblem without lettering for navigation and browser icons. Generated PNG originals are preserved without bitmap post-processing.
+## Compatibility and deployment
 
-Deploy the views, component, head partial, stylesheet, SVG and PNG together. On Hostinger, mirror public assets to both Laravel's `public` directory and the `public_html` document root. Recompile Blade views and rebuild the config/route/view caches after deployment. No migration, account, provider, credential or private environment change is required.
+Keep `AGRI-F-######`, stored portal IDs, `agri_gov_id`/`agriGovId`, `X-AgriGOV-Crop-Modal`, existing routes and legacy `agrilgu-*` CSS hooks unchanged. The private production `APP_NAME`, effective session/cache/Redis namespaces and provider counters are preserved. Do not clear the general application cache for branding.
 
-## Verification
+Deploy the component, head partial, changed views/scripts, photo credits, branding/card stylesheets, source/raster wordmark, compact mark, license and shared field SVGs together. Mirror public assets to Laravel `public` and served `public_html`, with 0644 file permissions. Regenerate optimized autoloading and configuration/route/view caches through the existing locked-dependency release process on PHP 8.3+. Branding alone needs no migration or environment change; the combined LGU feature requires the two explicitly named additive migrations after private backup.
 
-Local verification: the branding-focused PHP runner reported 194 passed plus 266 warning-marked tests (3,609 assertions, no failures) and the focused JavaScript group passed 63 tests; Blade compilation and diff checks passed. The release keeps the existing database, accounts, provider quotas, session/cache namespaces and private environment values unchanged. Live login and both new branding assets are checked after deployment.
+Verify served asset hashes, welcome and both sign-ins, scoped office navigation, public LGU directory/pages, card front/back and artwork failures. Card checking includes long names, issuer/parcel text, signatures and unchanged QR destination. Physical printing and provider-backed browser behavior must be reported separately from automated checks. Final results and deployment status belong in the dated release receipt in [GITHUB_DEPLOYMENT.md](GITHUB_DEPLOYMENT.md).
+
+## Historical releases
+
+The October 15 eAgriLGU rebrand introduced the earlier gold e and corn wordmark; the October 10 AgriLGU and September 18 AgriGOV releases used earlier assets. Their dated records in [AGRILGU_BRANDING.md](AGRILGU_BRANDING.md), design history and deployment history remain evidence for those releases. The October 20 wordmark and card composition supersede those visual descriptions without changing registry identity or session/cache namespaces.

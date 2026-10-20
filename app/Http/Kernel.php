@@ -9,6 +9,7 @@ use App\Http\Middleware\EnsureAccountScope;
 use App\Http\Middleware\MeasureApplicationUsage;
 use App\Http\Middleware\PreventRequestsDuringMaintenance;
 use App\Http\Middleware\RedirectIfAuthenticated;
+use App\Http\Middleware\ResolveLguWebsiteHost;
 use App\Http\Middleware\RestrictGisEvaluatorAccess;
 use App\Http\Middleware\RestrictProvincialVeterinaryAccess;
 use App\Http\Middleware\RestrictVisitorAccess;
@@ -53,6 +54,7 @@ class Kernel extends HttpKernel
         TrimStrings::class,
         ConvertEmptyStringsToNull::class,
         SecurityHeaders::class,
+        ResolveLguWebsiteHost::class,
     ];
 
     /**

@@ -24,6 +24,9 @@
   $provinceName = optional($farmer->municipality)->province
       ?: $farmer->farm_province
       ?: 'Tarlac';
+  if ($cardIssuer['configured'] && $cardIssuer['province']) {
+      $provinceName = $cardIssuer['province'];
+  }
   $sectorTags = collect([
       $farmer->is_arb ? 'ARB' : null,
       $farmer->is_4ps ? '4Ps' : null,
@@ -34,9 +37,6 @@
   ])->filter()->values();
   $plotCount = $farmer->farmPlots->count();
   $cardFarmLocation = $cardFarmLocation ?? 'Parcel address not recorded';
-  $municipalCard = $cardEmblem['municipal'];
-  $cardOfficeHeading = $municipalCard ? 'MUNICIPAL AGRICULTURE OFFICE' : 'PROVINCIAL AGRICULTURE OFFICE';
-  $cardJurisdiction = $municipalCard ? 'RAMOS, TARLAC' : mb_strtoupper($provinceName);
   // 24x24 stroke icons. The same path data is drawn inline on the printed card and
   // through Path2D on the canvas export, so both renderings show identical icons.
   $cardIcons = [
@@ -60,14 +60,16 @@
       <p>Present, print, or download {{ $fullName ?: 'this farmer' }}'s QR-enabled agriculture registry card.</p>
     </div>
     <div class="module-actions">
-      @if(auth()->user()->canManageOperationalData())<a class="module-button" href="{{ route('farmers.edit', $farmer) }}">Edit profile</a>@endif
       <a class="module-button" href="{{ route('farmers.index') }}">Back to registry</a>
-      <button class="module-button module-button-primary" type="button" id="openFarmerDigitalId">Open digital ID</button>
-      <button class="module-button" type="button" id="printFarmerCard">Print cards</button>
-      <button class="module-button" type="button" id="downloadFarmerCardFront">Download front</button>
-      <button class="module-button" type="button" id="downloadFarmerCardBack">Download back</button>
+      @if(auth()->user()->canManageOperationalData())<a class="module-button" href="{{ route('farmers.edit', $farmer) }}">Edit profile</a>@endif
     </div>
   </header>
+
+  <div class="farmer-card-toolbar farmer-card-screen-only" aria-label="Card actions">
+    <div><span class="farmer-card-toolbar-label">Present this ID</span><button class="module-button module-button-primary" type="button" id="openFarmerDigitalId">Open digital ID <span aria-hidden="true">↗</span></button></div>
+    <div><span class="farmer-card-toolbar-label">Print or save a copy</span><div class="module-actions"><button class="module-button" type="button" id="printFarmerCard">Print both sides</button><button class="module-button" type="button" id="downloadFarmerCardFront">Download front</button><button class="module-button" type="button" id="downloadFarmerCardBack">Download back</button></div></div>
+  </div>
+  <div class="module-alert farmer-card-screen-only" id="farmerCardLayoutNotice" role="status" hidden>Some card text exceeds its space. Review the complete details on this page and in the farmer profile before printing or downloading.</div>
 
   @unless($photoUrl)
     <div class="farmer-card-notice farmer-card-screen-only">
@@ -84,9 +86,12 @@
   @endunless
 
   <section class="farmer-card-workspace">
+    @if($cardIssuer['configured'])
+      <div class="farmer-card-workspace-head farmer-card-address-list"><div><strong>Issuing LGU · {{ $cardIssuer['location'] }}</strong><span>{{ $cardIssuer['office_name'] }}@if($cardIssuer['office_address']) · {{ $cardIssuer['office_address'] }}@endif</span><span>{{ collect([$cardIssuer['phone'], $cardIssuer['email'], $cardIssuer['website_url']])->filter()->implode(' · ') }}</span></div></div>
+    @endif
     <div class="farmer-card-workspace-head farmer-card-address-list"><div><strong>Parcel addresses</strong><span>{{ $cardFarmLocation }}</span></div></div>
     <div class="farmer-card-workspace-head farmer-card-screen-only">
-      <div><strong>Print-ready preview</strong><span>Standard CR80 card ratio · front and back</span></div>
+      <div><strong>Front &amp; back preview</strong><span>CR80 · 85.6 × 54 mm when printed at actual size</span></div>
       <span class="farmer-card-id-chip">{{ $farmer->agri_gov_id }}</span>
     </div>
 
@@ -94,16 +99,14 @@
       <article>
         <div class="farmer-card-side-label farmer-card-screen-only"><strong>Front</strong><span>Identity and registry details</span></div>
         <div class="farmer-id-card farmer-id-card-front" id="farmerIdCardFront">
-          <div class="farmer-card-header-brand">
-            <img class="{{ $municipalCard ? 'farmer-card-municipal-logo' : 'farmer-card-republic-logo' }}" src="{{ asset($cardEmblem['path']) }}" alt="{{ $cardEmblem['alt'] }}">
+          <div @class(['farmer-card-header-brand', 'has-lgu-profile' => $cardIssuer['configured']])>
+            <img class="farmer-card-eagrilgu-brand" src="{{ asset('images/branding/eagrilgu-wordmark-v3.png') }}" alt="eAgriLGU">
             <div>
-              <small>REPUBLIKA NG PILIPINAS</small>
-              <span class="farmer-card-republic-translation">Republic of the Philippines</span>
-              <strong>{{ $cardOfficeHeading }}</strong>
+              <strong data-card-fit="1.8" data-card-min="1.38">{{ mb_strtoupper($cardIssuer['office_name']) }}</strong>
               <b>FARMER REGISTRY CARD</b>
-              <span>{{ $cardJurisdiction }}</span>
+              <span data-card-fit="1.55" data-card-min="1.3">{{ mb_strtoupper($cardIssuer['configured'] ? $cardIssuer['location'].' · '.$provinceName : $provinceName) }}</span>
             </div>
-            <img class="farmer-card-da-logo" src="{{ asset('images/da.jpg') }}" alt="Department of Agriculture logo">
+            <img @class(['farmer-card-da-logo', 'farmer-card-lgu-logo' => $cardIssuer['configured']]) src="{{ $cardIssuer['logo_url'] }}" alt="{{ $cardIssuer['logo_alt'] }}">
           </div>
 
           <div class="farmer-card-photo">
@@ -113,23 +116,18 @@
               <span>{{ $initials }}</span>
             @endif
           </div>
-          {{-- Translucent repeat of the portrait, a familiar ID-card detail. Initials alone would only read as a grey patch. --}}
-          @if($photoUrl)
-            <div class="farmer-card-ghost" aria-hidden="true"><img src="{{ $photoUrl }}" alt=""></div>
-          @endif
-
           <div class="farmer-card-front-details">
-            <div class="farmer-card-field farmer-card-field-name"><span>Full name</span><strong>{{ mb_strtoupper($fullName ?: 'NAME NOT RECORDED') }}</strong></div>
-            <div class="farmer-card-field"><span>eAgriLGU ID <em>System-generated</em></span><strong class="farmer-card-code">{{ $farmer->agri_gov_id }}</strong></div>
+            <div class="farmer-card-field farmer-card-field-name"><span>Full name</span><strong data-card-fit="3.36" data-card-min="2.37" data-card-lines="2">{{ mb_strtoupper($fullName ?: 'NAME NOT RECORDED') }}</strong></div>
+            <div class="farmer-card-field farmer-card-field-id"><span>eAgriLGU ID <em>System-generated</em></span><strong class="farmer-card-code" data-card-fit="3.46" data-card-min="2">{{ $farmer->agri_gov_id }}</strong></div>
             <div class="farmer-card-two-fields">
-              <div class="farmer-card-field"><span>RSBSA number</span><strong>{{ $farmer->rsbsa_no ?: 'Not recorded' }}</strong></div>
-              <div class="farmer-card-field"><span>FFRS number</span><strong>{{ $farmer->ffrs ?: 'Not recorded' }}</strong></div>
+              <div class="farmer-card-field"><span>RSBSA number</span><strong data-card-fit="2.5" data-card-min="1.38">{{ $farmer->rsbsa_no ?: 'Not recorded' }}</strong></div>
+              <div class="farmer-card-field"><span>FFRS number</span><strong data-card-fit="2.5" data-card-min="1.38">{{ $farmer->ffrs ?: 'Not recorded' }}</strong></div>
             </div>
-            <div class="farmer-card-field farmer-card-field-municipality"><span>Registry municipality</span><strong>{{ mb_strtoupper($municipalityName) }}</strong></div>
+            <div class="farmer-card-field farmer-card-field-municipality"><span>Registry municipality</span><strong data-card-fit="2.5" data-card-min="1.38">{{ mb_strtoupper($municipalityName) }}</strong></div>
           </div>
 
           <div class="farmer-card-front-footer">
-            <span class="farmer-card-footer-brand"><span aria-hidden="true"><x-brand compact /></span><span>eAgriLGU <i>LGU AGRICULTURE INFORMATION SYSTEM</i></span></span>
+            <span class="farmer-card-service-label">LOCAL AGRICULTURE SERVICES</span>
             <b>{!! $cardIcon('shield') !!}REGISTERED FARMER</b>
             <strong>{{ $farmer->created_at ? $farmer->created_at->format('Y') : now()->format('Y') }}</strong>
           </div>
@@ -139,15 +137,17 @@
       <article>
         <div class="farmer-card-side-label farmer-card-screen-only"><strong>Back</strong><span>Farm details and scannable interactive land map</span></div>
         <div class="farmer-id-card farmer-id-card-back" id="farmerIdCardBack">
-          <header>
-            <x-brand />
+          <header @class(['farmer-card-issuer-header' => $cardIssuer['configured']])>
+            @if($cardIssuer['configured'])<div class="farmer-card-issuer-info">{{ collect([$cardIssuer['office_name'], $cardIssuer['website_url']])->filter()->implode(' · ') }}</div>@endif
+            <img class="farmer-card-eagrilgu-brand" src="{{ asset('images/branding/eagrilgu-wordmark-v3.png') }}" alt="eAgriLGU">
+            @if($cardIssuer['configured'])<div class="farmer-card-issuer-info">{{ collect([$cardIssuer['office_address'], $cardIssuer['phone'], $cardIssuer['email']])->filter()->implode(' · ') }}</div>@endif
           </header>
           <div class="farmer-card-back-body">
             <div class="farmer-card-back-column">
-              <section><span>{!! $cardIcon('phone') !!}Contact number</span><strong>{{ $farmer->contact_number ?: 'Not recorded' }}</strong></section>
+              <section><span>{!! $cardIcon('phone') !!}Contact number</span><strong data-card-fit="2.55" data-card-min="1.38">{{ $farmer->contact_number ?: 'Not recorded' }}</strong></section>
               <section class="farmer-card-parcel-address"><span>{!! $cardIcon('pin') !!}Farm location · Parcel address</span><strong>{{ mb_strlen($cardFarmLocation) <= 120 ? $cardFarmLocation : 'Full parcel address list attached.' }}</strong></section>
-              <section><span>{!! $cardIcon('area') !!}Declared farm area</span><strong>{{ $farmer->farm_area_ha !== null ? number_format((float)$farmer->farm_area_ha, 2).' hectares' : 'Not recorded' }}</strong></section>
-              <section><span>{!! $cardIcon('sprout') !!}Ecosystem</span><strong>{{ $farmer->ecosystem ?: 'Not recorded' }}</strong></section>
+              <section><span>{!! $cardIcon('area') !!}Declared farm area</span><strong data-card-fit="2.55" data-card-min="1.38">{{ $farmer->farm_area_ha !== null ? number_format((float)$farmer->farm_area_ha, 2).' hectares' : 'Not recorded' }}</strong></section>
+              <section><span>{!! $cardIcon('sprout') !!}Ecosystem</span><strong data-card-fit="2.55" data-card-min="1.38">{{ $farmer->ecosystem ?: 'Not recorded' }}</strong></section>
             </div>
             <div class="farmer-card-back-column farmer-card-back-column-right">
               <section><span>{!! $cardIcon('people') !!}Sector classifications</span><div class="farmer-card-sector-list">@forelse($sectorTags as $tag)<b>{{ $tag }}</b>@empty<small>No classifications recorded</small>@endforelse</div></section>
@@ -180,17 +180,12 @@
       </article>
     </div>
   </section>
-  @if($municipalCard)
-    <p class="farmer-card-art-credit farmer-card-screen-only">Municipality of Ramos seal: image supplied by the project owner. Original colors and proportions preserved.</p>
-  @else
-    <p class="farmer-card-art-credit farmer-card-screen-only">Coat of arms: Galo Ocampo; vector by Zachary Harden, <a href="https://commons.wikimedia.org/wiki/File:Coat_of_arms_of_the_Philippines.svg" target="_blank" rel="noopener">Wikimedia Commons</a>, <a href="https://creativecommons.org/licenses/by-sa/2.5/" target="_blank" rel="noopener">CC BY-SA 2.5</a>. Raster reproduction; colors unchanged.</p>
-  @endif
 
   <dialog class="farmer-digital-dialog farmer-card-screen-only" id="farmerDigitalIdDialog" aria-labelledby="farmerDigitalIdTitle">
     <div class="farmer-digital-shell">
       <header class="farmer-digital-header">
         <div>
-          <span class="farmer-digital-kicker">Agriculture registry card</span>
+          <span class="farmer-digital-kicker">eAgriLGU farmer registry card</span>
           <h2 id="farmerDigitalIdTitle">{{ $fullName ?: 'Farmer' }}'s digital ID</h2>
         </div>
         <button class="farmer-digital-icon-button" type="button" data-close-digital-id aria-label="Close digital ID">&times;</button>
@@ -246,21 +241,8 @@
 @endsection
 
 @push('styles')
-<style>
-  .farmer-card-notice{display:flex;align-items:center;gap:11px;padding:11px 13px;border:1px solid #ead39d;border-radius:9px;background:#fffaf0}.farmer-card-notice>span{padding:5px 8px;border-radius:999px;color:#8a5b08;background:#f9e9bd;font-size:9px;font-weight:900;text-transform:uppercase}.farmer-card-notice p{margin:0;color:#6e624b;font-size:10px}.farmer-card-notice a{color:var(--module-green);font-weight:800}
-  .farmer-card-workspace{overflow:hidden;border:1px solid var(--module-border);border-radius:12px;background:#eef3ef}.farmer-card-workspace-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;border-bottom:1px solid var(--module-border);background:#fff}.farmer-card-workspace-head strong,.farmer-card-workspace-head span{display:block}.farmer-card-workspace-head strong{font-size:12px}.farmer-card-workspace-head div>span{margin-top:3px;color:var(--module-muted);font-size:9px}.farmer-card-id-chip{padding:6px 9px;border-radius:7px;color:var(--module-green);background:var(--module-green-soft);font:800 9px ui-monospace,monospace}
-  .farmer-card-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;padding:24px}.farmer-card-grid>article{min-width:0}.farmer-card-side-label{display:flex;justify-content:space-between;gap:10px;margin-bottom:8px}.farmer-card-side-label strong{font-size:11px}.farmer-card-side-label span{color:var(--module-muted);font-size:9px}
-  .farmer-digital-dialog,.farmer-qr-dialog{width:min(880px,calc(100vw - 28px));max-width:none;max-height:calc(100dvh - 28px);padding:0;overflow:hidden;border:0;border-radius:22px;background:transparent;box-shadow:0 32px 90px rgba(8,29,17,.28)}.farmer-digital-dialog::backdrop,.farmer-qr-dialog::backdrop{background:rgba(9,24,15,.72);backdrop-filter:blur(6px)}
-  .farmer-digital-shell{display:grid;max-height:calc(100dvh - 28px);overflow:auto;background:#f8fbf8}.farmer-digital-header{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px 20px;border-bottom:1px solid #d9e4dc;background:#fff}.farmer-digital-header h2,.farmer-qr-shell h2{margin:3px 0 0;color:#102219;font-size:22px;line-height:1.1}.farmer-digital-kicker,.farmer-qr-shell header span{color:#14743f;font-size:10px;font-weight:900;letter-spacing:.09em;text-transform:uppercase}.farmer-digital-icon-button{display:grid;flex:0 0 44px;width:44px;height:44px;place-items:center;border:1px solid #d5dfd8;border-radius:50%;color:#425248;background:#fff;font-size:24px;line-height:1;cursor:pointer}.farmer-digital-icon-button:hover{color:#0b6736;background:#edf7f0}.farmer-digital-icon-button:focus-visible{outline:3px solid rgba(22,131,75,.24);outline-offset:2px}
-  .farmer-digital-stage{display:grid;justify-items:center;padding:18px 20px 12px;background:radial-gradient(circle at 50% 0,#eff8f1 0,#e2eee6 48%,#dbe8df 100%)}.farmer-digital-status{display:flex;align-items:center;gap:7px;margin-bottom:10px;padding:6px 10px;border:1px solid rgba(23,119,65,.16);border-radius:999px;color:#135f35;background:rgba(255,255,255,.82);font-size:10px}.farmer-digital-status span{width:7px;height:7px;border-radius:50%;background:#24b865;box-shadow:0 0 0 4px rgba(36,184,101,.12)}.farmer-digital-card-frame{position:relative;width:min(650px,100%);aspect-ratio:1011/638;display:grid;place-items:center;overflow:hidden;border-radius:22px;background:#fff;box-shadow:0 24px 62px rgba(15,54,31,.2)}.farmer-digital-card-frame img{display:block;width:100%;height:100%;object-fit:contain;opacity:0;transform:scale(.985);transition:opacity .22s ease,transform .22s ease}.farmer-digital-card-frame img.is-ready{opacity:1;transform:scale(1)}.farmer-digital-card-frame.is-changing img{opacity:.15;transform:scale(.975)}.farmer-digital-loading{position:absolute;max-width:90%;text-align:center;color:#65746a;font-size:12px;font-weight:800}.farmer-digital-hint{max-width:660px;margin:10px 0 0;color:#607067;font-size:11px;line-height:1.45;text-align:center}.farmer-digital-side-switch{display:flex;justify-content:center;gap:4px;padding:10px 20px 3px;background:#f8fbf8}.farmer-digital-side-switch button{min-width:120px;min-height:44px;padding:9px 14px;border:0;border-radius:999px;color:#637168;background:transparent;font-size:11px;font-weight:850;cursor:pointer}.farmer-digital-side-switch button.is-active{color:#fff;background:#146f3c;box-shadow:0 6px 16px rgba(20,111,60,.2)}.farmer-digital-side-switch button:focus-visible{outline:3px solid rgba(22,131,75,.22);outline-offset:2px}.farmer-digital-actions{display:flex;align-items:center;justify-content:center;gap:8px;padding:9px 20px 14px;background:#f8fbf8}
-  .farmer-qr-dialog{width:min(440px,calc(100vw - 28px))}.farmer-qr-shell{padding:20px;background:#fff;text-align:center}.farmer-qr-shell>header{display:flex;align-items:center;justify-content:space-between;gap:14px;text-align:left}.farmer-qr-image-wrap{width:min(330px,100%);margin:20px auto 12px;padding:16px;border:1px solid #d8e3db;border-radius:20px;background:#fff;box-shadow:0 16px 40px rgba(16,62,34,.1)}.farmer-qr-image-wrap img{display:block;width:100%;aspect-ratio:1;object-fit:contain}.farmer-qr-shell>strong{display:block;color:#155f36;font:900 14px ui-monospace,monospace;letter-spacing:.04em}.farmer-qr-shell>p{margin:8px auto 18px;color:#607067;font-size:11px;line-height:1.55}.farmer-qr-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.farmer-qr-actions .module-button{justify-content:center;text-align:center}
-  @media(max-width:1180px){.farmer-card-grid{grid-template-columns:1fr}.farmer-card-grid>article{width:min(856px,100%);margin:auto}}
-  @media(max-width:560px){.farmer-card-grid{padding:10px;gap:16px}.farmer-card-workspace-head{align-items:flex-start;flex-direction:column}.farmer-card-notice{align-items:flex-start;flex-direction:column}.farmer-digital-dialog{width:calc(100vw - 12px);max-height:calc(100dvh - 12px);border-radius:18px}.farmer-digital-shell{max-height:calc(100dvh - 12px)}.farmer-digital-header{padding:14px 15px}.farmer-digital-header h2{font-size:17px}.farmer-digital-stage{padding:16px 10px 12px}.farmer-digital-card-frame{border-radius:14px}.farmer-digital-hint{font-size:10px}.farmer-digital-side-switch{padding:11px 10px 3px}.farmer-digital-side-switch button{min-width:105px;min-height:44px;padding:8px 12px}.farmer-digital-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:10px 12px 14px}.farmer-digital-actions .module-button{justify-content:center;padding-inline:8px}.farmer-qr-shell{padding:16px}.farmer-qr-image-wrap{margin-top:16px}}
-  @media print{
-    @page{size:A4 portrait;margin:12mm}.sidebar,.topbar,.farmer-card-screen-only,.farmer-digital-dialog,.farmer-qr-dialog{display:none!important}.main,.content{margin:0!important;padding:0!important;width:100%!important}.farmer-card-page,.farmer-card-workspace,.farmer-card-grid{display:block!important;border:0!important;background:#fff!important;padding:0!important}.farmer-card-grid>article{width:85.6mm!important;margin:0 auto 12mm!important;break-inside:avoid;page-break-inside:avoid}.farmer-id-card{width:85.6mm!important;height:54mm!important;border-radius:2.5mm!important;box-shadow:none!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  }
-</style>
-<link rel="stylesheet" href="{{ asset('css/farmer-id-card.css') }}?v={{ @filemtime(public_path('css/farmer-id-card.css')) ?: 1 }}">
+<link rel="stylesheet" href="{{ asset('css/farmer-id-workspace.css') }}?v={{ filemtime(public_path('css/farmer-id-workspace.css')) }}">
+<link rel="stylesheet" href="{{ asset('css/farmer-id-card.css') }}?v={{ filemtime(public_path('css/farmer-id-card.css')) }}">
 @endpush
 
 @push('scripts')
@@ -272,8 +254,7 @@
       rsbsa: @json($farmer->rsbsa_no ?: 'Not recorded'),
       ffrs: @json($farmer->ffrs ?: 'Not recorded'),
       municipality: @json(mb_strtoupper($municipalityName)),
-      jurisdiction: @json($cardJurisdiction),
-      officeHeading: @json($cardOfficeHeading),
+      province: @json(mb_strtoupper($provinceName)),
       farmLocation: @json($cardFarmLocation),
       contact: @json($farmer->contact_number ?: 'Not recorded'),
       area: @json($farmer->farm_area_ha !== null ? number_format((float)$farmer->farm_area_ha, 2).' hectares' : 'Not recorded'),
@@ -283,14 +264,12 @@
       year: @json($farmer->created_at ? $farmer->created_at->format('Y') : now()->format('Y')),
       initials: @json($initials),
       photoUrl: @json($photoUrl),
-      daLogo: @json(asset('images/da.jpg')),
-      officeEmblem: @json(asset($cardEmblem['path'])),
-      municipalEmblem: @json($municipalCard),
-      background: @json(asset('images/branding/farmer-card-background.svg').'?v=field-20261010-1'),
-      frontArt: @json(asset('images/branding/farmer-card-front-art.svg').'?v=field-20261010-1'),
-      backArt: @json(asset('images/branding/farmer-card-back-art.svg').'?v=field-20261010-1'),
-      brandWordmark: @json(asset('images/branding/eagrilgu-wordmark-v1.svg')),
-      brandMark: @json(asset('images/branding/eagrilgu-mark-v1.png')),
+      daLogo: @json($cardIssuer['logo_url']),
+      issuer: @json($cardIssuer),
+      background: @json(asset('images/branding/farmer-card-background.svg').'?v=20261020-field'),
+      frontArt: @json(asset('images/branding/farmer-card-front-art.svg').'?v=20261020-field'),
+      backArt: @json(asset('images/branding/farmer-card-back-art.svg').'?v=20261020-field'),
+      eAgriLguWordmark: @json(asset('images/branding/eagrilgu-wordmark-v3.png')),
       icons: @json($cardIcons),
       signatory: @json($cardSignatory ? ['name' => mb_strtoupper($cardSignatory['name']), 'title' => $cardSignatory['title']] : null),
       holderName: @json($fullName ? mb_strtoupper($fullName) : null),
@@ -325,13 +304,34 @@
       ctx.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, x, y, width, height);
     }
 
-    function fittedText(ctx, text, x, y, maxWidth, startSize, weight, color, family) {
+    function fittedText(ctx, text, x, y, maxWidth, startSize, weight, color, family, minimumSize) {
       let size = startSize;
       family = family || 'Arial';
-      do { ctx.font = `${weight || 700} ${size}px ${family}`; size -= 1; }
-      while (ctx.measureText(String(text)).width > maxWidth && size > 18);
-      ctx.fillStyle = color || '#132018';
-      ctx.fillText(String(text), x, y, maxWidth);
+      const minimum = Math.min(startSize, minimumSize || 14);
+      while (size >= minimum) {
+        ctx.font = `${weight || 700} ${size}px ${family}`;
+        if (ctx.measureText(String(text)).width <= maxWidth) break;
+        size -= 1;
+      }
+      if (size < minimum) throw new Error('Some card text exceeds its space. Review the complete details before printing or downloading.');
+      ctx.fillStyle = color || '#20362c';
+      ctx.fillText(String(text), x, y);
+    }
+
+    // The same outlined wordmark is used in Blade, print and canvas exports.
+    function drawEAgriLgu(ctx, wordmark, x, y, width, height) {
+      const scale = Math.min(width / wordmark.width, height / wordmark.height);
+      const w = wordmark.width * scale, h = wordmark.height * scale;
+      ctx.drawImage(wordmark, x + (width - w) / 2, y + (height - h) / 2, w, h);
+    }
+
+    function drawCardHeading(ctx) {
+      ctx.save();
+      ctx.textAlign = 'center';
+      fittedText(ctx, cardData.issuer.office_name.toUpperCase(), 578.5, 67, 505, 18, 700, '#294a38');
+      fittedText(ctx, 'FARMER REGISTRY CARD', 578.5, 105, 505, 30, 700, '#173e2d');
+      fittedText(ctx, cardData.issuer.configured ? cardData.municipality+' · '+cardData.province : cardData.province, 578.5, 132, 505, 16, 700, '#52685b');
+      ctx.restore();
     }
 
     function drawIcon(ctx, name, x, y, size, color, width) {
@@ -346,14 +346,14 @@
 
     function label(ctx, text, x, y, icon) {
       if (icon) { drawIcon(ctx, icon, x, y - 18, 22, '#2f7a52'); x += 30; }
-      ctx.fillStyle = '#607067';
-      ctx.font = '700 20px Arial';
+      ctx.fillStyle = '#52685b';
+      ctx.font = '700 16px Arial';
       ctx.fillText(text, x, y);
     }
 
     function field(ctx, text, value, x, y, maxWidth, valueSize, mono, icon) {
       label(ctx, text, x, y, icon);
-      fittedText(ctx, value, x, y + 35, maxWidth, valueSize || 28, 800, '#132018', mono ? 'monospace' : 'Arial');
+      fittedText(ctx, value, x, y + 34, maxWidth, valueSize || 26, 700, '#20362c', mono ? 'monospace' : 'Arial');
     }
 
     function wrapText(ctx, text, maxWidth) {
@@ -368,29 +368,67 @@
     }
 
     // A line to sign above, with the printed name and caption centred beneath it.
+    function signatureName(ctx, name, middle, width) {
+      for (let size = 16; size >= 12; size--) {
+        ctx.font = `700 ${size}px Arial`;
+        const lines = wrapText(ctx, name, width);
+        if (lines.length <= 2 && lines.every(line => ctx.measureText(line).width <= width) && lines.length * size * 1.12 <= 32) {
+          ctx.fillStyle = '#20362c';
+          lines.forEach((line, index) => ctx.fillText(line, middle, 593 + index * size * 1.12));
+          return;
+        }
+      }
+      throw new Error('The complete signature name exceeds the card space. Review the full name before printing or downloading.');
+    }
+
     function signatureLine(ctx, left, right, name, caption) {
       const middle = (left + right) / 2;
       ctx.strokeStyle = '#284d36'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(left, 576); ctx.lineTo(right, 576); ctx.stroke();
       ctx.textAlign = 'center';
-      if (name) fittedText(ctx, name, middle, 598, right - left - 8, 16, 800, '#132018');
-      ctx.fillStyle = '#53685c'; ctx.font = '700 13px Arial';
-      ctx.fillText(caption, middle, name ? 616 : 598, right - left);
+      if (name) signatureName(ctx, name, middle, right - left - 8);
+      fittedText(ctx, caption, middle, name ? 623 : 598, right - left, 13, 700, '#52685b', 'Arial', 11);
       ctx.textAlign = 'left';
     }
 
     // Classification pills matching the printed card; false when they need more
     // than one row, so the caller can fall back to a single fitted line.
     function sectorChips(ctx, tags, x, y, maxWidth) {
-      ctx.font = '700 19px Arial';
+      ctx.font = '700 16px Arial';
       const widths = tags.map(tag => ctx.measureText(tag).width + 24);
       if (!tags.length || widths.reduce((sum, width) => sum + width, 0) + (tags.length - 1) * 8 > maxWidth) return false;
       tags.forEach((tag, index) => {
-        roundRect(ctx, x, y, widths[index], 32, 8, '#e0eee3');
-        ctx.fillStyle = '#174d31'; ctx.fillText(tag, x + 12, y + 23);
+        roundRect(ctx, x, y, widths[index], 29, 5, '#edf4ed', '#d1dfd4');
+        ctx.fillStyle = '#294a38'; ctx.fillText(tag, x + 12, y + 20);
         x += widths[index] + 8;
       });
       return true;
+    }
+
+    // Wrap the complete name into two lines; never squeeze or ellipsize identity text.
+    function identityText(ctx, text, x, y, width, height) {
+      const value = String(text);
+      for (let size = 34; size >= 24; size--) {
+        ctx.font = `700 ${size}px Arial`;
+        const lines = [''];
+        for (const word of value.split(/\s+/)) {
+          const last = lines.length - 1;
+          const next = lines[last] ? lines[last] + ' ' + word : word;
+          if (ctx.measureText(next).width <= width) { lines[last] = next; continue; }
+          if (lines[last]) lines.push('');
+          for (const character of word) {
+            const index = lines.length - 1;
+            if (lines[index] && ctx.measureText(lines[index] + character).width > width) lines.push(character);
+            else lines[index] += character;
+          }
+        }
+        if (lines.length <= 2 && lines.length * size * 1.12 <= height && lines.every(line => ctx.measureText(line).width <= width)) {
+          ctx.fillStyle = '#20362c';
+          lines.forEach((line, index) => ctx.fillText(line, x, y + size + index * size * 1.12));
+          return;
+        }
+      }
+      throw new Error('The complete farmer name exceeds the card space. Review the name in the farmer profile before printing or downloading.');
     }
 
     function addressText(ctx, text, x, y, width, height) {
@@ -419,7 +457,75 @@
       lines.forEach((line, index) => ctx.fillText(line, x, y + index * size * 1.25));
     }
 
+    function issuerText(ctx, text, x, y, width, height) {
+      if (!text) return;
+      for (let size = 16; size >= 14; size--) {
+        ctx.font = `700 ${size}px Arial`;
+        const lines = [''];
+        for (const character of text) {
+          const last = lines.length - 1;
+          if (ctx.measureText(lines[last] + character).width > width) {
+            const boundary = lines[last].lastIndexOf(' ');
+            if (boundary > 0) {
+              const remainder = lines[last].slice(boundary + 1);
+              lines[last] = lines[last].slice(0, boundary + 1);
+              lines.push(remainder + character);
+            } else lines.push(character);
+          } else lines[last] += character;
+        }
+        if (lines.length * size * 1.25 <= height) {
+          ctx.fillStyle = '#243e30';
+          lines.forEach((line, index) => ctx.fillText(line, x, y + size + index * size * 1.25));
+          return;
+        }
+      }
+      throw new Error('The LGU office details exceed the card space. Shorten the details in Settings before downloading or printing.');
+    }
+
+    // The full issuer details remain on the printed sheet if card text is too long.
+    function fitIssuerInfo() {
+      document.querySelectorAll('.farmer-card-issuer-info').forEach(element => {
+        if (!element.dataset.fullText) element.dataset.fullText = element.textContent;
+        element.textContent = element.dataset.fullText;
+        for (let size = 1.55; size >= 1.39; size -= .05) {
+          element.style.fontSize = size + 'cqw';
+          if (element.scrollHeight <= element.clientHeight + 1) return;
+        }
+        element.textContent = 'Full office details attached.';
+        element.style.fontSize = '1.55cqw';
+      });
+    }
     const printedAddress = document.querySelector('.farmer-card-parcel-address>strong');
+    function fitCardValues() {
+      let overflow = false;
+      document.querySelectorAll('.farmer-card-signature strong, .farmer-card-signatory small').forEach(element => {
+        element.dataset.cardFit = element.tagName === 'STRONG' ? '1.6' : '1.3';
+        element.dataset.cardMin = element.tagName === 'STRONG' ? '1.18' : '1.05';
+        if (element.tagName === 'STRONG') element.dataset.cardLines = '2';
+      });
+      document.querySelectorAll('[data-card-fit]').forEach(element => {
+        const start = Number(element.dataset.cardFit), minimum = Number(element.dataset.cardMin);
+        for (let size = start; size >= minimum; size = Math.round((size - .05) * 100) / 100) {
+          element.style.fontSize = size + 'cqw';
+          if (element.scrollWidth <= element.clientWidth + 1 && (!element.dataset.cardLines || element.scrollHeight <= element.clientHeight + 1)) return;
+        }
+        overflow = true;
+      });
+      document.getElementById('farmerCardLayoutNotice').hidden = !overflow;
+    }
+    fitCardValues();
+    window.addEventListener('beforeprint', fitCardValues);
+    document.fonts?.ready.then(fitCardValues);
+    if (typeof ResizeObserver !== 'undefined') {
+      const cardResize = new ResizeObserver(fitCardValues);
+      document.querySelectorAll('.farmer-id-card').forEach(card => cardResize.observe(card));
+    }
+    fitIssuerInfo();
+    window.addEventListener('beforeprint', fitIssuerInfo);
+    if (typeof ResizeObserver !== 'undefined') {
+      const issuerHeader = document.querySelector('.farmer-card-issuer-header');
+      if (issuerHeader) new ResizeObserver(fitIssuerInfo).observe(issuerHeader);
+    }
     function fitPrintedAddress() {
       if (!printedAddress || !printedAddress.clientWidth) return;
       printedAddress.textContent = cardData.farmLocation;
@@ -437,65 +543,65 @@
     window.addEventListener('beforeprint', fitPrintedAddress);
 
     async function renderFront() {
-      const [photo, daLogo, officeEmblem, background, frontArt, brandMark] = await Promise.all([
-        loadImage(cardData.photoUrl), loadImage(cardData.daLogo), loadImage(cardData.officeEmblem), loadImage(cardData.background),
-        loadImage(cardData.frontArt), loadImage(cardData.brandMark)
+      const [photo, daLogo, background, frontArt, eAgriLguWordmark] = await Promise.all([
+        loadImage(cardData.photoUrl), loadImage(cardData.daLogo), loadImage(cardData.background),
+        loadImage(cardData.frontArt), loadImage(cardData.eAgriLguWordmark)
       ]);
-      if (!daLogo || !officeEmblem || !background || !frontArt || !brandMark) throw new Error('The card artwork could not load. Reload this page before downloading the ID.');
+      if (!daLogo || !background || !frontArt || !eAgriLguWordmark) throw new Error('The card artwork could not load. Reload this page before downloading the ID.');
+      if (cardData.photoUrl && !photo) throw new Error('The farmer photo could not load. Reload this page before downloading or printing the ID.');
       const canvas = document.createElement('canvas');
       canvas.width = 1011; canvas.height = 638;
       const ctx = canvas.getContext('2d');
+      ctx.beginPath(); ctx.roundRect(0, 0, 1011, 638, 25); ctx.clip();
       ctx.drawImage(background, 0, 0, 1011, 638);
-      // Readable identity panel, registry microtext, photo corners and field-row footer.
+      // Shared identity panels, gold rule and footer artwork used by CSS/print.
       ctx.drawImage(frontArt, 0, 0, 1011, 638);
-      ctx.drawImage(officeEmblem, 52, cardData.municipalEmblem ? 35 : 30, 98, cardData.municipalEmblem ? 98 : 109);
-      ctx.save(); ctx.beginPath(); ctx.arc(916, 86, 54, 0, Math.PI * 2); ctx.clip(); ctx.drawImage(daLogo, 862, 32, 108, 108); ctx.restore();
-      ctx.textAlign = 'center'; ctx.fillStyle = '#173e2d'; ctx.font = '700 22px Arial'; ctx.fillText('REPUBLIKA NG PILIPINAS', 505, 43);
-      ctx.fillStyle = '#53685c'; ctx.font = '15px Arial'; ctx.fillText('Republic of the Philippines', 505, 64);
-      ctx.fillStyle = '#243e30'; ctx.font = '700 22px Arial'; ctx.fillText(cardData.officeHeading, 505, 94);
-      ctx.fillStyle = '#075b2e'; ctx.font = '900 34px Arial'; ctx.fillText('FARMER REGISTRY CARD', 505, 131);
-      fittedText(ctx, cardData.jurisdiction, 505, 155, 650, 17, 700, '#53685c'); ctx.textAlign = 'left';
-      roundRect(ctx, 52, 190, 250, 305, 18, '#245e3a', '#173f28');
-      ctx.save(); ctx.beginPath(); ctx.roundRect(60, 198, 234, 289, 12); ctx.clip();
-      if (photo) coverImage(ctx, photo, 60, 198, 234, 289);
-      else { ctx.fillStyle = '#245e3a'; ctx.fillRect(60,198,234,289); ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.font='900 92px Arial'; ctx.fillText(cardData.initials,177,370); ctx.textAlign='left'; }
+      drawEAgriLgu(ctx, eAgriLguWordmark, 52, 38, 245, 98);
+      // Contain the complete LGU seal instead of cropping non-square artwork.
+      const logoScale = Math.min(108 / daLogo.width, 108 / daLogo.height);
+      ctx.drawImage(daLogo, 916 - daLogo.width * logoScale / 2, 86 - daLogo.height * logoScale / 2, daLogo.width * logoScale, daLogo.height * logoScale);
+      drawCardHeading(ctx);
+      roundRect(ctx, 52, 200, 245, 312, 12, '#ffffff', '#b9cdbf');
+      ctx.save(); ctx.beginPath(); ctx.roundRect(59, 207, 231, 298, 7); ctx.clip();
+      if (photo) coverImage(ctx, photo, 59, 207, 231, 298);
+      else { ctx.fillStyle = '#236344'; ctx.fillRect(59,207,231,298); ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.font='700 82px Arial'; ctx.fillText(cardData.initials,174,381); ctx.textAlign='left'; }
       ctx.restore();
-      // Ghost portrait: a faint grayscale repeat of the photo beside the details.
-      if (photo) {
-        ctx.save(); ctx.globalAlpha = .2; ctx.beginPath(); ctx.roundRect(858, 424, 92, 112, 10); ctx.clip();
-        if ('filter' in ctx) ctx.filter = 'grayscale(1)';
-        coverImage(ctx, photo, 858, 424, 92, 112);
-        ctx.restore();
-      }
-      field(ctx, 'FULL NAME', cardData.fullName, 340, 205, 610, 38);
-      label(ctx, 'EAGRILGU ID · SYSTEM-GENERATED', 340, 285);
-      ctx.font = '800 35px monospace';
-      roundRect(ctx, 333, 290, Math.min(ctx.measureText(cardData.farmerId).width, 610) + 15, 42, 9, 'rgba(20,116,63,.08)', 'rgba(20,116,63,.3)');
-      fittedText(ctx, cardData.farmerId, 340, 320, 610, 35, 800, '#132018', 'monospace');
-      field(ctx, 'RSBSA NUMBER', cardData.rsbsa, 340, 365, 285, 27);
-      field(ctx, 'FFRS NUMBER', cardData.ffrs, 650, 365, 300, 27);
-      field(ctx, 'REGISTRY MUNICIPALITY', cardData.municipality, 340, 445, 490, 26);
-      ctx.drawImage(brandMark, 52, 571, 50, 50);
-      ctx.fillStyle='#fff'; ctx.font='800 27px Arial'; ctx.fillText('eAgriLGU',120,592); ctx.fillStyle='#e2f1e6'; ctx.font='13px Arial'; ctx.fillText('LGU AGRICULTURE INFORMATION SYSTEM',120,614);
-      ctx.textAlign='right'; ctx.fillStyle='#fff'; ctx.font='800 19px Arial'; ctx.fillText('REGISTERED FARMER',860,602);
+      label(ctx, 'FULL NAME', 340, 216);
+      identityText(ctx, cardData.fullName, 340, 221, 610, 77);
+      label(ctx, 'eAgriLGU ID · SYSTEM-GENERATED', 340, 317);
+      ctx.font = '700 35px monospace';
+      const codeWidth = Math.min(610, ctx.measureText(cardData.farmerId).width + 20);
+      roundRect(ctx, 340, 327, codeWidth, 48, 7, '#eaf3ed', '#c5d9cb');
+      fittedText(ctx, cardData.farmerId, 350, 363, codeWidth - 20, 35, 700, '#173e2d', 'monospace');
+      field(ctx, 'RSBSA NUMBER', cardData.rsbsa, 340, 411, 285, 25);
+      field(ctx, 'FFRS NUMBER', cardData.ffrs, 650, 411, 300, 25);
+      field(ctx, 'REGISTRY MUNICIPALITY', cardData.municipality, 340, 491, 610, 25);
+      ctx.fillStyle = '#fff'; ctx.font = '700 18px Arial';
+      ctx.fillText('LOCAL AGRICULTURE SERVICES', 48, 602);
+      ctx.textAlign='right'; ctx.fillStyle='#fff'; ctx.font='700 18px Arial'; ctx.fillText('REGISTERED FARMER',860,602);
       drawIcon(ctx, 'shield', 860 - ctx.measureText('REGISTERED FARMER').width - 32, 582, 24, '#eac64d', 2.2);
-      ctx.font='800 22px Arial'; ctx.fillText(cardData.year,963,602); ctx.textAlign='left';
+      ctx.strokeStyle='rgba(255,255,255,.35)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(888,581); ctx.lineTo(888,610); ctx.stroke();
+      ctx.font='700 22px Arial'; ctx.fillText(cardData.year,963,602); ctx.textAlign='left';
       return canvas;
     }
 
     async function renderBack() {
-      const [brandWordmark, qrImage, background, backArt] = await Promise.all([
-        loadImage(cardData.brandWordmark), loadImage(cardData.qrDataUri), loadImage(cardData.background), loadImage(cardData.backArt)
+      const [eAgriLguWordmark, qrImage, background, backArt] = await Promise.all([
+        loadImage(cardData.eAgriLguWordmark), loadImage(cardData.qrDataUri), loadImage(cardData.background), loadImage(cardData.backArt)
       ]);
-      if (!brandWordmark || !qrImage || !background || !backArt) throw new Error('The card artwork or QR code could not load. Reload this page before downloading the ID.');
+      if (!eAgriLguWordmark || !qrImage || !background || !backArt) throw new Error('The card artwork or QR code could not load. Reload this page before downloading the ID.');
       const canvas = document.createElement('canvas');
       canvas.width = 1011; canvas.height = 638;
       const ctx = canvas.getContext('2d');
+      ctx.beginPath(); ctx.roundRect(0, 0, 1011, 638, 25); ctx.clip();
       ctx.drawImage(background, 0, 0, 1011, 638);
-      // Field-row header, white detail/QR panels and clear ink-signature area.
+      // The light header keeps configured LGU details readable beside the wordmark.
       ctx.drawImage(backArt, 0, 0, 1011, 638);
-      roundRect(ctx,366,8,279,98,8,'#ffffff');
-      ctx.drawImage(brandWordmark,390,13,230,230 * brandWordmark.height / brandWordmark.width);
+      drawEAgriLgu(ctx, eAgriLguWordmark, 366, 8, 279, 98);
+      if (cardData.issuer.configured) {
+        issuerText(ctx, [cardData.issuer.office_name, cardData.issuer.website_url].filter(Boolean).join(' · '), 52, 25, 290, 76);
+        issuerText(ctx, [cardData.issuer.office_address, cardData.issuer.phone, cardData.issuer.email].filter(Boolean).join(' · '), 682, 25, 277, 76);
+      }
       field(ctx,'CONTACT NUMBER',cardData.contact,52,162,420,28,false,'phone');
       label(ctx,'FARM LOCATION · PARCEL ADDRESS',52,237,'pin');
       addressText(ctx,cardData.farmLocation,52,270,440,100);
@@ -513,7 +619,7 @@
         ctx.moveTo(x, y + dy * 24); ctx.lineTo(x, y); ctx.lineTo(x + dx * 24, y);
       });
       ctx.stroke(); ctx.restore();
-      ctx.fillStyle='#175334'; ctx.font='900 18px Arial'; ctx.textAlign='center'; ctx.fillText('SCAN LAND MAP',745,482);
+      ctx.fillStyle='#173e2d'; ctx.font='700 17px Arial'; ctx.textAlign='center'; ctx.fillText('SCAN LAND MAP',745,482);
       ctx.fillStyle='#53685c'; ctx.font='700 14px Arial'; ctx.fillText(cardData.plotCount+' mapped parcel'+(cardData.plotCount === 1 ? '' : 's')+' · Interactive view',745,504); ctx.textAlign='left';
       // Ink signatures go above these lines after printing: cardholder on the left,
       // the office signatory on the right when one is configured, notes between.
@@ -523,7 +629,6 @@
       ctx.font = '13px Arial';
       const notice = wrapText(ctx, 'Local agriculture registry card — not a substitute for a Philippine national government ID.', notesRight - notesLeft);
       const firstLine = 597 - (notice.length - 1) * 17;
-      ctx.strokeStyle='#cfdbd3'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(notesLeft, firstLine - 20); ctx.lineTo(notesRight, firstLine - 20); ctx.stroke();
       ctx.textAlign='center'; ctx.fillStyle='#68756d';
       notice.forEach((line, index) => ctx.fillText(line, notesMid, firstLine + index * 17));
       ctx.fillStyle='#284d36'; ctx.font='700 14px Arial'; ctx.fillText('Issued '+cardData.issued, notesMid, 617);
@@ -553,11 +658,13 @@
     const digitalDownloadButton = document.getElementById('farmerDigitalDownload');
     const digitalPreviewCache = {};
     let digitalSide = 'front';
+    let digitalRequest = 0;
 
     async function digitalPreview(side) {
       if (!digitalPreviewCache[side]) {
-        const canvas = side === 'back' ? await renderBack() : await renderFront();
-        digitalPreviewCache[side] = canvas.toDataURL('image/png', 1);
+        digitalPreviewCache[side] = (side === 'back' ? renderBack() : renderFront())
+          .then(canvas => canvas.toDataURL('image/png', 1))
+          .catch(error => { delete digitalPreviewCache[side]; throw error; });
       }
       return digitalPreviewCache[side];
     }
@@ -575,23 +682,32 @@
     }
 
     async function showDigitalSide(side) {
+      const request = ++digitalRequest;
       digitalSide = side === 'back' ? 'back' : 'front';
       updateDigitalControls(digitalSide);
       digitalFrame.classList.add('is-changing');
       digitalImage.classList.remove('is-ready');
       digitalLoading.hidden = false;
+      digitalLoading.textContent = 'Preparing digital card…';
+      digitalFrame.setAttribute('aria-busy', 'true');
 
       try {
-        digitalImage.src = await digitalPreview(digitalSide);
+        const preview = await digitalPreview(digitalSide);
+        if (request !== digitalRequest) return;
+        digitalImage.src = preview;
         digitalLoading.hidden = true;
+        digitalFrame.setAttribute('aria-busy', 'false');
         requestAnimationFrame(() => {
+          if (request !== digitalRequest) return;
           digitalFrame.classList.remove('is-changing');
           digitalImage.classList.add('is-ready');
         });
       } catch (error) {
+        if (request !== digitalRequest) return;
         digitalLoading.hidden = false;
         digitalLoading.textContent = error.message || 'The digital card could not be prepared.';
         digitalFrame.classList.remove('is-changing');
+        digitalFrame.setAttribute('aria-busy', 'false');
         console.error('Digital farmer ID preview failed.', error);
       }
     }
@@ -636,7 +752,12 @@
       });
     });
 
-    document.getElementById('printFarmerCard')?.addEventListener('click', () => window.print());
+    document.getElementById('printFarmerCard')?.addEventListener('click', async event => {
+      const button = event.currentTarget; button.disabled = true;
+      try { await Promise.all([renderFront(), renderBack()]); window.print(); }
+      catch (error) { alert(error.message); }
+      finally { button.disabled = false; }
+    });
     document.getElementById('downloadFarmerCardFront')?.addEventListener('click', async event => {
       const button = event.currentTarget; button.disabled = true; button.textContent = 'Preparing…';
       try { downloadCanvas(await renderFront(), 'front'); } catch (error) { alert(error.message); } finally { button.disabled = false; button.textContent = 'Download front'; }

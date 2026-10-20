@@ -1,49 +1,57 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1011" height="638" viewBox="0 0 1011 638">
   <defs>
     <linearGradient id="sky" x2="0" y2="1">
-      <stop stop-color="#f8fcf7"/><stop offset=".52" stop-color="#edf5e7"/><stop offset="1" stop-color="#f9f3da"/>
+      <stop stop-color="#fff8d9"/>
+      <stop offset=".48" stop-color="#f7edbd"/>
+      <stop offset="1" stop-color="#d8e5bd"/>
     </linearGradient>
-    <linearGradient id="fields" x2=".15" y2="1">
-      <stop stop-color="#adc98a"/><stop offset=".55" stop-color="#739b60"/><stop offset="1" stop-color="#426f47"/>
+    <linearGradient id="hill" x2="0" y2="1">
+      <stop stop-color="#5c9564"/>
+      <stop offset="1" stop-color="#2d6746"/>
     </linearGradient>
-    <linearGradient id="light" x2="0" y2="1">
-      <stop stop-color="#ffffff" stop-opacity=".86"/><stop offset=".45" stop-color="#ffffff" stop-opacity=".3"/><stop offset="1" stop-color="#ffffff" stop-opacity=".04"/>
+    <linearGradient id="field" x2="0" y2="1">
+      <stop stop-color="#8fbd58"/>
+      <stop offset="1" stop-color="#3b814c"/>
     </linearGradient>
-    <linearGradient id="water" x2="1" y2="0">
-      <stop stop-color="#dfe9d6"/><stop offset=".6" stop-color="#f3efc9"/><stop offset="1" stop-color="#bed9c4"/>
+    <linearGradient id="fieldLight" x2="0" y2="1">
+      <stop stop-color="#c3d86a"/>
+      <stop offset="1" stop-color="#6ba34b"/>
     </linearGradient>
-    <g id="rice" fill="none" stroke="#315d3f" stroke-linecap="round">
-      <path d="M0 78C-2 42 0 20 6 0" stroke-width="2"/>
-      <path d="M0 69C-9 52-15 43-21 38M1 57C11 40 19 34 26 29M2 40C-5 30-12 24-18 22" stroke-width="1.6"/>
-      <g fill="#d4bb67" stroke="#a88a38" stroke-width=".5">
-        <ellipse cx="7" cy="4" rx="2.6" ry="5" transform="rotate(18 7 4)"/>
-        <ellipse cx="3" cy="12" rx="2.6" ry="5" transform="rotate(-26 3 12)"/>
-        <ellipse cx="10" cy="13" rx="2.6" ry="5" transform="rotate(30 10 13)"/>
-        <ellipse cx="1" cy="22" rx="2.5" ry="5" transform="rotate(-28 1 22)"/>
-        <ellipse cx="8" cy="23" rx="2.5" ry="5" transform="rotate(28 8 23)"/>
-        <ellipse cx="0" cy="32" rx="2.3" ry="4.6" transform="rotate(-30 0 32)"/>
-        <ellipse cx="6" cy="33" rx="2.3" ry="4.6" transform="rotate(30 6 33)"/>
-      </g>
-    </g>
+    <pattern id="rows" width="30" height="16" patternUnits="userSpaceOnUse" patternTransform="skewX(-28)">
+      <path d="M0 3h30M0 11h30" fill="none" stroke="#d8e77e" stroke-opacity=".56" stroke-width="3"/>
+    </pattern>
+    <pattern id="rowsDark" width="34" height="18" patternUnits="userSpaceOnUse" patternTransform="skewX(-28)">
+      <path d="M0 4h34M0 13h34" fill="none" stroke="#b8d365" stroke-opacity=".4" stroke-width="2.5"/>
+    </pattern>
   </defs>
+
   <rect width="1011" height="638" fill="url(#sky)"/>
-  <circle cx="897" cy="249" r="41" fill="#ecd889" opacity=".48"/>
-  <path d="M0 310C86 290 136 237 223 263C302 282 326 237 419 255C505 272 544 229 621 253C714 284 772 226 852 257C923 281 956 245 1011 260V410H0Z" fill="#c9daca"/>
-  <path d="M0 340C97 305 149 310 219 327C321 354 385 285 473 310C559 335 624 297 702 311C823 340 912 289 1011 303V421H0Z" fill="#abc9af" opacity=".7"/>
-  <path d="M0 368C184 352 330 371 515 351C670 334 827 342 1011 331V638H0Z" fill="url(#fields)"/>
-  <!-- Perspective rows follow a shared vanishing point; pale channels separate planted beds. -->
-  <path d="M0 385C210 373 385 377 586 359C748 345 883 348 1011 344M0 419C214 394 415 404 593 377C753 354 901 365 1011 356M0 470C242 422 399 440 601 398C772 363 895 386 1011 377M0 535C240 465 429 481 615 429C799 378 903 414 1011 401M0 618C216 514 464 535 643 471C803 414 919 451 1011 439" fill="none" stroke="#e2dca3" stroke-width="5"/>
-  <path d="M0 405C209 386 386 394 589 368C749 350 895 357 1011 351M0 446C225 405 401 422 597 387C764 358 899 375 1011 365M0 502C240 442 414 460 608 414C787 371 901 399 1011 389M0 574C238 487 446 506 628 448C807 394 910 432 1011 419" fill="none" stroke="#365f3f" stroke-width="1.8" opacity=".44"/>
-  <path d="M489 359C435 405 367 471 249 638H324C427 491 466 419 503 359Z" fill="url(#water)" opacity=".74"/>
-  <path d="M493 359C444 407 391 482 286 638" fill="none" stroke="#f8f3d7" stroke-width="2"/>
-  <g fill="none" stroke="#3e6745" stroke-width="1" opacity=".26">
-    <path d="M95 369L-191 638M179 366L2 638M282 367L187 638M601 345L733 638M708 342L957 638M810 339L1185 638M911 335L1420 638"/>
+  <circle cx="864" cy="112" r="54" fill="#f5c943" fill-opacity=".78"/>
+  <circle cx="864" cy="112" r="72" fill="none" stroke="#f5c943" stroke-opacity=".24" stroke-width="12"/>
+
+  <path d="M0 309C112 230 193 245 284 291c95 48 153 40 238-21 80-57 152-62 234-4 80 56 143 57 255-13v172H0Z" fill="#8eb66c"/>
+  <path d="M0 348c127-87 224-55 321 4 96 59 162 32 252-32 102-72 169-57 249 7 66 53 118 63 189 19v151H0Z" fill="url(#hill)"/>
+
+  <path d="M0 395c156-63 271-7 373 42 104 50 187 29 286-37 103-68 188-60 352 18v220H0Z" fill="url(#field)"/>
+  <path d="M0 438c147-38 254 6 373 58 109 47 197 41 301-25 109-69 207-42 337 37v130H0Z" fill="url(#fieldLight)"/>
+  <path d="M0 474c136-30 261 25 370 67 107 41 208 22 319-40 113-63 205-28 322 44v93H0Z" fill="#4b9550"/>
+
+  <path d="M0 395c156-63 271-7 373 42 104 50 187 29 286-37 103-68 188-60 352 18" fill="none" stroke="#d5e779" stroke-width="7" stroke-opacity=".72"/>
+  <path d="M0 438c147-38 254 6 373 58 109 47 197 41 301-25 109-69 207-42 337 37" fill="none" stroke="#2f7549" stroke-width="6" stroke-opacity=".66"/>
+  <path d="M0 474c136-30 261 25 370 67 107 41 208 22 319-40 113-63 205-28 322 44" fill="none" stroke="#c5da70" stroke-width="6" stroke-opacity=".64"/>
+  <path d="M0 395h1011v243H0Z" fill="url(#rows)" opacity=".5"/>
+  <path d="M0 474h1011v164H0Z" fill="url(#rowsDark)" opacity=".55"/>
+
+  <g fill="#236344" opacity=".9">
+    <path d="M82 415c-10-31 6-56 19-73 2 28 13 48 4 73Z"/>
+    <path d="M98 415c3-31 25-47 42-57-10 28-9 47-29 57Z"/>
+    <path d="M919 414c-7-29 8-51 21-67 0 25 12 43 4 67Z"/>
+    <path d="M934 414c5-28 25-42 42-51-10 25-9 41-28 51Z"/>
   </g>
-  <rect width="1011" height="638" fill="url(#light)"/>
-  <g opacity=".4">
-    <use href="#rice" transform="translate(15 451) rotate(-9)"/>
-    <use href="#rice" transform="translate(33 498) scale(.8) rotate(12)"/>
-    <use href="#rice" transform="translate(986 429) rotate(7)"/>
-    <use href="#rice" transform="translate(1002 488) scale(.9) rotate(-14)"/>
+
+  <g fill="none" stroke="#236344" stroke-opacity=".34" stroke-width="2">
+    <path d="M60 526c91-14 154-3 237 25M41 552c112-17 182-4 278 29M704 515c94-13 176 3 260 29M669 548c117-14 205 1 302 32"/>
   </g>
+
+  <rect width="1011" height="638" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="4"/>
 </svg>

@@ -1,0 +1,62 @@
+.farmer-card-page{display:grid;gap:20px}
+.farmer-card-page .module-header{margin-bottom:0;align-items:flex-start}
+.farmer-card-page .module-header h1{font-size:30px}
+.farmer-card-page .module-header p{max-width:680px;font-size:14px;overflow-wrap:anywhere}
+.farmer-card-toolbar{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;padding:20px 24px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-panel);background:var(--ui-surface)}
+.farmer-card-toolbar>div{min-width:0}
+.farmer-card-toolbar-label{display:block;margin-bottom:8px;font-size:12px;font-weight:500;color:var(--ui-text-muted)}
+.farmer-card-page .module-button{min-height:44px;font-size:14px}
+.farmer-card-notice{display:flex;align-items:center;gap:16px;padding:16px 20px;border:1px solid var(--ui-warning);border-radius:var(--ui-radius-control);background:var(--ui-warning-soft)}
+.farmer-card-notice>span{flex:none;color:var(--ui-warning);font-size:12px;font-weight:700}
+.farmer-card-notice p{margin:0;color:var(--ui-text);font-size:14px;line-height:1.5}
+.farmer-card-notice a{color:var(--ui-primary);text-decoration:underline;text-underline-offset:3px}
+.farmer-card-workspace{overflow:hidden;border:1px solid var(--ui-border);border-radius:var(--ui-radius-panel);background:var(--ui-surface-subtle)}
+.farmer-card-workspace-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 24px;border-bottom:1px solid var(--ui-border);background:var(--ui-surface)}
+.farmer-card-workspace-head strong,.farmer-card-workspace-head span{display:block}
+.farmer-card-workspace-head strong{font-size:14px;font-weight:500;color:var(--ui-text)}
+.farmer-card-workspace-head div>span{margin-top:4px;color:var(--ui-text-muted);font-size:12px;line-height:1.5}
+.farmer-card-workspace-head.farmer-card-address-list div>span{font-size:14px}
+.farmer-card-id-chip{padding:8px 12px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-control);color:var(--ui-primary);background:var(--ui-primary-soft);font:700 13px/1.4 ui-monospace,monospace;white-space:nowrap}
+.farmer-card-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;padding:24px}
+.farmer-card-grid>article{min-width:0}
+.farmer-card-side-label{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px}
+.farmer-card-side-label strong{font-size:14px;font-weight:700;color:var(--ui-text)}
+.farmer-card-side-label span{color:var(--ui-text-muted);font-size:12px;text-align:right}
+.farmer-digital-dialog,.farmer-qr-dialog{width:min(880px,calc(100vw - 32px));max-width:none;max-height:calc(100dvh - 32px);padding:0;overflow:hidden;border:1px solid var(--ui-border);border-radius:16px;background:var(--ui-surface);box-shadow:0 24px 64px rgba(23,62,45,.24);color:var(--ui-text)}
+.farmer-digital-dialog::backdrop,.farmer-qr-dialog::backdrop{background:rgba(16,35,25,.7)}
+.farmer-digital-shell{display:grid;max-height:calc(100dvh - 32px);overflow:auto;background:var(--ui-surface)}
+.farmer-digital-header{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:20px 24px;border-bottom:1px solid var(--ui-border);background:var(--ui-surface)}
+.farmer-digital-header>div,.farmer-qr-shell header>div{min-width:0}
+.farmer-digital-header h2,.farmer-qr-shell h2{margin:4px 0 0;font-size:22px;line-height:1.25;overflow-wrap:anywhere;color:var(--ui-text)}
+.farmer-digital-kicker,.farmer-qr-shell header span{color:var(--ui-primary);font-size:12px;font-weight:500}
+.farmer-digital-icon-button{display:grid;flex:0 0 44px;width:44px;height:44px;place-items:center;border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);color:var(--ui-text);background:var(--ui-surface);font-size:26px;line-height:1;cursor:pointer}
+.farmer-digital-icon-button:hover{color:var(--ui-primary);background:var(--ui-primary-soft)}
+.farmer-digital-icon-button:focus-visible,.farmer-digital-side-switch button:focus-visible{outline:3px solid var(--ui-focus);outline-offset:3px}
+.farmer-digital-stage{display:grid;justify-items:center;padding:24px;background:var(--ui-surface-subtle)}
+.farmer-digital-status{display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:12px;color:var(--ui-text-muted)}
+.farmer-digital-status>span{width:8px;height:8px;border-radius:50%;background:var(--ui-primary)}
+.farmer-digital-status strong{font-weight:500}
+.farmer-digital-card-frame{position:relative;width:min(730px,100%);aspect-ratio:1011/638;display:grid;place-items:center;overflow:hidden;border:1px solid var(--ui-border);border-radius:14px;background:var(--ui-surface);box-shadow:0 8px 24px rgba(23,62,45,.12)}
+.farmer-digital-card-frame img{display:block;width:100%;height:100%;object-fit:contain;opacity:0;transition:opacity .16s ease}
+.farmer-digital-card-frame img.is-ready{opacity:1}
+.farmer-digital-card-frame.is-changing img{opacity:0}
+.farmer-digital-loading{position:absolute;max-width:85%;text-align:center;color:var(--ui-text-muted);font-size:14px;line-height:1.5}
+.farmer-digital-loading[hidden]{display:none}
+.farmer-digital-hint{max-width:660px;margin:16px 0 0;color:var(--ui-text-muted);font-size:12px;line-height:1.5;text-align:center}
+.farmer-digital-side-switch{display:flex;justify-content:center;gap:4px;padding:16px 24px 8px;background:var(--ui-surface)}
+.farmer-digital-side-switch button{min-width:132px;min-height:44px;padding:10px 20px;border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);color:var(--ui-text-muted);background:var(--ui-surface);font:500 14px/1.4 var(--ui-font);cursor:pointer}
+.farmer-digital-side-switch button.is-active{color:var(--ui-surface);border-color:var(--ui-primary);background:var(--ui-primary)}
+.farmer-digital-actions{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;padding:8px 24px 20px;background:var(--ui-surface)}
+.farmer-qr-dialog{width:min(460px,calc(100vw - 32px))}
+.farmer-qr-shell{padding:24px;background:var(--ui-surface);text-align:center;max-height:calc(100dvh - 32px);overflow:auto}
+.farmer-qr-shell>header{display:flex;align-items:center;justify-content:space-between;gap:16px;text-align:left}
+.farmer-qr-image-wrap{width:min(330px,100%);margin:24px auto 16px;padding:16px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-panel);background:#fff}
+.farmer-qr-image-wrap img{display:block;width:100%;aspect-ratio:1;object-fit:contain}
+.farmer-qr-shell>strong{display:block;color:var(--ui-primary);font:700 16px/1.4 ui-monospace,monospace}
+.farmer-qr-shell>p{margin:12px auto 24px;color:var(--ui-text-muted);font-size:14px;line-height:1.5}
+.farmer-qr-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.farmer-qr-actions .module-button{justify-content:center;text-align:center}
+@media(max-width:1350px){.farmer-card-grid{grid-template-columns:1fr}.farmer-card-grid>article{width:min(856px,100%);margin:auto}}
+@media(max-width:640px){.farmer-card-page{gap:16px}.farmer-card-page .module-header h1{font-size:26px}.farmer-card-toolbar{padding:16px;align-items:stretch;gap:16px}.farmer-card-toolbar>div{width:100%}.farmer-card-toolbar .module-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.farmer-card-toolbar #printFarmerCard{grid-column:1/-1}.farmer-card-toolbar #openFarmerDigitalId{width:100%;justify-content:center}.farmer-card-toolbar .module-button{justify-content:center;padding-inline:8px}.farmer-card-grid{padding:12px;gap:24px}.farmer-card-workspace-head{padding:16px;align-items:flex-start;flex-direction:column}.farmer-card-side-label{align-items:flex-start}.farmer-card-side-label span{max-width:68%}.farmer-card-notice{align-items:flex-start;flex-direction:column;gap:8px}.farmer-digital-dialog{width:calc(100vw - 16px);max-height:calc(100dvh - 16px);border-radius:12px}.farmer-digital-shell{max-height:calc(100dvh - 16px)}.farmer-digital-header{padding:16px}.farmer-digital-header h2{font-size:18px}.farmer-digital-stage{padding:20px 12px}.farmer-digital-card-frame{border-radius:10px}.farmer-digital-actions{display:grid;grid-template-columns:1fr 1fr;padding:8px 16px 16px}.farmer-digital-actions .module-button{justify-content:center;padding-inline:8px}.farmer-qr-shell{padding:16px}}
+@media(prefers-reduced-motion:reduce){.farmer-digital-card-frame img{transition:none}}
+@media print{@page{size:A4 portrait;margin:12mm}.sidebar,.topbar,.farmer-card-screen-only,.farmer-digital-dialog,.farmer-qr-dialog{display:none!important}.main,.content{margin:0!important;padding:0!important;width:100%!important}.farmer-card-page,.farmer-card-workspace,.farmer-card-grid{display:block!important;border:0!important;background:#fff!important;padding:0!important}.farmer-card-workspace-head{padding:3mm 0!important}.farmer-card-grid>article{width:85.6mm!important;margin:0 auto 12mm!important;break-inside:avoid;page-break-inside:avoid}.farmer-id-card{width:85.6mm!important;height:54mm!important;border-radius:2.5mm!important;box-shadow:none!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}}

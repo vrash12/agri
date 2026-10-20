@@ -1,5 +1,7 @@
 # eAgriLGU — Complete Feature Catalog
 
+October 20, 2026 release prepared for authorized deployment: **LGU profiles, public websites and Poppins eAgriLGU branding**. Settings lets authorized office managers configure the LGU logo, approved office contacts/location and printed ID signatory, then prepare and publish an LGU website with services, announcements and office hours. Published pages use the `/lgus` directory and fixed public links; optional subdomains require host DNS/HTTPS setup. Pages remain unpublished until an authorized manager publishes them. Site/card branding uses Poppins Bold, the owner's logo as A and a blue/red e. The farmer card keeps a visible green-field background and removes the Republic emblem/heading. Deployment verification is pending; see [LGU profiles](docs/LGU_PROFILE_SETTINGS.md), [LGU websites](docs/LGU_PUBLIC_WEBSITES.md) and [branding](docs/AGRIGOV_BRANDING.md).
+
 October 19 satellite-index expansion (deployed in runtime `aeb8eb5`): the existing parcel
 field check adds NDMI for investigating vegetation water stress, SAVI for sparse
 crop cover and EVI for dense vegetation alongside NDVI. Each explicit search
@@ -259,13 +261,7 @@ See [OFFICE_ASSISTANT.md](docs/OFFICE_ASSISTANT.md) and
 [AI_ASSISTANT_IMPLEMENTATION_PLAN.md](docs/AI_ASSISTANT_IMPLEMENTATION_PLAN.md).
 AgriLGU corn branding, the in-page seasonal crop editor, saved crop icons and the System Owner/Super Admin satellite/map usage panel are deployed in runtime `c322a5e` on October 10, 2026. Existing records and farmer IDs are unchanged. Usage shows local NDVI reservations and outgoing Google Static Maps attempts, not complete provider billing or interactive map loads. The deployed runtime has no planted-section harvest link; a local additive follow-up now permits a direct harvest to reference one keyed saved section after matching farmer, parcel, year, season and crop checks. Release the migration, crop/harvest backend and harvest form together; release-projected rice harvests remain unlinked.
 
-The October 10 field-background ID enhancement is local and not deployed. Front and back now show an illustrated rice-field landscape with clear reading panels, a plain white QR area, aligned signature space and green/gold borders. All six classification labels fit beside the QR; accented names and initials display correctly. Digital controls have 44px touch targets. Screen, print and PNG use the same artwork, and existing identifiers, slash-separated parcel addresses and access rules are preserved.
-
-The pending Ramos-specific ID update replaces the front Philippine emblem with the supplied Municipality of Ramos seal and labels the issuing office Municipal Agriculture Office, Ramos, Tarlac. It applies only to farmers registered under active Ramos, Tarlac. Other municipalities retain their existing emblem and heading. The AgriLGU identity, DA logo, back signatures and QR workflow remain in place.
-
-The front-footer AgriLGU corn mark now has a transparent background in screen, print and PNG rendering. This is part of the pending local card update.
-
-The farmer digital/printable ID now uses a DA green-and-gold gradient card design with the Republic of the Philippines coat of arms, Department of Agriculture logo, AgriLGU identity, and a QR panel for the read-only parcel map. The front carries the identity details; the back uses the AgriLGU wordmark without repeating the front header text. The same artwork is used by on-screen, print, and PNG export views. Farmer fields, parcel-address safeguards, role-scoped access, and the statement that the card is not a national government ID remain unchanged. This card redesign is deployed in runtime `d796071`. See [AGRIGOV_FARMER_IDS.md](docs/AGRIGOV_FARMER_IDS.md).
+The prepared October 20 card replaces the earlier field-artwork and Ramos presentation notes. The front/back use the same visible rice-field artwork and Poppins eAgriLGU wordmark in screen, print and PNG rendering. Configured LGU details and logo take precedence; active Ramos, Tarlac retains its municipal seal when unconfigured, and other unconfigured offices use the DA logo. The Republic emblem/heading is removed. Readable information panels, white QR quiet area, ink-signature lines, identifiers, complete parcel addresses and access rules remain. See [farmer IDs](docs/AGRIGOV_FARMER_IDS.md).
 
 Bicol Region is live with 114 explicit planning/reference geofences: Albay 18, Camarines Norte 12, Camarines Sur 36 including Iriga City, Catanduanes 11, Masbate 21, separate Naga City 1, and Sorsogon 15. The import is atomic and idempotent, preserves existing rows and accounts, and is activated only through `BicolBoundarySeeder` plus `region-access:configure --region=region5`; it issues no accounts. Naga City is a separate scope. See `docs/BICOL_BOUNDARY_SOURCES.md` for sources and limitations.
 
@@ -453,6 +449,14 @@ Implementation status and remaining staff/staging checks are documented in [DESI
 - Delisted workbook rows are retained separately without an active farmer link; duplicate, deceased and inactive source statuses do not reactivate a profile.
 - Parcel Map workspace opened separately from directory work while preserving existing map bookmarks; map startup and parcel retrieval begin on opening.
 
+### LGU office settings and public websites
+
+System Owners, scoped provincial Super Administrators and municipal heads maintain approved office profiles and website content from Settings. Regional Heads, provincial agriculture staff and municipal staff can view and preview within scope; veterinary, GIS evaluator, visitor and farmer-portal identities have no access. Settings includes unconfigured active offices and does not grant operational editing permissions.
+
+Profiles supply office name, logo, public website/contact details, address/location, description and optional printed ID signatory. PNG/JPEG/WebP uploads are validated and privately stored. Stale saves are rejected and administrative changes are audited. Existing printed/downloaded IDs retain their original details.
+
+Public websites add a fixed slug, welcome message, services, announcements, office hours and cover photograph. Active offices with saved profiles can publish; unpublished pages remain staff-preview only. Published pages appear in `/lgus` and `/lgus/{slug}`. Optional subdomains require hosting setup, with sign-in and operational records on the central host. No farmer or parcel data appears publicly. The feature requires two additive migrations and official office content to be supplied; it creates no accounts, profiles or published pages automatically.
+
 ## 6. Farmer ID and digital identification
 
 - Print-ready, two-sided farmer registry card.
@@ -468,10 +472,10 @@ Implementation status and remaining staff/staging checks are documented in [DESI
 - Enlarged QR view for easier scanning.
 - QR code links to the farmer’s public interactive parcel page.
 - The card clearly identifies itself as a local agriculture registry card rather than a Philippine national government ID.
-- ID-style design details: fine-line rosette and microtext rule, grain-ear accents beside the title, gold photo corners, a faint repeat of the farmer's photo, a highlighted AgriLGU ID, a patterned AgriLGU footer and back header, icons beside the back-of-card labels, classification pills, and scan corners around the QR code. The printed card, digital ID and PNG downloads show the same design; the QR code keeps its plain white panel.
-- Cardholder signature line on the back of every card, over the farmer's printed name, for the farmer to sign in ink when the card is handed over.
-- Office signature line on the back of Ramos, Tarlac cards: "ENGR. DENNISH C. PASCUA, Head Agriculturist" printed beneath a line that is signed by hand after printing. Other municipalities' cards show no signatory until their own head is configured. No signature image is stored.
-- Signature artwork and compact expandable Land Plots cards deployed on Hostinger on October 8, 2026 in runtime `18cf956`; existing farmer and account records were preserved.
+- Shared green-field artwork, readable panels, one Poppins eAgriLGU wordmark per side, issuing LGU logo, bounded title, highlighted ID, label icons, classification pills and a white QR panel. The logo replaces A and the e is blue/red; the Republic emblem/heading is removed.
+- Cardholder signature line over the farmer's printed name, signed in ink after printing.
+- Optional printed office signatory from LGU settings; blank saved signatory fields omit the office line. Configured fallback entries apply only to offices without profiles. No signature image is stored.
+- Existing role scope, complete parcel-address rules, QR destination and registry numbers remain intact. The October 20 revision is prepared; earlier signature artwork deployed in runtime `18cf956`.
 
 ## 7. GIS farmer and parcel workspace
 

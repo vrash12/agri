@@ -531,7 +531,7 @@
       >
         <header class="login-header">
           <a class="agrilgu-login" href="{{ route('welcome') }}" aria-label="eAgriLGU home">
-            <x-brand compact />
+            <x-brand />
           </a>
 
           <div class="office-badge">

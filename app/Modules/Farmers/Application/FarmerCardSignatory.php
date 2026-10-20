@@ -4,16 +4,15 @@ namespace App\Modules\Farmers\Application;
 
 use App\Models\Farmer;
 use App\Models\Municipality;
-use App\Modules\Land\Application\BarangayBoundaryReferences;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Resolves the office signatory printed on the back of a farmer registry card.
  *
- * Each office prints its own head, so a farmer only receives the signatory
- * configured for their municipality in `config/farmer_card.php`. Identity uses
- * the municipality name and its supervising province record, the same rule
- * `BarangayBoundaryReferences` uses for Ramos.
+ * A saved LGU profile takes precedence, including a deliberately blank pair.
+ * Legacy config entries remain a fallback for offices without profiles, using
+ * municipality name and supervising province to avoid same-name office matches.
  */
 final class FarmerCardSignatory
 {
@@ -22,6 +21,23 @@ final class FarmerCardSignatory
     {
         if ($farmer->municipality_id === null) {
             return null;
+        }
+
+        $municipality = Municipality::query()->active()->whereKey($farmer->municipality_id)
+            ->whereHas('supervisingProvince', fn (Builder $query) => $query->active())->first();
+
+        return $municipality ? $this->forMunicipality($municipality) : null;
+    }
+
+    /** @return array{name: string, title: string}|null */
+    public function forMunicipality(Municipality $municipality): ?array
+    {
+        if (! $municipality->is_active || ! $municipality->supervisingProvince?->is_active) {
+            return null;
+        }
+        if (Schema::hasTable('municipality_profiles') && ($profile = $municipality->profile)) {
+            return $profile->signatory_name && $profile->signatory_title
+                ? ['name' => $profile->signatory_name, 'title' => $profile->signatory_title] : null;
         }
 
         foreach ((array) config('farmer_card.signatories', []) as $entry) {
@@ -36,7 +52,7 @@ final class FarmerCardSignatory
             }
 
             $matches = Municipality::query()->active()
-                ->whereKey($farmer->municipality_id)
+                ->whereKey($municipality->getKey())
                 ->whereIn('name', $municipalities)
                 ->whereHas('supervisingProvince', fn (Builder $query) => $query->active()->where('name', $province))
                 ->exists();

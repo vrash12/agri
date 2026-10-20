@@ -42,6 +42,16 @@ class Municipality extends Model
         return $this->belongsTo(Province::class, 'province_id');
     }
 
+    public function profile(): HasOne
+    {
+        return $this->hasOne(MunicipalityProfile::class);
+    }
+
+    public function website(): HasOne
+    {
+        return $this->hasOne(MunicipalityWebsite::class);
+    }
+
     public function farmers(): HasMany
     {
         return $this->hasMany(Farmer::class);

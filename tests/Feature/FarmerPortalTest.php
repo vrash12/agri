@@ -6,10 +6,12 @@ use App\Models\Farmer;
 use App\Models\FarmerPortalAccount;
 use App\Models\User;
 use App\Support\ConcurrentWrite;
+use Illuminate\Database\QueryException;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -29,7 +31,7 @@ class FarmerPortalTest extends TestCase
         DB::purge('sqlite');
         DB::setDefaultConnection('sqlite');
         $this->passphrase = bin2hex(random_bytes(16));
-        \Illuminate\Support\Facades\Http::fake(['api.pwnedpasswords.com/*' => fn () => \Illuminate\Support\Facades\Http::response($this->breachedPassword ? substr(strtoupper(sha1($this->passphrase)), 5).':5' : '')]);
+        Http::fake(['api.pwnedpasswords.com/*' => fn () => Http::response($this->breachedPassword ? substr(strtoupper(sha1($this->passphrase)), 5).':5' : '')]);
         $this->schema();
         $this->fixtures();
     }
@@ -42,7 +44,7 @@ class FarmerPortalTest extends TestCase
             ->assertSee('Office sign in')
             ->assertSee('eAgriLGU ID or RSBSA number')
             ->assertSee('<title>Farmer sign in | eAgriLGU</title>', false)
-            ->assertSee(asset('images/branding/eagrilgu-mark-v1.png'), false)
+            ->assertSee(asset('images/branding/eagrilgu-system-mark.png'), false)
             ->assertDontSee('AgriGOV')
             ->assertDontSee('activation code')
             ->assertDontSee('Activate my account');
@@ -197,8 +199,8 @@ class FarmerPortalTest extends TestCase
             ->assertSee('OwnFarmer')
             ->assertSee('eAgriLGU farmer ID')
             ->assertSee(Farmer::findOrFail(1)->agri_gov_id)
-            ->assertSee(asset('images/branding/eagrilgu-wordmark-v1.svg'), false)
-            ->assertSee(asset('images/branding/eagrilgu-mark-v1.png'), false)
+            ->assertSee(asset('images/branding/eagrilgu-wordmark-v3.png'), false)
+            ->assertSee(asset('images/branding/eagrilgu-system-mark.png'), false)
             ->assertDontSee('AgriGOV')
             ->assertDontSee('OtherPrivate');
         $this->get(route('farmer-portal.parcels'))->assertOk()->assertSee('Own parcel')->assertDontSee('Foreign parcel');
@@ -475,7 +477,7 @@ class FarmerPortalTest extends TestCase
         try {
             DB::table('farmer_portal_accounts')->insert(['farmer_id' => 1, 'municipality_id' => 1, 'login_id' => 'AGRI-F-DUPLICATE']);
             $this->fail('The database must reject two portal accounts for the same farmer.');
-        } catch (\Illuminate\Database\QueryException $exception) {
+        } catch (QueryException $exception) {
             $this->assertSame(1, FarmerPortalAccount::count());
         }
         DB::table('farmers')->where('id', 1)->delete();

@@ -104,10 +104,9 @@ class FarmerCardSignatoryTest extends TestCase
         $this->as($this->staff(self::RAMOS))->get(route('farmers.id-card', $farmer))->assertOk()
             ->assertSee('eAgriLGU ID')
             ->assertSee($farmer->agri_gov_id)
-            ->assertSee(asset('images/branding/eagrilgu-wordmark-v1.svg'), false)
-            ->assertSee(asset('images/branding/eagrilgu-mark-v1.png'), false)
-            ->assertSee('brandWordmark:', false)
-            ->assertSee('brandMark:', false)
+            ->assertSee(asset('images/branding/eagrilgu-wordmark-v3.png'), false)
+            ->assertSee(asset('images/branding/eagrilgu-system-mark.png'), false)
+            ->assertSee('eAgriLguWordmark:', false)
             ->assertDontSee('AgriGOV')
             ->assertSee('class="has-signatory"', false)
             ->assertSee('<strong>ENGR. DENNISH C. PASCUA</strong>', false)
@@ -134,7 +133,6 @@ class FarmerCardSignatoryTest extends TestCase
 
             $this->as($this->staff($municipalityId))->get(route('farmers.id-card', $farmer))->assertOk()
                 ->assertSee('farmer-card-holder-signature', false)
-                ->assertSee('<span>Full name</span><strong>MARÍA DELA PEÑA</strong>', false)
                 ->assertSee('<strong>MARÍA DELA PEÑA</strong>', false)
                 ->assertSee("<small>Cardholder's signature</small>", false)
                 ->assertSee('fullName: '.json_encode('MARÍA DELA PEÑA', JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT), false)
@@ -165,9 +163,9 @@ class FarmerCardSignatoryTest extends TestCase
             $farmer = $this->farmer($municipalityId);
             $this->assertFalse($emblems->forFarmer($farmer)['municipal']);
             $this->as($this->staff($municipalityId))->get(route('farmers.id-card', $farmer))->assertOk()
-                ->assertSee('philippines-coat-of-arms.png', false)
+                ->assertSee(asset('images/da.jpg'), false)
+                ->assertDontSee('philippines-coat-of-arms.png', false)
                 ->assertSee('PROVINCIAL AGRICULTURE OFFICE')
-                ->assertSee('Wikimedia Commons')
                 ->assertDontSee('ramos-municipality-seal.jpg', false);
             auth()->logout();
         }
@@ -184,12 +182,9 @@ class FarmerCardSignatoryTest extends TestCase
         $this->as($this->staff(self::RAMOS))->get(route('farmers.id-card', $this->farmer(self::RAMOS)))->assertOk()
             ->assertSee(asset('images/branding/ramos-municipality-seal.jpg'), false)
             ->assertSee('Seal of the Municipality of Ramos, Tarlac')
-            ->assertSee('<strong>MUNICIPAL AGRICULTURE OFFICE</strong>', false)
-            ->assertSee('officeHeading: "MUNICIPAL AGRICULTURE OFFICE"', false)
-            ->assertSee('jurisdiction: "RAMOS, TARLAC"', false)
-            ->assertSee('municipalEmblem: true', false)
-            ->assertSee('officeEmblem:', false)
-            ->assertSee('Original colors and proportions preserved.')
+            ->assertSee('MUNICIPAL AGRICULTURE OFFICE', false)
+            ->assertSee('municipality: "RAMOS"', false)
+            ->assertSee('"office_name":"Municipal Agriculture Office"', false)
             ->assertDontSee('philippines-coat-of-arms.png', false);
     }
 

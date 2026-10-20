@@ -9,7 +9,7 @@ use App\Models\Municipality;
 use App\Models\MunicipalityBoundary;
 use App\Models\RiceSeedDistribution;
 use App\Models\User;
-use App\Modules\Farmers\Application\FarmerCardEmblem;
+use App\Modules\Farmers\Application\FarmerCardIssuer;
 use App\Modules\Farmers\Application\FarmerCardLocations;
 use App\Modules\Farmers\Application\FarmerCardSignatory;
 use App\Modules\Farmers\Application\FarmerDataQuality;
@@ -379,14 +379,14 @@ class FarmerController extends Controller
     /**
      * Display one farmer's printable local registry card.
      */
-    public function idCard(Request $request, Farmer $farmer, FarmerCardLocations $cardLocations, FarmerCardSignatory $cardSignatories, FarmerCardEmblem $cardEmblems)
+    public function idCard(Request $request, Farmer $farmer, FarmerCardLocations $cardLocations, FarmerCardSignatory $cardSignatories, FarmerCardIssuer $issuers)
     {
         $this->authorize('view', $farmer);
         $user = $this->authenticatedUser($request);
         $this->ensureFarmerIsAccessible($farmer, $user);
 
         $farmer->loadMissing([
-            'municipality:id,name,province',
+            'municipality:id,name,province,province_id',
             'farmPlots:id,farmer_id,name,area_ha',
         ]);
 
@@ -402,14 +402,14 @@ class FarmerController extends Controller
 
         $cardFarmLocation = $cardLocations->forFarmer($farmer);
         $cardSignatory = $cardSignatories->forFarmer($farmer);
-        $cardEmblem = $cardEmblems->forFarmer($farmer);
+        $cardIssuer = $issuers->forFarmer($farmer);
 
         return view('farmers.id-card', compact(
             'farmer',
             'scanUrl',
             'cardFarmLocation',
             'cardSignatory',
-            'cardEmblem',
+            'cardIssuer',
             'qrDataUri'
         ));
     }

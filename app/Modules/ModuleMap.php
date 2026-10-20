@@ -12,6 +12,7 @@ final class ModuleMap
         'Climate' => [Land\Application\BarangayBoundaryReferences::class],
         'Farmers' => [Land\Application\BarangayBoundaryReferences::class],
         'Land' => [Agriculture\Application\SeedReleaseQuantity::class],
+        'LocalGovernment' => [],
         'Reporting' => [
             Assistant\Contracts\OfficeRecordReader::class,
             Farmers\Application\AssistantDataQuality::class,

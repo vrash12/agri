@@ -1,14 +1,34 @@
-# AgriGOV farmer IDs
+# eAgriLGU farmer IDs
 
-Current branding is **AgriLGU**, deployed in runtime `c322a5e`. Screen, print, digital ID and PNG exports use the matching corn emblem/wordmark and AgriLGU labels. Actual `AGRI-F-######` numbers, portal logins and `agri_gov_id` compatibility fields are unchanged; the dated releases below used the former name. See [AgriLGU branding](AGRILGU_BRANDING.md).
+## Current revision — October 20, 2026 (prepared)
 
-The October 12, 2026 Ramos seal and field-artwork follow-up is deployed in
-runtime `d89aa10`. Ramos cards resolve the supplied municipal seal only for an
-active Ramos municipality under Tarlac, while other offices retain the national
-emblem treatment. The shared field artwork, signature lines, HTML/canvas
-rendering and five mirrored public assets were released together. No farmer
-records, identifiers, QR destinations, account assignments or signature images
-were changed; signatures remain for ink after printing.
+The LGU issuer, field-artwork and Poppins revision is prepared for the owner's explicitly authorized deployment. Integrated test results, live asset/card acceptance and data-preservation evidence remain pending. The implementation runs in the current Laravel 12/PHP 8.3+ modular application. Historical sections below retain earlier names and release details; the current behavior is defined here.
+
+Screen, print, digital dialog and 1011 × 638 PNG downloads share the outlined Poppins Bold **eAgriLGU** wordmark: the owner's corn-and-field mark replaces **A**, the lowercase **e** is blue/red, and griLGU is green. `eagrilgu-wordmark-v3.png` is rasterized from the matching SVG source. One wordmark appears per card side. The front title is bounded and centered between branding and the issuing logo; the footer names local agriculture services. Body/card data keeps its existing dedicated typesetting.
+
+The shared `farmer-card-background.svg`, `farmer-card-front-art.svg` and `farmer-card-back-art.svg` supply a visible green-field landscape and readable panels. CSS/print and canvas use the same versioned files. The white QR panel and quiet zone stay clear of decoration. Physical cards remain 85.6 × 54 mm. Missing artwork or text exceeding safe export space produces a clear failure rather than an incomplete download.
+
+## Issuer settings and seals
+
+`Settings → LGU profiles, websites & IDs` stores the approved office logo, heading, address, website/contacts and optional printed signatory. `App\Modules\Farmers\Application\FarmerCardIssuer` resolves the farmer's numeric municipality relationship and supplies one payload to HTML and canvas. Full office and parcel-address details remain on the print sheet. Authorized same-origin logo delivery prevents remote-image dependencies.
+
+A configured LGU logo takes precedence. Without one, `FarmerCardEmblem` keeps the supplied municipal seal only for active Ramos under active Tarlac; other offices use the DA logo. Ramos retains its municipal heading when unconfigured. The Republic emblem/heading is removed from all cards. Agency seals and application branding remain distinct.
+
+`FarmerCardSignatory` prefers a saved profile's paired printed name/title, including an intentionally blank pair that omits the office line. Only offices without profiles use the municipality/province-matched fallback in `config/farmer_card.php` (Ramos: Engr. Dennish C. Pascua, Head Agriculturist). Every back prints the farmer's signature line above the printed name; office lines appear only when configured. Signatures are added in ink after printing, with no signature image stored.
+
+Unconfigured offices keep fallback rendering, including when the profile table is absent. Printed/downloaded cards retain details present when generated. Profile changes affect subsequent rendering only. See [LGU_PROFILE_SETTINGS.md](LGU_PROFILE_SETTINGS.md) and [LGU_PUBLIC_WEBSITES.md](LGU_PUBLIC_WEBSITES.md).
+
+## Data and release safeguards
+
+`FarmerCardLocations` retains complete distinct, non-delisted, same-municipality imported parcel addresses; residence or mapped-plot names are never substituted. Long names, issuer fields, parcel addresses and signature captions retain bounded wrapping and incomplete-export refusal. Farmer identity data, `AGRI-F-######`, external RSBSA/FFRS values, role scope, public QR destination and the disclaimer that this is not a national government ID remain unchanged.
+
+Deploy the modular issuer/signatory/emblem services, controller, view, styles, v3 branding and three SVG artwork sources together. Mirror public assets with 0644 permissions and rebuild autoload/configuration/route/view caches without clearing provider budgets. The branding/design needs no data migration; enabling profile/website settings requires only their two explicitly named additive migrations after backup. Do not run unrelated pending migrations or populate office data automatically. Current verification and live status will be recorded in [GITHUB_DEPLOYMENT.md](GITHUB_DEPLOYMENT.md).
+
+## Historical artwork and identifier releases
+
+The dated sections below describe earlier artwork and config-only signatory behavior. They are retained for provenance and are superseded by the current issuer/branding rules above.
+
+The October 12 Ramos seal/field-artwork follow-up deployed in runtime `d89aa10`. It introduced the active Ramos/Tarlac seal resolution and released shared artwork, signature lines, HTML/canvas rendering and five mirrored assets together without changing farmer records, identifiers, QR destinations, accounts or stored signatures. Its national-emblem treatment for other offices is superseded by the October 20 DA fallback above.
 
 ## Field-background refinement — October 10, 2026 (local)
 

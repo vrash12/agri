@@ -2,9 +2,9 @@
 
 <img
     {{ $attributes->class(['agrilgu-logo', 'agrilgu-logo--mark' => $compact]) }}
-    src="{{ asset($compact ? 'images/branding/eagrilgu-mark-v1.png' : 'images/branding/eagrilgu-wordmark-v1.svg') }}"
+    src="{{ asset($compact ? 'images/branding/eagrilgu-system-mark.png' : 'images/branding/eagrilgu-wordmark-v3.png') }}"
     alt="eAgriLGU"
-    width="{{ $compact ? 1254 : 2025 }}"
-    height="{{ $compact ? 1254 : 777 }}"
+    width="{{ $compact ? 236 : 365 }}"
+    height="{{ $compact ? 236 : 104 }}"
     decoding="async"
 >

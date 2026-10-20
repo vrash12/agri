@@ -20,7 +20,7 @@ final class FarmerCardEmblem
         return $ramos
             ? ['path' => 'images/branding/ramos-municipality-seal.jpg',
                 'alt' => 'Seal of the Municipality of Ramos, Tarlac', 'municipal' => true]
-            : ['path' => 'images/branding/philippines-coat-of-arms.png',
-                'alt' => 'Coat of arms of the Republic of the Philippines', 'municipal' => false];
+            : ['path' => 'images/da.jpg',
+                'alt' => 'Department of Agriculture logo', 'municipal' => false];
     }
 }

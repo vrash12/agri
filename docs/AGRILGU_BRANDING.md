@@ -1,8 +1,13 @@
 # AgriLGU identity
 
-Current identity (October 15, 2026): **eAgriLGU**. Shared views and card exports use
-`eagrilgu-wordmark-v1.svg` and `eagrilgu-mark-v1.png`. The SVG embeds the corn
-image so browser image and canvas rendering require no external image fetch.
+The October 20, 2026 release supersedes the following identity with the owner's
+selected Poppins Bold wordmark, supplied corn-and-field logo replacing A, and
+blue/red e. Shared views and card exports use `eagrilgu-wordmark-v3.png`; compact
+branding uses `eagrilgu-system-mark.png`. See [current assets and deployment](AGRIGOV_BRANDING.md).
+
+Historical identity (October 15, 2026): **eAgriLGU** used
+`eagrilgu-wordmark-v1.svg` and `eagrilgu-mark-v1.png`. The SVG embedded the corn
+image so browser image and canvas rendering required no external image fetch.
 The visible rebrand preserves existing farmer identifiers and private production
 environment values. See [current branding](AGRIGOV_BRANDING.md). The following
 sections document the prior October 10 identity and its verification.
