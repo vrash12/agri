@@ -36,7 +36,7 @@ class WelcomePageTest extends TestCase
             ->assertViewIs('welcome')
             ->assertSee('<title>Farmer services | eAgriLGU</title>', false)
             ->assertSee('alt="eAgriLGU"', false)
-            ->assertSee(asset('images/branding/eagrilgu-wordmark-v3.png'), false)
+            ->assertSee(asset('images/branding/eagrilgu-wordmark-v4.png'), false)
             ->assertSee(asset('images/branding/eagrilgu-system-mark.png'), false)
             ->assertDontSee('AgriGOV')
             ->assertSeeText('Mas malapit ang serbisyo sa magsasaka.')

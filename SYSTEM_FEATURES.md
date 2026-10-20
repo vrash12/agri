@@ -481,7 +481,7 @@ Public websites add a fixed slug, welcome message, services, announcements, offi
 - Enlarged QR view for easier scanning.
 - QR code links to the farmer’s public interactive parcel page.
 - The card clearly identifies itself as a local agriculture registry card rather than a Philippine national government ID.
-- Shared green-field artwork, readable panels, one Poppins eAgriLGU wordmark per side, issuing LGU logo, bounded title, highlighted ID, label icons, classification pills and a white QR panel. The logo replaces A and the e is blue/red; the Republic emblem/heading is removed.
+- Shared green-field artwork, readable panels, one Poppins eAgriLGU wordmark per side, issuing LGU logo, bounded title, highlighted ID, label icons, classification pills and a white QR panel. The logo replaces A and the e is agriculture green with tighter spacing around the A mark; the Republic emblem/heading is removed.
 - Cardholder signature line over the farmer's printed name, signed in ink after printing.
 - Optional printed office signatory from LGU settings; blank saved signatory fields omit the office line. Configured fallback entries apply only to offices without profiles. No signature image is stored.
 - Existing role scope, complete parcel-address rules, QR destination and registry numbers remain intact. The October 20 revision deployed in runtime `fed7289`; earlier signature artwork deployed in runtime `18cf956`.

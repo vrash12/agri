@@ -199,7 +199,7 @@ class FarmerPortalTest extends TestCase
             ->assertSee('OwnFarmer')
             ->assertSee('eAgriLGU farmer ID')
             ->assertSee(Farmer::findOrFail(1)->agri_gov_id)
-            ->assertSee(asset('images/branding/eagrilgu-wordmark-v3.png'), false)
+            ->assertSee(asset('images/branding/eagrilgu-wordmark-v4.png'), false)
             ->assertSee(asset('images/branding/eagrilgu-system-mark.png'), false)
             ->assertDontSee('AgriGOV')
             ->assertDontSee('OtherPrivate');

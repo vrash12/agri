@@ -1,5 +1,12 @@
 # Design and UX implementation record
 
+October 20 green-e and compact-spacing follow-up (deployment pending): the shared v4 wordmark uses
+`#12633F` for the lowercase e, matching griLGU. Poppins Bold, the supplied A mark,
+transparent background are preserved. The A mark and griLGU sit closer to the e;
+the wordmark canvas is 350 ? 104 (PNG 1,400 ? 416). The shared brand component and
+farmer-card screen/print/canvas references use the same versioned PNG. See
+[current branding](docs/AGRIGOV_BRANDING.md).
+
 October 20 Assistant update (deployed in runtime `80166f4`): reviewed general agriculture
 questions now use ten canonical topics alongside existing system help, with
 local unrelated-question refusal. Raw chat and records stay local. General

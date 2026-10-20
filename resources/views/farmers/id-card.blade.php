@@ -100,7 +100,7 @@
         <div class="farmer-card-side-label farmer-card-screen-only"><strong>Front</strong><span>Identity and registry details</span></div>
         <div class="farmer-id-card farmer-id-card-front" id="farmerIdCardFront">
           <div @class(['farmer-card-header-brand', 'has-lgu-profile' => $cardIssuer['configured']])>
-            <img class="farmer-card-eagrilgu-brand" src="{{ asset('images/branding/eagrilgu-wordmark-v3.png') }}" alt="eAgriLGU">
+            <img class="farmer-card-eagrilgu-brand" src="{{ asset('images/branding/eagrilgu-wordmark-v4.png') }}" alt="eAgriLGU">
             <div>
               <strong data-card-fit="1.8" data-card-min="1.38">{{ mb_strtoupper($cardIssuer['office_name']) }}</strong>
               <b>FARMER REGISTRY CARD</b>
@@ -139,7 +139,7 @@
         <div class="farmer-id-card farmer-id-card-back" id="farmerIdCardBack">
           <header @class(['farmer-card-issuer-header' => $cardIssuer['configured']])>
             @if($cardIssuer['configured'])<div class="farmer-card-issuer-info">{{ collect([$cardIssuer['office_name'], $cardIssuer['website_url']])->filter()->implode(' · ') }}</div>@endif
-            <img class="farmer-card-eagrilgu-brand" src="{{ asset('images/branding/eagrilgu-wordmark-v3.png') }}" alt="eAgriLGU">
+            <img class="farmer-card-eagrilgu-brand" src="{{ asset('images/branding/eagrilgu-wordmark-v4.png') }}" alt="eAgriLGU">
             @if($cardIssuer['configured'])<div class="farmer-card-issuer-info">{{ collect([$cardIssuer['office_address'], $cardIssuer['phone'], $cardIssuer['email']])->filter()->implode(' · ') }}</div>@endif
           </header>
           <div class="farmer-card-back-body">
@@ -269,7 +269,7 @@
       background: @json(asset('images/branding/farmer-card-background.svg').'?v=20261020-field'),
       frontArt: @json(asset('images/branding/farmer-card-front-art.svg').'?v=20261020-field'),
       backArt: @json(asset('images/branding/farmer-card-back-art.svg').'?v=20261020-field'),
-      eAgriLguWordmark: @json(asset('images/branding/eagrilgu-wordmark-v3.png')),
+      eAgriLguWordmark: @json(asset('images/branding/eagrilgu-wordmark-v4.png')),
       icons: @json($cardIcons),
       signatory: @json($cardSignatory ? ['name' => mb_strtoupper($cardSignatory['name']), 'title' => $cardSignatory['title']] : null),
       holderName: @json($fullName ? mb_strtoupper($fullName) : null),
