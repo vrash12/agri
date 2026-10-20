@@ -1,6 +1,6 @@
 # eAgriLGU identity
 
-The October 20, 2026 revision is **prepared for explicitly authorized deployment**. Final integrated verification and live deployment acceptance remain pending. Earlier dated branding checks describe their original release, not this revision.
+The October 20, 2026 revision is **deployed and verified** in runtime `fed7289`. Eleven source/served public assets match; HTTP text/SVG assets match byte-for-byte, while the hosting CDN losslessly recompresses the two PNGs with identical decoded RGBA pixels and dimensions. Welcome, office/farmer sign-in, the LGU directory and scoped card renders passed. Existing operational data, environment/session/cache namespaces and provider counters were preserved. See [the deployment receipt](EAGRILGU_LGU_DEPLOYMENT_2026_10_20.md) for test and acceptance evidence.
 
 The application wordmark reads **eAgriLGU**: a blue/red lowercase **e**, the owner's supplied corn-and-field mark replacing **A**, then agriculture-green **griLGU**. The owner selected Poppins Bold (700). Use `<x-brand />` for this full lockup and `<x-brand compact />` for the supplied square mark. Accessible alternative text is eAgriLGU. Shared sizing lives in `public/css/branding.css`; standalone documents include `partials.branding-head`.
 
@@ -23,7 +23,7 @@ Keep `AGRI-F-######`, stored portal IDs, `agri_gov_id`/`agriGovId`, `X-AgriGOV-C
 
 Deploy the component, head partial, changed views/scripts, photo credits, branding/card stylesheets, source/raster wordmark, compact mark, license and shared field SVGs together. Mirror public assets to Laravel `public` and served `public_html`, with 0644 file permissions. Regenerate optimized autoloading and configuration/route/view caches through the existing locked-dependency release process on PHP 8.3+. Branding alone needs no migration or environment change; the combined LGU feature requires the two explicitly named additive migrations after private backup.
 
-Verify served asset hashes, welcome and both sign-ins, scoped office navigation, public LGU directory/pages, card front/back and artwork failures. Card checking includes long names, issuer/parcel text, signatures and unchanged QR destination. Physical printing and provider-backed browser behavior must be reported separately from automated checks. Final results and deployment status belong in the dated release receipt in [GITHUB_DEPLOYMENT.md](GITHUB_DEPLOYMENT.md).
+Verify served asset hashes, welcome and both sign-ins, scoped office navigation, public LGU directory/pages, card front/back and artwork failures. Card checking includes long names, issuer/parcel text, signatures and unchanged QR destination. Physical printing and provider-backed browser behavior must be reported separately from automated checks. Results and deployment evidence are recorded in [the October 20 receipt](EAGRILGU_LGU_DEPLOYMENT_2026_10_20.md). Physical printing and interactive live PNG export were not repeated.
 
 ## Historical releases
 

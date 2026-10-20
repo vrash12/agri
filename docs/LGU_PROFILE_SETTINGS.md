@@ -1,6 +1,6 @@
 # LGU profiles and farmer ID issuers
 
-Status: prepared October 20, 2026 for explicitly authorized deployment on the current Laravel 12/PHP 8.3+ modular application. Integrated acceptance and production preservation are not yet verified. No profile, account or logo is created automatically.
+Status: deployed and verified October 20, 2026 in runtime `fed7289` on the current Laravel 12/PHP 8.3+ modular application. The profile migration was applied after verified private backup; its new table remains empty. Three scoped settings renders, existing-card rendering and guest denial checks passed. Existing operational records/accounts and configuration were preserved. No profile, account or logo is created automatically. See [the deployment receipt](EAGRILGU_LGU_DEPLOYMENT_2026_10_20.md).
 
 ## Office workflow
 
@@ -38,6 +38,6 @@ php artisan migrate --path=database/migrations/2026_10_19_000100_create_municipa
 
 This creates an empty additive table and does not modify existing office, farmer, assistance or account rows. Do not run unrelated pending migrations against the legacy baseline. Release models/policies/requests/controllers, LocalGovernment services, modular card services, route/middleware wiring, views and public assets together. Ensure private storage is writable, mirror public assets to both Hostinger directories with 0644 permissions and rebuild optimized autoload/configuration/route/view caches without clearing the general cache. Public website support additionally requires its named migration; see [LGU_PUBLIC_WEBSITES.md](LGU_PUBLIC_WEBSITES.md).
 
-Focused fixtures cover permitted/scoped roles, denied foreign offices, validation, uploads, stale edits, cleanup, safe logo delivery, same-named municipalities, signatory fallback and card/QR consistency. Final integrated results and live deployment status are forthcoming in [GITHUB_DEPLOYMENT.md](GITHUB_DEPLOYMENT.md); earlier isolated local counts are not release acceptance.
+Focused fixtures cover permitted/scoped roles, denied foreign offices, validation, uploads, stale edits, cleanup, safe logo delivery, same-named municipalities, signatory fallback and card/QR consistency. Integrated test results, targeted migrations and live preservation/acceptance checks are recorded in [the October 20 receipt](EAGRILGU_LGU_DEPLOYMENT_2026_10_20.md). No live office profile or logo was populated during deployment.
 
 Back up the profile table and private `lgu-logos` files together. Rollback first withdraws dependent routes/code; dropping the table discards configured profiles. A database-only backup does not contain logo bytes.

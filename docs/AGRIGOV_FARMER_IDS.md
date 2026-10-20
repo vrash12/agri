@@ -1,8 +1,8 @@
 # eAgriLGU farmer IDs
 
-## Current revision — October 20, 2026 (prepared)
+## Current revision — October 20, 2026 (deployed)
 
-The LGU issuer, field-artwork and Poppins revision is prepared for the owner's explicitly authorized deployment. Integrated test results, live asset/card acceptance and data-preservation evidence remain pending. The implementation runs in the current Laravel 12/PHP 8.3+ modular application. Historical sections below retain earlier names and release details; the current behavior is defined here.
+The LGU issuer, field-artwork and Poppins revision deployed and passed verification in runtime `fed7289`. Live server checks rendered two existing cards including Ramos; scoped settings, public routes and all eleven mirrored public assets passed. Existing operational rows/schemas and environment/session/cache/provider state were preserved. Physical printing and interactive live PNG download were not repeated. See [the deployment receipt](EAGRILGU_LGU_DEPLOYMENT_2026_10_20.md). The implementation runs in the current Laravel 12/PHP 8.3+ modular application. Historical sections below retain earlier names and release details; the current behavior is defined here.
 
 Screen, print, digital dialog and 1011 × 638 PNG downloads share the outlined Poppins Bold **eAgriLGU** wordmark: the owner's corn-and-field mark replaces **A**, the lowercase **e** is blue/red, and griLGU is green. `eagrilgu-wordmark-v3.png` is rasterized from the matching SVG source. One wordmark appears per card side. The front title is bounded and centered between branding and the issuing logo; the footer names local agriculture services. Body/card data keeps its existing dedicated typesetting.
 
@@ -22,7 +22,7 @@ Unconfigured offices keep fallback rendering, including when the profile table i
 
 `FarmerCardLocations` retains complete distinct, non-delisted, same-municipality imported parcel addresses; residence or mapped-plot names are never substituted. Long names, issuer fields, parcel addresses and signature captions retain bounded wrapping and incomplete-export refusal. Farmer identity data, `AGRI-F-######`, external RSBSA/FFRS values, role scope, public QR destination and the disclaimer that this is not a national government ID remain unchanged.
 
-Deploy the modular issuer/signatory/emblem services, controller, view, styles, v3 branding and three SVG artwork sources together. Mirror public assets with 0644 permissions and rebuild autoload/configuration/route/view caches without clearing provider budgets. The branding/design needs no data migration; enabling profile/website settings requires only their two explicitly named additive migrations after backup. Do not run unrelated pending migrations or populate office data automatically. Current verification and live status will be recorded in [GITHUB_DEPLOYMENT.md](GITHUB_DEPLOYMENT.md).
+Deploy the modular issuer/signatory/emblem services, controller, view, styles, v3 branding and three SVG artwork sources together. Mirror public assets with 0644 permissions and rebuild autoload/configuration/route/view caches without clearing provider budgets. The branding/design needs no data migration; enabling profile/website settings requires only their two explicitly named additive migrations after backup. Do not run unrelated pending migrations or populate office data automatically. Both named migrations were applied after backup and their new tables remain empty. Current verification and live status are recorded in [the October 20 receipt](EAGRILGU_LGU_DEPLOYMENT_2026_10_20.md).
 
 ## Historical artwork and identifier releases
 

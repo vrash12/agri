@@ -1,5 +1,22 @@
 # GitHub-to-Hostinger deployment
 
+## Verified Hostinger release — October 20, 2026 — eAgriLGU and LGU setup
+
+Runtime `fed7289e595b4539086f7efe3617905790d8167d` was pushed to GitHub main and
+installed by fast-forward pull from `db6935b`. It releases the selected Poppins
+Bold wordmark (logo as A, blue/red e), revised green-field farmer IDs, scoped LGU
+profile/issuer settings and optional public LGU websites. Current Laravel 12 and
+modular application features were retained.
+
+The verified private backup covers **25 existing tables / 9,978 rows**. All original
+rows/schemas, environment bytes, session/cache namespaces and provider counters
+were preserved. Only the two reviewed LGU migrations ran, creating empty profile
+and website tables. Eleven public assets were mirrored; caches/autoloading were
+rebuilt. Scoped live Settings/card renders and public HTTP/asset checks passed;
+the site is online. No LGU content, accounts, DNS or private environment settings
+were changed. Full receipts, checks, checksum and acceptance limitations are in
+[EAGRILGU_LGU_DEPLOYMENT_2026_10_20.md](EAGRILGU_LGU_DEPLOYMENT_2026_10_20.md).
+
 ## Verified Hostinger release — October 19, 2026 — parcel agronomy and live acceptance
 
 Runtime `fe05f036a546415ceb47b4c20aa2361a39174b69` was pushed to GitHub main
