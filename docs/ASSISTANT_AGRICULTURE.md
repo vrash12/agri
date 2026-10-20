@@ -1,6 +1,8 @@
 # Agriculture help and numbered replies
 
-Status: implemented locally on October 20, 2026; not pushed or deployed.
+Status: deployed and verified on October 20, 2026 in runtime
+`80166f41804b58ca3823878ebbb6841804801f45`. See the
+[deployment receipt](ASSISTANT_AGRICULTURE_DEPLOYMENT_2026_10_20.md).
 
 The Assistant distinguishes reviewed farming education from eAgriLGU workflows.
 Questions about fertilizer, planting or fish farming no longer automatically
@@ -77,5 +79,6 @@ change is needed. Deployment still requires the owner's explicit request.
   and whitespace checks passed.
 
 All provider regression calls were faked and private-record tests used synthetic
-SQLite fixtures. No live-model accuracy evaluation, browser visual acceptance,
-production request, push or deployment was performed for this update.
+SQLite fixtures. These local checks did not include live-model accuracy evaluation or browser
+visual acceptance. The subsequent authorized production release is recorded
+in the linked deployment receipt.

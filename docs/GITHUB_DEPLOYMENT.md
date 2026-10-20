@@ -1,5 +1,16 @@
 # GitHub-to-Hostinger deployment
 
+## Verified Hostinger release — October 20, 2026 — Assistant agriculture help
+
+Runtime `80166f41804b58ca3823878ebbb6841804801f45` was pushed to main and
+installed by fast-forward pull from `b3c16a9`. Ten reviewed agriculture topics,
+local unrelated-question refusals and safe numbered-list display are live.
+All 27 tables / 9,987 rows, schemas, environment, namespaces and provider counters
+were preserved against a verified private backup. No migrations or general-cache
+clear ran. Both public assets match Git over HTTPS; public pages, scoped
+read-only Assistant checks and the new chat render passed. See the
+[deployment receipt](ASSISTANT_AGRICULTURE_DEPLOYMENT_2026_10_20.md).
+
 ## Verified Hostinger release — October 20, 2026 — eAgriLGU and LGU setup
 
 Runtime `fed7289e595b4539086f7efe3617905790d8167d` was pushed to GitHub main and

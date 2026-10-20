@@ -1,6 +1,6 @@
 # Agriculture Information System — Developer Guide
 
-Local October 20 Assistant update (not deployed): reviewed general agriculture
+October 20 Assistant update (deployed in runtime `80166f4`): reviewed general agriculture
 questions now use ten canonical topics alongside existing system help, with
 local unrelated-question refusal. Raw chat and records stay local. General
 livestock-care guidance is available to veterinary roles without additional
