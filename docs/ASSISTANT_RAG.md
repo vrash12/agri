@@ -1,5 +1,14 @@
 # Assistant retrieval and grounded help
 
+Local October 20 Assistant update (not deployed): reviewed general agriculture
+questions now use ten canonical topics alongside existing system help, with
+local unrelated-question refusal. Raw chat and records stay local. General
+livestock-care guidance is available to veterinary roles without additional
+operational access. Numbered replies use safe semantic lists, including legacy
+inline sequences. Corpus: 42 passages / 39 topics, bounded at 48 entries with
+unchanged byte/retrieval limits. See [agriculture help](ASSISTANT_AGRICULTURE.md)
+for source provenance, limitations, tests and deployment requirements.
+
 October 19 understanding follow-up (deployed in runtime `2a9ab66`): the
 manifest now contains **32 reviewed passages / 29 canonical topics**. Existing
 satellite passages support focused NDMI, SAVI, EVI and index-choice questions;

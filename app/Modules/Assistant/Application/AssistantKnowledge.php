@@ -27,6 +27,16 @@ final class AssistantKnowledge
      * @var array<string, array{title: string, topics: list<string>, primary: list<string>, audience: string}>
      */
     private const MANIFEST = [
+        'agri-agriculture-basics' => ['title' => 'Agriculture and farming basics', 'topics' => ['agriculture-basics'], 'primary' => ['agriculture-basics'], 'audience' => 'office'],
+        'agri-soil-health' => ['title' => 'Soil health, organic matter and soil cover — FAO-based guide', 'topics' => ['soil-health'], 'primary' => ['soil-health'], 'audience' => 'office'],
+        'agri-crop-rotation' => ['title' => 'Crop rotation and intercropping — FAO-based guide', 'topics' => ['crop-rotation'], 'primary' => ['crop-rotation'], 'audience' => 'office'],
+        'agri-crop-nutrition' => ['title' => 'Crop nutrition and site-specific fertilizer choices — IRRI-based guide', 'topics' => ['crop-nutrition'], 'primary' => ['crop-nutrition'], 'audience' => 'office'],
+        'agri-seed-selection' => ['title' => 'Choosing quality seed — IRRI-based guide', 'topics' => ['seed-selection'], 'primary' => ['seed-selection'], 'audience' => 'office'],
+        'agri-crop-establishment' => ['title' => 'Planning crop establishment', 'topics' => ['crop-establishment'], 'primary' => ['crop-establishment'], 'audience' => 'office'],
+        'agri-irrigation' => ['title' => 'Crop water and irrigation — IRRI-based guide', 'topics' => ['irrigation'], 'primary' => ['irrigation'], 'audience' => 'office'],
+        'agri-pest-management' => ['title' => 'Integrated pest management — FAO-based guide', 'topics' => ['pest-management'], 'primary' => ['pest-management'], 'audience' => 'office'],
+        'agri-livestock-care' => ['title' => 'Farm-animal husbandry and biosecurity — FAO-based guide', 'topics' => ['livestock-care'], 'primary' => ['livestock-care'], 'audience' => 'all'],
+        'agri-aquaculture' => ['title' => 'Fish-farming management — FAO-based guide', 'topics' => ['aquaculture'], 'primary' => ['aquaculture'], 'audience' => 'office'],
         'crop-sections' => ['title' => 'Drawing planted crop sections', 'topics' => ['crop-drawing'], 'primary' => ['crop-drawing'], 'audience' => 'office'],
         'crop-boundary-rules' => ['title' => 'Crop boundary and saving rules', 'topics' => ['crop-drawing'], 'primary' => [], 'audience' => 'office'],
         'parcel-boundaries' => ['title' => 'Drawing or importing a farm parcel', 'topics' => ['parcel-drawing'], 'primary' => ['parcel-drawing'], 'audience' => 'office'],
@@ -127,7 +137,7 @@ final class AssistantKnowledge
         $directory = app('path.resources').DIRECTORY_SEPARATOR.'assistant'.DIRECTORY_SEPARATOR.'knowledge';
         $realDirectory = realpath($directory);
         if ($realDirectory === false || ! is_dir($realDirectory) || is_link($directory)
-            || count(self::MANIFEST) > 32) {
+            || count(self::MANIFEST) > 48) {
             throw $this->unavailable();
         }
         $contents = [];

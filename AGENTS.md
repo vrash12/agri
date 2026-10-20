@@ -1,5 +1,14 @@
 # Agriculture Information System — Developer Guide
 
+Local October 20 Assistant update (not deployed): reviewed general agriculture
+questions now use ten canonical topics alongside existing system help, with
+local unrelated-question refusal. Raw chat and records stay local. General
+livestock-care guidance is available to veterinary roles without additional
+operational access. Numbered replies use safe semantic lists, including legacy
+inline sequences. Corpus: 42 passages / 39 topics, bounded at 48 entries with
+unchanged byte/retrieval limits. See [agriculture help](docs/ASSISTANT_AGRICULTURE.md)
+for source provenance, limitations, tests and deployment requirements.
+
 The October 20, 2026 LGU settings, public websites and Poppins branding release is **deployed and verified** in runtime `fed7289e595b4539086f7efe3617905790d8167d` through GitHub and Hostinger fast-forward pull. All 25 existing tables / 9,978 rows and existing schemas, environment, session/cache namespaces and provider counters were preserved. Only the two named additive LGU migrations ran, creating two empty tables and two migration receipts; no office profiles, website publications, accounts or DNS were changed. Eleven public assets were mirrored and verified. Scoped settings/card renders, public routes and guest denial checks passed. The release passed 101 focused PHP tests / 2,025 assertions, an additional seven login tests / 77 assertions, 328 JavaScript tests, syntax, Blade/routes, Pint and diff checks. No general-cache clear ran. See [the dated deployment receipt](docs/EAGRILGU_LGU_DEPLOYMENT_2026_10_20.md), [LGU profiles](docs/LGU_PROFILE_SETTINGS.md), [LGU websites](docs/LGU_PUBLIC_WEBSITES.md) and [branding](docs/AGRIGOV_BRANDING.md).
 
 The October 19 parcel agronomy workflow is deployed in runtime `fe05f03`

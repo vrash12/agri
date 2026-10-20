@@ -1,5 +1,14 @@
 # Design and UX implementation record
 
+Local October 20 Assistant update (not deployed): reviewed general agriculture
+questions now use ten canonical topics alongside existing system help, with
+local unrelated-question refusal. Raw chat and records stay local. General
+livestock-care guidance is available to veterinary roles without additional
+operational access. Numbered replies use safe semantic lists, including legacy
+inline sequences. Corpus: 42 passages / 39 topics, bounded at 48 entries with
+unchanged byte/retrieval limits. See [agriculture help](docs/ASSISTANT_AGRICULTURE.md)
+for source provenance, limitations, tests and deployment requirements.
+
 ## LGU settings, public pages and Poppins brand — October 20, 2026 (deployed)
 
 This revision deployed and passed acceptance checks in runtime `fed7289`. Scoped settings and two existing card renders, public welcome/sign-ins/directory, guest denial and all eleven mirrored assets were verified. Existing rows, schemas, environment and provider/session/cache namespaces were preserved; the two additive LGU tables remain empty. See [the deployment receipt](docs/EAGRILGU_LGU_DEPLOYMENT_2026_10_20.md). Physical printing and an interactive live PNG download were not repeated. Existing Laravel 12 modules and body/form/table Inter typography are preserved. The shared wordmark uses outlined Poppins Bold (700), the owner's corn-and-field mark as A, a blue/red lowercase e and green griLGU. The versioned v3 PNG supplies site and ID screen/print/canvas output; the supplied compact mark supplies browser and collapsed-navigation icons. No runtime font download is added.

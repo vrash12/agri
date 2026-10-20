@@ -4,7 +4,10 @@ The runtime help path retrieves reviewed passages from `knowledge/*.md` through
 the explicit `AssistantKnowledge` manifest. This index is not provider context.
 The previous whole-guide prompt was replaced by local RAG on October 11, 2026.
 
-The explicit manifest contains 31 reviewed passages for 24 supported help topics.
+The explicit manifest contains 42 reviewed passages for 39 supported help topics, with a 48-entry ceiling.
+Ten agriculture topics add farming basics, soil, rotation, nutrients, seeds,
+planting preparation, irrigation, pest management, livestock and aquaculture.
+See [agriculture sources and limits](../../docs/ASSISTANT_AGRICULTURE.md).
 Coverage includes farmer profiles/workbook imports and incomplete-data review;
 parcel boundaries and planning-reference limits; planted crop sections and saving
 rules; agriculture/fisheries release entry, rice distribution sheets, assistance

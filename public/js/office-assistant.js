@@ -170,6 +170,57 @@
     announce('Suggested message ready. Edit it or send when you are ready.');
     input.focus();
   }
+  function answerContent(text) {
+    // Create only text nodes and semantic lists. Never interpret provider HTML,
+    // Markdown links or event attributes, including inside numbered items.
+    const normalized = text.replace(/\r\n?/g, '\n').split(/\n\s*\n/).map(paragraph => {
+      const markers = [...paragraph.matchAll(/(?:^|\s)([1-9]\d{0,2})[.)]\s+(?=\S)/g)];
+      if (markers.length < 2 || markers.length > 50 || Number(markers[0][1]) !== 1
+        || !markers.every((marker, i) => Number(marker[1]) === i + 1)) return paragraph;
+      // Older/cached replies may put all steps on one line. Recognize only
+      // consecutive 1..N markers, not decimals, years or isolated numbers.
+      let result = paragraph.slice(0, markers[0].index).trimEnd();
+      markers.forEach((marker, i) => {
+        const start = marker.index + marker[0].length;
+        const end = markers[i + 1]?.index ?? paragraph.length;
+        result += (result ? '\n' : '') + marker[1] + '. ' + paragraph.slice(start, end).trim();
+      });
+      return result;
+    }).join('\n\n');
+    if (!/^\s*[1-9]\d{0,2}[.)]\s+\S/m.test(normalized) && !/\n\s*\n/.test(normalized)) {
+      const plain = document.createElement('p'); plain.textContent = text; return plain;
+    }
+    const container = document.createElement('div');
+    container.className = 'assistant-answer';
+    const lines = normalized.split('\n');
+    let list = null, item = null, previous = null, paragraph = [];
+    function flushParagraph() {
+      if (!paragraph.length) return;
+      const p = document.createElement('p'); p.textContent = paragraph.join('\n');
+      container.append(p); paragraph = [];
+    }
+    lines.forEach((line, index) => {
+      const match = line.match(/^\s*([1-9]\d{0,2})[.)]\s+(.+)$/);
+      if (match) {
+        flushParagraph();
+        const number = Number(match[1]);
+        if (!list || number !== previous + 1) {
+          list = document.createElement('ol'); list.setAttribute('start', String(number)); container.append(list);
+        }
+        item = document.createElement('li'); item.textContent = match[2]; list.append(item); previous = number;
+      } else if (!line.trim()) {
+        flushParagraph();
+        const next = lines.slice(index + 1).find(value => value.trim())?.match(/^\s*([1-9]\d{0,2})[.)]\s+/);
+        if (!next || Number(next[1]) !== previous + 1) { list = null; item = null; }
+      } else if (item && /^\s{2,}\S/.test(line)) {
+        item.textContent += '\n' + line.trim();
+      } else {
+        list = null; item = null; paragraph.push(line);
+      }
+    });
+    flushParagraph();
+    return container;
+  }
   function showReply(reply, text, data) {
     const atBottom = nearBottom();
     latestSuggestions = new Set();
@@ -177,7 +228,7 @@
     reply.entry.classList.remove('is-pending', 'is-error');
     reply.entry.removeAttribute('aria-busy');
     reply.label.textContent = replyLabel(reply.guide, data?.source);
-    reply.content.textContent = text;
+    reply.content = answerContent(text);
     reply.entry.replaceChildren(reply.label, reply.content);
     if (data) {
       const details = [];

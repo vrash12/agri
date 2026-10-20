@@ -800,3 +800,51 @@ test('unified dialog has no mode or year selectors and uses the shared visual sy
   assert.doesNotMatch(css, /100vw/);
   assert.match(css, /width: calc\(100% - 16px\)/);
 });
+
+
+test('numbered steps render as semantic lists, including legacy inline answers', async () => {
+  for (const answer of [
+    '1. Inspect the soil.\n2. Plan irrigation.\n3. Monitor the crop.',
+    '1) Inspect the soil. 2) Plan irrigation. 3) Monitor the crop.',
+    '1. Inspect the soil.\n\n2. Plan irrigation.\n\n3. Monitor the crop.'
+  ]) {
+    const ui = setup(async () => reply(answer));
+    ui.input.value = 'Explain irrigation step by step'; await ui.form.fire('submit');
+    const lists = ui.messages.children.at(-1).querySelectorAll('ol');
+    assert.equal(lists.length, 1);
+    assert.equal(lists[0].attributes.start, '1');
+    assert.deepEqual(lists[0].children.map(item => item.textContent),
+      ['Inspect the soil.', 'Plan irrigation.', 'Monitor the crop.']);
+    assert.ok(lists[0].children.every(item => item.tagName === 'li'));
+  }
+});
+
+test('lists preserve introductions, conclusions, indented continuation and malicious text as text', async () => {
+  const ui = setup(async () => reply('Start here:\n\n1. Inspect <img src=x onerror=alert(1)>\n  Look at the roots.\n2. Ask an officer.\n\nThis is general guidance.'));
+  ui.input.value = 'Show the steps'; await ui.form.fire('submit');
+  const answer = ui.messages.children.at(-1).children[1];
+  assert.equal(answer.children[0].textContent, 'Start here:');
+  assert.equal(answer.children.at(-1).textContent, 'This is general guidance.');
+  assert.equal(answer.querySelectorAll('li')[0].textContent, 'Inspect <img src=x onerror=alert(1)>\nLook at the roots.');
+  assert.equal(answer.querySelectorAll('img').length, 0);
+  assert.equal(answer.querySelectorAll('script').length, 0);
+});
+
+test('decimals, years and isolated inline numbers stay ordinary text', async () => {
+  const answer = 'Area: 1.25 hectares. Yield: 2.5 tonnes. Year 2026. Version 1. Review the record.';
+  const ui = setup(async () => reply(answer));
+  ui.input.value = 'Show harvests'; await ui.form.fire('submit');
+  assert.equal(content(ui), answer);
+  assert.equal(ui.messages.children.at(-1).querySelectorAll('ol').length, 0);
+});
+
+test('a numbered reply can be followed by a new request and a clean retry', async () => {
+  let turn = 0;
+  const ui = setup(async () => ++turn === 1 ? reply('1. Inspect.\n2. Review.') : response(503, {}));
+  ui.input.value = 'Explain soil health'; await ui.form.fire('submit');
+  ui.input.value = 'More'; await ui.form.fire('submit');
+  await controls(ui)[0].fire('click');
+  assert.equal(ui.requests.length, 3);
+  assert.equal(ui.messages.children.length, 4);
+  assert.equal(ui.messages.children.at(-1).querySelectorAll('ol').length, 0);
+});

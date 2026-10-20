@@ -22,11 +22,11 @@ final class AssistantIdentity
 
         $capabilities = $filipino
             ? ($veterinary
-                ? 'Matutulungan kitang gamitin ang Animal Health at maintindihan ang pinapayagang ulat. Maaari ko ring ipaliwanag ang access at privacy ng Assistant.'
-                : 'Tumutulong ako sa mga feature ng eAgriLGU lamang: farmer registry, parcels, crop plotting, satellite indices, El Niño readiness, assistance, harvests, Animal Health, cooperatives, machinery, dashboard, weather, geofences, accounts, backups at audit tools.')
+                ? 'May pangkalahatang gabay ako sa pag-aalaga ng hayop. Matutulungan kitang gamitin ang Animal Health at maintindihan ang pinapayagang ulat. Maaari ko ring ipaliwanag ang access at privacy ng Assistant.'
+                : 'May sinuring gabay ako sa pananim, lupa, patubig, peste, alagang hayop at palaisdaan, at sa mga feature ng eAgriLGU: farmer registry, parcels, crop plotting, satellite indices, El Niño readiness, assistance, harvests, Animal Health, cooperatives, machinery, dashboard, weather, geofences, accounts, backups at audit tools.')
             : ($veterinary
-                ? 'I can help you use Animal Health and understand permitted reports. I can also explain Assistant access and privacy.'
-                : 'I help with eAgriLGU features only: farmer registry, parcels, crop plotting, satellite indices, El Niño readiness, assistance, harvests, Animal Health, cooperatives, machinery, dashboard, weather, geofences, accounts, backups and audit tools.');
+                ? 'I can explain general farm-animal care, help you use Animal Health and understand permitted reports. I can also explain Assistant access and privacy.'
+                : 'I explain reviewed agriculture topics such as soil, crops, irrigation, pests, livestock and fish farming, and eAgriLGU features: farmer registry, parcels, crop plotting, satellite indices, El Niño readiness, assistance, harvests, Animal Health, cooperatives, machinery, dashboard, weather, geofences, accounts, backups and audit tools.');
         $pageContext = $this->pageContext($module, $filipino);
 
         return match ($kind) {

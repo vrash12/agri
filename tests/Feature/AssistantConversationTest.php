@@ -150,7 +150,7 @@ class AssistantConversationTest extends TestCase
     {
         return [
             ['Who are you?', 'Ka Berto'], ['Hello!', 'How can I help with eAgriLGU?'],
-            ['What can you do?', 'eAgriLGU features only'], ['What AI are you using?', 'Laravel AI SDK'],
+            ['What can you do?', 'reviewed agriculture topics'], ['What AI are you using?', 'Laravel AI SDK'],
             ['Are you ChatGPT?', 'OpenAI'], ['Sino ka?', 'Ako si Ka Berto'],
             ['Kumusta!', 'Kumusta!'], ['Salamat!', 'Walang anuman!'],
             ['Do you know eAgriLGU?', 'reviewed system guidance'],
@@ -266,7 +266,7 @@ class AssistantConversationTest extends TestCase
         $greeting = $this->ask('Hello!')->assertOk()->assertJsonPath('source', 'conversation');
         DB::enableQueryLog();
         $this->ask('Explain more.', ['context' => $greeting->json('context')])->assertOk()->assertJsonPath('source', 'conversation')
-            ->assertSee('eAgriLGU features only')->assertSee('no live browsing');
+            ->assertSee('reviewed agriculture topics')->assertSee('no live browsing');
         $this->assertSame(0, $this->operationalQueries());
         $this->assertNull(Cache::get('assistant:requests:day:'.now('UTC')->format('Ymd')));
         OfficeHelpAgent::assertNeverPrompted();

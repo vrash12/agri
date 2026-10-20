@@ -20,8 +20,10 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Testing\TestResponse;
 use Laravel\Ai\Prompts\AgentPrompt;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\DataProviderExternal;
 use Tests\Support\ProvinceScopeSchema;
 use Tests\TestCase;
+use Tests\Unit\AssistantAgricultureTest;
 
 /** Natural wording must retain the real endpoint's disclosure and scope gates. */
 final class AssistantUnderstandingTest extends TestCase
@@ -237,6 +239,54 @@ final class AssistantUnderstandingTest extends TestCase
             ['Why is climate risk not assessed?', 'climate-readiness', 'climate-risk'],
             ['How do I use this page?', 'climate-readiness', 'climate-risk'],
         ];
+    }
+
+    #[DataProviderExternal(AssistantAgricultureTest::class, 'questions')]
+    public function test_general_agriculture_help_uses_reviewed_sources_without_record_queries(string $question, string $topic): void
+    {
+        DB::enableQueryLog();
+        $result = $this->ask($question)->assertOk()->assertJsonPath('source', 'help')
+            ->assertJsonPath('report', $topic)->assertJsonPath('delivery', 'ai');
+        $this->assertSame('agri-'.$topic, $result->json('sources.0.id'));
+        $this->assertSame(0, $this->operationalQueries());
+        OfficeHelpAgent::assertPrompted(function (AgentPrompt $prompt) use ($question, $topic): bool {
+            $this->assertSame(OfficeAssistant::TOPICS[$topic]['question'], $prompt->prompt);
+            $this->assertEmpty($prompt->messages);
+            $this->assertStringNotContainsString($question, $prompt->agent->instructions());
+            $this->assertStringNotContainsString('ForeignSecret', $prompt->agent->instructions());
+
+            return true;
+        });
+    }
+
+    #[DataProviderExternal(AssistantAgricultureTest::class, 'rejectedQuestions')]
+    public function test_unrelated_or_unsupported_advice_never_calls_the_provider_or_reads_records(string $question): void
+    {
+        DB::enableQueryLog();
+        $this->ask($question)->assertOk()->assertJsonPath('source', 'clarification');
+        $this->assertSame(0, $this->operationalQueries());
+        $this->assertLocalOnly();
+    }
+
+    public function test_veterinary_general_husbandry_does_not_open_crop_guidance_or_other_records(): void
+    {
+        $this->actingAs($this->account(User::ROLE_PROVINCIAL_VET));
+        $this->ask('How do I care for chickens?')->assertOk()->assertJsonPath('report', 'livestock-care');
+        $this->ask('How do I improve soil health?')->assertOk()->assertJsonPath('source', 'clarification');
+        OfficeHelpAgent::assertPromptedTimes(1);
+    }
+
+    public function test_general_agriculture_followup_keeps_topic_language_and_separate_cached_style(): void
+    {
+        $first = $this->ask('Explain irrigation')->assertOk()->assertJsonPath('report', 'irrigation');
+        $next = $this->ask('Show me the steps', ['context' => $first->json('context')])->assertOk()
+            ->assertJsonPath('report', 'irrigation')->assertJsonPath('delivery', 'ai');
+        $this->ask('Show me the steps', ['context' => $next->json('context')])->assertOk()->assertJsonPath('delivery', 'cache');
+        $refs = app(AssistantConversationContext::class)->read($this->staff, session()->getId(), $next->json('context'));
+        $this->assertSame('steps', $refs['help_style']);
+        $this->assertSame('irrigation', $refs['help_topic']);
+        $this->assertArrayNotHasKey('message', $refs);
+        OfficeHelpAgent::assertPromptedTimes(2);
     }
 
     private function structuredHelp(string $question): array

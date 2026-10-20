@@ -1,5 +1,14 @@
 # eAgriLGU — Complete Feature Catalog
 
+Local October 20 Assistant update (not deployed): reviewed general agriculture
+questions now use ten canonical topics alongside existing system help, with
+local unrelated-question refusal. Raw chat and records stay local. General
+livestock-care guidance is available to veterinary roles without additional
+operational access. Numbered replies use safe semantic lists, including legacy
+inline sequences. Corpus: 42 passages / 39 topics, bounded at 48 entries with
+unchanged byte/retrieval limits. See [agriculture help](docs/ASSISTANT_AGRICULTURE.md)
+for source provenance, limitations, tests and deployment requirements.
+
 Deployed and verified October 20, 2026 in runtime `fed7289`: **LGU profiles, public websites and Poppins eAgriLGU branding**. Settings lets authorized office managers configure the LGU logo, approved office contacts/location and printed ID signatory, then prepare and publish an LGU website with services, announcements and office hours. Published pages use the `/lgus` directory and fixed public links; optional subdomains require host DNS/HTTPS setup. Pages remain unpublished until an authorized manager publishes them. Site/card branding uses Poppins Bold, the owner's logo as A and a blue/red e. The farmer card keeps a visible green-field background and removes the Republic emblem/heading. Existing records/accounts were preserved; the two new LGU tables remain empty and subdomain DNS was not changed. See [the deployment receipt](docs/EAGRILGU_LGU_DEPLOYMENT_2026_10_20.md), [LGU profiles](docs/LGU_PROFILE_SETTINGS.md), [LGU websites](docs/LGU_PUBLIC_WEBSITES.md) and [branding](docs/AGRIGOV_BRANDING.md).
 
 October 19 satellite-index expansion (deployed in runtime `aeb8eb5`): the existing parcel

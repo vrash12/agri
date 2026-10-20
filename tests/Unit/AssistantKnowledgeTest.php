@@ -61,6 +61,16 @@ final class AssistantKnowledgeTest extends TestCase
     public static function canonicalTopics(): array
     {
         return [
+            'agriculture agriculture-basics' => ['agriculture-basics', 'agri-agriculture-basics'],
+            'agriculture soil-health' => ['soil-health', 'agri-soil-health'],
+            'agriculture crop-rotation' => ['crop-rotation', 'agri-crop-rotation'],
+            'agriculture crop-nutrition' => ['crop-nutrition', 'agri-crop-nutrition'],
+            'agriculture seed-selection' => ['seed-selection', 'agri-seed-selection'],
+            'agriculture crop-establishment' => ['crop-establishment', 'agri-crop-establishment'],
+            'agriculture irrigation' => ['irrigation', 'agri-irrigation'],
+            'agriculture pest-management' => ['pest-management', 'agri-pest-management'],
+            'agriculture livestock-care' => ['livestock-care', 'agri-livestock-care'],
+            'agriculture aquaculture' => ['aquaculture', 'agri-aquaculture'],
             'crop workflow' => ['crop-drawing', 'crop-sections'],
             'whole parcel' => ['parcel-drawing', 'parcel-boundaries'],
             'workbook import' => ['seed-import', 'rice-release-import'],

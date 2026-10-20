@@ -1,5 +1,14 @@
 # Office Assistant
 
+Local October 20 Assistant update (not deployed): reviewed general agriculture
+questions now use ten canonical topics alongside existing system help, with
+local unrelated-question refusal. Raw chat and records stay local. General
+livestock-care guidance is available to veterinary roles without additional
+operational access. Numbered replies use safe semantic lists, including legacy
+inline sequences. Corpus: 42 passages / 39 topics, bounded at 48 entries with
+unchanged byte/retrieval limits. See [agriculture help](ASSISTANT_AGRICULTURE.md)
+for source provenance, limitations, tests and deployment requirements.
+
 ## Natural questions and current feature help — October 19, 2026
 
 Deployed on Hostinger in runtime `2a9ab66`. The bounded local router

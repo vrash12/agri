@@ -20,6 +20,7 @@ final class OfficeAssistant
 
     /** Provider questions are application-owned; the visible chat never becomes a prompt. */
     public const TOPICS = [
+        ...AssistantAgriculture::TOPICS,
         'crop-drawing' => ['module' => 'crops', 'question' => 'How do authorized office staff draw and save a planted crop section inside an existing parcel?'],
         'parcel-drawing' => ['module' => 'farmers', 'question' => 'How do authorized office staff select a farmer and draw or import a whole farm parcel boundary?'],
         'seed-import' => ['module' => 'assistance', 'question' => 'How do authorized office staff import rice seed releases and correct a workbook validation error?'],
@@ -51,7 +52,7 @@ final class OfficeAssistant
         'assistance-coverage' => ['module' => 'assistance', 'question' => 'How do authorized office users read the assistance coverage report and map with its program, period and unit limits?'],
     ];
 
-    public const VETERINARY_TOPICS = ['animals', 'access', 'help', 'ai-technology', 'assistant-privacy'];
+    public const VETERINARY_TOPICS = ['animals', 'access', 'help', 'ai-technology', 'assistant-privacy', 'livestock-care'];
 
     public const STYLES = ['plain', 'brief', 'steps', 'example', 'more'];
 
@@ -191,8 +192,8 @@ final class OfficeAssistant
             return $this->result(['answer' => 'Verified guidance is not available for this task yet. Ask your agriculture office or system administrator.', 'sources' => []], $evidence, 'unavailable');
         }
         $prefix = $language === 'fil'
-            ? 'Narito ang nakasulat na gabay ng sistema (English).'
-            : 'Here is the documented system guidance.';
+            ? 'Narito ang sinuring gabay (English).'
+            : 'Here is the reviewed guidance.';
 
         return $this->result(['answer' => $prefix."\n\n".$passage['text'],
             'sources' => [['id' => $passage['id'], 'title' => $passage['title']]]], $evidence, 'guide', $input, $output);

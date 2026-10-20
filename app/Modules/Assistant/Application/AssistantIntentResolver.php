@@ -7,7 +7,7 @@ use App\Modules\Farmers\Application\AssistantDataQuality;
 /** Bounded task routing. Unknown text is never submitted to an external model. */
 final class AssistantIntentResolver
 {
-    public function __construct(private AssistantReportRequest $reports = new AssistantReportRequest) {}
+    public function __construct(private AssistantReportRequest $reports = new AssistantReportRequest, private AssistantAgriculture $agriculture = new AssistantAgriculture) {}
 
     /** @return array{task:string,year:int,farmer_id?:int|null,search?:string,topic?:string,style?:string,kind?:string,language?:string,clarification?:string,clarification_kind?:string,reset_context?:bool,references?:array{task:string,year:int,farmer_id:int|null,pending_scope?:string}} */
     public function resolve(string $message, array $context, string $module, int $currentYear): array
@@ -34,6 +34,9 @@ final class AssistantIntentResolver
             return isset($lookup['search'])
                 ? ['task' => 'farmer-search', 'search' => $lookup['search'], 'year' => $lookup['year'] ?? $year]
                 : $this->clarify('Ask for one farmer by name or eAgriLGU ID first. I cannot combine a person lookup with other requests, private fields or location filters. After choosing the matching record, ask for their permitted summary, parcels, crops, assistance or harvests.', $year) + ['reset_context' => true];
+        }
+        if ($agriculture = $this->agriculture->resolve($text, $year, $language)) {
+            return $agriculture;
         }
         if ($style = $this->helpFollowUpStyle($text)) {
             if (($context['task'] ?? null) === 'identity') {
@@ -83,7 +86,7 @@ final class AssistantIntentResolver
             $topic = $this->helpTopic($text, $module);
 
             return $topic ? ['task' => 'help', 'topic' => $topic, 'year' => $year, 'language' => $language]
-                : $this->clarify('Which eAgriLGU feature do you need help with? I can explain the dashboard, registry, parcel/crop maps, assistance, harvests, Animal Health, cooperatives, machinery or authorized office tools. Ask about one feature, or say “How do I use this page?”.', $year);
+                : $this->clarify(AssistantAgriculture::refusal($language), $year) + ['reset_context' => true];
         }
         if ($languageRequest['explicit'] || preg_match('/^(?:please\s+)?(?:translate|isalin)\b/iu', $text)) {
             return $this->clarify('I can explain an eAgriLGU feature in English or Filipino. Private record replies are not sent to AI for translation. Ask your records question without a translation request, or name a feature you want explained.', $year);
@@ -200,7 +203,7 @@ final class AssistantIntentResolver
             return ['task' => $context['task'], 'year' => $year, 'farmer_id' => $context['farmer_id'] ?? null];
         }
 
-        return $this->clarify('I help with eAgriLGU features and permitted office records. Ask “Who are you?”, “How do I use this page?”, “Summarize my farmers” or name a feature you want explained. I cannot inspect server files or answer unrelated general questions.', $year);
+        return $this->clarify('I help with agriculture, eAgriLGU features and permitted office records. I cannot answer unrelated general questions or inspect server files. Ask about crops, soil, irrigation, pests, livestock or fish farming, or name the system feature you need.', $year);
     }
 
     private function reportClarification(string $text, int $year): ?array

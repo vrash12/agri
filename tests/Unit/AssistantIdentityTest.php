@@ -246,7 +246,7 @@ final class AssistantIdentityTest extends TestCase
             $this->assertStringContainsString('Animal Health', $answer);
             $this->assertStringNotContainsString('cooperatives', $answer);
         } elseif ($kind === 'capabilities') {
-            $this->assertStringContainsString($language === 'fil' ? 'eAgriLGU lamang' : 'eAgriLGU features only', $answer);
+            $this->assertStringContainsString($language === 'fil' ? 'sinuring gabay' : 'reviewed agriculture topics', $answer);
             foreach (['farmer registry', 'parcels', 'crop plotting', 'assistance', 'harvests', 'Animal Health', 'cooperatives', 'machinery', 'dashboard', 'weather', 'geofences', 'accounts', 'backups', 'audit'] as $module) {
                 $this->assertStringContainsString($module, $answer);
             }

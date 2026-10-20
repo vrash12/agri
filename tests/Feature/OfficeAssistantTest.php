@@ -211,7 +211,7 @@ class OfficeAssistantTest extends TestCase
     {
         $this->actingAs($this->staff)->withViewErrors([]);
         $this->view('layouts.app')->assertSee('data-office-assistant', false)->assertSee('Ask Ka Berto')
-            ->assertSee('Ka Kaloy')->assertSee('Aling Maya')->assertSee('Kiko')->assertSee('General help uses AI')
+            ->assertSee('Ka Kaloy')->assertSee('Aling Maya')->assertSee('Kiko')->assertSee('Reviewed agriculture and system guidance uses AI')
             ->assertDontSee('data-assistant-mode', false)->assertDontSee('data-assistant-year', false);
         $visitor = $this->user(User::ROLE_SUPER_ADMIN);
         $visitor->forceFill(['visitor_mode' => true, 'province_id' => null, 'municipality_id' => null])->save();

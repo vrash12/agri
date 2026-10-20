@@ -63,7 +63,7 @@
       <div class="assistant-welcome" data-assistant-welcome>
         <img class="assistant-welcome-mascot" src="{{ $assistantPortrait }}" width="112" height="112" alt="{{ $assistantGuide['alt'] }}" decoding="async" data-assistant-portrait>
         <h3>Hi, I’m <span data-assistant-guide-name>{{ $assistantGuide['name'] }}</span>.</h3>
-        <p>{{ $assistantVeterinary ? 'Need a hand with Animal Health records or this page? Ask me here.' : 'Need a hand finding records or using eAgriLGU? Ask me here.' }}</p>
+        <p>{{ $assistantVeterinary ? 'Need a hand with Animal Health records or this page? Ask me here.' : 'Ask about farming, find permitted records, or get help using eAgriLGU.' }}</p>
         <div class="assistant-suggestions" aria-label="Suggested questions">
           @foreach($assistantSuggestions as $suggestion)
             <button type="button" data-assistant-suggestion>{{ $suggestion }}<span aria-hidden="true">→</span></button>
@@ -86,7 +86,7 @@
       <p id="officeAssistantPrivacy" class="assistant-privacy">Digital guide · AI-assisted help. Keep passwords and keys private.</p>
       <details class="assistant-about">
         <summary>About your guide</summary>
-        <p>Your chosen character is eAgriLGU’s digital farm guide, not a person or an official decision-maker. General help uses AI. Office records stay in eAgriLGU; only general help topics and reviewed guides are sent to the AI provider. Your guide cannot edit or approve records.</p>
+        <p>Your chosen character is eAgriLGU’s digital farm guide, not a person or an official decision-maker. Reviewed agriculture and system guidance uses AI. Unrelated questions are outside this guide’s scope. Office records stay in eAgriLGU; only general help topics and reviewed guides are sent to the AI provider. Your guide cannot edit or approve records.</p>
       </details>
     </form>
   </dialog>

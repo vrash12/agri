@@ -51,6 +51,12 @@
 .assistant-message[data-guide="aling-maya"] > strong::before { background-image:url('../images/mascots/aling-maya-avatar-v1.webp'); }
 .assistant-message[data-guide="kiko"] > strong::before { background-image:url('../images/mascots/kiko-avatar-v1.webp'); }
 .assistant-message p { white-space: pre-wrap; margin: 0; font-size: 14px; line-height: 1.65; }
+.assistant-answer { font-size: 14px; line-height: 1.65; }
+.assistant-message .assistant-answer > * + * { margin-top: 12px; }
+.assistant-answer ol { list-style: decimal; padding-left: 1.65em; margin-bottom: 0; }
+.assistant-answer li { display: list-item; padding-left: .2em; white-space: pre-wrap; }
+.assistant-answer li + li { margin-top: 8px; }
+.assistant-answer li::marker { color: var(--ui-primary); font-weight: 600; }
 .assistant-message.is-error p { color: var(--ui-danger); }
 .assistant-message.is-pending { align-self: flex-start; max-width: 92%; padding: 12px 16px; border: 1px solid var(--ui-border); border-radius: 16px 16px 16px 4px; background: var(--ui-surface-subtle); }
 .assistant-message.is-pending p { color: var(--ui-text-muted); }
