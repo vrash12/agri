@@ -80,7 +80,7 @@ test('card heading is centered between the brand and seal and restores alignment
     assert.equal(ctx.textAlign, 'left');
     assert.equal(ctx.drawn.length, 3);
     for (const line of ctx.drawn) {
-        assert.ok(line.x - line.width / 2 >= 326, 'heading stays clear of the left brand');
-        assert.ok(line.x + line.width / 2 <= 831, 'heading stays clear of the right seal');
+        assert.ok(line.x - line.width / 2 >= 181, 'heading stays clear of the left brand');
+        assert.ok(line.x + line.width / 2 <= 830, 'heading stays clear of the right seal');
     }
 });

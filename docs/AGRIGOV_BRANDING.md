@@ -4,7 +4,9 @@ The October 20, 2026 revision is **deployed and verified** in runtime `fed7289`.
 
 The application wordmark reads **eAgriLGU**: an agriculture-green lowercase **e**, the owner's supplied corn-and-field mark replacing **A**, then agriculture-green **griLGU**. The owner selected Poppins Bold (700). Use `<x-brand />` for this full lockup and `<x-brand compact />` for the supplied square mark. Accessible alternative text is eAgriLGU. Shared sizing lives in `public/css/branding.css`; standalone documents include `partials.branding-head`.
 
-The same identity covers welcome/about pages, office and farmer sign-in, navigation, dashboards, Assistant, farmer portal, public parcel pages, LGU public websites, browser icons and farmer IDs. The sign-in card uses the full wordmark. Collapsed navigation/browser icons use the compact mark. Body text, forms and tables retain the existing local Inter typography and shared tokens.
+The local full-field farmer-card revision uses the standalone mark on the front and no system logo/wordmark on the back. Front logo white margins blend into the field through multiply compositing in CSS and canvas, without modifying stored image files; the site wordmark is unchanged. See [the card guide](AGRIGOV_FARMER_IDS.md).
+
+The deployed identity covers welcome/about pages, office and farmer sign-in, navigation, dashboards, Assistant, farmer portal, public parcel pages, LGU public websites, browser icons and farmer IDs. The sign-in card uses the full wordmark. Collapsed navigation/browser icons use the compact mark. Body text, forms and tables retain the existing local Inter typography and shared tokens.
 
 ## Source assets and provenance
 

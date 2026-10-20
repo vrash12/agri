@@ -1,5 +1,15 @@
 # GitHub-to-Hostinger deployment
 
+## Pending local full-field farmer-card revision
+
+Deploy the revised card Blade view, farmer-id-card.css and all three farmer-card
+SVGs together; mirror the four public assets to public_html with 0644 permissions
+and rebuild compiled views. Both renderers use `20261020-open-field` asset URLs.
+The existing standalone agriculture mark is required for front export. No
+migration, dependency or environment change is required. Verify front/back,
+long text, artwork failures, signatures and the unchanged QR destination. This
+revision has not been pushed or deployed.
+
 ## Verified Hostinger release ? October 20, 2026 ? compact green wordmark
 
 Runtime `eeb9ed97ed8afc68f024da904bc1a58a8d04f058` was pushed to main and

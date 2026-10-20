@@ -1,5 +1,41 @@
 # eAgriLGU farmer IDs
 
+October 20 full-field farmer-card revision (local, not deployed): the landscape
+extends to every edge on both sides without boxed information panels. Dark
+forest-green text sits over a continuous warm wash in the shared background;
+the QR keeps a small opaque cream scan area. Logo white margins blend into
+the landscape using matching CSS/canvas multiply compositing; original uploaded
+assets are retained unchanged. The larger QR panel is transparent. The front uses only the standalone agriculture mark on the left, retains
+the issuing LGU seal on the right, labels the identifier Registry ID and adds
+recorded declared area and mapped-parcel count below the photo. The back has no
+system logo or wordmark; its header shows issuing-office details and available
+contact channels, with return/lost-card/record-correction guidance above the ink
+signature area. The existing record creation date is labeled Registered.
+Screen/print and canvas use the same artwork version `20261020-open-field`.
+No record, schema, permission, QR destination or parcel-address rule changes.
+
+Logo/QR background follow-up: CSS and canvas both blend white logo pixels with
+the landscape using multiply compositing. The larger white QR panel is removed;
+a uniform cream `#f4f2d8` area remains beneath the QR and its quiet margin. Stored
+logos and QR payloads are unchanged. Both synthetic exported and screen-rendered
+QR codes decoded to the same map URL at 505 and 650 pixels card width; the export
+also passed at 856 and 1011 pixels, and the screen version at 850 pixels. The 13
+JavaScript tests and Blade compilation passed. No project dependency was added;
+the decode checker was installed only in the temporary preview directory.
+
+Panel-free follow-up: removed the header/detail/signature white rectangles and
+the ID chip fill. Sector tags use outlines only. Screen and canvas use the same
+dark text palette and shared full-surface gradient. Synthetic front/back screen
+and PNG exports were inspected; text-region raster samples have minimum
+contrast 6.60:1 for main values and 4.95:1 for labels against the artwork. This
+is a targeted contrast check, not a full accessibility certification. The 13
+JavaScript card tests, Blade compilation and diff checks passed again.
+
+Verification: 34 card/LGU settings tests (268 assertions), 13 JavaScript
+identity/address/issuer tests, Pint, Blade compilation and whitespace checks
+passed. Synthetic desktop/mobile previews and both 1011 x 638 PNG downloads
+were inspected. Missing front artwork blocked export. Physical printing and live production rendering were not performed.
+
 ## Current revision — October 20, 2026 (deployed)
 
 The LGU issuer, field-artwork and Poppins revision deployed and passed verification in runtime `fed7289`. Live server checks rendered two existing cards including Ramos; scoped settings, public routes and all eleven mirrored public assets passed. Existing operational rows/schemas and environment/session/cache/provider state were preserved. Physical printing and interactive live PNG download were not repeated. See [the deployment receipt](EAGRILGU_LGU_DEPLOYMENT_2026_10_20.md). The implementation runs in the current Laravel 12/PHP 8.3+ modular application. Historical sections below retain earlier names and release details; the current behavior is defined here.

@@ -1,5 +1,19 @@
 # eAgriLGU — Complete Feature Catalog
 
+October 20 full-field farmer-card revision (local, not deployed): the landscape
+extends to every edge on both sides without boxed information panels. Dark
+forest-green text sits over a continuous warm wash in the shared background;
+the QR keeps a small opaque cream scan area. Logo white margins blend into
+the landscape using matching CSS/canvas multiply compositing; original uploaded
+assets are retained unchanged. The larger QR panel is transparent. The front uses only the standalone agriculture mark on the left, retains
+the issuing LGU seal on the right, labels the identifier Registry ID and adds
+recorded declared area and mapped-parcel count below the photo. The back has no
+system logo or wordmark; its header shows issuing-office details and available
+contact channels, with return/lost-card/record-correction guidance above the ink
+signature area. The existing record creation date is labeled Registered.
+Screen/print and canvas use the same artwork version `20261020-open-field`.
+No record, schema, permission, QR destination or parcel-address rule changes.
+
 October 20 compact green wordmark follow-up is deployed in runtime `eeb9ed9`. The e uses agriculture green; the A mark and griLGU sit closer together. The shared v4 asset supplies site and farmer-card screen/print/canvas branding. All 27 tables / 9,987 rows and environment/provider settings were preserved. See [the deployment receipt](docs/GREEN_WORDMARK_DEPLOYMENT_2026_10_20.md).
 
 October 20 Assistant update (deployed in runtime `80166f4`): reviewed general agriculture

@@ -102,11 +102,15 @@ class FarmerCardSignatoryTest extends TestCase
         $farmer = $this->farmer(self::RAMOS);
 
         $this->as($this->staff(self::RAMOS))->get(route('farmers.id-card', $farmer))->assertOk()
-            ->assertSee('eAgriLGU ID')
+            ->assertSee('Registry ID')
             ->assertSee($farmer->agri_gov_id)
             ->assertSee(asset('images/branding/eagrilgu-wordmark-v4.png'), false)
             ->assertSee(asset('images/branding/eagrilgu-system-mark.png'), false)
-            ->assertSee('eAgriLguWordmark:', false)
+            ->assertSee('agricultureMark:', false)
+            ->assertSee('Declared farm area')
+            ->assertSee('Mapped parcels')
+            ->assertSee('Help &amp; record updates', false)
+            ->assertSee('If found, return to the issuing office.')
             ->assertDontSee('AgriGOV')
             ->assertSee('class="has-signatory"', false)
             ->assertSee('<strong>ENGR. DENNISH C. PASCUA</strong>', false)
@@ -186,6 +190,27 @@ class FarmerCardSignatoryTest extends TestCase
             ->assertSee('municipality: "RAMOS"', false)
             ->assertSee('"office_name":"Municipal Agriculture Office"', false)
             ->assertDontSee('philippines-coat-of-arms.png', false);
+    }
+
+    public function test_card_sides_use_a_front_mark_and_office_help_without_system_wordmarks(): void
+    {
+        $farmer = $this->farmer(self::RAMOS);
+        $farmer->update(['farm_area_ha' => 2.5]);
+        $html = $this->as($this->staff(self::RAMOS))->get(route('farmers.id-card', $farmer))->assertOk()->getContent();
+        $front = explode('</article>', explode('id="farmerIdCardFront"', $html, 2)[1], 2)[0];
+        $back = explode('</article>', explode('id="farmerIdCardBack"', $html, 2)[1], 2)[0];
+
+        $this->assertStringContainsString('eagrilgu-system-mark.png', $front);
+        $this->assertStringNotContainsString('eagrilgu-wordmark', $front);
+        $this->assertStringContainsString('Declared farm area', $front);
+        $this->assertStringContainsString('2.50 hectares', $front);
+        $this->assertStringContainsString('0 parcels', $front);
+        $this->assertStringNotContainsString('eagrilgu-system-mark', $back);
+        $this->assertStringNotContainsString('eagrilgu-wordmark', $back);
+        $this->assertStringContainsString('Issuing agriculture office', $back);
+        $this->assertStringContainsString('Visit the issuing agriculture office for assistance.', $back);
+        $this->assertStringContainsString('Report a lost card or request record corrections there.', $back);
+        $this->assertStringContainsString('not a substitute for a Philippine national government ID', $back);
     }
 
     private function as(User $user): self

@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1011" height="638" viewBox="0 0 1011 638">
   <defs>
     <linearGradient id="sky" x2="0" y2="1">
-      <stop stop-color="#fff8d9"/>
-      <stop offset=".48" stop-color="#f7edbd"/>
+      <stop stop-color="#e9f0cc"/>
+      <stop offset=".48" stop-color="#c8dfa4"/>
       <stop offset="1" stop-color="#d8e5bd"/>
     </linearGradient>
     <linearGradient id="hill" x2="0" y2="1">
@@ -23,12 +23,19 @@
     <pattern id="rowsDark" width="34" height="18" patternUnits="userSpaceOnUse" patternTransform="skewX(-28)">
       <path d="M0 4h34M0 13h34" fill="none" stroke="#b8d365" stroke-opacity=".4" stroke-width="2.5"/>
     </pattern>
+    <linearGradient id="reading-light" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f4f2d8" stop-opacity=".64"/>
+      <stop offset=".3" stop-color="#f4f2d8" stop-opacity=".57"/>
+      <stop offset=".78" stop-color="#f4f2d8" stop-opacity=".57"/>
+      <stop offset="1" stop-color="#f4f2d8" stop-opacity=".8"/>
+    </linearGradient>
   </defs>
 
   <rect width="1011" height="638" fill="url(#sky)"/>
   <circle cx="864" cy="112" r="54" fill="#f5c943" fill-opacity=".78"/>
   <circle cx="864" cy="112" r="72" fill="none" stroke="#f5c943" stroke-opacity=".24" stroke-width="12"/>
 
+  <g transform="translate(0 -280) scale(1 1.45)">
   <path d="M0 309C112 230 193 245 284 291c95 48 153 40 238-21 80-57 152-62 234-4 80 56 143 57 255-13v172H0Z" fill="#8eb66c"/>
   <path d="M0 348c127-87 224-55 321 4 96 59 162 32 252-32 102-72 169-57 249 7 66 53 118 63 189 19v151H0Z" fill="url(#hill)"/>
 
@@ -53,5 +60,7 @@
     <path d="M60 526c91-14 154-3 237 25M41 552c112-17 182-4 278 29M704 515c94-13 176 3 260 29M669 548c117-14 205 1 302 32"/>
   </g>
 
+  </g>
+  <rect width="1011" height="638" fill="url(#reading-light)"/>
   <rect width="1011" height="638" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="4"/>
 </svg>
