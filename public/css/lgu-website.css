@@ -38,7 +38,7 @@ p { margin-bottom: 16px; overflow-wrap: anywhere; }
 .lgu-header { position: sticky; top: 0; z-index: 10; background: rgba(255, 255, 255, .96); border-bottom: 1px solid var(--ui-border); backdrop-filter: saturate(1.4); }
 .lgu-header-inner { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 80px; padding-block: 12px; }
 .lgu-brand { display: inline-flex; flex-shrink: 0; }
-.lgu-brand .agrigov-logo { width: 150px; height: auto; }
+.lgu-brand .agrilgu-logo { width: 150px; height: auto; }
 .lgu-header nav { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-left: auto; }
 .lgu-header nav > a:not(.lgu-button) { display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: var(--ui-radius-control); color: var(--ui-text); font-size: 14px; font-weight: 500; text-decoration: none; }
 .lgu-header nav > a:not(.lgu-button):hover { color: var(--ui-primary); background: var(--ui-primary-soft); }
@@ -71,7 +71,7 @@ p { margin-bottom: 16px; overflow-wrap: anywhere; }
 .lgu-office-identity { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; }
 .lgu-office-identity .lgu-seal { display: grid; place-items: center; flex: 0 0 auto; width: 80px; height: 80px; padding: 8px; border: 1px solid var(--ui-border); border-radius: 50%; background: #fff; box-shadow: 0 6px 18px rgba(23, 62, 45, .08); }
 .lgu-office-identity .lgu-seal img { width: 100%; height: 100%; object-fit: contain; }
-.lgu-office-identity .lgu-seal .agrigov-logo { width: 48px; height: 48px; object-fit: contain; }
+.lgu-office-identity .lgu-seal .agrilgu-logo { width: 48px; height: 48px; object-fit: contain; }
 .lgu-office-identity .lgu-eyebrow { margin-bottom: 2px; }
 .lgu-office-identity strong { display: block; font-size: 20px; line-height: 1.25; }
 .lgu-office-identity span.lgu-office-name { display: block; color: var(--ui-text-muted); font-size: 14px; }
@@ -143,12 +143,12 @@ p { margin-bottom: 16px; overflow-wrap: anywhere; }
 .lgu-id-card { position: relative; overflow: hidden; max-width: 380px; justify-self: center; width: 100%; border-radius: 16px; background: linear-gradient(140deg, #fff 0%, #f6fbf7 60%, #fdf7dc 100%); box-shadow: 0 18px 40px rgba(23, 62, 45, .16); }
 .lgu-id-card::before { content: ''; display: block; height: 10px; background: var(--ui-brand-stripe); }
 .lgu-id-card-body { display: flex; flex-direction: column; align-items: center; padding: 28px 24px; text-align: center; }
-.lgu-id-card-body > img, .lgu-id-card-body > .lgu-id-seal .agrigov-logo { width: 76px; height: 76px; margin-bottom: 14px; object-fit: contain; }
+.lgu-id-card-body > img, .lgu-id-card-body > .lgu-id-seal .agrilgu-logo { width: 76px; height: 76px; margin-bottom: 14px; object-fit: contain; }
 .lgu-id-card .lgu-eyebrow { margin-bottom: 6px; }
 .lgu-id-card h3 { margin-bottom: 6px; font-size: 17px; text-transform: uppercase; letter-spacing: .02em; }
 .lgu-id-card p { margin-bottom: 18px; color: var(--ui-text-muted); font-size: 14px; }
 .lgu-id-card-foot { display: flex; justify-content: center; padding: 12px; border-top: 1px dashed var(--ui-border); background: rgba(255, 255, 255, .8); }
-.lgu-id-card-foot .agrigov-logo { width: 104px; height: auto; }
+.lgu-id-card-foot .agrilgu-logo { width: 104px; height: auto; }
 
 .lgu-contact-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 32px; align-items: start; }
 .lgu-contact-card, .lgu-location { padding: 32px; border: 1px solid var(--ui-border); border-radius: var(--ui-radius-panel); background: var(--ui-surface); }
@@ -191,7 +191,7 @@ p { margin-bottom: 16px; overflow-wrap: anywhere; }
 .lgu-directory-card:hover, .lgu-directory-card:focus-within { border-color: #b9cbbf; box-shadow: 0 12px 28px rgba(23, 62, 45, .08); transform: translateY(-2px); }
 .lgu-card-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
 .lgu-card-mark { display: grid; place-items: center; width: 64px; height: 64px; padding: 6px; border: 1px solid var(--ui-border); border-radius: 50%; background: #fff; }
-.lgu-card-mark img, .lgu-card-mark .agrigov-logo { width: 100%; height: 100%; object-fit: contain; }
+.lgu-card-mark img, .lgu-card-mark .agrilgu-logo { width: 100%; height: 100%; object-fit: contain; }
 .lgu-directory-card h3 { margin-bottom: 8px; font-size: 21px; }
 .lgu-directory-card p { color: var(--ui-text-muted); font-size: 14px; }
 .lgu-directory-card .lgu-link { justify-content: space-between; margin-top: auto; padding-top: 16px; border-top: 1px solid var(--ui-border); }
@@ -207,7 +207,7 @@ p { margin-bottom: 16px; overflow-wrap: anywhere; }
 .lgu-footer { margin-top: 0; padding: 40px 0; border-top: 1px solid var(--ui-border); background: var(--ui-surface); color: var(--ui-text-muted); font-size: 13px; }
 .lgu-footer > .lgu-container { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
 .lgu-footer > .lgu-container > div { display: flex; align-items: center; gap: 14px; }
-.lgu-footer .agrigov-logo { width: 44px; height: 44px; object-fit: contain; }
+.lgu-footer .lgu-footer-mark { display: block; flex: 0 0 44px; width: 44px; height: 44px; object-fit: contain; }
 .lgu-footer p { margin-bottom: 0; }
 .lgu-footer nav { display: flex; flex-wrap: wrap; gap: 4px 20px; }
 .lgu-footer nav a { padding-block: 12px; color: var(--ui-text); font-weight: 500; text-decoration: none; }
@@ -240,7 +240,7 @@ p { margin-bottom: 16px; overflow-wrap: anywhere; }
 @media (max-width: 640px) {
   .lgu-container { width: calc(100% - 32px); }
   .lgu-topbar span { font-size: 12px; }
-  .lgu-brand .agrigov-logo { width: 132px; }
+  .lgu-brand .agrilgu-logo { width: 132px; }
   .lgu-header nav > a:not(.lgu-button) { font-size: 13px; padding: 0 10px; }
   .lgu-header .lgu-button { min-height: 44px; padding: 8px 12px; font-size: 13px; }
   .lgu-header nav > a:not(.lgu-button) { flex: 0 0 auto; }

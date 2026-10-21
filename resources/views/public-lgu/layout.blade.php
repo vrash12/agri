@@ -22,7 +22,7 @@
   @if($preview ?? false)<aside class="lgu-preview" aria-label="Staff preview notice"><div class="lgu-container"><strong>@include('public-lgu.partials.icon', ['name' => 'eye', 'size' => 18])Staff preview</strong><span>{{ $site->is_published ? 'This website is published.' : 'This website is unpublished. Only authorized staff can see this page.' }}</span><a href="{{ route('settings.lgu.website.edit', $municipality) }}">Return to website settings</a></div></aside>@endif
   <main id="main">@yield('content')</main>
   <footer class="lgu-footer"><div class="lgu-container">
-    <div><x-brand compact /><p>Connecting communities<br>with their agriculture offices.</p></div>
+    <div class="lgu-footer-identity"><img class="lgu-footer-mark" src="{{ asset('images/branding/eagrilgu-mark-v1.png') }}" alt="AgriLGU" width="44" height="44" loading="lazy" decoding="async"><p>Connecting communities<br>with their agriculture offices.</p></div>
     <nav aria-label="Footer navigation"><a href="{{ \App\Modules\LocalGovernment\Application\LguWebsiteAddress::centralUrl('lgu.index') }}">LGU directory</a><a href="{{ \App\Modules\LocalGovernment\Application\LguWebsiteAddress::centralUrl('farmer-portal.login') }}">Farmer sign in</a><a href="{{ \App\Modules\LocalGovernment\Application\LguWebsiteAddress::centralUrl('welcome') }}">About AgriLGU</a></nav>
     <p class="lgu-footer-note">Powered by AgriLGU<br><span>Information maintained by participating LGUs.</span></p>
   </div></footer>
