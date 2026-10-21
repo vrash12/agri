@@ -1,5 +1,9 @@
 # GitHub-to-Hostinger deployment
 
+## LGU subdomain hosting activated — October 21, 2026
+
+Runtime `f98afb2` was pushed to GitHub main and installed through Hostinger fast-forward pull from `007adc4`. The later authorized hosting operation created `ramos-mao` and `mayantoc-tarlac-8` with active Lifetime SSL, added the restricted shared `lgu-public` entry point and enabled `LGU_WEBSITE_DOMAIN=agritarlac.online`. The existing Mayantoc publication returns HTTP 200; Ramos remains unpublished/404. All 27 tables / 10,017 rows and all other environment values were preserved. Central login and the isolated demo remain available; tenant office/API routes fail closed. No migration, account or operational data change ran. See [the receipt and reproducible entry point](LGU_SUBDOMAIN_HOSTING_2026_10_21.md).
+
 ## Verified homepage feature catalog release - October 20, 2026
 
 Runtime `95e831a661370f223d17c059d2f5d025370a5030` was pushed to GitHub main

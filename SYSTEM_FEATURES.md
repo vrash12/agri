@@ -491,6 +491,8 @@ Implementation status and remaining staff/staging checks are documented in [DESI
 
 ### LGU office settings and public websites
 
+Subdomain hosting was activated October 21, 2026. The existing published Mayantoc page is available at `https://mayantoc-tarlac-8.agritarlac.online/`. The requested `ramos-mao.agritarlac.online` hostname has working DNS/HTTPS and remains unavailable publicly until approved Ramos content is saved and published. Future LGU hostnames still require provider setup before publication. See [the hosting receipt](docs/LGU_SUBDOMAIN_HOSTING_2026_10_21.md).
+
 System Owners, scoped provincial Super Administrators and municipal heads maintain approved office profiles and website content from Settings. Regional Heads, provincial agriculture staff and municipal staff can view and preview within scope; veterinary, GIS evaluator, visitor and farmer-portal identities have no access. Settings includes unconfigured active offices and does not grant operational editing permissions.
 
 Profiles supply office name, logo, public website/contact details, address/location, description and optional printed ID signatory. PNG/JPEG/WebP uploads are validated and privately stored. Stale saves are rejected and administrative changes are audited. Existing printed/downloaded IDs retain their original details.

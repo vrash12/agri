@@ -1,5 +1,7 @@
 # LGU public websites
 
+October 21 hosting update: the selected tenant domain is now enabled. Hostinger created `ramos-mao.agritarlac.online` and `mayantoc-tarlac-8.agritarlac.online` with active HTTPS and the shared restricted `lgu-public` entry point. The existing Mayantoc publication works; Ramos stays 404 until approved content is published. See [the hosting receipt and reproduction steps](LGU_SUBDOMAIN_HOSTING_2026_10_21.md). The initial-release status below describes October 20.
+
 Status: deployed and verified October 20, 2026 in runtime `fed7289`. Both named LGU migrations were applied after backup; the new tables remain empty. The public directory returned HTTP 200 and an unpublished slug returned 404. Existing data, environment/session/cache namespaces and provider counters were preserved. No profile, publication, DNS or account change was made. See [the deployment receipt](EAGRILGU_LGU_DEPLOYMENT_2026_10_20.md). Each active municipality/city may publish one public eAgriLGU website linked to its approved LGU profile; no page, content or DNS is provisioned automatically.
 
 ## Public and office experience
@@ -42,7 +44,7 @@ php artisan migrate --path=database/migrations/2026_10_19_000200_create_municipa
 
 The migrations create empty additive tables without changing existing operational records/accounts or publishing pages. Release the modular services, scoped adapters, middleware/routes, views, shared branding and `lgu-website.css` together. Mirror public assets with 0644 permissions and rebuild optimized autoload/configuration/route/view caches. Preserve private environment/session/cache namespaces and provider counters; do not clear the general application cache. Ensure writable private storage and include `lgu-logos`/`lgu-covers` bytes in backups.
 
-`MunicipalityProfileSettingsTest` contains isolated coverage for unpublished/published behavior, preview, role scope, unique/reserved slugs, tenant isolation and restricted media delivery. Integrated results and live acceptance are recorded in [the October 20 receipt](EAGRILGU_LGU_DEPLOYMENT_2026_10_20.md). Central-path publication is ready for approved office setup; the `agritarlac.online` tenant setting remains disabled until each required hostname and HTTPS certificate are verified. Populate profiles/content only from approved office information, review before publishing and verify optional subdomains separately from central-path publication.
+`MunicipalityProfileSettingsTest` contains isolated coverage for unpublished/published behavior, preview, role scope, unique/reserved slugs, tenant isolation and restricted media delivery. Integrated results and initial live acceptance are recorded in [the October 20 receipt](EAGRILGU_LGU_DEPLOYMENT_2026_10_20.md); [October 21 hosting acceptance](LGU_SUBDOMAIN_HOSTING_2026_10_21.md) records the domain activation. Populate profiles/content only from approved office information, review before publishing and verify every new hostname and HTTPS certificate before publication.
 
 ## Interface refresh — October 20, 2026
 
