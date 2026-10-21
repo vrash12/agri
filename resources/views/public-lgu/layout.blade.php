@@ -17,7 +17,7 @@
   <header class="lgu-header"><div class="lgu-container lgu-header-inner">
     <a class="lgu-brand" href="{{ \App\Modules\LocalGovernment\Application\LguWebsiteAddress::centralUrl('welcome') }}" aria-label="AgriLGU home"><x-brand /></a>
     <nav aria-label="Main navigation">@yield('navigation')</nav>
-    <a class="lgu-button lgu-button-outline lgu-button-sm lgu-header-action" href="{{ \App\Modules\LocalGovernment\Application\LguWebsiteAddress::centralUrl('login') }}">Office sign in</a>
+    <a class="lgu-button lgu-button-outline lgu-button-sm lgu-header-action" href="{{ $officeLoginUrl ?? \App\Modules\LocalGovernment\Application\LguWebsiteAddress::centralUrl('login') }}">Office sign in</a>
   </div></header>
   @if($preview ?? false)<aside class="lgu-preview" aria-label="Staff preview notice"><div class="lgu-container"><strong>@include('public-lgu.partials.icon', ['name' => 'eye', 'size' => 18])Staff preview</strong><span>{{ $site->is_published ? 'This website is published.' : 'This website is unpublished. Only authorized staff can see this page.' }}</span><a href="{{ route('settings.lgu.website.edit', $municipality) }}">Return to website settings</a></div></aside>@endif
   <main id="main">@yield('content')</main>

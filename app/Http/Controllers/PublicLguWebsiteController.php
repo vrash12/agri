@@ -5,17 +5,19 @@ namespace App\Http\Controllers;
 use App\Models\MunicipalityWebsite;
 use App\Modules\LocalGovernment\Application\LguWebsiteAddress;
 use App\Modules\LocalGovernment\Application\LguWebsiteMedia;
+use App\Modules\LocalGovernment\Application\PublishedLguWebsite;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class PublicLguWebsiteController extends Controller
 {
+    public function __construct(private PublishedLguWebsite $websites) {}
+
     public static function ready(): bool
     {
-        return Schema::hasTable('municipality_websites') && Schema::hasTable('municipality_profiles');
+        return PublishedLguWebsite::ready();
     }
 
     public function index(Request $request): View
@@ -39,7 +41,7 @@ class PublicLguWebsiteController extends Controller
 
     public function show(Request $request, string $slug): View
     {
-        return $this->page($this->published($slug), false, (bool) $request->attributes->get('lgu_website_slug'));
+        return $this->page($this->websites->find($slug), false, (bool) $request->attributes->get('lgu_website_slug'));
     }
 
     public function subdomain(Request $request): View
@@ -49,7 +51,7 @@ class PublicLguWebsiteController extends Controller
 
     public function media(Request $request, string $slug, string $kind, LguWebsiteMedia $media): BinaryFileResponse
     {
-        $site = $this->published($slug);
+        $site = $this->websites->find($slug);
 
         return $media->response($site->municipality_id, $kind === 'logo' ? $site->municipality->profile->logo_path : $site->cover_path, $kind);
     }
@@ -75,18 +77,9 @@ class PublicLguWebsiteController extends Controller
             'logoUrl' => $profile?->logo_path ? $mediaUrl('logo') : null,
             'coverUrl' => $site->cover_path ? $mediaUrl('cover') : null,
             'publicUrl' => LguWebsiteAddress::publicUrl($site),
+            'officeLoginUrl' => LguWebsiteAddress::loginUrl($site),
             'mapQuery' => $profile?->latitude !== null && $profile?->longitude !== null
                 ? $profile->latitude.','.$profile->longitude : $profile?->office_address,
         ]);
-    }
-
-    private function published(string $slug): MunicipalityWebsite
-    {
-        abort_unless(self::ready(), 404);
-
-        return MunicipalityWebsite::query()->publiclyVisible()->where('slug', $slug)
-            ->with(['municipality:id,name,province_id', 'municipality.supervisingProvince:id,name',
-                'municipality.profile:id,municipality_id,office_name,website_url,email,phone,office_address,description,latitude,longitude,logo_path'])
-            ->firstOrFail();
     }
 }

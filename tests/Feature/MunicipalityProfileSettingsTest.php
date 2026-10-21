@@ -3,15 +3,20 @@
 namespace Tests\Feature;
 
 use App\Http\Middleware\EnforceIdleSession;
+use App\Models\AuditLog;
 use App\Models\Farmer;
 use App\Models\Municipality;
 use App\Models\MunicipalityProfile;
+use App\Models\MunicipalityWebsite;
 use App\Models\User;
+use App\Modules\LocalGovernment\Application\LguWebsiteAddress;
 use App\Modules\LocalGovernment\Application\MunicipalityProfiles;
 use App\Modules\LocalGovernment\Application\MunicipalityWebsites;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -289,6 +294,8 @@ class MunicipalityProfileSettingsTest extends TestCase
             ->assertRedirect()->assertSessionHas('success', 'LGU website published. Saved changes are now public.');
         $this->get(route('lgu.index'))->assertOk()->assertSee('Ramos');
         $this->get(route('lgu.show', 'ramos-tarlac-1'))->assertOk()->assertSee('Welcome to Ramos')->assertSee('Sample service');
+        $this->get(route('settings.lgu.website.edit', 1))->assertOk()->assertSee('Open LGU office sign in')
+            ->assertSee(route('lgu.login', 'ramos-tarlac-1'), false);
     }
 
     public function test_website_permissions_are_scoped_and_staff_are_read_only(): void
@@ -317,7 +324,8 @@ class MunicipalityProfileSettingsTest extends TestCase
         $this->asRole(User::ROLE_MUNICIPAL_HEAD)->put(route('settings.lgu.website.update', 1), array_replace($this->websiteData(1), ['is_published' => 1]))->assertRedirect();
 
         $this->get('http://ramos-tarlac-1.example.test/')->assertOk()->assertSee('Welcome to Ramos');
-        $this->get('http://ramos-tarlac-1.example.test/login')->assertNotFound();
+        $this->get('http://ramos-tarlac-1.example.test/login')->assertRedirect(LguWebsiteAddress::centralUrl('lgu.login', ['slug' => 'ramos-tarlac-1']));
+        $this->post('http://ramos-tarlac-1.example.test/login', [])->assertNotFound();
         $this->get('http://other.example.test/')->assertNotFound();
     }
 
@@ -341,6 +349,199 @@ class MunicipalityProfileSettingsTest extends TestCase
         $response->assertOk()->assertHeader('X-Content-Type-Options', 'nosniff');
         $this->assertStringContainsString('no-store', (string) $response->headers->get('Cache-Control'));
         $this->get(route('lgu.media', ['ramos-tarlac-1', 'cover']))->assertOk();
+    }
+
+    public function test_lgu_sign_in_is_branded_and_posts_only_to_its_central_scoped_endpoint(): void
+    {
+        $site = $this->publishedLoginSite();
+        $site->municipality->profile->forceFill(['logo_path' => 'lgu-logos/1/fixture.png'])->saveQuietly();
+
+        $response = $this->get(route('lgu.login', $site->slug));
+        $response->assertOk()->assertSee('Ramos office sign in')->assertSee('Ramos LGU logo')
+            ->assertSee('Tarlac')->assertSee('Local Agriculture Office')->assertSee('secure central dashboard')
+            ->assertSee('action="'.route('lgu.login.attempt', $site->slug).'"', false)
+            ->assertSee(route('lgu.media', [$site->slug, 'logo']), false)
+            ->assertSee('name="confidentiality_acknowledged"', false)->assertSee('autocomplete="current-password"', false)
+            ->assertDontSee('name="municipality_id"', false)->assertDontSee('Anao');
+        $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
+        $this->get(route('lgu.show', $site->slug))->assertOk()->assertSee(route('lgu.login', $site->slug), false);
+    }
+
+    public function test_lgu_sign_in_accepts_own_municipal_accounts_and_ignores_submitted_scope(): void
+    {
+        $site = $this->publishedLoginSite();
+        $user = $this->loginAccount(User::ROLE_MUNICIPAL_HEAD, 1);
+        $this->withSession(['url.intended' => 'https://untrusted.example.test/'])
+            ->post(route('lgu.login.attempt', $site->slug), array_replace($this->loginPayload($user), ['municipality_id' => 2, 'role' => User::ROLE_SYSTEM_OWNER, 'remember' => 1]))
+            ->assertRedirect(route('dashboard'));
+        $this->assertAuthenticatedAs($user);
+        $this->assertNotNull($user->fresh()->last_login_at);
+        $this->assertSame(1, $user->fresh()->municipality_id);
+        $this->assertSame(User::ROLE_MUNICIPAL_HEAD, $user->fresh()->role);
+        $this->assertSame(1, AuditLog::where('event', 'login')->sole()->metadata['entry_municipality_id']);
+        $this->assertFalse(Auth::guard('farmer')->check());
+    }
+
+    public function test_other_lgu_accounts_and_oversight_accounts_cannot_use_the_scoped_sign_in(): void
+    {
+        $site = $this->publishedLoginSite();
+        foreach ([[User::ROLE_MUNICIPAL_STAFF, 2, null], [User::ROLE_MUNICIPAL_HEAD, 3, null],
+            [User::ROLE_SUPER_ADMIN, null, 1], [User::ROLE_PROVINCIAL_STAFF, null, 1], [User::ROLE_PROVINCIAL_VET, null, 1],
+            [User::ROLE_SYSTEM_OWNER, null, null]] as [$role, $municipality, $province]) {
+            $user = $this->loginAccount($role, $municipality, $province);
+            $this->from(route('lgu.login', $site->slug))
+                ->post(route('lgu.login.attempt', $site->slug), $this->loginPayload($user) + ['remember' => 1])
+                ->assertRedirect(route('lgu.login', $site->slug))->assertSessionHasErrors(['email' => 'Invalid email or password.'])
+                ->assertSessionMissing('_old_input.password');
+            $this->assertGuest();
+            $this->assertNull($user->fresh()->last_login_at);
+            $this->assertNull($user->fresh()->remember_token);
+        }
+        $this->assertSame(0, AuditLog::where('event', 'login')->count());
+    }
+
+    public function test_municipal_staff_can_use_their_lgu_entry_with_existing_credentials(): void
+    {
+        $site = $this->publishedLoginSite();
+        $user = $this->loginAccount(User::ROLE_MUNICIPAL_STAFF, 1);
+        $this->post(route('lgu.login.attempt', $site->slug), $this->loginPayload($user))->assertRedirect(route('dashboard'));
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_lgu_login_uses_the_existing_notice_and_shared_credential_lockout(): void
+    {
+        $site = $this->publishedLoginSite();
+        $user = $this->loginAccount(User::ROLE_MUNICIPAL_STAFF, 1);
+        $this->post(route('lgu.login.attempt', $site->slug), array_replace($this->loginPayload($user), ['confidentiality_acknowledged' => 0]))
+            ->assertSessionHasErrors('confidentiality_acknowledged');
+        $this->assertSame(0, AuditLog::count());
+        for ($i = 0; $i < 5; $i++) {
+            $this->post(route('lgu.login.attempt', $site->slug), array_replace($this->loginPayload($user), ['password' => 'incorrect-synthetic-value']))
+                ->assertSessionHasErrors('email');
+        }
+        $this->post(route('login.attempt'), $this->loginPayload($user))->assertSessionHasErrors('email');
+        $this->assertStringContainsString('Too many sign-in attempts', session('errors')->first('email'));
+        $this->assertGuest();
+        $this->assertSame(1, AuditLog::where('event', 'login_throttled')->count());
+    }
+
+    public function test_unpublished_or_inactive_lgu_logins_fail_closed_before_credentials_are_checked(): void
+    {
+        $site = $this->publishedLoginSite();
+        $user = $this->loginAccount(User::ROLE_MUNICIPAL_STAFF, 1);
+        $site->forceFill(['is_published' => false])->saveQuietly();
+        $this->get(route('lgu.login', $site->slug))->assertNotFound();
+        $this->post(route('lgu.login.attempt', $site->slug), $this->loginPayload($user))->assertNotFound();
+        $site->forceFill(['is_published' => true])->saveQuietly();
+        $site->municipality->forceFill(['is_active' => false])->saveQuietly();
+        $this->get(route('lgu.login', $site->slug))->assertNotFound();
+        $this->post(route('lgu.login.attempt', $site->slug), $this->loginPayload($user))->assertNotFound();
+        $this->get(route('lgu.login', 'unknown-lgu'))->assertNotFound();
+        $this->assertGuest();
+        $this->assertNull($user->fresh()->last_login_at);
+        $this->assertSame(0, AuditLog::count());
+    }
+
+    public function test_tenant_login_redirect_is_publication_scoped_and_does_not_create_a_tenant_session(): void
+    {
+        config(['lgu_websites.domain' => 'example.test']);
+        $site = $this->publishedLoginSite();
+        $this->get('https://ramos-tarlac-1.example.test/')->assertOk()->assertSee('https://ramos-tarlac-1.example.test/login', false);
+        $response = $this->get('https://ramos-tarlac-1.example.test/login');
+        $response->assertRedirect(LguWebsiteAddress::centralUrl('lgu.login', ['slug' => $site->slug]));
+        $this->assertCount(0, $response->headers->getCookies());
+        $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
+        $this->head('https://ramos-tarlac-1.example.test/login')->assertRedirect(LguWebsiteAddress::centralUrl('lgu.login', ['slug' => $site->slug]));
+        $this->post('https://ramos-tarlac-1.example.test/login', [])->assertNotFound();
+        $this->post('https://ramos-tarlac-1.example.test/lgus/'.$site->slug.'/login', [])->assertNotFound();
+        $this->get('https://other.example.test/login')->assertNotFound();
+        $this->get('https://demo.example.test/login')->assertNotFound();
+        $site->forceFill(['is_published' => false])->saveQuietly();
+        $this->get('https://ramos-tarlac-1.example.test/login')->assertNotFound();
+    }
+
+    public function test_central_sign_in_is_unchanged_and_accepts_its_oversight_accounts(): void
+    {
+        $user = $this->loginAccount(User::ROLE_SYSTEM_OWNER, null);
+        $this->get(route('login'))->assertOk()->assertSee('Office sign in')->assertDontSee('secure central dashboard');
+        $this->post(route('login.attempt'), $this->loginPayload($user))->assertRedirect(route('dashboard'));
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_central_veterinary_sign_in_still_enters_animal_health(): void
+    {
+        $user = $this->loginAccount(User::ROLE_PROVINCIAL_VET, null, 1);
+        $this->post(route('login.attempt'), $this->loginPayload($user))->assertRedirect(route('anti-rabies-vaccinations.index'));
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_lgu_login_keeps_central_heartbeat_timeout_and_logout_protection(): void
+    {
+        config(['session.idle_timeout' => 15]);
+        $site = $this->publishedLoginSite();
+        $user = $this->loginAccount(User::ROLE_MUNICIPAL_STAFF, 1);
+        $this->post(route('lgu.login.attempt', $site->slug), $this->loginPayload($user))
+            ->assertRedirect(route('dashboard'))->assertSessionHas(EnforceIdleSession::LAST_ACTIVITY_KEY);
+        $this->postJson(route('session.heartbeat'))->assertNoContent();
+        $this->withSession([EnforceIdleSession::LAST_ACTIVITY_KEY => now()->subMinutes(15)->timestamp])
+            ->postJson(route('session.heartbeat'))->assertUnauthorized()->assertJson(['code' => 'SESSION_IDLE_TIMEOUT']);
+        $this->assertGuest();
+        $this->assertSame(1, AuditLog::where('event', 'session_timeout')->count());
+        $this->post(route('lgu.login.attempt', $site->slug), $this->loginPayload($user))->assertRedirect(route('dashboard'));
+        $this->post(route('logout'))->assertRedirect(route('login'));
+        $this->assertGuest();
+    }
+
+    public function test_lgu_sign_in_keeps_csrf_protection_and_does_not_attempt_credentials_without_it(): void
+    {
+        $site = $this->publishedLoginSite();
+        $user = $this->loginAccount(User::ROLE_MUNICIPAL_STAFF, 1);
+        $this->app->instance('env', 'local');
+        $this->post(route('lgu.login.attempt', $site->slug), $this->loginPayload($user))->assertStatus(419);
+        $this->assertGuest();
+        $this->assertNull($user->fresh()->last_login_at);
+        $this->assertSame(0, AuditLog::count());
+    }
+
+    public function test_inactive_municipal_accounts_still_cannot_sign_in_through_their_lgu(): void
+    {
+        $site = $this->publishedLoginSite();
+        $user = $this->loginAccount(User::ROLE_MUNICIPAL_STAFF, 1);
+        $user->forceFill(['is_active' => false])->saveQuietly();
+        $this->post(route('lgu.login.attempt', $site->slug), $this->loginPayload($user))->assertSessionHasErrors('email');
+        $this->assertGuest();
+        $this->assertNull($user->fresh()->last_login_at);
+        $this->assertSame(0, AuditLog::where('event', 'login')->count());
+    }
+
+    public function test_tenant_login_entry_has_a_bounded_lookup_rate_across_hostnames(): void
+    {
+        config(['lgu_websites.domain' => 'example.test']);
+        $this->publishedLoginSite();
+        for ($i = 0; $i < 60; $i++) {
+            $this->get('https://ramos-tarlac-1.example.test/login')->assertRedirect();
+        }
+        $this->get('https://other.example.test/login')->assertStatus(429)->assertHeader('Retry-After');
+        $this->assertGuest();
+    }
+
+    private function publishedLoginSite(): MunicipalityWebsite
+    {
+        MunicipalityProfile::forceCreate(['municipality_id' => 1, 'office_name' => 'Local Agriculture Office']);
+
+        return MunicipalityWebsite::forceCreate(['municipality_id' => 1, 'slug' => 'ramos-tarlac-1', 'is_published' => true, 'headline' => 'Welcome to Ramos']);
+    }
+
+    private function loginAccount(string $role, ?int $municipality, ?int $province = null): User
+    {
+        return User::withoutEvents(fn () => User::create(['name' => 'Synthetic sign-in fixture', 'email' => uniqid().'@example.test',
+            'password' => Hash::make('synthetic-lgu-test-only'), 'role' => $role, 'municipality_id' => $municipality,
+            'province_id' => $province, 'is_active' => true]));
+    }
+
+    private function loginPayload(User $user): array
+    {
+        return ['email' => $user->email, 'password' => 'synthetic-lgu-test-only', 'confidentiality_acknowledged' => 1];
     }
 
     private function data(int $id = 1): array

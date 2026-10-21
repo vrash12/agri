@@ -175,6 +175,7 @@
           <div class="lgu-set-links" style="margin-top:12px">
             <a class="module-button" href="{{ route('settings.lgu.website.preview', $municipality) }}" target="_blank" rel="noopener">@include('public-lgu.partials.icon', ['name' => 'eye', 'size' => 18])Preview saved website</a>
             @if($website->is_published)<a class="module-button" href="{{ $publicUrl }}" target="_blank" rel="noopener">@include('public-lgu.partials.icon', ['name' => 'external', 'size' => 18])Open public website</a>@endif
+            @if($website->is_published)<a class="module-button" href="{{ $officeLoginUrl }}" target="_blank" rel="noopener">@include('public-lgu.partials.icon', ['name' => 'external', 'size' => 18])Open LGU office sign in</a>@endif
             <button class="module-button" type="button" id="copyAddress" hidden>@include('public-lgu.partials.icon', ['name' => 'copy', 'size' => 18])<span>Copy website address</span></button>
           </div>
           <p style="margin-top:10px">Preview shows saved content. Save your changes before opening it.</p>

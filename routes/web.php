@@ -19,6 +19,7 @@ use App\Http\Controllers\FarmerPortalController;
 use App\Http\Controllers\FarmersCooperativeController;
 use App\Http\Controllers\FarmPlotController;
 use App\Http\Controllers\HarvestRecordController;
+use App\Http\Controllers\LguLoginController;
 use App\Http\Controllers\MapUsageController;
 use App\Http\Controllers\MunicipalityBoundaryController;
 use App\Http\Controllers\MunicipalityProfileController;
@@ -72,6 +73,11 @@ Route::middleware('throttle:120,1')->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware('guest')->group(function () {
+    Route::get('/lgus/{slug}/login', [LguLoginController::class, 'show'])
+        ->where('slug', '[a-z0-9-]{3,63}')->middleware('throttle:120,1')->name('lgu.login');
+    Route::post('/lgus/{slug}/login', [LguLoginController::class, 'login'])
+        ->where('slug', '[a-z0-9-]{3,63}')->middleware('throttle:30,1')->name('lgu.login.attempt');
+
     Route::get('/login', [AuthController::class, 'showLogin'])
         ->name('login');
 

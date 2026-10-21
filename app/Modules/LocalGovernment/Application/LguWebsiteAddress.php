@@ -47,4 +47,10 @@ final class LguWebsiteAddress
         return self::domain() ? 'https://'.$website->slug.'.'.self::domain().'/'
             : self::centralUrl('lgu.show', ['slug' => $website->slug]);
     }
+
+    public static function loginUrl(MunicipalityWebsite $website): string
+    {
+        return self::domain() ? self::publicUrl($website).'login'
+            : self::centralUrl('lgu.login', ['slug' => $website->slug]);
+    }
 }

@@ -1,5 +1,7 @@
 # LGU public websites
 
+October 21 LGU office sign-in follow-up (local; not deployed): published LGU pages link to a dedicated branded entry for their municipal head/staff accounts. Tenant GET/HEAD `/login` redirects to the matching central form; credentials and private modules remain central. See [the workflow, security checks and release requirements](LGU_OFFICE_SIGN_IN.md).
+
 October 21 footer correction (local; not deployed): the public stylesheet now targets the current `agrilgu-logo` class, restoring the intended header, ID-panel and directory sizing. The footer uses the existing transparent 1,254-pixel mark at a fixed 44 × 44 CSS pixels with lazy loading, rather than enlarging the low-resolution compact icon. Routes, public content, permissions and publication state are unchanged. Release `resources/views/public-lgu/layout.blade.php` and `public/css/lgu-website.css` together, mirror the stylesheet to `public_html/css`, and rebuild views. The existing high-resolution mark must remain available in `public_html/images/branding` (also reached through the LGU document-root symlink).
 
 October 21 hosting update: the selected tenant domain is now enabled. Hostinger created `ramos-mao.agritarlac.online` and `mayantoc-tarlac-8.agritarlac.online` with active HTTPS and the shared restricted `lgu-public` entry point. The existing Mayantoc publication works; Ramos stays 404 until approved content is published. See [the hosting receipt and reproduction steps](LGU_SUBDOMAIN_HOSTING_2026_10_21.md). The initial-release status below describes October 20.

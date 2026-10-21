@@ -115,6 +115,16 @@
 .login-help { margin: 20px 0 0; color: var(--ui-text-muted); font-size: 14px; line-height: 1.6; }
 .login-status { margin-bottom: 20px; padding: 12px; border: 1px solid var(--ui-border); border-radius: var(--ui-radius-control); color: var(--ui-text); background: var(--ui-surface-subtle); }
 
+.login-lgu-identity { display: flex; justify-content: center; align-items: center; gap: 12px; margin: 0 0 20px; text-align: left; }
+.login-lgu-identity img { flex: 0 0 64px; width: 64px; height: 64px; object-fit: contain; }
+.login-lgu-identity strong { display: block; color: var(--ui-text); font-size: 20px; line-height: 1.3; overflow-wrap: anywhere; }
+.login-lgu-identity span { display: block; color: var(--ui-text-muted); font-size: 14px; }
+.login-lgu-identity + .office-badge { max-width: 100%; overflow-wrap: anywhere; }
+.login-lgu-help { margin: 0 0 20px; }
+.login-lgu-links { display: grid; gap: 8px; padding: 0 26px 24px; }
+.login-lgu-links a { display: flex; align-items: center; min-height: 44px; color: var(--ui-primary); font-size: 13px; text-underline-offset: 3px; }
+.login-lgu-links a:focus-visible { outline: 3px solid var(--ui-focus); outline-offset: 3px; }
+
 .login-confidentiality {
     margin: 0 26px 24px;
     padding: 14px 16px;

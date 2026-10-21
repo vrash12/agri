@@ -32,6 +32,7 @@ class MunicipalityWebsiteController extends Controller
             'municipality' => $municipality, 'website' => $website,
             'version' => $this->websites->version($municipality, $website->exists ? $website : null),
             'domain' => LguWebsiteAddress::domain(), 'publicUrl' => LguWebsiteAddress::publicUrl($website),
+            'officeLoginUrl' => LguWebsiteAddress::loginUrl($website),
         ]);
     }
 

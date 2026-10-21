@@ -1,5 +1,14 @@
 {{-- resources/views/auth/login.blade.php --}}
-@php($farmerSignIn = $farmerSignIn ?? false)
+@php
+  $farmerSignIn = $farmerSignIn ?? false;
+  $lguSignIn = !$farmerSignIn && isset($lguWebsite);
+  $officeSignInUrl = $lguSignIn
+    ? \App\Modules\LocalGovernment\Application\LguWebsiteAddress::centralUrl('lgu.login', ['slug' => $lguWebsite->slug])
+    : route('login');
+  $loginAction = $lguSignIn
+    ? \App\Modules\LocalGovernment\Application\LguWebsiteAddress::centralUrl('lgu.login.attempt', ['slug' => $lguWebsite->slug])
+    : route($farmerSignIn ? 'farmer-portal.login.attempt' : 'login.attempt');
+@endphp
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -13,7 +22,7 @@
     content="{{ csrf_token() }}"
   >
 
-  <title>{{ $farmerSignIn ? 'Farmer sign in' : 'Office sign in' }} | AgriLGU</title>
+  <title>{{ $lguSignIn ? $lguWebsite->municipality->name.' office sign in' : ($farmerSignIn ? 'Farmer sign in' : 'Office sign in') }} | AgriLGU</title>
   <meta name="robots" content="noindex, nofollow">
 
   @include('partials.design-tokens')
@@ -530,13 +539,22 @@
         aria-labelledby="login-title"
       >
         <header class="login-header">
-          <a class="agrilgu-login" href="{{ route('welcome') }}" aria-label="AgriLGU home">
-            <x-brand />
-          </a>
+          @unless($lguSignIn)
+            <a class="agrilgu-login" href="{{ route('welcome') }}" aria-label="AgriLGU home">
+              <x-brand />
+            </a>
+          @endunless
+
+          @if($lguSignIn)
+            <div class="login-lgu-identity">
+              @if($lguLogoUrl)<img src="{{ $lguLogoUrl }}" alt="{{ $lguWebsite->municipality->name }} LGU logo" width="64" height="64" decoding="async">@endif
+              <div><strong>{{ $lguWebsite->municipality->name }}</strong><span>{{ $lguWebsite->municipality->supervisingProvince->name }}</span></div>
+            </div>
+          @endif
 
           <div class="office-badge">
             <span class="office-badge-dot"></span>
-            {{ $farmerSignIn ? 'Your agriculture records' : 'Agriculture office' }}
+            {{ $lguSignIn ? $lguWebsite->municipality->profile->office_name : ($farmerSignIn ? 'Your agriculture records' : 'Agriculture office') }}
           </div>
 
           <h1
@@ -547,21 +565,22 @@
           </h1>
 
           <p class="login-subtitle">
-            {{ $farmerSignIn ? 'View your profile, farm parcels, and assistance history.' : 'For Regional Heads and authorized agriculture office staff.' }}
+            {{ $lguSignIn ? 'For this LGU’s authorized municipal head and staff. Sign in with your existing office account.' : ($farmerSignIn ? 'View your profile, farm parcels, and assistance history.' : 'For Regional Heads and authorized agriculture office staff.') }}
           </p>
         </header>
 
         <nav class="login-audience" aria-label="Choose sign-in account">
-          <a href="{{ route('login') }}" @if(!$farmerSignIn) aria-current="page" @endif>Office sign in</a>
+          <a href="{{ $officeSignInUrl }}" @if(!$farmerSignIn) aria-current="page" @endif>Office sign in</a>
           <a href="{{ route('farmer-portal.login') }}" @if($farmerSignIn) aria-current="page" @endif>Farmer sign in</a>
         </nav>
 
         <form
           method="POST"
-          action="{{ route($farmerSignIn ? 'farmer-portal.login.attempt' : 'login.attempt') }}"
+          action="{{ $loginAction }}"
           class="login-form"
         >
           @csrf
+          @if($lguSignIn)<p class="login-help login-lgu-help">After signing in, you will continue to the secure central dashboard for your LGU.</p>@endif
 
           @if(session('success') || session('status'))
             <div class="login-status" role="status">{{ session('success') ?: session('status') }}</div>
@@ -739,6 +758,13 @@
           <p class="login-help">Need help with your ID or password? Contact your city or municipal agriculture office.</p>
         @endif
         </form>
+
+        @if($lguSignIn)
+          <nav class="login-lgu-links" aria-label="Other sign-in options">
+            <a href="{{ \App\Modules\LocalGovernment\Application\LguWebsiteAddress::publicUrl($lguWebsite) }}">Back to {{ $lguWebsite->municipality->name }} website</a>
+            <a href="{{ \App\Modules\LocalGovernment\Application\LguWebsiteAddress::centralUrl('login') }}">Provincial, regional &amp; system sign in</a>
+          </nav>
+        @endif
 
         <footer class="login-footer">
           © {{ date('Y') }}

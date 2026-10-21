@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Http\Middleware\EnforceIdleSession;
+use App\Models\MunicipalityWebsite;
 use App\Models\User;
+use App\Modules\Farmers\Application\FarmerPortalAuthentication;
+use App\Modules\LocalGovernment\Application\LguWebsiteAddress;
 use App\Support\AuditTrail;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Http\RedirectResponse;
@@ -51,7 +54,7 @@ class AuthController extends Controller
     /**
      * Authenticate the user.
      */
-    public function login(Request $request): RedirectResponse
+    public function login(Request $request, ?MunicipalityWebsite $lguWebsite = null): RedirectResponse
     {
         $validated = $request->validate([
             'email' => [
@@ -80,6 +83,12 @@ class AuthController extends Controller
             'email' => $email,
             'password' => $validated['password'],
         ];
+        if ($lguWebsite) {
+            // Constrain the office before issuing a session or remember token.
+            // Oversight roles continue to use the central sign-in page.
+            $credentials['municipality_id'] = $lguWebsite->municipality_id;
+            $credentials['role'] = User::MUNICIPAL_ROLES;
+        }
 
         $remember = $request->boolean('remember');
 
@@ -207,8 +216,8 @@ class AuthController extends Controller
         // A browser session belongs to one audience at a time.
         Auth::guard('farmer')->logout();
         $request->session()->forget([
-            \App\Modules\Farmers\Application\FarmerPortalAuthentication::VERSION_KEY,
-            \App\Modules\Farmers\Application\FarmerPortalAuthentication::ACTIVITY_KEY,
+            FarmerPortalAuthentication::VERSION_KEY,
+            FarmerPortalAuthentication::ACTIVITY_KEY,
         ]);
 
         $user->forceFill([
@@ -222,7 +231,8 @@ class AuthController extends Controller
             [
                 'actor' => $user,
                 'auditable' => $user,
-                'metadata' => ['remembered_session' => $remember],
+                'metadata' => ['remembered_session' => $remember]
+                    + ($lguWebsite ? ['entry_municipality_id' => $lguWebsite->municipality_id] : []),
             ]
         );
 
@@ -230,6 +240,12 @@ class AuthController extends Controller
             EnforceIdleSession::LAST_ACTIVITY_KEY,
             now()->timestamp
         );
+
+        if ($lguWebsite) {
+            $request->session()->forget('url.intended');
+
+            return redirect()->to(LguWebsiteAddress::centralUrl('dashboard'));
+        }
 
         /*
         |--------------------------------------------------------------------------
