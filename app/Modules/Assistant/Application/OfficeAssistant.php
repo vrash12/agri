@@ -48,6 +48,8 @@ final class OfficeAssistant
         'assistant-privacy' => ['module' => 'other', 'question' => 'Who is the AgriLGU Assistant, what can it answer, and what information stays private or is sent to OpenAI?'],
         'data-quality' => ['module' => 'farmers', 'question' => 'How do authorized staff review incomplete farmer references, duplicate claims and import validation errors without inventing missing information?'],
         'farmer-registry' => ['module' => 'farmers', 'question' => 'How do authorized office staff create or update farmer registry records and import approved farmer workbooks?'],
+        'registry-sections' => ['module' => 'farmers', 'question' => 'How do authorized office users review Outside LGU and Delisted workbook rows, and how do these differ from active farmer profiles?'],
+        'lgu-settings' => ['module' => 'other', 'question' => 'How do authorized office users maintain LGU profiles, farmer card issuer details and public LGU websites, and what does subdomain activation require?'],
         'assistance-management' => ['module' => 'assistance', 'question' => 'How do authorized office staff record agriculture and fisheries releases, quantities and rice distribution sheets?'],
         'assistance-coverage' => ['module' => 'assistance', 'question' => 'How do authorized office users read the assistance coverage report and map with its program, period and unit limits?'],
     ];

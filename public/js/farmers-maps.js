@@ -3953,15 +3953,68 @@ window.__handleDownloadAllPlots = handleDownloadAllPlots;
       }
     }
 
+  function setPlotListState(state) {
+    var list = document.getElementById('plotList');
+    var count = document.getElementById('parcelListCount');
+    if (!list) return;
+    list.setAttribute('aria-busy', state === 'loading' ? 'true' : 'false');
+    if (count) count.textContent = state === 'loading' ? 'Loading…' : state === 'error' ? 'Unavailable' : 'Choose a farmer';
+    var title = state === 'loading' ? 'Loading this farmer’s parcels…'
+      : state === 'error' ? 'Parcels could not load' : 'Choose a farmer to see their parcels';
+    var help = state === 'loading' ? 'Please wait before opening or changing a parcel.'
+      : state === 'error' ? 'The records are unavailable right now. This does not mean this farmer has no parcels.'
+      : 'Search by name or registry ID above, then choose Open farmer.';
+    list.innerHTML = '<div class="map-plot-state" role="status"><strong>' + title + '</strong>' + help
+      + (state === 'error' ? '<br><button type="button" class="btn btn-soft btn-sm" data-parcel-list-retry>Retry parcels</button>' : '') + '</div>';
+    var retry = list.querySelector('[data-parcel-list-retry]');
+    if (retry) retry.addEventListener('click', function () {
+      if (selectedFarmerId == null) return;
+      loadPlotsForSelectedFarmer(selectedFarmerId, {force: true, autoZoom: false}).catch(function () {});
+    });
+  }
+
+  function parcelCropSummary(plotId) {
+    var prefix = cropSettings.year + ' · ' + (cropSettings.season === 'dry' ? 'Dry season' : 'Wet season') + ' · ';
+    if (!cropLayer || cropLayer.state.status === 'off') return prefix + 'Crop details not loaded';
+    if (cropLayer.state.status === 'loading') return prefix + 'Loading crop record…';
+    var row = cropLayer.record(plotId);
+    if (!row) return prefix + 'Crop details unavailable';
+    return prefix + (row.crop === 'not_recorded' ? 'No crop recorded' : 'Saved crop: ' + row.crop_label);
+  }
+
+  function refreshPlotListMetadata() {
+    var list = document.getElementById('plotList');
+    var period = document.getElementById('parcelListPeriod');
+    if (period && cropSettings) period.textContent = 'Crop records: ' + cropSettings.year + ' · ' + (cropSettings.season === 'dry' ? 'Dry season' : 'Wet season') + '. Change the period in Crops on the map.';
+    if (!list) return;
+    list.querySelectorAll('[data-parcel-crop-summary]').forEach(function (element) {
+      var text = parcelCropSummary(element.getAttribute('data-parcel-crop-summary'));
+      if (element.textContent !== text) element.textContent = text;
+    });
+    list.querySelectorAll('[data-parcel-selected]').forEach(function (element) {
+      var selected = selectedPlotId != null && String(selectedPlotId) === element.getAttribute('data-parcel-selected');
+      element.hidden = !selected;
+      element.closest('details').classList.toggle('is-selected', selected);
+    });
+  }
+
   function updatePlotList(plots) {
   var list = document.getElementById('plotList');
   if (!list) return;
+  if (selectedFarmerId == null) {
+    setPlotListState('empty');
+    return;
+  }
+  list.setAttribute('aria-busy', 'false');
+  var count = document.getElementById('parcelListCount');
+  if (count) count.textContent = (plots || []).length + ((plots || []).length === 1 ? ' parcel' : ' parcels');
 
   if (!plots || !plots.length) {
     list.innerHTML = window.__canManageOperationalData
-      ? '<div class="map-empty">No plots yet. Select a farmer, then click <b>Plot Land</b>.</div>'
-      : '<div class="map-empty">No saved plots are available for this farmer.</div>';
+      ? '<div class="map-plot-state" role="status"><strong>No saved parcels for this farmer</strong>Use Draw boundary or Import KML/KMZ above to add their first parcel.</div>'
+      : '<div class="map-plot-state" role="status"><strong>No saved parcels for this farmer</strong>The agriculture office can add a boundary when it is available.</div>';
     syncSuggestedPlotName([], false);
+    refreshPlotListMetadata();
     return;
   }
 
@@ -3972,12 +4025,11 @@ window.__handleDownloadAllPlots = handleDownloadAllPlots;
     var pl = plots[i12];
     var name = pl.name || ('Plot #' + pl.id);
     var created = pl.created_at ? String(pl.created_at).split('T')[0] : '';
-    var ring = normalizePolygonRing(pl.polygon_json || pl.polygon || pl.polygonJson);
     var ha = (pl.area_ha != null ? pl.area_ha : (pl.areaHa != null ? pl.areaHa : null));
-    if (ha == null) ha = estimateAreaHa(ring);
-
-    var sub = (created ? created : '—') + (' • ' + Number(ha || 0).toFixed(2) + ' ha');
-    var c = pl.color ? String(pl.color) : "#22c55e";
+    var areaLabel = ha !== null && ha !== '' && Number.isFinite(Number(ha)) && Number(ha) > 0
+      ? Number(ha).toFixed(2) + ' ha recorded' : 'Recorded area unavailable';
+    var sub = areaLabel + (created ? ' · Added ' + created : '');
+    var c = /^#[a-f0-9]{3,8}$/i.test(pl.color || '') ? String(pl.color) : '#22c55e';
 
     html +=
       '<details class="map-plot-item map-plot-card">' +
@@ -3985,24 +4037,30 @@ window.__handleDownloadAllPlots = handleDownloadAllPlots;
           '<span class="map-plot-summary-copy">' +
             '<span class="map-plot-name"><span class="plot-swatch" aria-hidden="true" style="background:' + escapeHtml(c) + ';"></span>' + escapeHtml(name) + '</span>' +
             '<span class="map-plot-sub">' + escapeHtml(sub) + '</span>' +
+            '<span class="map-plot-crop" data-parcel-crop-summary="' + escapeHtml(pl.id) + '">' + escapeHtml(parcelCropSummary(pl.id)) + '</span>' +
+            '<span class="map-plot-selected" data-parcel-selected="' + escapeHtml(pl.id) + '" hidden>Selected on map</span>' +
             '<span class="map-plot-toggle-label"><span class="map-plot-show-label">Show actions</span><span class="map-plot-hide-label">Hide actions</span></span>' +
           '</span>' +
           '<svg class="map-plot-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"></path></svg>' +
         '</summary>' +
         '<div class="map-plot-actions">' +
-          '<button type="button" class="btn btn-soft btn-sm" data-action="focusPlot" data-plot-id="' + escapeHtml(pl.id) + '">Focus</button>' +
+          '<div class="map-plot-action-group"><small>Review this parcel</small>' +
+          '<button type="button" class="btn btn-soft btn-sm" data-action="focusPlot" data-plot-id="' + escapeHtml(pl.id) + '">Show on map</button>' +
           (window.__parcelSatelliteUrl ? '<a class="btn btn-soft btn-sm" data-action="openSatellite" data-plot-id="' + escapeHtml(pl.id) + '" aria-haspopup="dialog" aria-controls="parcelSatelliteModal" href="' + escapeHtml(window.__parcelSatelliteUrl.replace('__ID__', encodeURIComponent(pl.id))) + '">Satellite field check</a>' : '') +
           (window.__parcelAgronomyUrl ? '<a class="btn btn-soft btn-sm" data-plot-agronomy-id="' + escapeHtml(pl.id) + '" href="' + escapeHtml(window.__parcelAgronomyUrl.replace('__ID__', encodeURIComponent(pl.id)) + '?year=' + cropSettings.year + '&season=' + cropSettings.season) + '">Crop guidance &amp; field checks</a>' : '') +
-          '<a class="btn btn-soft btn-sm" data-action="openCropModal" data-plot-crop-id="' + escapeHtml(pl.id) + '" aria-haspopup="dialog" aria-controls="parcelCropModal" href="' + escapeHtml((window.__parcelCropEditUrl || '').replace('__ID__', encodeURIComponent(pl.id)) + '?year=' + cropSettings.year + '&season=' + cropSettings.season) + '">Crop areas / season</a>' +
-          (window.__canManageOperationalData ? '<button type="button" class="btn btn-soft btn-sm" data-action="editPlot" data-plot-id="' + escapeHtml(pl.id) + '">Edit</button>' : '') +
-          '<button type="button" class="btn btn-soft btn-sm" data-action="downloadPlot" data-plot-id="' + escapeHtml(pl.id) + '">Download</button>' +
-          '<button type="button" class="btn btn-soft btn-sm" data-action="printPlot" data-plot-id="' + escapeHtml(pl.id) + '">Print</button>' +
-          (window.__canManageOperationalData ? '<button type="button" class="btn btn-soft btn-sm" data-action="deletePlot" data-plot-id="' + escapeHtml(pl.id) + '">Delete</button>' : '') +
+          '<a class="btn btn-soft btn-sm" data-action="openCropModal" data-plot-crop-id="' + escapeHtml(pl.id) + '" aria-haspopup="dialog" aria-controls="parcelCropModal" href="' + escapeHtml((window.__parcelCropEditUrl || '').replace('__ID__', encodeURIComponent(pl.id)) + '?year=' + cropSettings.year + '&season=' + cropSettings.season) + '">Seasonal crops &amp; drawings</a>' +
+          '</div><div class="map-plot-action-group"><small>Boundary &amp; copies</small>' +
+          (window.__canManageOperationalData ? '<button type="button" class="btn btn-soft btn-sm" data-action="editPlot" data-plot-id="' + escapeHtml(pl.id) + '">Edit boundary</button>' : '') +
+          '<button type="button" class="btn btn-soft btn-sm" data-action="downloadPlot" data-plot-id="' + escapeHtml(pl.id) + '">Download map</button>' +
+          '<button type="button" class="btn btn-soft btn-sm" data-action="printPlot" data-plot-id="' + escapeHtml(pl.id) + '">Print parcel sheet</button>' +
+          (window.__canManageOperationalData ? '<button type="button" class="btn btn-soft btn-sm" data-action="deletePlot" data-plot-id="' + escapeHtml(pl.id) + '">Delete parcel</button>' : '') +
+          '</div>' +
         '</div>' +
       '</details>';
   }
 
   list.innerHTML = html;
+  refreshPlotListMetadata();
 
   var btnsFocus = list.querySelectorAll('button[data-action="focusPlot"]');
   for (var j4 = 0; j4 < btnsFocus.length; j4++) {
@@ -4069,13 +4127,12 @@ window.__handleDownloadAllPlots = handleDownloadAllPlots;
     btnsDelete[k3].addEventListener('click', function () {
       var pid = this.getAttribute('data-plot-id');
       if (!pid || !selectedFarmerId) return;
-      if (!confirm('Delete this plot?')) return;
-
       var deletingPlot = getPlotById(pid);
       if (!deletingPlot || !deletingPlot._record_version) {
         toast('The plot data is out of date. Reload the farmer before deleting.', 'warn');
         return;
       }
+      if (!confirm('Delete ' + (deletingPlot.name || 'this parcel') + ' and its saved boundary? This cannot be undone.')) return;
 
       setStatus('Deleting plot…', '');
       fetch("/farm-plots/" + encodeURIComponent(String(pid)), {
@@ -4105,6 +4162,7 @@ window.__handleDownloadAllPlots = handleDownloadAllPlots;
 }
 
     function refreshSelectedParcelStats() {
+      refreshPlotListMetadata();
       var root = document.getElementById('farmerParcelStats');
       if (!root || !window.FarmerParcelStats) return;
       var active = selectedFarmerId != null && parcelStatsState.farmerId === String(selectedFarmerId);
@@ -4134,6 +4192,7 @@ window.__handleDownloadAllPlots = handleDownloadAllPlots;
       var revision = ++parcelStatsRevision;
       if (String(selectedFarmerId || '') === farmerId) {
         parcelStatsState = {farmerId: farmerId, landStatus: 'loading', plots: []};
+        setPlotListState('loading');
         refreshSelectedParcelStats();
       }
 
@@ -4162,7 +4221,7 @@ window.__handleDownloadAllPlots = handleDownloadAllPlots;
       }).catch(function (error) {
         if (revision === parcelStatsRevision && String(selectedFarmerId || '') === farmerId) {
           parcelStatsState = {farmerId: farmerId, landStatus: 'error', plots: []};
-          updatePlotList([]);
+          setPlotListState('error');
           refreshSelectedParcelStats();
         }
         throw error;

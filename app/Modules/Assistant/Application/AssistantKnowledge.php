@@ -67,6 +67,8 @@ final class AssistantKnowledge
         'assistant-identity-privacy' => ['title' => 'Assistant identity and privacy boundaries', 'topics' => ['assistant-privacy', 'ai-technology'], 'primary' => ['assistant-privacy'], 'audience' => 'all'],
         'farmer-data-quality' => ['title' => 'Missing information and duplicate review', 'topics' => ['data-quality'], 'primary' => ['data-quality'], 'audience' => 'office'],
         'farmer-registry' => ['title' => 'Farmer profiles and workbook imports', 'topics' => ['farmer-registry'], 'primary' => ['farmer-registry'], 'audience' => 'office'],
+        'registry-sections' => ['title' => 'Outside LGU and Delisted workbook references', 'topics' => ['registry-sections'], 'primary' => ['registry-sections'], 'audience' => 'office'],
+        'lgu-settings' => ['title' => 'LGU office profiles, ID issuers and websites', 'topics' => ['lgu-settings'], 'primary' => ['lgu-settings'], 'audience' => 'office'],
         'assistance-management' => ['title' => 'Agriculture and fisheries releases and rice sheets', 'topics' => ['assistance-management'], 'primary' => ['assistance-management'], 'audience' => 'office'],
         'assistance-coverage' => ['title' => 'Recorded assistance coverage by municipality', 'topics' => ['assistance-coverage'], 'primary' => ['assistance-coverage'], 'audience' => 'office'],
     ];

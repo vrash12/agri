@@ -1,6 +1,6 @@
 Drawing planted crop sections
 
-In Farmers, open Parcel map, find or select the farmer and expand the saved parcel's Land Plots box. Choose Seasonal crops / Crop areas / season. This opens an in-page dialog while preserving the parcel map; the standalone seasonal-crop page is also available.
+In Farmers, open Parcel map, find or select the farmer and expand a card under Saved parcels. Choose Seasonal crops & drawings. This opens an in-page dialog while preserving the parcel map; the standalone seasonal-crop page is also available.
 
 Choose the crop year and dry or wet season. Select a crop and Start crop line, then click two or more points along the planted section inside the existing saved parcel. Optional names or varieties identify the mark. Finish the crop line and save the season. Lines are visual crop marks without hectare calculations; older enclosed crop areas remain editable.
 

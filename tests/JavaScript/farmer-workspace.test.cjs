@@ -21,3 +21,13 @@ test('choosing All submits a cleared geography filter instead of leaving the pre
   changed({ target: { value: '1' } });
   assert.equal(submits, 2);
 });
+
+test('workbook sections keep their selected tab instead of marking the registry active', () => {
+  const source = fs.readFileSync(path.resolve(__dirname, '../../public/js/farmer-workspace.js'), 'utf8');
+  const registryLink = { dataset: { workspaceTarget: 'registry' }, classList: { toggle() { assert.fail('Must not change workbook navigation'); } } };
+  const control = { querySelectorAll: selector => selector === '[data-workspace-target]' ? [registryLink] : [] };
+  vm.runInNewContext(source, {
+    document: { querySelector: () => control, getElementById: () => null },
+    window: { location: { hash: '' }, addEventListener() {} },
+  });
+});

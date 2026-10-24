@@ -119,6 +119,39 @@ test('a partial name still offers every farmer it could mean', () => {
   assert.equal(matchesFor(entries, '').length, 0, 'An empty box must not select everyone');
 });
 
+test('full-name suggestions remain selectable with omitted middle names or surname-first input', () => {
+  const { matchesFor, describe } = finder();
+  const entries = [describe({ id: 1, first_name: 'Maria', middle_name: 'Isabel', last_name: 'Cruz', agri_gov_id: 'AGRI-F-000001' }),
+    describe({ id: 2, first_name: 'Maria', middle_name: 'Elena', last_name: 'Cruz', agri_gov_id: 'AGRI-F-000002' })];
+  assert.equal(matchesFor(entries, 'Maria Cruz').length, 2, 'Namesakes still require an explicit choice');
+  assert.equal(matchesFor(entries, 'Cruz, Maria Isabel')[0].id, '1');
+  assert.equal(matchesFor(entries, 'Maria Unknown').length, 0);
+});
+
+test('clearing or changing a query invalidates older replies before the next debounce starts', async () => {
+  const listeners = {}, timers = [], requests = [];
+  const input = { value: '', addEventListener: (name, callback) => { listeners[name] = callback; } };
+  const button = { disabled: true, addEventListener() {} };
+  const help = { textContent: '' };
+  const context = vm.createContext({
+    document: { readyState: 'complete', querySelectorAll: () => [], getElementById: id => ({ mapFarmerSearch: input, mapFarmerLocateBtn: button, mapPickerHelp: help })[id] || null },
+    window: { __farmerLookupUrl: '/lookup', setTimeout: callback => { timers.push(callback); return timers.length; }, clearTimeout() {} },
+    fetch: () => new Promise(resolve => requests.push(resolve)),
+  });
+  vm.runInContext(source, context);
+  const respond = resolve => resolve({ ok: true, json: async () => ({ farmers: [{ id: 1, first_name: 'Maria', last_name: 'Cruz' }], total: 1 }) });
+  input.value = 'Maria'; listeners.input(); timers.shift()();
+  input.value = ''; listeners.input(); respond(requests.shift());
+  await new Promise(resolve => setImmediate(resolve));
+  assert.match(help.textContent, /at least 2/, 'A stale match must not replace the cleared input hint');
+  assert.equal(button.disabled, true);
+  input.value = 'Maria'; listeners.input(); timers.shift()();
+  input.value = 'Juan'; listeners.input(); respond(requests.shift());
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(help.textContent, 'Searching…', 'The newer query remains pending until its own reply');
+  assert.equal(button.disabled, true);
+});
+
 test('the finder holds no Blade syntax, so it can be cached and linted as a plain script', () => {
   assert.doesNotMatch(source, /@json|\{\{|@php|@endphp/, 'Template syntax leaked into the script file');
   assert.match(source, /window\.__farmerLookupUrl/, 'Configuration must arrive through window');
@@ -176,4 +209,22 @@ test('choosing a returned datalist label enables Locate without searching the fo
   clicks.click();
   assert.equal(opened, '7');
   assert.equal(requests.length, 1);
+});
+
+test('workspace shortcuts focus their destination and reveal crop controls without hijacking modified clicks', () => {
+  const clicks = [];
+  const input = {addEventListener() {},focus() {this.focused=true;}};
+  const controls = {tagName:'DETAILS',open:false,focus() {this.focused=true;}};
+  const links=['#mapFarmerSearch','#parcelCropControls'].map(href=>({getAttribute:()=>href,addEventListener(name,callback) {clicks.push(callback);}}));
+  const context=vm.createContext({
+    document:{readyState:'complete',getElementById:id=>({mapFarmerSearch:input,mapFarmerLocateBtn:{addEventListener() {}},parcelCropControls:controls})[id] || null,
+      querySelectorAll:selector=>selector === '.parcel-workspace-shortcuts a' ? links : []},window:{}});
+  vm.runInContext(source,context);
+  clicks[1]({ctrlKey:true});
+  assert.equal(controls.open,false);
+  clicks[0]({button:0});
+  assert.equal(input.focused,true);
+  clicks[1]({button:0});
+  assert.equal(controls.open,true);
+  assert.equal(controls.focused,true);
 });

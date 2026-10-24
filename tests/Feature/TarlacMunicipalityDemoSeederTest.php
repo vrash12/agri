@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Models\Farmer;
 use App\Models\Municipality;
 use App\Models\MunicipalityBoundary;
+use App\Models\Province;
 use App\Models\RiceSeedDistribution;
+use App\Models\User;
 use Database\Seeders\TarlacMunicipalityDemoSeeder;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
@@ -13,6 +15,19 @@ use Tests\TestCase;
 class TarlacMunicipalityDemoSeederTest extends TestCase
 {
     use DatabaseTransactions;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        User::create(['name' => 'Synthetic Import Owner', 'email' => 'import-owner@example.test',
+            'password' => 'non-login-fixture', 'role' => User::ROLE_SYSTEM_OWNER, 'is_active' => true]);
+        $province = Province::create(['name' => 'Tarlac', 'is_active' => true]);
+        foreach (['ANAO' => 'Anao', 'CAMILING' => 'Camiling', 'CONCEPCION' => 'Concepcion',
+            'PANIQUI' => 'Paniqui', 'RAMOS' => 'Ramos', 'TARLAC_CITY' => 'Tarlac City'] as $code => $name) {
+            Municipality::create(['name' => $name, 'code' => $code, 'province' => 'Tarlac',
+                'province_id' => $province->id, 'is_active' => true]);
+        }
+    }
 
     public function test_the_named_demo_seeder_is_scoped_balanced_and_idempotent(): void
     {

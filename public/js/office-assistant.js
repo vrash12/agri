@@ -7,7 +7,7 @@
   const form = find('form'), send = find('send'), clear = find('clear');
   const welcome = find('welcome'), messages = find('messages'), body = find('body');
   const status = find('status'), count = find('count'), jump = find('jump');
-  const cooldown = find('cooldown');
+  const cooldown = find('cooldown'), stop = find('stop');
   if (!dialog || typeof dialog.showModal !== 'function') return;
   const guidePicker = find('guide-picker');
   const guideButtons = [...root.querySelectorAll('[data-assistant-guide]')];
@@ -20,7 +20,8 @@
   const guidePreference = 'eagrilgu.assistant-guide.v1';
   let context = null, busy = false, controller = null, serial = 0, pending = null;
   let composing = false, sessionExpired = false;
-  let cooldownUntil = 0, cooldownTimer = null;
+  let cooldownUntil = 0, cooldownTimer = null, revealing = null;
+  const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
   let suggestedDraft = null, latestSuggestions = new Set();
   const suggestionControls = new WeakSet();
 
@@ -31,7 +32,7 @@
 
   function announce(text) { status.textContent = text; }
   function selectGuide(id, persist = true) {
-    if (busy || sessionExpired || !guides.has(id)) return;
+    if (busy || revealing || sessionExpired || !guides.has(id)) return;
     activeGuide = guides.get(id);
     root.dataset.guide = id;
     root.querySelectorAll('[data-assistant-avatar]').forEach(image => { image.src = activeGuide.avatar; });
@@ -56,12 +57,14 @@
   }
   function updateCount() { count.textContent = input.value.length + ' / 800'; }
   function refreshControls() {
-    const blocked = busy || sessionExpired || coolingDown();
+    const blocked = busy || Boolean(revealing) || sessionExpired || coolingDown();
     send.disabled = blocked;
+    if (stop) { stop.hidden = !busy; stop.disabled = !busy; }
     input.disabled = sessionExpired;
-    form.setAttribute('aria-busy', String(busy));
-    guideButtons.forEach(button => { button.disabled = busy || sessionExpired; });
+    form.setAttribute('aria-busy', String(busy || Boolean(revealing)));
+    guideButtons.forEach(button => { button.disabled = busy || Boolean(revealing) || sessionExpired; });
     messages.querySelectorAll('button').forEach((button) => {
+      if (button === revealing?.button) { button.disabled = false; return; }
       button.disabled = blocked || (suggestionControls.has(button) && !latestSuggestions.has(button));
     });
   }
@@ -155,7 +158,7 @@
     return actions;
   }
   function stageSuggestion(text, replyContext) {
-    if (busy || sessionExpired || coolingDown()) return;
+    if (busy || revealing || sessionExpired || coolingDown()) return;
     if (input.value.trim()) {
       announce('Finish or clear your current draft before choosing a suggestion.');
       input.focus();
@@ -221,7 +224,166 @@
     flushParagraph();
     return container;
   }
-  function showReply(reply, text, data) {
+  function finishReveal(announceReady = true) {
+    const current = revealing;
+    if (!current) return;
+    revealing = null;
+    if (current.timer !== null) window.clearTimeout(current.timer);
+    current.targets.forEach(target => { target.node.textContent = target.text; target.node.hidden = false; });
+    current.reply.content.removeAttribute('aria-hidden');
+    current.reply.entry.removeAttribute('aria-busy');
+    current.reply.entry.classList.remove('is-typing');
+    const restoreFocus = document.activeElement === current.button;
+    current.button.remove();
+    refreshControls();
+    keepReading(nearBottom());
+    if (announceReady) announce('Reply ready.');
+    if (restoreFocus && dialog.open && !sessionExpired) input.focus();
+  }
+  function revealReply(reply) {
+    // The complete validated reply has arrived. Reveal its safe text nodes;
+    // never reparse partial HTML or claim these are streamed provider tokens.
+    if (reducedMotion?.matches || document.hidden) return;
+    const targets = [];
+    function collect(node) {
+      if (['p', 'li'].includes(node.tagName.toLowerCase())) {
+        const text = node.textContent;
+        const characters = typeof Intl.Segmenter === 'function'
+          ? [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(text)].map(part => part.segment)
+          : Array.from(text);
+        targets.push({ node, text, characters });
+      } else Array.from(node.children).forEach(collect);
+    }
+    collect(reply.content);
+    const length = targets.reduce((total, target) => total + target.characters.length, 0);
+    if (length < 12) return;
+    targets.forEach(target => { target.node.textContent = ''; target.node.hidden = true; });
+    reply.content.setAttribute('aria-hidden', 'true');
+    reply.entry.setAttribute('aria-busy', 'true');
+    reply.entry.classList.add('is-typing');
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'assistant-show-full'; button.textContent = 'Show full reply';
+    reply.entry.append(button);
+    const current = { reply, targets, button, timer: null, shown: 0 };
+    revealing = current;
+    // Short replies remain readable, while even the largest accepted reply
+    // completes within about four seconds. No character is split mid-grapheme.
+    const frames = Math.ceil(Math.min(3800, Math.max(900, length * 9)) / 24);
+    const step = Math.max(1, Math.ceil(length / frames));
+    function tick() {
+      if (revealing !== current) return;
+      const atBottom = nearBottom();
+      current.shown = Math.min(length, current.shown + step);
+      let remaining = current.shown;
+      targets.forEach(target => {
+        const visible = Math.min(target.characters.length, Math.max(0, remaining));
+        target.node.textContent = target.characters.slice(0, visible).join('');
+        target.node.hidden = !visible;
+        remaining -= target.characters.length;
+      });
+      keepReading(atBottom);
+      if (current.shown >= length) finishReveal();
+      else current.timer = window.setTimeout(tick, 24);
+    }
+    button.addEventListener('click', () => { if (revealing === current) finishReveal(); });
+    announce(reply.guide.name + ' is displaying the reply. Choose Show full reply to skip the typing effect.');
+    current.timer = window.setTimeout(tick, 24);
+  }
+  const boundedText = (value, maximum) => typeof value === 'string' && value.trim()
+    && value.length <= maximum && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]/.test(value);
+  function localLink(value) {
+    if (typeof value !== 'string' || !value.trim() || value.length > 2048) return null;
+    try {
+      const url = new URL(value, window.location.href);
+      return url.origin === window.location.origin && ['http:', 'https:'].includes(url.protocol)
+        && !url.username && !url.password ? url.href : null;
+    } catch (_) { return null; }
+  }
+  function checkedTime(value) {
+    if (typeof value !== 'string' || value.length > 40
+      || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/.test(value)) return null;
+    const date = new Date(value);
+    if (!Number.isFinite(date.getTime())) return null;
+    return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric',
+      hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }).format(date);
+  }
+  function renderEvidence(reply, data) {
+    const records = data.source === 'records' && data.evidence && typeof data.evidence === 'object'
+      && !Array.isArray(data.evidence) ? data.evidence : null;
+    const sources = records
+      ? (Array.isArray(records.sources) ? records.sources : []).slice(0, 8)
+        .filter(source => boundedText(source?.title, 120))
+      : (Array.isArray(data.sources) ? data.sources : []).slice(0, 3)
+        .filter(source => typeof source?.id === 'string' && /^[a-z0-9-]{1,80}$/.test(source.id)
+          && boundedText(source.title, 120));
+    const limitations = records && Array.isArray(records.limitations)
+      ? records.limitations.slice(0, 6).filter(value => boundedText(value, 600)) : [];
+    const scope = records && boundedText(records.scope, 200) ? records.scope : data.scope;
+    const period = records && boundedText(records.period, 200) ? records.period
+      : Number.isInteger(data.year) && data.year >= 1900 && data.year <= 2100 ? 'Year ' + data.year : null;
+    const metadata = [];
+    if (boundedText(scope, 200)) metadata.push(scope);
+    if (period) metadata.push(period);
+    if (metadata.length) {
+      const line = document.createElement('p');
+      line.className = 'assistant-message-meta';
+      line.textContent = metadata.join(' · ');
+      reply.entry.append(line);
+    }
+    const checked = records && checkedTime(records.checked_at);
+    if (checked) {
+      const line = document.createElement('p');
+      line.className = 'assistant-message-meta assistant-checked';
+      line.textContent = 'Checked ' + checked;
+      reply.entry.append(line);
+    }
+    if (!sources.length && !limitations.length) return;
+    const evidence = document.createElement('details');
+    evidence.className = 'assistant-evidence';
+    const summary = document.createElement('summary');
+    summary.textContent = records ? 'Sources and coverage' : 'Guide sources';
+    if (sources.length) summary.textContent += ' · ' + sources.length;
+    evidence.append(summary);
+    if (sources.length) {
+      const list = document.createElement('ul');
+      list.className = 'assistant-evidence-sources';
+      sources.forEach(source => {
+        const item = document.createElement('li');
+        const url = records && localLink(source.url);
+        const title = document.createElement(url ? 'a' : 'span');
+        title.className = 'assistant-evidence-title';
+        title.textContent = source.title;
+        if (url) title.href = url;
+        item.append(title);
+        if (records && boundedText(source.detail, 600)) {
+          const detail = document.createElement('p');
+          detail.textContent = source.detail;
+          item.append(detail);
+        }
+        list.append(item);
+      });
+      evidence.append(list);
+    }
+    if (limitations.length) {
+      const heading = document.createElement('p');
+      heading.className = 'assistant-evidence-caption';
+      heading.textContent = 'What these figures cover';
+      const list = document.createElement('ul');
+      list.className = 'assistant-evidence-limits';
+      limitations.forEach(text => {
+        const item = document.createElement('li'); item.textContent = text; list.append(item);
+      });
+      evidence.append(heading, list);
+    }
+    if (records && checked) {
+      const note = document.createElement('p');
+      note.className = 'assistant-evidence-note';
+      note.textContent = 'Checked is when this answer read saved records. It is not a verification of their accuracy or completeness.';
+      evidence.append(note);
+    }
+    reply.entry.append(evidence);
+  }
+  function showReply(reply, text, data, animate = false) {
     const atBottom = nearBottom();
     latestSuggestions = new Set();
     clearThinking(reply);
@@ -231,25 +393,7 @@
     reply.content = answerContent(text);
     reply.entry.replaceChildren(reply.label, reply.content);
     if (data) {
-      const details = [];
-      if (typeof data.scope === 'string' && data.scope.trim()) details.push(data.scope.slice(0, 200));
-      if (Number.isInteger(data.year) && data.year >= 1900 && data.year <= 2100) details.push('Year ' + data.year);
-      if (details.length) {
-        const metadata = document.createElement('p');
-        metadata.className = 'assistant-message-meta';
-        metadata.textContent = details.join(' · ');
-        reply.entry.append(metadata);
-      }
-      const sourceTitles = (Array.isArray(data.sources) ? data.sources : []).slice(0, 3)
-        .filter(source => typeof source?.id === 'string' && /^[a-z0-9-]{1,80}$/.test(source.id)
-          && typeof source.title === 'string' && source.title.trim() && source.title.length <= 120)
-        .map(source => source.title);
-      if (sourceTitles.length) {
-        const evidence = document.createElement('p');
-        evidence.className = 'assistant-message-meta';
-        evidence.textContent = 'Based on: ' + [...new Set(sourceTitles)].join(' · ');
-        reply.entry.append(evidence);
-      }
+      renderEvidence(reply, data);
       const actions = actionContainer(reply);
       (Array.isArray(data.actions) ? data.actions : []).slice(0, 6).forEach((action) => {
         if (!validToken(action.choice) || typeof action.label !== 'string'
@@ -258,7 +402,7 @@
         button.type = 'button';
         button.textContent = action.label;
         button.addEventListener('click', () => {
-          if (busy || sessionExpired) return;
+          if (busy || revealing || sessionExpired) return;
           return sendQuestion({ question: 'Continue with my choice.', visible: action.label,
             choice: action.choice, context: data.context || null }, null,
             document.activeElement === button ? button : null);
@@ -300,6 +444,7 @@
       });
       if (suggestions.childElementCount) reply.entry.append(suggestions);
     }
+    if (animate) revealReply(reply);
     refreshControls();
     keepReading(atBottom);
   }
@@ -310,13 +455,14 @@
     retry.type = 'button';
     retry.textContent = 'Retry';
     retry.addEventListener('click', () => {
-      if (busy || sessionExpired) return;
+      if (busy || revealing || sessionExpired) return;
       return sendQuestion(request, reply, document.activeElement === retry ? retry : null);
     });
     actionContainer(reply).append(retry);
     announce(text + (coolingDown() && cooldown ? ' ' + cooldown.textContent : ''));
   }
   function cancel(reason, preserveReply) {
+    finishReveal(false);
     serial++;
     if (controller) controller.abort();
     controller = null;
@@ -356,7 +502,7 @@
   }
 
   async function sendQuestion(request, existingReply, focusOrigin) {
-    if (busy || sessionExpired) return;
+    if (busy || revealing || sessionExpired) return;
     if (coolingDown()) {
       refreshCooldown();
       announce(cooldown?.textContent || 'Wait a moment before trying again.');
@@ -432,14 +578,14 @@
         return;
       }
       context = data.context;
-      showReply(reply, data.answer, data);
+      showReply(reply, data.answer, data, true);
       if (!outgoing.choice && input.value.trim() === question) {
         input.value = '';
         suggestedDraft = null;
       }
       input.removeAttribute('aria-invalid');
       updateCount();
-      announce('');
+      if (!revealing) announce('');
     } catch (error) {
       if (requestId === serial) retryReply(reply, error.name === 'AbortError'
         ? 'The reply took too long. Your message is still here; try again.'
@@ -467,6 +613,8 @@
     guidePicker.open = false;
     guidePicker.querySelector('summary')?.focus();
   });
+  reducedMotion?.addEventListener?.('change', event => { if (event.matches) finishReveal(); });
+  document.addEventListener?.('visibilitychange', () => { if (document.hidden) finishReveal(false); });
   open.hidden = false;
   open.addEventListener('click', () => {
     refreshCooldown();
@@ -482,6 +630,11 @@
     open.focus();
   });
   clear.addEventListener('click', () => { reset(); if (!sessionExpired) input.focus(); });
+  stop?.addEventListener('click', () => {
+    if (!busy) return;
+    cancel('Checking stopped. Your message is still here; retry when you are ready.', true);
+    if (dialog.open && !sessionExpired) input.focus();
+  });
   input.addEventListener('input', () => {
     suggestedDraft = null;
     input.removeAttribute('aria-invalid');
@@ -502,11 +655,8 @@
   });
   root.querySelectorAll('[data-assistant-suggestion]').forEach((button) => {
     button.addEventListener('click', () => {
-      if (busy || sessionExpired) return;
-      input.value = button.childNodes[0].textContent.trim();
-      input.removeAttribute('aria-invalid');
-      updateCount();
-      input.focus();
+      const question = button.dataset.question;
+      if (boundedText(question, 200)) stageSuggestion(question, null);
     });
   });
   form.addEventListener('submit', (event) => {

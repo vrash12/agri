@@ -1,5 +1,7 @@
 # Agriculture help and numbered replies
 
+October 21 local refinement (not deployed): [agriculture scope and typing](ASSISTANT_AGRICULTURE_TYPING.md) retains agriculture-only questions and AgriLGU help, removes the proposed unrestricted mode, honors initial numbered-step requests and reveals replies gradually.
+
 Status: deployed and verified on October 20, 2026 in runtime
 `80166f41804b58ca3823878ebbb6841804801f45`. See the
 [deployment receipt](ASSISTANT_AGRICULTURE_DEPLOYMENT_2026_10_20.md).

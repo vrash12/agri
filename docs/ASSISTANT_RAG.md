@@ -1,5 +1,7 @@
 # Assistant retrieval and grounded help
 
+October 24 local follow-up (not deployed): [LGU record retrieval and UX](ASSISTANT_LGU_RECORDS.md) adds fresh local operational coverage and explicit source evidence without sending private records to a provider. Help retrieval now has 44 passages / 41 topics within the existing 48-entry/80KiB/3-passage/7000-character limits. Generation and cache validation require citation of the first, primary retrieved passage. This strengthens provenance selection; it is not semantic entailment or a guarantee against hallucinations. Earlier corpus counts below are historical.
+
 October 20 Assistant update (deployed in runtime `80166f4`): reviewed general agriculture
 questions now use ten canonical topics alongside existing system help, with
 local unrelated-question refusal. Raw chat and records stay local. General

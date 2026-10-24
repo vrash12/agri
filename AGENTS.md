@@ -1,5 +1,25 @@
 # Agriculture Information System — Developer Guide
 
+October 25 local refinement (not deployed): shared `FarmerIdentitySearch` handles bounded, literal full-name parts and canonical IDs after existing finder/picker scope; punctuation is escaped consistently on SQLite and MariaDB. Clearing or changing a map search immediately invalidates older responses. Satellite default/preset dates share the last complete UTC day, and browser Back retains readings and retry deadlines without issuing new requests. The Assistant's current-only workbook, cooperative, machinery and LGU setup reports reject explicit reporting years and year follow-ups instead of relabeling today's data as historical. Annual crop/assistance/harvest/Animal Health reports remain available. See [UX verification](docs/OPERATIONAL_UX_2026_10_25.md) and [Assistant limits](docs/ASSISTANT_LGU_RECORDS.md).
+
+October 25 local operational UX follow-up (not deployed): the dashboard now exposes scoped mapping, annual assistance reach and current-year input-weight charts without opening reports or loading Chart.js. Each chart states its period and units; figures remain accessible. Saved parcels precede optional profile/assistance details, carry applied crop period/classification, and distinguish no selection, loading, failed retrieval and confirmed empty results. A failed load must never become “no parcels.” Satellite checks now have beginner guidance, purpose-first index choices, recent-date shortcuts and explicit result/retry states; changing filters clears old results and closing pending work leaves an honest retry state. No new provider request, permission, route, schema or operational data change is introduced. Ship the related views/assets together. See [operational UX verification](docs/OPERATIONAL_UX_2026_10_25.md).
+
+October 24 local LGU Assistant follow-up (not deployed): `AssistantOperationalReports` extends local policy/scoped reads to retained workbook rows, separate Outside LGU/Delisted reports, cooperative memberships, machinery, seasonal crop counts and LGU profile setup. `AssistantRecordTopics` recognizes bounded exact report phrases; unsupported scope/status/age/exclusion/ranking/period filters clarify instead of broader totals. Current saved data and annual records stay distinct, units are never combined, and stale cross-LGU relationships are excluded. Record replies include application-owned source links, scope, period, query time and limitations. Private data never enters provider prompts/caches; help RAG has 44 curated passages / 41 topics and requires the primary retrieved source citation. Source disclosures, mobile controls, draft-safe starters and Stop checking improve the shared chat. No migration/provider/configuration/data change is needed for this follow-up. See [LGU retrieval and UX](docs/ASSISTANT_LGU_RECORDS.md) for coverage, exclusions, evidence and deployment dependencies.
+
+October 24 local follow-up (not deployed): new empty installations are reproducible through the full migration chain and interactive `system:bootstrap-owner`, with legacy adoption guards and no automatic office/operational data. Transactional integration suites build isolated in-memory schema; MySQL-only backup checks remain engine-specific. `ReportDateSql` preserves native MySQL completed-year calculations while supporting SQLite tests, and farmer-picker literal searches use explicit SQL escaping. The Ramos reference checksum now matches the committed LF artifact, with the old CRLF hash reproduced and no geometry change. See [fresh installation](docs/FRESH_INSTALLATION.md) and [acceptance evidence](docs/ACCEPTANCE_2026_10_24.md). Registry/chat browser and keyboard checks passed on synthetic data; real devices, screen-reader audio and staff approval remain unverified.
+
+October 21 farmer workbook sections (local source; not deployed): Farmers has
+municipality-scoped **Outside LGU** and **Delisted** reference sections at
+`farmers.registry-sources.index`. `FarmerRegistrySources` scopes retained source
+rows before counts, search and pagination. Counts measure workbook rows, not
+farmers; repeated parcel/commodity rows stay separate. Outside addresses never
+transfer ownership. Delisted rows have no active-profile or ID actions, even
+with a stale farmer link. Only same-municipality outside-LGU links are shown.
+Existing office read permissions apply; veterinary, evaluator, visitor and
+farmer-portal identities gain no access. No migration, re-import or data write
+is required. The normal workbook importer is unchanged. See
+[workbook reference sections](docs/FARMER_WORKBOOK_SECTIONS.md).
+
 October 21 Assistant refinement (local source; not deployed): the Assistant remains limited to agriculture, related farm topics and permitted AgriLGU help/records. The proposed General questions mode was withdrawn and removed; arbitrary questions stay local and are declined. Improved prompts, first-question numbered steps and the gradual typing effect remain. See [agriculture scope and typing](docs/ASSISTANT_AGRICULTURE_TYPING.md).
 
 October 21, 2026: an isolated staff demonstration is live at `https://demo.agritarlac.online`, using synthetic records and normal municipal-staff permissions. It has a separate database, credentials, application key, sessions and storage. Following explicit owner authorization, AI, satellite and Google Maps use the existing provider accounts. Demo limits are 20 AI requests/day (200/month) and 10 satellite requests/day (100/month); automatic satellite refresh remains disabled. Production visitor permissions are unchanged. See [the demo operations note](docs/STAFF_DEMO.md).
@@ -699,7 +719,7 @@ Audit, cache, queue, file, map, weather, or export integration
 - Large imports, exports, map payloads, and dashboards must be bounded, paginated, chunked, aggregated, cached, or lazy-loaded rather than fully loaded into memory without a limit.
 - New modules owned by a municipality must include `municipality_id`, a foreign key and indexes, model relationships, municipality-aware policies, scoped queries, validation of related records, audit coverage, and isolation tests.
 - Database constraints should protect important invariants in addition to application validation whenever the supported database can enforce them safely.
-- Schema changes must use reversible migrations and must account for the legacy baseline-schema warning in this guide.
+- Schema changes must use reversible migrations and follow the distinct fresh-installation and existing-import migration safeguards in section 9.
 
 ### Laravel and PHP practices
 
@@ -1530,16 +1550,16 @@ Boundary saves disable duplicate submissions and show a persistent, focusable er
 
 `EnsureHeadAdmin` and its `head_admin` route-middleware alias were removed, along with the obsolete role label in the layout; no route used them and `head_admin` is not a supported role. Authorization goes through policies and the supported `User` role constants.
 
-## 9. Database and migration warning
+## 9. Fresh installation and existing database migrations
 
-The repository does **not yet contain a complete migration history for a clean database**. The application began from an imported legacy schema. Core tables such as `municipalities`, `farmers`, `farm_plots`, `rice_seed_distributions`, `anti_rabies_vaccinations`, `farmers_cooperatives`, `cooperative_farmer`, and `backup_files` are not all created by repository migrations.
+The October 24 local implementation completes clean installation with `2014_10_12_000100_create_legacy_application_tables.php`. All 33 migrations build 30 tables from an empty database without a SQL dump, sample accounts, geography or operational records. SQLite and a new local MariaDB database passed installation, repeat migration and rollback/reinstall. See [docs/FRESH_INSTALLATION.md](docs/FRESH_INSTALLATION.md) for the current setup, compatibility guards and evidence. This work is not deployed.
 
 Consequences:
 
-- Do not assume `php artisan migrate` on an empty database can build the application.
+- On a genuinely new, empty dedicated database use the complete migration chain, then interactive `system:bootstrap-owner`. It requires the fresh marker, no existing office accounts, a hidden confirmed password and a required audit receipt. Never use it for recovery or privilege changes on existing installations.
 - Do not run migrations blindly against an imported database whose `migrations` table does not match its real schema; old “create users” migrations may appear pending even when `users` already exists.
-- Obtain the approved, sanitized baseline SQL schema from the project owner, then reconcile migration history before onboarding a fresh environment.
-- The long-term fix is to create and test a complete baseline migration set or squash the verified schema into a Laravel schema dump.
+- The baseline adopts all eight existing core tables without changing their rows/defaults/constraints and does not own them on rollback. It fails closed on partial/unrelated installations; it never guesses or repairs migration history. MySQL DDL failures require explicit operator review.
+- Keep the fresh marker private to its installation. Existing databases still require verified backups and individually reviewed migrations; never reset, refresh, seed or regenerate their application key as part of an update.
 
 Legacy and deployed environments may still be missing these incremental migrations even when the current local database has them:
 
@@ -1553,7 +1573,7 @@ The migration `2026_08_24_000100_extend_vaccinations_for_animal_health_services.
 
 The code already queries those fields/tables. Apply the migrations to the intended environment after taking a database backup. A missing `quantity_unit` produces `SQLSTATE[42S22]`, and a missing machinery table prevents the dashboard and machinery module from loading.
 
-The two Rice Seed Distribution Sheet migrations are additive only. They create one new table and add nullable columns (plus the `consent_status` default `unrecorded`) to the imported `rice_seed_distributions` table; nothing is renamed, repurposed, backfilled or deleted, and existing releases stay usable with a null `batch_id`. Because the repository has no complete migration history, apply them by path after taking a backup, never with a bare `php artisan migrate`:
+The two Rice Seed Distribution Sheet migrations are additive only. They create one new table and add nullable columns (plus the `consent_status` default `unrecorded`) to `rice_seed_distributions`; nothing is renamed, repurposed, backfilled or deleted, and existing releases stay usable with a null `batch_id`. On an existing imported installation apply only reviewed pending migrations by path after taking a backup. A new empty install runs the full chain instead:
 
 ```bash
 php artisan db:backup
@@ -1703,14 +1723,14 @@ Farmer photos and backup files live on the private `local` disk under `storage/a
 
 ## 11. Local setup and deployment checklist
 
-For an existing, correctly baselined database:
+For a new empty installation follow [docs/FRESH_INSTALLATION.md](docs/FRESH_INSTALLATION.md), including `php artisan migrate` and the guarded interactive first-owner command. The abbreviated commands below are only a local-development example; never copy an environment over an existing installation or regenerate its key:
 
 ```bash
 composer install
 copy .env.example .env
 php artisan key:generate
 php artisan migrate:status
-npm install
+npm ci
 npm run build
 php artisan optimize:clear
 php artisan serve
@@ -1732,7 +1752,7 @@ Production/Hostinger requirements:
 
 ### Database backup and restore
 
-Because this repository has no complete migration history, the dump is the only route back from a lost database. `php artisan db:backup` writes a verified, gzipped logical dump through `App\Support\DatabaseBackup`, reading inside one consistent snapshot so a dump taken during office hours is a coherent point in time. It is produced in PHP rather than by `mysqldump`, so it does not depend on a matching client version or on shell access being available.
+Migrations rebuild schema; backups recover operational data, account hashes and historical records. `php artisan db:backup` writes a verified, gzipped logical dump through `App\Support\DatabaseBackup`, reading inside one consistent snapshot so a dump taken during office hours is a coherent point in time. It is produced in PHP rather than by `mysqldump`, so it does not depend on a matching client version or on shell access being available. Preserve the application key and private files separately and test restoration.
 
 `App\Console\Kernel` schedules it daily at `BACKUP_DATABASE_SCHEDULE_AT`, which only runs where Laravel's scheduler is actually invoked. On a server add the one cron entry Laravel needs, and confirm it is running:
 
@@ -1774,7 +1794,7 @@ Important feature suites include:
 - `RiceSeedDistributionSheetTest`
 - `ConcurrentWriteTest` (uses its own in-memory SQLite connection)
 
-The current PHPUnit 11 configuration forces the testing environment and in-memory SQLite, and hides the real OpenAI key from tests. Fixtures receive a fresh random encryption key. Older `DatabaseTransactions` suites still require a disposable imported legacy schema and cannot pass against an empty database; do not substitute production data or weaken isolation to run them. Never run tests in the production checkout or with a cached production configuration. See `docs/LARAVEL_12_AI_UPGRADE.md` for the tested subset and remaining integration checks. Add a regression test whenever changing permissions, municipality scoping, route-model binding, public-map privacy, imports, exports, file access, or audit redaction.
+The current PHPUnit 11 configuration forces the testing environment and in-memory SQLite, and hides the real OpenAI key from tests. Fixtures receive a fresh random encryption key. `CreatesApplication` uses `.env.testing.example` when no private `.env.testing` exists and migrates the disposable schema for older `DatabaseTransactions` suites; it refuses persistent connections for that setup. No imported legacy database is required. Never run tests in the production checkout or with a cached production configuration. See `docs/FRESH_INSTALLATION.md` and `docs/ACCEPTANCE_2026_10_24.md` for current evidence; the upgrade receipt records its historical tested subset. Add a regression test whenever changing permissions, municipality scoping, route-model binding, public-map privacy, imports, exports, file access, or audit redaction.
 
 The UI suites `SharedDesignPresentationTest`, `DashboardPresentationTest`, `FarmerWorkspacePresentationTest`, `OperationsPresentationTest`, and `SupportingWorkflowPresentationTest` use unsaved fixtures and an in-memory SQLite connection. They check rendering, visible role actions, form values, and version tokens; they do not replace database-backed authorization, persistence, or provider integration tests.
 

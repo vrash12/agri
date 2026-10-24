@@ -31,12 +31,15 @@ class ParcelSatelliteController extends Controller
         }
 
         $view = $request->boolean('modal') ? 'farm_plots.satellite_modal' : 'farm_plots.satellite';
+        $today = CarbonImmutable::now('UTC')->startOfDay();
+        $latestCompleteDay = $today->subDay();
 
         return response()->view($view, [
             'plot' => $plot, 'parcel' => $parcel, 'geometryError' => $geometryError,
             'configured' => $this->imagery->configured(),
             'indexes' => SatelliteIndex::definitions(),
-            'from' => now()->utc()->subDays(30)->toDateString(), 'to' => now()->utc()->subDay()->toDateString(),
+            'from' => $latestCompleteDay->subDays(29)->toDateString(),
+            'to' => $latestCompleteDay->toDateString(), 'today' => $today->toDateString(),
         ])->header('Cache-Control', 'private, no-store');
     }
 

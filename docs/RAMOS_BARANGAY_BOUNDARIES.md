@@ -31,12 +31,20 @@ municipality drawing/editing to keep editing gestures available.
 - Original SHA-256:
   `f9d3408769079d94fcfafbe61aad438f31d34458b601487cf80ce5cd6870b750`.
 - Application extract SHA-256:
-  `cd34baa1f643b1dcce5aedbff2011cf17327c6c6a7b7fc38963b3655b158844f`.
+  `fbd8bfbbfb545a09414a4b7cec7501ceb1b2e2edc450e7b2677fd6b39ac6e4cf`
+  (canonical LF bytes tracked by Git).
+
+October 24 local reproducibility correction: the former pin
+`cd34baa1f643b1dcce5aedbff2011cf17327c6c6a7b7fc38963b3655b158844f`
+matches the same committed JSON with its final LF converted to CRLF. The
+checksum now verifies the committed LF artifact; no coordinates, properties,
+source, file bytes or municipality ownership changed. Integrity validation remains
+mandatory. This correction is not deployed.
 
 The application extract preserves coordinates, retains only names and zero-padded
 ten-digit PSGC codes, and adds interior label points calculated with Shapely's
 representative point. Shapely was only a preparation tool, not an app dependency.
-Size: 6,286 bytes; nine Polygons; 111 coordinate pairs including closing points.
+Size: 6,285 LF bytes; nine Polygons; 111 coordinate pairs including closing points.
 No further simplification, snapping, repair or clipping was applied. Git enforces
 LF for the pinned file because the runtime verifies its checksum.
 

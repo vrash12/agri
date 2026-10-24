@@ -95,6 +95,11 @@ class OperationsDashboardTest extends TestCase
             ->get(route('dashboard'))
             ->assertOk()
             ->assertSee('Operations dashboard')
+            ->assertSee('Your LGU at a glance')
+            ->assertViewHas('coverageStats', fn ($coverage) => $coverage['assistance']['registered'] === 2
+                && $coverage['assistance']['beneficiaries'] === 1
+                && $coverage['assistance']['without_release'] === 1)
+            ->assertViewHas('charts', fn ($charts) => array_sum($charts['rice_monthly']) === 25.0)
             ->assertSee('Parcel mapping coverage')
             ->assertSee('50.0%')
             ->assertSee('DashboardOwnRecipient'.$suffix)

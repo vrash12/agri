@@ -10,7 +10,7 @@ use Throwable;
 /** Encrypted references are hints. Every record is independently authorized. */
 final class AssistantConversationContext
 {
-    private const TASKS = ['farmers', 'assistance', 'harvests', 'animal-health', 'summary', 'farmer-search', 'farmer', 'farmer-parcels', 'farmer-assistance', 'farmer-harvests', 'help', 'identity'];
+    private const TASKS = ['farmers', 'assistance', 'harvests', 'animal-health', 'summary', 'farmer-search', 'farmer', 'farmer-parcels', 'farmer-assistance', 'farmer-harvests', 'data-quality', 'help', 'identity', ...AssistantRecordTopics::TASKS];
 
     public const HELP_STYLES = ['plain', 'brief', 'steps', 'example', 'more'];
 

@@ -73,6 +73,20 @@ final class AssistantNextSteps
         }
 
         return match ($report) {
+            'summary' => [$this->prompt('Registry sections', 'Summarize registry sections'),
+                $this->prompt('Machinery inventory', 'Summarize machinery'),
+                $this->prompt('Crop records', "Show our crops for {$year}")],
+            'registry-sources', 'outside-lgu', 'delisted' => [$this->prompt('Outside LGU rows', 'Show outside LGU records'),
+                $this->prompt('Delisted rows', 'Show delisted rows'),
+                $this->prompt('How to review sections', 'How do I review registry sections?')],
+            'cooperatives' => [$this->prompt('Review memberships', 'How do I manage cooperative membership?'),
+                $this->prompt('LGU overview', 'Summarize our LGU records')],
+            'machinery' => [$this->prompt('Equipment workflow', 'How do I track machinery maintenance?'),
+                $this->prompt('LGU overview', 'Summarize our LGU records')],
+            'lgu-profile' => [$this->prompt('Manage LGU settings', 'How do I manage LGU profiles?'),
+                $this->prompt('LGU overview', 'Summarize our LGU records')],
+            'crops' => array_merge($this->previousReport('crops', $year),
+                [$this->prompt('Office harvests', "Show our harvests for {$year}"), $this->prompt('Crop drawing help', 'How do I draw crop sections?')]),
             'assistance' => array_merge($this->previousReport($report, $year),
                 [$this->prompt('Office harvests', "Show our harvests for {$year}"), $this->prompt('How to record assistance', 'How do I record assistance releases?')]),
             'harvests' => array_merge($this->previousReport($report, $year),

@@ -4,7 +4,7 @@ The runtime help path retrieves reviewed passages from `knowledge/*.md` through
 the explicit `AssistantKnowledge` manifest. This index is not provider context.
 The previous whole-guide prompt was replaced by local RAG on October 11, 2026.
 
-The explicit manifest contains 42 reviewed passages for 39 supported help topics, with a 48-entry ceiling.
+The explicit manifest contains 44 reviewed passages for 41 supported help topics, with a 48-entry ceiling. The October 24 local follow-up adds Outside LGU/Delisted references and LGU profile/website guidance. Generated help must cite the primary retrieved passage, including when a cached answer is reused.
 Ten agriculture topics add farming basics, soil, rotation, nutrients, seeds,
 planting preparation, irrigation, pest management, livestock and aquaculture.
 See [agriculture sources and limits](../../docs/ASSISTANT_AGRICULTURE.md).
@@ -29,6 +29,10 @@ entry and retrieval/permission tests; changing the content changes its digest.
 `OfficeAssistant` supplies only canonical help questions and approved passages.
 Raw chat and records never enter model context. Operational summaries are fresh,
 authorized reads through `AssistantRecords`, not generated or cached answers.
+Live coverage includes retained workbook sections, cooperative memberships,
+machinery availability/maintenance, seasonal crop counts and LGU profile setup.
+Each record reply shows source registers, scope, period, query time and limits.
+It does not inspect every private field, attachment, account or climate reading.
 Identity/greetings can be answered locally. Current-page questions and bounded
 follow-ups reuse a reviewed topic or an independently authorized record reference,
 never the full visible thread. Unrelated general chat is outside this scope.

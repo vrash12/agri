@@ -55,9 +55,9 @@ class Element {
   }
 }
 
-function setup(fetcher, { savedGuide = null, storageBlocked = false } = {}) {
+function setup(fetcher, { savedGuide = null, storageBlocked = false, reducedMotion = true } = {}) {
   const names = ['dialog', 'open', 'input', 'form', 'send', 'clear', 'welcome',
-    'messages', 'body', 'status', 'count', 'close', 'jump', 'cooldown', 'guide-picker', 'launcher-name', 'portrait'];
+    'messages', 'body', 'status', 'count', 'close', 'jump', 'cooldown', 'stop', 'guide-picker', 'launcher-name', 'portrait'];
   const elements = Object.fromEntries(names.map(name => [name, new Element()]));
   elements.jump.hidden = true;
   const guideButtons = [['ka-berto', 'Ka Berto'], ['ka-kaloy', 'Ka Kaloy'], ['aling-maya', 'Aling Maya'], ['kiko', 'Kiko']].map(([id, name]) => {
@@ -67,21 +67,27 @@ function setup(fetcher, { savedGuide = null, storageBlocked = false } = {}) {
     return button;
   });
   const avatars = [new Element('img'), new Element('img')], guideNames = [new Element('h2'), new Element('span')];
+  const starters = [new Element('button')];
+  starters[0].dataset.question = 'Summarize our LGU records';
   const root = { dataset: { endpoint: '/assistant/message', module: 'crops', guide: 'ka-berto' },
     querySelector: selector => elements[selector.slice(16, -1)],
     querySelectorAll: selector => selector === '[data-assistant-guide]' ? guideButtons
-      : selector === '[data-assistant-avatar]' ? avatars : selector === '[data-assistant-guide-name]' ? guideNames : [] };
-  const document = { body: new Element('body'),
+      : selector === '[data-assistant-avatar]' ? avatars : selector === '[data-assistant-guide-name]' ? guideNames
+        : selector === '[data-assistant-suggestion]' ? starters : [] };
+  const documentListeners = {};
+  const document = { body: new Element('body'), hidden: false,
+    addEventListener(name, fn) { documentListeners[name] = fn; },
     querySelector: selector => selector === '[data-office-assistant]' ? root : { content: 'synthetic-csrf' },
     createElement(tagName) { const element = new Element(tagName); element.ownerDocument = document; return element; } };
   document.activeElement = document.body;
-  [...Object.values(elements), ...guideButtons, ...avatars, ...guideNames].forEach(element => { element.ownerDocument = document; });
+  [...Object.values(elements), ...guideButtons, ...avatars, ...guideNames, ...starters].forEach(element => { element.ownerDocument = document; });
   const listeners = {};
   let now = Date.UTC(2026, 9, 11, 2), nextTimer = 0;
   const timers = new Map();
   class ClockDate extends Date { static now() { return now; } }
   const stored = new Map(savedGuide === null ? [] : [['eagrilgu.assistant-guide.v1', savedGuide]]), storageWrites = [];
-  const window = { localStorage: {
+  const media = { matches: reducedMotion, addEventListener(name, fn) { this.listener = fn; } };
+  const window = { matchMedia: () => media, localStorage: {
       getItem(key) { if (storageBlocked) throw new Error('Storage blocked'); return stored.get(key) ?? null; },
       setItem(key, value) { if (storageBlocked) throw new Error('Storage blocked'); stored.set(key, value); storageWrites.push([key, value]); }
     },
@@ -92,7 +98,7 @@ function setup(fetcher, { savedGuide = null, storageBlocked = false } = {}) {
   const requests = [];
   const fetch = async (url, options) => { requests.push({ url, options }); return fetcher(url, options); };
   vm.runInNewContext(source, { document, window, fetch, AbortController, URL, Date: ClockDate });
-  return { ...elements, document, requests, listeners, root, guideButtons, avatars, guideNames, stored, storageWrites, now: () => now,
+  return { ...elements, document, documentListeners, media, requests, listeners, root, guideButtons, avatars, guideNames, starters, stored, storageWrites, now: () => now,
     timeout() { const timer = [...timers.entries()].find(([, entry]) => entry.delay === 30000); if (timer) timer[1].fn(); },
     advance(milliseconds) {
       const until = now + milliseconds;
@@ -281,10 +287,112 @@ test('retrieved source titles are bounded plain text and never rendered as HTML 
   ] }));
   ui.input.value = 'How do I draw corn?'; await ui.form.fire('submit');
   const entry = ui.messages.children.at(-1);
-  assert.equal(entry.children[2].textContent, 'Based on: <img src=x onerror=alert(1)> · Crop limits');
-  assert.equal(entry.children[2].innerHTML, undefined);
+  const evidence = entry.children[2];
+  assert.equal(evidence.tagName, 'details');
+  assert.equal(evidence.children[0].textContent, 'Guide sources · 2');
+  assert.deepEqual(evidence.querySelectorAll('span').map(span => span.textContent), ['<img src=x onerror=alert(1)>', 'Crop limits']);
+  assert.equal(evidence.innerHTML, undefined);
   assert.equal(entry.querySelectorAll('a').length, 0);
   assert.equal(entry.querySelectorAll('img').length, 0);
+});
+
+test('record evidence shows current scope, period and checked time with bounded source coverage', async () => {
+  const ui = setup(async () => reply('There are 12 registered farmers.', { source: 'records', year: 2025, scope: 'Old fallback',
+    evidence: { checked_at: '2026-10-24T02:35:00+00:00', scope: 'Ramos', period: 'Current saved records',
+      sources: [{ title: 'Farmer registry', url: '/farmers', detail: '12 matching registered farmers.' }],
+      limitations: ['Outside-LGU and delisted source rows are counted separately.'] } }));
+  ui.input.value = 'Summarize registry sections'; await ui.form.fire('submit');
+  const entry = ui.messages.children.at(-1), evidence = entry.querySelectorAll('details')[0];
+  assert.equal(entry.children[2].textContent, 'Ramos · Current saved records');
+  assert.match(entry.children[3].textContent, /^Checked .+2026/);
+  assert.doesNotMatch(entry.children[3].textContent, /Updated|live|verified/i);
+  assert.equal(evidence.children[0].textContent, 'Sources and coverage · 1');
+  assert.equal(evidence.querySelectorAll('a')[0].href, 'https://example.test/farmers');
+  assert.equal(evidence.querySelectorAll('a')[0].textContent, 'Farmer registry');
+  assert.ok(evidence.querySelectorAll('p').some(p => /not a verification/.test(p.textContent)));
+  assert.ok(evidence.querySelectorAll('li').some(li => /counted separately/.test(li.textContent)));
+  assert.equal(evidence.open, undefined);
+});
+
+test('record evidence rejects unsafe URLs and never interprets metadata as HTML', async () => {
+  const urls = ['https://other.test/private', '//other.test/path', 'javascript:alert(1)',
+    'data:text/html,test', 'https://user:password@example.test/farmers', '  ', '/farmers'];
+  const ui = setup(async () => reply('A safe answer.', { source: 'records', evidence: {
+    checked_at: '<img onerror=alert(1)>', scope: '<script>Ramos</script>', period: '<b>Current</b>',
+    sources: urls.map((url, index) => ({ title: '<img src=x> source ' + index, detail: '<script>private()</script>', url })),
+    limitations: ['<img onerror=alert(1)>'] } }));
+  ui.input.value = 'Office records'; await ui.form.fire('submit');
+  const entry = ui.messages.children.at(-1), evidence = entry.querySelectorAll('details')[0];
+  assert.equal(entry.children[2].textContent, '<script>Ramos</script> · <b>Current</b>');
+  assert.equal(evidence.querySelectorAll('a').length, 1);
+  assert.equal(evidence.querySelectorAll('a')[0].href, 'https://example.test/farmers');
+  assert.equal(entry.querySelectorAll('img').length, 0);
+  assert.equal(entry.querySelectorAll('script').length, 0);
+  assert.ok(evidence.querySelectorAll('p').some(p => p.textContent === '<script>private()</script>'));
+  assert.equal(entry.children.filter(child => child.className.includes('assistant-checked')).length, 0);
+});
+
+test('oversized or malformed evidence never blocks a valid answer and source counts stay bounded', async () => {
+  const invalidSources = [null, {}, { title: '' }, { title: 'x'.repeat(121) }, { title: 'bad\u0000title' }];
+  for (const evidence of [null, [], 'bad', { checked_at: '2026-99-99T12:00:00Z', scope: 'x'.repeat(201),
+    period: 'x'.repeat(201), sources: invalidSources, limitations: [null, '', 'x'.repeat(601), 'bad\u0000text'] }]) {
+    const ui = setup(async () => reply('A safe answer.', { source: 'records', evidence }));
+    ui.input.value = 'Office records'; await ui.form.fire('submit');
+    assert.equal(content(ui), 'A safe answer.');
+    assert.equal(ui.messages.children.at(-1).querySelectorAll('details').length, 0);
+  }
+  const ui = setup(async () => reply('A safe answer.', { source: 'records', evidence: {
+    sources: Array.from({ length: 10 }, (_, i) => ({ title: 'Source ' + i })),
+    limitations: Array.from({ length: 8 }, (_, i) => 'Limit ' + i) } }));
+  ui.input.value = 'Office records'; await ui.form.fire('submit');
+  const evidence = ui.messages.children.at(-1).querySelectorAll('details')[0];
+  assert.equal(evidence.querySelectorAll('span').length, 8);
+  assert.equal(evidence.querySelectorAll('li').filter(li => li.textContent.startsWith('Limit')).length, 6);
+});
+
+test('help replies cannot claim record evidence or checked data from an unexpected envelope', async () => {
+  const ui = setup(async () => reply('Use the registry.', { evidence: {
+    checked_at: '2026-10-24T02:35:00Z', scope: 'Private scope', period: 'Private period',
+    sources: [{ title: 'Private source', url: '/farmers' }], limitations: ['Private detail'] } }));
+  ui.input.value = 'How do I use this page?'; await ui.form.fire('submit');
+  const entry = ui.messages.children.at(-1);
+  assert.equal(entry.children.length, 2);
+  assert.equal(entry.querySelectorAll('details').length, 0);
+});
+
+test('starter cards stage explicit editable questions, preserve unfinished drafts and reset prior references', async () => {
+  const ui = setup(async () => reply('Farmer summary.', { source: 'records', context: 'farmer-reference' }));
+  await ui.open.fire('click'); ui.input.value = 'An unfinished question';
+  await ui.starters[0].fire('click');
+  assert.equal(ui.input.value, 'An unfinished question');
+  assert.equal(ui.requests.length, 0);
+  ui.input.value = 'Find a farmer'; await ui.form.fire('submit');
+  await ui.starters[0].fire('click');
+  assert.equal(ui.input.value, 'Summarize our LGU records');
+  assert.equal(ui.requests.length, 1);
+  assert.equal(ui.document.activeElement, ui.input);
+  await ui.form.fire('submit');
+  assert.equal(payload(ui).context, undefined);
+});
+
+test('Stop checking cancels in place, preserves the draft, returns focus and discards late results', async () => {
+  let resolve;
+  const ui = setup(() => new Promise(done => { resolve = done; }));
+  await ui.open.fire('click'); ui.input.value = 'Summarize our LGU records';
+  const pending = ui.form.fire('submit');
+  assert.equal(ui.stop.hidden, false);
+  assert.equal(ui.stop.disabled, false);
+  ui.input.value = 'My next draft'; ui.stop.focus(); await ui.stop.fire('click');
+  assert.equal(ui.requests[0].options.signal.aborted, true);
+  assert.equal(ui.stop.hidden, true);
+  assert.equal(ui.input.value, 'My next draft');
+  assert.equal(ui.document.activeElement, ui.input);
+  assert.match(content(ui), /Checking stopped/);
+  assert.equal(controls(ui)[0].textContent, 'Retry');
+  resolve(reply('Late protected response', { source: 'records' })); await pending;
+  assert.match(content(ui), /Checking stopped/);
+  assert.equal(ui.messages.children.length, 2);
+  assert.equal(ui.send.disabled, false);
 });
 
 test('one conversation renders untrusted text safely and sends only current message and opaque context', async () => {
@@ -779,7 +887,7 @@ test('a pending turn keeps its guide and Retry retains that guide after an appea
   assert.equal(ui.messages.children.length, 2);
 });
 
-test('unified dialog has no mode or year selectors and uses the shared visual system', () => {
+test('unified agriculture dialog has no mode or year selectors and uses the shared visual system', () => {
   const blade = fs.readFileSync(path.join(__dirname, '../../resources/views/partials/office-assistant.blade.php'), 'utf8');
   const css = fs.readFileSync(path.join(__dirname, '../../public/css/office-assistant.css'), 'utf8');
   assert.doesNotMatch(blade, /data-assistant-mode|data-assistant-year|<select|type="number"|Records &amp; reports/);
@@ -847,4 +955,83 @@ test('a numbered reply can be followed by a new request and a clean retry', asyn
   assert.equal(ui.requests.length, 3);
   assert.equal(ui.messages.children.length, 4);
   assert.equal(ui.messages.children.at(-1).querySelectorAll('ol').length, 0);
+});
+
+
+test('verified replies reveal gradually inside safe numbered-list nodes with a skip button', async () => {
+  const answer = 'Start here:\n\n1. Inspect the soil.\n2. Ask <img src=x onerror=alert(1)> for help.\n\nReview the record.';
+  const ui = setup(async () => reply(answer), { reducedMotion: false });
+  await ui.open.fire('click'); ui.input.value = 'Show steps'; await ui.form.fire('submit');
+  const entry = ui.messages.children.at(-1), body = entry.children[1];
+  assert.equal(entry.attributes['aria-busy'], 'true');
+  assert.equal(body.attributes['aria-hidden'], 'true');
+  assert.equal(ui.send.disabled, true);
+  const items = body.querySelectorAll('li');
+  assert.equal(items.length, 2); assert.ok(items.every(item => item.hidden && item.textContent === ''));
+  assert.equal(body.querySelectorAll('img').length, 0);
+  const skip = entry.querySelectorAll('button').find(button => button.textContent === 'Show full reply');
+  assert.equal(skip.disabled, false);
+  ui.advance(120);
+  assert.ok(body.children[0].textContent.length > 0 && body.children[0].textContent.length <= 'Start here:'.length);
+  skip.focus(); await skip.fire('click');
+  assert.equal(items[1].textContent, 'Ask <img src=x onerror=alert(1)> for help.');
+  assert.ok(items.every(item => !item.hidden));
+  assert.equal(body.attributes['aria-hidden'], undefined);
+  assert.equal(entry.attributes['aria-busy'], undefined);
+  assert.equal(ui.send.disabled, false);
+  assert.equal(ui.document.activeElement, ui.input);
+  assert.equal(ui.status.textContent, 'Reply ready.');
+  assert.equal(ui.requests.length, 1);
+});
+
+test('typing completes in bounded time, keeps the next draft and cannot submit twice', async () => {
+  const answer = 'A useful explanation. '.repeat(250);
+  const ui = setup(async () => reply(answer), { reducedMotion: false });
+  ui.input.value = 'Question'; await ui.form.fire('submit');
+  ui.input.value = 'My next unsent draft'; await ui.form.fire('submit');
+  assert.equal(ui.requests.length, 1);
+  ui.advance(4000);
+  assert.equal(content(ui), answer);
+  assert.equal(ui.input.value, 'My next unsent draft');
+  assert.equal(ui.send.disabled, false);
+  assert.equal(ui.messages.children.at(-1).querySelectorAll('button').length, 0);
+});
+
+test('closing, resetting and navigating cancel reveal timers without late private text', async () => {
+  for (const action of ['close', 'clear', 'pagehide']) {
+    const ui = setup(async () => reply('A complete protected synthetic office record.', { source: 'records' }), { reducedMotion: false });
+    await ui.open.fire('click'); ui.input.value = 'Office report'; await ui.form.fire('submit');
+    const entry = ui.messages.children.at(-1), replyNode = entry.children[1];
+    ui.advance(48);
+    if (action === 'pagehide') ui.listeners.pagehide(); else await ui[action].fire('click');
+    ui.advance(10000);
+    assert.equal(replyNode.textContent, 'A complete protected synthetic office record.');
+    assert.equal(entry.querySelectorAll('button').length, 0);
+    assert.equal(ui.messages.children.length, action === 'close' ? 2 : 0);
+    assert.equal(ui.send.disabled, false);
+  }
+});
+
+test('reduced motion and hidden tabs show full text without animation or partial live announcements', async () => {
+  const answer = 'A sufficiently long but useful answer.';
+  const reduced = setup(async () => reply(answer));
+  reduced.input.value = 'Question'; await reduced.form.fire('submit');
+  assert.equal(content(reduced), answer); assert.equal(reduced.send.disabled, false);
+  const ui = setup(async () => reply(answer), { reducedMotion: false });
+  ui.input.value = 'Question'; await ui.form.fire('submit');
+  ui.media.matches = true; ui.media.listener({ matches: true });
+  assert.equal(content(ui), answer); assert.equal(ui.send.disabled, false);
+  ui.media.matches = false;
+  ui.input.value = 'Next'; await ui.form.fire('submit');
+  ui.document.hidden = true; ui.documentListeners.visibilitychange();
+  assert.equal(content(ui), answer); assert.equal(ui.send.disabled, false);
+});
+
+test('typing respects the reader position and never splits combined Unicode characters', async () => {
+  const ui = setup(async () => reply('👩🏽‍🌾 Inspect crops carefully. '.repeat(5)), { reducedMotion: false });
+  ui.body.scrollHeight = 1000; ui.body.clientHeight = 300; ui.body.scrollTop = 60;
+  ui.input.value = 'Question'; await ui.form.fire('submit'); ui.advance(24);
+  assert.ok(content(ui).startsWith('👩🏽‍🌾'));
+  assert.equal(ui.body.scrollTop, 60); assert.equal(ui.jump.hidden, false);
+  ui.advance(4000); assert.equal(ui.body.scrollTop, 60);
 });

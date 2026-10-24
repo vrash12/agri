@@ -14,6 +14,13 @@ signature area. The existing record creation date is labeled Registered.
 Screen/print and canvas use the same artwork version `20261020-open-field`.
 No record, schema, permission, QR destination or parcel-address rule changes.
 
+Sharp-mark follow-up — October 21, 2026 (local, not deployed): the farmer-card
+front now uses the existing transparent 1,254 × 1,254 `eagrilgu-mark-v1.png`
+source instead of the 236 × 236 compatibility raster. The same versioned source
+is used by the HTML/print card and canvas PNG export; canvas downsampling enables
+high-quality smoothing. The shared site compact mark and all stored branding
+namespaces remain unchanged.
+
 Logo/QR background follow-up: CSS and canvas both blend white logo pixels with
 the landscape using multiply compositing. The larger white QR panel is removed;
 a uniform cream `#f4f2d8` area remains beneath the QR and its quiet margin. Stored

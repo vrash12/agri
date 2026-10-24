@@ -181,6 +181,8 @@
     </article>
   </section>
 
+  @include('dashboard.partials.lgu-insights')
+
   <div class="ops-layout ops-daily-layout">
     <div class="ops-main-column">      <section class="ops-panel">
         <div class="ops-panel-header">

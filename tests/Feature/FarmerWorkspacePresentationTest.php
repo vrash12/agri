@@ -79,6 +79,24 @@ class FarmerWorkspacePresentationTest extends TestCase
         $view->assertSee('Change municipality');
     }
 
+    public function test_parcel_workspace_prioritizes_saved_parcels_and_keeps_optional_details_accessible(): void
+    {
+        $view = $this->view('farmers.index', $this->fixture(User::ROLE_MUNICIPAL_STAFF));
+        $html = (string) $view;
+        $xpath = $this->xpath($html);
+
+        $this->assertSame(1, $xpath->query('//input[@id="mapFarmerSearch" and @aria-describedby="mapPickerHelp"]')->length);
+        $this->assertSame(1, $xpath->query('//*[@id="mapPickerHelp" and @role="status"]')->length);
+        $this->assertSame(1, $xpath->query('//section[@id="farmerSavedParcels" and @tabindex="-1"]')->length);
+        $this->assertSame(1, $xpath->query('//*[@id="plotList" and @aria-busy="false"]')->length);
+        $this->assertSame(1, $xpath->query('//details[not(@open)]//*[@id="farmerParcelStats"]')->length);
+        $this->assertLessThan(strpos($html, 'id="selOwnerName"'), strpos($html, 'id="plotList"'));
+        $view->assertSee('Open farmer')->assertSee('Saved parcels')->assertSee('Choose a farmer to see their parcels')
+            ->assertSee('Map unavailable? Open the farmer registry')->assertSee('Show this period')
+            ->assertSee('does not mean the land is unplanted');
+        $view->assertDontSee('No saved plots yet');
+    }
+
     public function test_required_farmer_fields_are_visible_and_errors_reveal_optional_details(): void
     {
         $data = $this->fixture(User::ROLE_PROVINCIAL_STAFF);

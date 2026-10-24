@@ -310,6 +310,56 @@ final class AssistantRagTest extends TestCase
         $this->assertStringNotContainsString('INVALID OUTPUT', $result['answer']);
     }
 
+    public function test_a_secondary_source_alone_cannot_support_or_cache_a_generated_workflow_answer(): void
+    {
+        $evidence = app(AssistantKnowledge::class)->retrieve($this->staff, 'crop-drawing', OfficeAssistant::TOPICS['crop-drawing']['question']);
+        $this->assertCount(2, $evidence['passages']);
+        $this->assertSame('crop-sections', $evidence['passages'][0]['id']);
+        $this->assertSame('crop-boundary-rules', $evidence['passages'][1]['id']);
+        OfficeHelpAgent::fake(fn () => ['answer' => 'UNSUPPORTED PRIMARY WORKFLOW', 'supported' => true,
+            'citations' => [$evidence['passages'][1]['id']]])->preventStrayPrompts();
+
+        foreach ([$this->answer(), $this->answer()] as $result) {
+            $this->assertSame('guide', $result['delivery']);
+            $this->assertStringNotContainsString('UNSUPPORTED PRIMARY WORKFLOW', $result['answer']);
+            $this->assertSame($evidence['passages'][0]['id'], $result['sources'][0]['id']);
+        }
+        OfficeHelpAgent::assertPromptedTimes(2);
+        $this->assertSame(2, $this->dailyRequests());
+    }
+
+    public function test_secondary_only_cached_help_is_rejected_and_regenerated_against_primary_evidence(): void
+    {
+        $evidence = app(AssistantKnowledge::class)->retrieve($this->staff, 'crop-drawing', OfficeAssistant::TOPICS['crop-drawing']['question']);
+        $store = Cache::store('array');
+        $cached = ['answer' => 'SECONDARY CACHE OUTPUT', 'supported' => true,
+            'citations' => [$evidence['passages'][1]['id']]];
+        Cache::shouldReceive('get')->andReturnUsing(fn (string $key, mixed $default = null) => str_starts_with($key, 'assistant:help:v1:') ? $cached : $store->get($key, $default));
+        Cache::shouldReceive('lock')->andReturnUsing(fn (string $key, int $seconds) => $store->lock($key, $seconds));
+        Cache::shouldReceive('put')->andReturnUsing(fn (string $key, mixed $value, mixed $ttl) => $store->put($key, $value, $ttl));
+
+        $result = $this->answer();
+        $this->assertSame('ai', $result['delivery']);
+        $this->assertStringNotContainsString('SECONDARY CACHE OUTPUT', $result['answer']);
+        $this->assertSame($evidence['passages'][0]['id'], $result['sources'][0]['id']);
+        $this->assertSame(1, $this->dailyRequests());
+        OfficeHelpAgent::assertPromptedTimes(1);
+    }
+
+    public function test_primary_and_secondary_sources_are_accepted_in_either_citation_order(): void
+    {
+        $evidence = app(AssistantKnowledge::class)->retrieve($this->staff, 'crop-drawing', OfficeAssistant::TOPICS['crop-drawing']['question']);
+        $ids = array_reverse(array_column($evidence['passages'], 'id'));
+        OfficeHelpAgent::fake(fn () => ['answer' => 'Draw the planted section within its parcel and save it after validation.',
+            'supported' => true, 'citations' => $ids])->preventStrayPrompts();
+
+        $result = $this->answer();
+        $this->assertSame('ai', $result['delivery']);
+        $this->assertSame($ids, array_column($result['sources'], 'id'));
+        $this->assertSame('cache', $this->answer()['delivery']);
+        OfficeHelpAgent::assertPromptedTimes(1);
+    }
+
     public function test_provider_failure_returns_a_safe_local_reference_without_error_or_prompt_text(): void
     {
         Log::spy();

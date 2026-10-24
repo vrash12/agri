@@ -24,6 +24,6 @@ final class ModuleMap
     // Shared platform capabilities; business workflows belong in a module.
     public const SHARED_SUPPORT = [
         'AuditTrail', 'Cdn', 'ConcurrentWrite', 'CsvExport', 'DatabaseBackup',
-        'GeoGeometry', 'LocalTime', 'MunicipalityAccess', 'ProviderUsage', 'RegionSupervision',
+        'GeoGeometry', 'LocalTime', 'MunicipalityAccess', 'ProviderUsage', 'RegionSupervision', 'ReportDateSql',
     ];
 }

@@ -268,6 +268,25 @@ final class AssistantUnderstandingTest extends TestCase
         $this->assertLocalOnly();
     }
 
+    #[DataProviderExternal(AssistantAgricultureTest::class, 'targetedRejectedQuestions')]
+    public function test_explicit_overrides_mixed_topics_and_unrelated_maintenance_cannot_reuse_help_or_farmer_context(string $question): void
+    {
+        $references = [
+            ['task' => 'help', 'help_topic' => 'irrigation', 'year' => 2025],
+            ['task' => 'farmers', 'year' => 2025],
+            ['task' => 'farmer', 'year' => 2025, 'farmer_id' => (int) $this->farmer->id],
+        ];
+        foreach ($references as $reference) {
+            $context = app(AssistantConversationContext::class)->issue($this->staff, session()->getId(), $reference);
+            DB::flushQueryLog();
+            DB::enableQueryLog();
+            $this->ask($question, ['context' => $context])->assertOk()->assertJsonPath('source', 'clarification')
+                ->assertJsonPath('context', null)->assertDontSee('Registered farmers:')->assertDontSee('private-contact-understanding');
+            $this->assertSame(0, $this->operationalQueries());
+            $this->assertLocalOnly();
+        }
+    }
+
     public function test_veterinary_general_husbandry_does_not_open_crop_guidance_or_other_records(): void
     {
         $this->actingAs($this->account(User::ROLE_PROVINCIAL_VET));

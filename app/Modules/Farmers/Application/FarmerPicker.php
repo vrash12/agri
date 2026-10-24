@@ -63,9 +63,7 @@ class FarmerPicker
 
     public const MAXIMUM_LIMIT = 50;
 
-    public function __construct(private MunicipalityAccess $municipalityAccess)
-    {
-    }
+    public function __construct(private MunicipalityAccess $municipalityAccess) {}
 
     /**
      * Farmers matching a typed term, within what this account may read.
@@ -91,22 +89,7 @@ class FarmerPicker
 
         $query = $this->scoped($user, $municipalityId);
 
-        // Escaped so a name containing % or _ searches for those characters rather
-        // than acting as a wildcard.
-        $like = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $term).'%';
-
-        $farmerId = FarmerIdentifier::parse($term);
-        $query->where(function (Builder $search) use ($like, $farmerId) {
-            $search->where('last_name', 'like', $like)
-                ->orWhere('first_name', 'like', $like)
-                ->orWhere('middle_name', 'like', $like)
-                ->orWhere('ffrs', 'like', $like)
-                ->orWhere('rsbsa_no', 'like', $like);
-
-            if ($farmerId !== null) {
-                $search->orWhere('farmers.id', $farmerId);
-            }
-        });
+        FarmerIdentitySearch::apply($query, $term, ['ffrs', 'rsbsa_no']);
 
         $total = (clone $query)->count();
 

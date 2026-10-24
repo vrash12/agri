@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreRiceSeedDistributionRequest;
 use App\Models\Farmer;
+use App\Models\HarvestRecord;
 use App\Models\RiceDistributionBatch;
 use App\Models\RiceSeedDistribution;
 use App\Modules\Agriculture\Application\DuplicateClaimCheck;
@@ -16,8 +17,10 @@ use App\Support\AuditTrail;
 use App\Support\ConcurrentWrite;
 use App\Support\CsvExport;
 use App\Support\MunicipalityAccess;
+use App\Support\ReportDateSql;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -241,14 +244,15 @@ class RiceSeedDistributionController extends Controller
         }
 
         // 4) Age group distribution
+        $ageSql = ReportDateSql::completedYears('date_of_birth');
         $ageGroups = (clone $baseQuery)
             ->whereNotNull('date_of_birth')
             ->selectRaw("
                 CASE
-                  WHEN TIMESTAMPDIFF(YEAR, date_of_birth, CURDATE()) < 18 THEN '0-17'
-                  WHEN TIMESTAMPDIFF(YEAR, date_of_birth, CURDATE()) BETWEEN 18 AND 29 THEN '18-29'
-                  WHEN TIMESTAMPDIFF(YEAR, date_of_birth, CURDATE()) BETWEEN 30 AND 44 THEN '30-44'
-                  WHEN TIMESTAMPDIFF(YEAR, date_of_birth, CURDATE()) BETWEEN 45 AND 59 THEN '45-59'
+                  WHEN {$ageSql} < 18 THEN '0-17'
+                  WHEN {$ageSql} BETWEEN 18 AND 29 THEN '18-29'
+                  WHEN {$ageSql} BETWEEN 30 AND 44 THEN '30-44'
+                  WHEN {$ageSql} BETWEEN 45 AND 59 THEN '45-59'
                   ELSE '60+'
                 END as grp,
                 COUNT(*) as cnt
@@ -791,7 +795,7 @@ class RiceSeedDistributionController extends Controller
         );
 
         // A harvest projected from a release does not outlive it.
-        \App\Models\HarvestRecord::query()->where('rice_seed_distribution_id', $releaseId)->delete();
+        HarvestRecord::query()->where('rice_seed_distribution_id', $releaseId)->delete();
 
         return redirect()->route('rice-seed-distributions.index')
             ->with('success', 'Assistance release deleted successfully.');
@@ -1071,7 +1075,7 @@ class RiceSeedDistributionController extends Controller
      * beneficiaries, on every load. The registry is searched on the server now;
      * `browse=1` still renders the whole list for anyone who wants it.
      *
-     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     * @return Collection<int, array<string, mixed>>
      */
     private function getFarmersForForm(Request $request, ?int $selectedId = null)
     {

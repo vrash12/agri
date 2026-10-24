@@ -98,6 +98,8 @@ final class AssistantKnowledgeTest extends TestCase
             'assistant identity and privacy' => ['assistant-privacy', 'assistant-identity-privacy'],
             'data review' => ['data-quality', 'farmer-data-quality'],
             'farmer profile and workbook entry' => ['farmer-registry', 'farmer-registry'],
+            'retained workbook sections' => ['registry-sections', 'registry-sections'],
+            'LGU issuer and publication' => ['lgu-settings', 'lgu-settings'],
             'agriculture and fisheries entry' => ['assistance-management', 'assistance-management'],
             'municipality assistance report map' => ['assistance-coverage', 'assistance-coverage'],
         ];

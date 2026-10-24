@@ -23,9 +23,27 @@
   $assistantGuide = \App\Modules\Assistant\Application\AssistantGuide::get();
   $assistantMascot = asset($assistantGuide['avatar']);
   $assistantPortrait = asset($assistantGuide['portrait']);
+  $assistantRecordsPrompt = match ($assistantModule) {
+    'farmers' => ['Summarize registry sections', 'Review active, outside-LGU and delisted source rows.'],
+    'crops' => ['Summarize crops', 'Check saved seasonal crop records.'],
+    'assistance', 'coverage' => ['Summarize assistance this year', 'Review recorded releases for the current year.'],
+    'harvests' => ['Summarize harvests this year', 'Check recorded harvest totals and their period.'],
+    'animal-health' => ['Summarize Animal Health services', 'Review permitted animal-health service records.'],
+    'cooperatives' => ['Summarize cooperatives', 'Review registered cooperatives and memberships.'],
+    'machinery' => ['Summarize machinery', 'Check recorded equipment and maintenance.'],
+    default => ['Summarize our LGU records', 'See a summary across your permitted office records.'],
+  };
   $assistantSuggestions = $assistantVeterinary
-    ? ['Summarize Animal Health services', 'How do I record multiple animals for one owner?', 'What can my veterinary account access?']
-    : ['Who are you?', 'How do I use this page?', 'How many farmers do we have?'];
+    ? [
+      ['label' => 'Check service records', 'question' => 'Summarize Animal Health services', 'detail' => 'Review records within your veterinary account’s scope.'],
+      ['label' => 'Record an animal-health service', 'question' => 'How do I record multiple animals for one owner?', 'detail' => 'Get the steps for an authorized workflow.'],
+      ['label' => 'Understand my access', 'question' => 'What can my veterinary account access?', 'detail' => 'See what this account can view and manage.'],
+    ]
+    : [
+      ['label' => 'Check office records', 'question' => $assistantRecordsPrompt[0], 'detail' => $assistantRecordsPrompt[1]],
+      ['label' => 'Find records that need review', 'question' => 'What needs attention in our registry?', 'detail' => 'Check missing references, farm locations and parcels.'],
+      ['label' => 'Guide me through this page', 'question' => 'How do I use this page?', 'detail' => 'Get steps based on reviewed AgriLGU guidance.'],
+    ];
 @endphp
 <div class="office-assistant" data-office-assistant data-endpoint="{{ route('assistant.message') }}" data-module="{{ $assistantModule }}" data-guide="{{ $assistantGuide['id'] }}">
   <button class="assistant-launcher" type="button" data-assistant-open aria-label="Chat with {{ $assistantGuide['name'] }}" aria-haspopup="dialog" aria-controls="officeAssistantDialog" aria-expanded="false" hidden>
@@ -54,21 +72,23 @@
       </details>
       <div class="assistant-title">
         <h2 id="officeAssistantTitle" data-assistant-guide-name>{{ $assistantGuide['name'] }}</h2>
-        <span class="assistant-presence">Your AgriLGU guide</span>
+        <span class="assistant-presence">Agriculture &amp; office records</span>
       </div>
       <button class="assistant-clear" type="button" data-assistant-clear>New chat</button>
       <button class="assistant-icon-button" type="button" data-assistant-close aria-label="Close farm guide chat">×</button>
     </header>
+    <div class="assistant-scope-note"><span>Read-only</span> Records follow your account’s LGU access.</div>
     <div class="assistant-body" data-assistant-body tabindex="0" role="region" aria-label="Conversation messages">
       <div class="assistant-welcome" data-assistant-welcome>
         <img class="assistant-welcome-mascot" src="{{ $assistantPortrait }}" width="112" height="112" alt="{{ $assistantGuide['alt'] }}" decoding="async" data-assistant-portrait>
         <h3>Hi, I’m <span data-assistant-guide-name>{{ $assistantGuide['name'] }}</span>.</h3>
-        <p>{{ $assistantVeterinary ? 'Need a hand with Animal Health records or this page? Ask me here.' : 'Ask about farming, find permitted records, or get help using AgriLGU.' }}</p>
-        <div class="assistant-suggestions" aria-label="Suggested questions">
+        <p>{{ $assistantVeterinary ? 'Check Animal Health records or get help with your next task.' : 'Ask about agriculture, check saved office data, or get steps for your next task.' }}</p>
+        <div class="assistant-suggestions" role="group" aria-label="Suggested questions">
           @foreach($assistantSuggestions as $suggestion)
-            <button type="button" data-assistant-suggestion>{{ $suggestion }}<span aria-hidden="true">→</span></button>
+            <button type="button" data-assistant-suggestion data-question="{{ $suggestion['question'] }}"><span><strong>{{ $suggestion['label'] }}</strong><small>{{ $suggestion['detail'] }}</small></span><span aria-hidden="true">→</span></button>
           @endforeach
         </div>
+        <p class="assistant-start-hint">Suggestions fill your message so you can review it before sending.</p>
       </div>
       <div class="assistant-messages" role="log" aria-label="Conversation with {{ $assistantGuide['name'] }}" aria-live="polite" aria-relevant="additions text" data-assistant-messages></div>
     </div>
@@ -80,6 +100,7 @@
       <div class="assistant-actions">
         <span class="assistant-keyboard-hint">Enter to send · Shift + Enter for a new line</span>
         <span id="officeAssistantCount" class="assistant-count" data-assistant-count>0 / 800</span>
+        <button class="assistant-stop" type="button" data-assistant-stop hidden>Stop checking</button>
         <button class="assistant-send" type="submit" data-assistant-send>Send <span aria-hidden="true">↑</span></button>
       </div>
       <p id="officeAssistantCooldown" class="assistant-cooldown" data-assistant-cooldown hidden></p>

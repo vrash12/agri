@@ -20,11 +20,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 /** Private, read-only answers. Nothing from this service goes to an AI provider. */
 final class AssistantRecords implements OfficeRecordReader
 {
-    public function __construct(private MunicipalityAccess $access, private AssistantDataQuality $quality) {}
+    public function __construct(private MunicipalityAccess $access, private AssistantDataQuality $quality, private AssistantOperationalReports $operations) {}
 
     /** @return array{answer:string,source:string,report:string,year:int,actions:array,links:array} */
     public function answer(User $user, string $question, int $year, ?int $farmerId = null): array
@@ -51,11 +52,14 @@ final class AssistantRecords implements OfficeRecordReader
         if (! config('assistant.enabled')) {
             throw new AssistantUnavailable('The Assistant is not available yet. Ask your administrator to enable it.');
         }
+        if ($year < 1900 || $year > 2100) {
+            return $this->result('Choose one reporting year between 1900 and 2100, then ask again.', 'guidance', $year);
+        }
         if ($user->isProvincialVeterinaryOffice() && ! in_array($topic, ['summary', 'animal-health', 'guidance'], true)) {
             abort(403, 'Your veterinary account can view Animal Health reports only.');
         }
         try {
-            return match ($topic) {
+            $result = match ($topic) {
                 'farmer-search' => $this->farmer($user, 'Find farmer '.$search, $year, null),
                 'farmer', 'farmer-parcels', 'farmer-assistance', 'farmer-harvests' => $this->farmer($user, $search, $year, $farmerId, $topic),
                 'farmers' => $this->result($this->farmerSummary($user), 'farmers', $year, links: [$this->link('Open farmer registry', 'farmers.index')]),
@@ -63,11 +67,16 @@ final class AssistantRecords implements OfficeRecordReader
                 'harvests' => $this->result($this->harvests($user, $year), 'harvests', $year, links: [$this->link('Open harvest register', 'harvest-records.index')]),
                 'animal-health' => $this->result($this->animals($user, $year), 'animal-health', $year, links: [$this->link('Open Animal Health', 'anti-rabies-vaccinations.index')]),
                 'data-quality' => $this->qualityResult($user, $year),
+                'registry-sources', 'outside-lgu', 'delisted', 'cooperatives', 'machinery', 'lgu-profile', 'crops' => $this->result(
+                    $this->operations->answer($user, $topic, $year), $topic, $year, links: $this->reportLinks($topic)
+                ),
                 'summary' => $user->isProvincialVeterinaryOffice()
                     ? $this->result($this->animals($user, $year), 'animal-health', $year)
-                    : $this->result($this->farmerSummary($user)."\n\n".$this->assistance($user, $year)."\n\n".$this->harvests($user, $year), 'summary', $year),
-                default => $this->result('I can show your farmer summary, assistance report, harvest report or Animal Health summary. To find one person, type “Find farmer” followed by a name or AgriLGU ID. Reports use your account’s permitted area and one reporting year.', 'guidance', $year),
+                    : $this->result($this->overview($user, $year), 'summary', $year),
+                default => $this->result('I can summarize your farmer registry, retained workbook sections, seasonal crops, assistance, harvests, Animal Health, cooperatives, machinery and LGU profile setup. To find one person, type “Find farmer” followed by a name or AgriLGU ID. Reports use your account’s permitted area and one reporting year.', 'guidance', $year),
             };
+
+            return $result + ['evidence' => $this->evidence($user, $result['report'], $year)];
         } catch (QueryException $exception) {
             // SQL errors can contain protected values. Never log the SQL or bindings.
             Log::warning('Assistant records could not be read.', ['exception_type' => $exception::class]);
@@ -83,6 +92,13 @@ final class AssistantRecords implements OfficeRecordReader
 
         return match (true) {
             AssistantDataQuality::matches($question) => 'data-quality',
+            (bool) preg_match('/\bdelisted\b/iu', $question) => 'delisted',
+            (bool) preg_match('/\boutside[\s-]+lgu\b/iu', $question) => 'outside-lgu',
+            (bool) preg_match('/\b(?:workbook|source rows|registry sections)\b/iu', $question) => 'registry-sources',
+            (bool) preg_match('/\b(?:cooperatives?|memberships?)\b/iu', $question) => 'cooperatives',
+            (bool) preg_match('/\b(?:machinery|equipment|inventory)\b/iu', $question) => 'machinery',
+            (bool) preg_match('/\b(?:lgu profiles?|office profiles?|website setup)\b/iu', $question) => 'lgu-profile',
+            (bool) preg_match('/\b(?:seasonal crops?|crop records?)\b/iu', $question) => 'crops',
             (bool) preg_match('/\b(harvest|harvests|production|ani)\b/iu', $question) => 'harvests',
             (bool) preg_match('/\b(assistance|seed|seeds|distribution|releases|binhi|ayuda)\b/iu', $question) => 'assistance',
             (bool) preg_match('/\b(animal|animals|vaccination|deworming|hayop)\b/iu', $question) => 'animal-health',
@@ -232,6 +248,100 @@ final class AssistantRecords implements OfficeRecordReader
         $summary = $this->quality->summary($user);
 
         return $this->result($summary['answer'], 'data-quality', $year, links: $summary['links']);
+    }
+
+    private function overview(User $user, int $year): string
+    {
+        $parts = [$this->farmerSummary($user), $this->assistance($user, $year), $this->harvests($user, $year), $this->animals($user, $year)];
+        foreach (['registry-sources', 'crops', 'cooperatives', 'machinery'] as $topic) {
+            // The overview presents only the leading labeled aggregates; each
+            // dedicated report supplies its bounded breakdown and caveats.
+            $parts[] = implode("\n", array_slice(explode("\n", $this->operations->answer($user, $topic, $year)), 0, 5));
+        }
+        $parts[] = 'Workbook figures count rows, not people. Crop figures count parcel-season records, not hectares or production. Memberships require same-LGU farmer links; machinery counts reflect saved inventory status. Ask for an individual module report for its breakdown and limitations. LGU profile setup is available separately.';
+
+        return implode("\n\n", $parts);
+    }
+
+    /** All source links and descriptions are application-owned, never generated by a provider. */
+    private function reportLinks(string $report): array
+    {
+        return match ($report) {
+            'registry-sources' => [
+                ['label' => 'Open Outside LGU rows', 'url' => route('farmers.registry-sources.index', 'outside_lgu')],
+                ['label' => 'Open Delisted rows', 'url' => route('farmers.registry-sources.index', 'delisted')],
+            ],
+            'outside-lgu', 'delisted' => [['label' => $report === 'outside-lgu' ? 'Open Outside LGU rows' : 'Open Delisted rows', 'url' => route('farmers.registry-sources.index', $report === 'outside-lgu' ? 'outside_lgu' : 'delisted')]],
+            'cooperatives' => [$this->link('Open cooperatives', 'farmers-cooperatives.index')],
+            'machinery' => [$this->link('Open machinery inventory', 'machinery-inventory.index')],
+            'lgu-profile' => [$this->link('Open LGU profiles', 'settings.lgu.index')],
+            'crops' => [$this->link('Open farmers and parcel records', 'farmers.index')],
+            default => [],
+        };
+    }
+
+    private function evidence(User $user, string $report, int $year): array
+    {
+        $catalog = [
+            'farmers' => ['Farmer registry and saved parcels', 'farmers.index', 'Current records; mapped areas are saved planning values.'],
+            'assistance' => ['Assistance register', 'rice-seed-distributions.index', "Received dates in {$year}; categories and units stay separate."],
+            'harvests' => ['Harvest register', 'harvest-records.index', "Stated harvest year {$year}; missing quantities are not zero."],
+            'animal-health' => ['Animal Health register', 'anti-rabies-vaccinations.index', "Recorded service year {$year}; repeat animal visits may count again."],
+            'registry-sources' => ['Retained farmer workbook', 'farmers.index', 'Imported source rows; repeated parcel/commodity rows are not distinct farmers.'],
+            'cooperatives' => ['Cooperative membership register', 'farmers-cooperatives.index', 'Current cooperatives; only valid same-LGU farmer membership links count.'],
+            'machinery' => ['Machinery inventory', 'machinery-inventory.index', 'Current saved availability and maintenance records.'],
+            'lgu-profile' => ['LGU profile and website settings', 'settings.lgu.index', 'Active office configuration; page publication does not verify DNS/HTTPS.'],
+            'crops' => ['Seasonal parcel crop records', 'farmers.index', "Stated crop year {$year}; valid same-LGU parcel-season records, not planted hectares."],
+        ];
+        $topics = match ($report) {
+            'summary' => ['farmers', 'assistance', 'harvests', 'animal-health', 'registry-sources', 'crops', 'cooperatives', 'machinery'],
+            'farmer' => ['farmers', 'crops', 'assistance', 'harvests'],
+            'farmer-parcels' => ['farmers', 'crops'],
+            'farmer-assistance' => ['farmers', 'assistance'],
+            'farmer-harvests' => ['farmers', 'harvests'],
+            'farmer-search', 'data-quality' => ['farmers'],
+            'outside-lgu', 'delisted' => ['registry-sources'],
+            default => isset($catalog[$report]) ? [$report] : [],
+        };
+        $sources = [];
+        $tables = [
+            'farmers' => ['farmers', 'farm_plots'], 'assistance' => ['rice_seed_distributions'],
+            'harvests' => ['harvest_records'], 'animal-health' => ['anti_rabies_vaccinations'],
+            'registry-sources' => ['farmer_registry_source_rows'], 'cooperatives' => ['farmers_cooperatives', 'cooperative_farmer'],
+            'machinery' => ['agricultural_machineries'], 'lgu-profile' => ['municipality_profiles', 'municipality_websites'],
+            'crops' => ['parcel_crop_seasons'],
+        ];
+        foreach ($topics as $topic) {
+            [$title, $route, $detail] = $catalog[$topic];
+            $url = route($route);
+            if (in_array($report, ['outside-lgu', 'delisted'], true)) {
+                $url = $this->reportLinks($report)[0]['url'];
+                $detail = ($report === 'outside-lgu' ? 'Outside LGU rows only. ' : 'Delisted rows only. ').$detail;
+            }
+            foreach ($tables[$topic] as $table) {
+                if (! Schema::hasTable($table)) {
+                    $detail = 'This module is wholly or partly unavailable in this installation. The reply identifies which count could not be established.';
+                    break;
+                }
+            }
+            $sources[] = ['title' => $title, 'url' => $url, 'detail' => $detail];
+        }
+        $period = match ($report) {
+            'assistance', 'farmer-assistance' => "Received in {$year}",
+            'harvests', 'farmer-harvests' => "Stated harvest year {$year}",
+            'animal-health' => "Recorded service year {$year}",
+            'crops' => "Stated crop year {$year}",
+            'summary', 'farmer', 'farmer-parcels' => "Current registry/setup plus explicitly labeled {$year} records",
+            default => 'Current saved records; not a historical snapshot',
+        };
+
+        return [
+            'checked_at' => now('UTC')->toIso8601String(), 'scope' => mb_substr($user->scopeLabel(), 0, 180), 'period' => $period,
+            'sources' => $sources,
+            'limitations' => ['Read directly from the authorized local registers for this reply; private record values are not sent to an AI provider.',
+                'Counts describe saved records, not every event in the LGU. Missing or unavailable records cannot establish zero real-world activity.',
+                'Separate queries may reflect ongoing staff edits; this is not a certified, transaction-frozen statistical report.'],
+        ];
     }
 
     /** @param class-string<Model> $model */

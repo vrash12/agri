@@ -9,6 +9,7 @@ use App\Modules\AnimalHealth\Application\RecordAnimalHealthServices;
 use App\Support\ConcurrentWrite;
 use App\Support\LocalTime;
 use App\Support\MunicipalityAccess;
+use App\Support\ReportDateSql;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -45,11 +46,11 @@ class AntiRabiesVaccinationController extends Controller
         if ($q !== '') {
             $base->where(function ($w) use ($q) {
                 $w->where('owner_name', 'like', "%{$q}%")
-                  ->orWhere('pet_name', 'like', "%{$q}%")
-                  ->orWhere('pet_breed', 'like', "%{$q}%")
-                  ->orWhere('service_name', 'like', "%{$q}%")
-                  ->orWhere('diagnosis', 'like', "%{$q}%")
-                  ->orWhere('treatment_notes', 'like', "%{$q}%");
+                    ->orWhere('pet_name', 'like', "%{$q}%")
+                    ->orWhere('pet_breed', 'like', "%{$q}%")
+                    ->orWhere('service_name', 'like', "%{$q}%")
+                    ->orWhere('diagnosis', 'like', "%{$q}%")
+                    ->orWhere('treatment_notes', 'like', "%{$q}%");
             });
         }
 
@@ -237,14 +238,15 @@ class AntiRabiesVaccinationController extends Controller
         }
 
         // 6) Owner Age Groups
+        $ageSql = ReportDateSql::completedYears('birthday');
         $ageGroups = (clone $base)
             ->whereNotNull('birthday')
             ->selectRaw("
                 CASE
-                    WHEN TIMESTAMPDIFF(YEAR, birthday, CURDATE()) < 18 THEN '0-17'
-                    WHEN TIMESTAMPDIFF(YEAR, birthday, CURDATE()) BETWEEN 18 AND 29 THEN '18-29'
-                    WHEN TIMESTAMPDIFF(YEAR, birthday, CURDATE()) BETWEEN 30 AND 44 THEN '30-44'
-                    WHEN TIMESTAMPDIFF(YEAR, birthday, CURDATE()) BETWEEN 45 AND 59 THEN '45-59'
+                    WHEN {$ageSql} < 18 THEN '0-17'
+                    WHEN {$ageSql} BETWEEN 18 AND 29 THEN '18-29'
+                    WHEN {$ageSql} BETWEEN 30 AND 44 THEN '30-44'
+                    WHEN {$ageSql} BETWEEN 45 AND 59 THEN '45-59'
                     ELSE '60+'
                 END AS grp,
                 COUNT(*) AS c

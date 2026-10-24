@@ -16,7 +16,9 @@ class BarangayBoundaryReferences
             'province' => 'Tarlac',
             'location_label' => 'Ramos, Tarlac',
             'file' => 'seeders/data/ramos_barangay_reference_boundaries.geojson',
-            'sha256' => 'cd34baa1f643b1dcce5aedbff2011cf17327c6c6a7b7fc38963b3655b158844f',
+            // Git pins LF bytes. The former pin was calculated on CRLF bytes
+            // of this identical JSON and rejected a clean checkout.
+            'sha256' => 'fbd8bfbbfb545a09414a4b7cec7501ceb1b2e2edc450e7b2677fd6b39ac6e4cf',
         ],
         [
             'names' => ['Baguio City', 'Baguio', 'City of Baguio'],
@@ -27,9 +29,7 @@ class BarangayBoundaryReferences
         ],
     ];
 
-    public function __construct(private MunicipalityAccess $access)
-    {
-    }
+    public function __construct(private MunicipalityAccess $access) {}
 
     /** @return list<int> */
     public function availableMunicipalityIds(User $user): array

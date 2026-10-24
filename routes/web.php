@@ -16,6 +16,7 @@ use App\Http\Controllers\FarmerController;
 use App\Http\Controllers\FarmerPortalAccountController;
 use App\Http\Controllers\FarmerPortalAuthController;
 use App\Http\Controllers\FarmerPortalController;
+use App\Http\Controllers\FarmerRegistrySourceController;
 use App\Http\Controllers\FarmersCooperativeController;
 use App\Http\Controllers\FarmPlotController;
 use App\Http\Controllers\HarvestRecordController;
@@ -374,6 +375,10 @@ Route::middleware([
     */
     Route::get('/farmers', [FarmerController::class, 'index'])
         ->name('farmers.index');
+
+    Route::get('/farmers/registry-sources/{status}', [FarmerRegistrySourceController::class, 'index'])
+        ->whereIn('status', ['outside_lgu', 'delisted'])
+        ->name('farmers.registry-sources.index');
 
     // Declared before /farmers/{farmer} so the wildcard does not swallow it.
     Route::get('/farmers/lookup', [FarmerController::class, 'lookup'])

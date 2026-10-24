@@ -1,5 +1,9 @@
 # Office Assistant
 
+October 24 local follow-up (not deployed): [LGU record retrieval and UX](ASSISTANT_LGU_RECORDS.md) extends local records to seven additional task IDs and eight-source overviews, adds scope/period/time/source evidence, closes unsupported-filter routing gaps and improves the shared chat. No private record ingestion into OpenAI is introduced. Help now has 44 passages / 41 topics and requires primary-source citation; earlier counts below describe historical releases.
+
+October 21 local refinement (not deployed): [agriculture scope and typing](ASSISTANT_AGRICULTURE_TYPING.md) retains agriculture-only questions and AgriLGU help, removes the proposed unrestricted mode, honors initial numbered-step requests and reveals replies gradually.
+
 October 20 Assistant update (deployed in runtime `80166f4`): reviewed general agriculture
 questions now use ten canonical topics alongside existing system help, with
 local unrelated-question refusal. Raw chat and records stay local. General

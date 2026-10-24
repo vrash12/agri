@@ -113,7 +113,7 @@ function harness(plots = []) {
     parcelStatsState: {farmerId:null,landStatus:'empty',plots:[]}, parcelStatsRevision: 0,
     savedPlotsHiddenForEditing: false, focusedParcelFarmerId: null, selectedFarmerId: null, editingPlotId: null,
     selectedPlotId: null, selectedPlotOverlay: null, selectedPlotHalo: null, parcelOpenRevision: 0, plotMode: false,
-    cropLayer: null, queueCropLayer: () => {}, plantedAreaLayer: null, refreshPlantedAreas: () => {},
+    cropLayer: null, queueCropLayer: () => {}, plantedAreaLayer: null, refreshPlantedAreas: () => {}, refreshPlotListMetadata: () => {},
     cropSettings: {enabled:false,year:2026,season:'dry',filter:'all'}, plantedAreaOverlays: [], schedulePlotDisplayRefresh: () => {},
     plantedAreaRenderedRecords: new Map(), plantedAreaRenderRevision: 0, plantedAreaRetryTimer: null, plantedAreaRefreshPending: false,
     overviewCropDetailsRef: null, overviewCropDetails: new Map(),
@@ -840,6 +840,7 @@ function parcelLoadingHarness(plots = []) {
     updatePlotCount: value => panelUpdates.push(['count', value]),
     updatePlotTotalArea: value => panelUpdates.push(['area', value]),
     updatePlotList: rows => panelUpdates.push(['plots', rows.map(row => row.id)]),
+    setPlotListState: state => panelUpdates.push(['state', state]),
     sumPlotAreas: rows => rows.reduce((sum, row) => sum + Number(row.area_ha || 0), 0),
     zoomToPlots: rows => panelUpdates.push(['zoom', rows.map(row => row.id)]),
   });
@@ -871,7 +872,7 @@ test('a truncated overview cannot become a complete farmer land chart, and a com
 });
 
 test('failed and malformed parcel responses cannot become zero-parcel charts or cached empty successes', async () => {
-  const {context, latest} = parcelLoadingHarness();
+  const {context, latest, panelUpdates} = parcelLoadingHarness();
   context.selectedFarmerId = '1';
   context.fetch = async () => ({ok:false,status:500});
   await assert.rejects(context.loadPlotsForSelectedFarmer('1'),/Could not load/);
@@ -880,6 +881,8 @@ test('failed and malformed parcel responses cannot become zero-parcel charts or 
   assert.equal(context.plotsCacheByFarmerId.has('1'),false);
   assert.equal(context.completePlotFarmers.has('1'),false);
   assert.equal(context.plotFetchPromisesByFarmerId.has('1'),false);
+  assert.deepEqual(panelUpdates.filter(row => row[0] === 'state'), [['state', 'loading'], ['state', 'error']]);
+  assert.equal(panelUpdates.some(row => row[0] === 'plots'), false, 'An unavailable parcel list never renders an empty success');
   context.fetch = async () => ({ok:true,json:async()=>({plots:null})});
   await assert.rejects(context.loadPlotsForSelectedFarmer('1'),/Could not read/);
   assert.equal(context.plotsCacheByFarmerId.has('1'),false);
@@ -978,4 +981,87 @@ test('real crop period changes clear prior chart counts and distinguish loading 
   assert.equal(latest().coverage.unknown,0);
   assert.equal(latest().coverage.notRecorded,1);
   assert.equal(latest().coverage.percentage,0);
+});
+const parcelListHarness = () => {
+  const retry = {addEventListener(name, callback) { this.click = callback; }};
+  const list = {innerHTML:'',attributes:{},setAttribute(name,value) {this.attributes[name]=value;},
+    querySelector(selector) {return selector === '[data-parcel-list-retry]' && this.innerHTML.includes('data-parcel-list-retry') ? retry : null;},
+    querySelectorAll() {return [];}};
+  const count = {textContent:''}, period = {textContent:''};
+  const context = vm.createContext({document:{getElementById:id=>({plotList:list,parcelListCount:count,parcelListPeriod:period})[id] || null},
+    window:{__canManageOperationalData:true,__parcelSatelliteUrl:'/parcels/__ID__/satellite',__parcelCropEditUrl:'/parcels/__ID__/crops'},
+    selectedFarmerId:'1',selectedPlotId:null,cropSettings:{year:2026,season:'dry'},cropLayer:null,
+    syncSuggestedPlotName:()=>{},escapeHtml:value=>String(value).replace(/[&<>"']/g, value=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[value]))});
+  vm.runInContext(['setPlotListState','parcelCropSummary','refreshPlotListMetadata','updatePlotList'].map(declaration).join('\n'),context);
+  return {context,list,count,period,retry};
+};
+
+test('parcel list distinguishes no selection, loading, failed and confirmed empty results and retries the current farmer', async () => {
+  const {context,list,count,retry} = parcelListHarness();
+  context.selectedFarmerId = null;
+  context.updatePlotList([]);
+  assert.match(list.innerHTML,/Choose a farmer/);
+  assert.doesNotMatch(list.innerHTML,/No saved parcels/);
+  context.selectedFarmerId = '9';
+  context.setPlotListState('loading');
+  assert.equal(list.attributes['aria-busy'],'true');
+  assert.equal(count.textContent,'Loading…');
+  context.setPlotListState('error');
+  assert.match(list.innerHTML,/does not mean this farmer has no parcels/);
+  assert.equal(count.textContent,'Unavailable');
+  let retried;
+  context.loadPlotsForSelectedFarmer=(id,options)=>{retried={id,options};return Promise.resolve();};
+  retry.click();
+  assert.equal(retried.id,'9');
+  assert.equal(retried.options.force,true);
+  context.updatePlotList([]);
+  assert.match(list.innerHTML,/No saved parcels for this farmer/);
+  assert.equal(count.textContent,'0 parcels');
+  assert.equal(list.attributes['aria-busy'],'false');
+});
+
+test('parcel cards label saved areas honestly and escape names while preserving read-only record actions', () => {
+  const {context,list,count} = parcelListHarness();
+  context.window.__canManageOperationalData=false;
+  context.updatePlotList([{id:1,name:'<img src=x onerror=alert(1)>',area_ha:null,color:'red;position:fixed'},
+    {id:2,name:'East field',area_ha:2.25}]);
+  assert.equal(count.textContent,'2 parcels');
+  assert.match(list.innerHTML,/Recorded area unavailable/);
+  assert.match(list.innerHTML,/2.25 ha recorded/);
+  assert.match(list.innerHTML,/&lt;img/);
+  assert.doesNotMatch(list.innerHTML,/<img|position:fixed|data-action="editPlot"|data-action="deletePlot"/);
+  assert.match(list.innerHTML,/data-action="openCropModal"/);
+  assert.match(list.innerHTML,/data-action="openSatellite"/);
+});
+
+test('parcel crop summaries separate not-recorded, unavailable and loading values for the applied period', () => {
+  const {context} = parcelListHarness();
+  context.cropLayer={state:{status:'ready'},record:()=>({crop:'not_recorded',crop_label:'Not recorded'})};
+  assert.equal(context.parcelCropSummary('1'),'2026 · Dry season · No crop recorded');
+  context.cropLayer.record=()=>null;
+  assert.match(context.parcelCropSummary('1'),/Crop details unavailable/);
+  context.cropSettings={year:2025,season:'wet'};
+  context.cropLayer.state.status='loading';
+  assert.equal(context.parcelCropSummary('1'),'2025 · Wet season · Loading crop record…');
+  context.cropLayer.state.status='ready';
+  context.cropLayer.record=()=>({crop:'rice',crop_label:'Rice'});
+  assert.match(context.parcelCropSummary('1'),/2025 · Wet season · Saved crop: Rice/);
+});
+
+test('crop and selection refresh updates text without rebuilding an expanded parcel card', () => {
+  const {context,list,period} = parcelListHarness();
+  const card={open:true,classList:{toggle(name,value) {this[name]=value;}}};
+  const crop={textContent:'Old crop',getAttribute:()=> '2'};
+  const selection={hidden:true,getAttribute:()=> '2',closest:()=>card};
+  list.innerHTML='Preserved card';
+  list.querySelectorAll=selector=>selector === '[data-parcel-crop-summary]' ? [crop] : [selection];
+  context.selectedPlotId='2';
+  context.cropLayer={state:{status:'ready'},record:()=>({crop:'rice',crop_label:'Rice'})};
+  context.refreshPlotListMetadata();
+  assert.equal(list.innerHTML,'Preserved card');
+  assert.equal(card.open,true);
+  assert.equal(selection.hidden,false);
+  assert.equal(card.classList['is-selected'],true);
+  assert.match(crop.textContent,/Saved crop: Rice/);
+  assert.match(period.textContent,/2026 · Dry season/);
 });

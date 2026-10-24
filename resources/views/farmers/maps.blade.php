@@ -862,11 +862,12 @@
         <strong id="mapStatus">Preparing map…</strong>
         <span id="mapStatusSmall">Parcel boundaries load when this workspace opens.</span>
         <button type="button" id="mapReloadBtn" class="module-button" hidden>Reload map</button>
+        <a class="parcel-record-fallback" href="#farmerDirectory">Map unavailable? Open the farmer registry</a>
       </div>
       <div class="map-progress" aria-hidden="true">
         <div class="map-progress-bar" id="mapProgressBar" style="width:0%;"></div>
       </div>
-      <span class="parcel-geocoded" id="mapGeocodedPill">0 geocoded</span>
+      <span class="parcel-geocoded" id="mapGeocodedPill">Waiting for map</span>
     </div>
   </header>
 
@@ -875,6 +876,12 @@
     <div><strong>Map scope: {{ $mapWorkspaceName }}</strong><small>{{ number_format($mapMappedFarmerCount) }} mapped farmers · {{ number_format($mapPlotCount) }} parcel {{ Str::plural('boundary', $mapPlotCount) }} · {{ number_format($mapAreaHa, 2) }} ha mapped</small></div>
     <a href="#farmerDirectory">Back to registry</a>
   </div>
+
+  <nav class="parcel-workspace-shortcuts" aria-label="Parcel workspace sections">
+    <a href="#mapFarmerSearch">1. Find a farmer</a>
+    <a href="#farmerSavedParcels">2. Review saved parcels</a>
+    <a href="#parcelCropControls">3. Choose crop year &amp; season</a>
+  </nav>
 
   <div class="parcel-command-bar">
     <div class="parcel-farmer-picker">
@@ -885,14 +892,15 @@
           id="mapFarmerSearch"
           type="search"
           list="mapFarmerOptions"
-          placeholder="Name, FFRS, or farm location"
+          placeholder="Name, AgriLGU ID, or FFRS"
           autocomplete="off"
+          aria-describedby="mapPickerHelp"
         >
         {{-- Filled from farmers.lookup as the user types; never pre-loaded. --}}
         <datalist id="mapFarmerOptions"></datalist>
-        <button type="button" class="btn btn-soft btn-sm" id="mapFarmerLocateBtn" disabled>Locate</button>
+        <button type="button" class="btn btn-primary btn-sm" id="mapFarmerLocateBtn" disabled>Open farmer</button>
       </div>
-      <small id="mapPickerHelp">Type at least two characters to search {{ number_format($mapFarmerCount) }} farmers in {{ $mapWorkspaceName }}.</small>
+      <small id="mapPickerHelp" role="status" aria-live="polite">Type at least two characters, choose a matching farmer, then open their parcels.</small>
     </div>
 
     <details class="parcel-tool-group parcel-map-tools">
@@ -956,7 +964,7 @@
       
       <div class="map-hint" id="mapHint">
         <div class="map-hint-title">{{ $mapWorkspaceShortName }} land view</div>
-        <div class="map-hint-text">Hover a parcel to identify its farmer. Click a boundary to focus on that farmer's land.</div>
+        <div class="map-hint-text">Tap a parcel to see its farmer, or use Find farmer above. The parcel list provides the same record actions without selecting a boundary.</div>
       </div>
 
       <div class="parcel-map-legend" aria-label="Map legend">
@@ -990,8 +998,8 @@
         </div>
 
         <div>
-          <h3>Farmer Details</h3>
-          <p>Profile, distribution, and land information</p>
+          <h3>Farmer &amp; parcels</h3>
+          <p>Saved boundaries and seasonal crop records</p>
         </div>
       </div>
 
@@ -1002,7 +1010,7 @@
         title="Deselect farmer"
         disabled
       >
-        Close
+        Clear selection
       </button>
     </header>
 
@@ -1080,7 +1088,7 @@
               <path d="M8 13h5"></path>
             </svg>
 
-            View Full Profile
+            Open farmer records
           </a>
 
           <button
@@ -1102,110 +1110,21 @@
               <path d="M19 12h3"></path>
             </svg>
 
-            Focus
+            Show all their parcels
           </button>
         </div>
       </section>
 
-      {{-- Owner and farm details --}}
-      <section class="fd-card">
-        <div class="fd-card-body">
-          <div class="fd-section-head">
-            <div class="fd-section-title-wrap">
-              <div class="fd-section-icon">
-                <svg viewBox="0 0 24 24">
-                  <circle cx="12" cy="8" r="4"></circle>
-                  <path d="M4 21a8 8 0 0 1 16 0"></path>
-                </svg>
-              </div>
-
-              <div>
-                <h4 class="fd-section-title">Owner and Farm Information</h4>
-                <p class="fd-section-subtitle">
-                  Registered ownership and location details
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div class="fd-info-grid">
-            <div class="fd-info-item is-wide">
-              <div class="fd-info-label">Owner</div>
-              <div class="fd-info-value" id="selOwnerName">—</div>
-            </div>
-
-            <div class="fd-info-item">
-              <div class="fd-info-label">FFRS</div>
-              <div class="fd-info-value" id="selOwnerFfrs">—</div>
-            </div>
-
-            <div class="fd-info-item">
-              <div class="fd-info-label">Farm Area</div>
-              <div class="fd-info-value" id="selOwnerFarmArea">—</div>
-            </div>
-
-            <div class="fd-info-item">
-              <div class="fd-info-label">Barangay</div>
-              <div class="fd-info-value" id="selOwnerBarangay">—</div>
-            </div>
-
-            <div class="fd-info-item">
-              <div class="fd-info-label">Municipality</div>
-              <div class="fd-info-value" id="selOwnerMunicipality">—</div>
-            </div>
-
-            <div class="fd-info-item is-wide">
-              <div class="fd-info-label">Province</div>
-              <div class="fd-info-value" id="selOwnerProvince">—</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {{-- Distribution metrics --}}
-      <section class="fd-card">
-        <div class="fd-card-body">
-          <div class="fd-section-head">
-            <div class="fd-section-title-wrap">
-              <div class="fd-section-icon blue">
-                <svg viewBox="0 0 24 24">
-                  <path d="M4 19V9"></path>
-                  <path d="M10 19V5"></path>
-                  <path d="M16 19v-7"></path>
-                  <path d="M22 19H2"></path>
-                </svg>
-              </div>
-
-              <div>
-                <h4 class="fd-section-title">Distribution Summary</h4>
-                <p class="fd-section-subtitle">
-                  Rice seed records linked to this farmer
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div class="fd-metrics">
-            <article class="fd-metric green">
-              <div class="fd-metric-label">Distribution Records</div>
-              <div class="fd-metric-value" id="selRecords">0</div>
-            </article>
-
-            <article class="fd-metric blue">
-              <div class="fd-metric-label">Total Seed Received</div>
-              <div class="fd-metric-value">
-                <span id="selKgs">0.00</span>
-                <span style="font-size:12px;">kg</span>
-              </div>
-            </article>
-          </div>
-        </div>
-      </section>
-
       {{-- Land plot management --}}
-      <section class="fd-card">
+      <section class="fd-card" id="farmerSavedParcels" tabindex="-1" aria-labelledby="farmerSavedParcelsTitle">
         <div class="fd-card-body">
-          @include('farmers._parcel_statistics')
+          <div class="parcel-list-heading">
+            <h4 class="fd-section-title" id="farmerSavedParcelsTitle">Saved parcels</h4>
+            <span id="parcelListCount" class="parcel-list-count">Choose a farmer</span>
+          </div>
+          <p class="fd-help-text">Open a parcel below to view its map, update seasonal crops, or plan a field check.</p>
+          <p class="parcel-list-period" id="parcelListPeriod">Crop period loads with the map.</p>
+          <p class="fd-help-text">Saved area is approximate mapped land. A missing crop record does not mean the parcel is unplanted.</p>
 
           {{-- Draft status --}}
           <div
@@ -1238,12 +1157,12 @@
           </div>
 
           {{-- Plot name --}}
-          <div class="fd-field operational-write-control" style="margin-top:12px;">
+          <div class="fd-field parcel-draft-field operational-write-control" style="margin-top:12px;">
             <label
               class="fd-label"
               for="plotNameInput"
             >
-              Plot name
+              Parcel name
             </label>
 
             <input
@@ -1261,9 +1180,9 @@
           </div>
 
           {{-- Advanced plot appearance --}}
-          <details class="fd-advanced operational-write-control">
+          <details class="fd-advanced parcel-draft-field operational-write-control">
             <summary>
-              Plot colour and appearance
+              Boundary colour and appearance
             </summary>
 
             <div class="fd-advanced-body">
@@ -1346,6 +1265,8 @@
           <div
             class="map-plot-list fd-plot-list"
             id="plotList"
+            aria-label="Saved parcel list"
+            aria-busy="false"
           >
             <div class="map-empty fd-empty">
               <div>
@@ -1357,13 +1278,115 @@
                   </svg>
                 </div>
 
-                <strong>No saved plots yet</strong><br>
-                Select a farmer and click <b>Draw boundary</b> above to begin.
+                <strong>Choose a farmer to see their parcels</strong><br>
+                Search by name or registry ID above, then choose <b>Open farmer</b>.
               </div>
             </div>
           </div>
+          <details class="parcel-record-details parcel-land-report">
+            <summary>Land &amp; crop statistics <span>Areas, crop coverage and parcel comparisons</span></summary>
+            @include('farmers._parcel_statistics')
+          </details>
         </div>
       </section>
+
+      {{-- Owner and farm details --}}
+      <details class="fd-card parcel-record-details">
+        <summary>Registry &amp; farm details</summary>
+        <div class="fd-card-body">
+          <div class="fd-section-head">
+            <div class="fd-section-title-wrap">
+              <div class="fd-section-icon">
+                <svg viewBox="0 0 24 24">
+                  <circle cx="12" cy="8" r="4"></circle>
+                  <path d="M4 21a8 8 0 0 1 16 0"></path>
+                </svg>
+              </div>
+
+              <div>
+                <h4 class="fd-section-title">Owner and Farm Information</h4>
+                <p class="fd-section-subtitle">
+                  Information declared in the farmer registry
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="fd-info-grid">
+            <div class="fd-info-item is-wide">
+              <div class="fd-info-label">Owner</div>
+              <div class="fd-info-value" id="selOwnerName">—</div>
+            </div>
+
+            <div class="fd-info-item">
+              <div class="fd-info-label">FFRS</div>
+              <div class="fd-info-value" id="selOwnerFfrs">—</div>
+            </div>
+
+            <div class="fd-info-item">
+              <div class="fd-info-label">Declared farm area</div>
+              <div class="fd-info-value" id="selOwnerFarmArea">—</div>
+            </div>
+
+            <div class="fd-info-item">
+              <div class="fd-info-label">Barangay</div>
+              <div class="fd-info-value" id="selOwnerBarangay">—</div>
+            </div>
+
+            <div class="fd-info-item">
+              <div class="fd-info-label">Municipality</div>
+              <div class="fd-info-value" id="selOwnerMunicipality">—</div>
+            </div>
+
+            <div class="fd-info-item is-wide">
+              <div class="fd-info-label">Province</div>
+              <div class="fd-info-value" id="selOwnerProvince">—</div>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      {{-- Distribution metrics --}}
+      <details class="fd-card parcel-record-details">
+        <summary>Rice seed assistance</summary>
+        <div class="fd-card-body">
+          <div class="fd-section-head">
+            <div class="fd-section-title-wrap">
+              <div class="fd-section-icon blue">
+                <svg viewBox="0 0 24 24">
+                  <path d="M4 19V9"></path>
+                  <path d="M10 19V5"></path>
+                  <path d="M16 19v-7"></path>
+                  <path d="M22 19H2"></path>
+                </svg>
+              </div>
+
+              <div>
+                <h4 class="fd-section-title">Distribution Summary</h4>
+                <p class="fd-section-subtitle">
+                  Rice seed records linked to this farmer
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="fd-metrics">
+            <article class="fd-metric green">
+              <div class="fd-metric-label">Distribution Records</div>
+              <div class="fd-metric-value" id="selRecords">0</div>
+            </article>
+
+            <article class="fd-metric blue">
+              <div class="fd-metric-label">Total Seed Received</div>
+              <div class="fd-metric-value">
+                <span id="selKgs">0.00</span>
+                <span style="font-size:12px;">kg</span>
+              </div>
+            </article>
+          </div>
+        </div>
+      </details>
+
 
     </div>
   </div>
@@ -1997,6 +2020,40 @@
   #farmersMapModule .farmers-map-stage {border-radius:0}
   #farmersMapModule :is(button,input,a,summary):focus-visible {outline:3px solid var(--ui-focus,#236344);outline-offset:3px}
   #farmersMapModule #mapReloadBtn[hidden] {display:none}
+  #farmersMapModule .parcel-workspace-shortcuts {display:flex;flex-wrap:wrap;gap:8px 20px;padding:12px 18px;border-bottom:1px solid var(--ui-border);background:var(--ui-surface-subtle)}
+  #farmersMapModule .parcel-workspace-shortcuts a {display:inline-flex;align-items:center;min-height:32px;color:var(--ui-primary);font-size:13px;font-weight:600;text-underline-offset:3px}
+  #farmersMapModule .parcel-record-fallback {margin-top:6px;color:var(--ui-primary);font-size:12px;text-underline-offset:3px}
+  #farmersMapModule .parcel-list-heading {display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+  #farmersMapModule .parcel-list-count {font-size:12px;font-weight:600;color:var(--ui-text-muted)}
+  #farmersMapModule .parcel-list-period {margin:10px 0 6px;padding:8px 10px;border-left:3px solid var(--ui-primary);background:var(--ui-surface-subtle);font-size:13px;font-weight:600;color:var(--ui-text)}
+  #farmersMapModule .parcel-record-details > summary {min-height:44px;padding:12px 14px;cursor:pointer;color:var(--ui-text);font-size:14px;font-weight:600}
+  #farmersMapModule .parcel-record-details > summary span {display:block;padding-top:4px;font-size:12px;font-weight:400;color:var(--ui-text-muted)}
+  #farmersMapModule .parcel-land-report {margin-top:16px;border-top:1px solid var(--ui-border)}
+  #farmersMapModule:not(.is-plot-mode) .parcel-draft-field {display:none}
+  #farmersMapModule .map-plot-crop {display:block;margin-top:6px;font-size:12px;line-height:1.5;color:var(--ui-text)}
+  #farmersMapModule .map-plot-selected {display:inline-block;width:fit-content;margin-top:5px;padding:3px 7px;border:1px solid var(--ui-primary);border-radius:4px;font-size:12px;color:var(--ui-primary);background:var(--ui-primary-soft)}
+  #farmersMapModule .map-plot-selected[hidden] {display:none}
+  #farmersMapModule .fd-plot-list .map-plot-card.is-selected {border-color:var(--ui-primary)}
+  #farmersMapModule .map-plot-actions {gap:8px;padding:12px}
+  #farmersMapModule .map-plot-actions .btn {min-height:44px;font-size:13px}
+  #farmersMapModule .map-plot-action-group {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-column:1 / -1;gap:8px;min-width:0}
+  #farmersMapModule .map-plot-action-group + .map-plot-action-group {padding-top:10px;border-top:1px solid var(--ui-border)}
+  #farmersMapModule .map-plot-action-group > small {grid-column:1 / -1;font-size:12px;font-weight:600;color:var(--ui-text-muted)}
+  #farmersMapModule .map-plot-state {padding:18px 12px;line-height:1.6;color:var(--ui-text-muted)}
+  #farmersMapModule .map-plot-state strong {display:block;color:var(--ui-text);font-size:14px}
+  #farmersMapModule .map-plot-state button {margin-top:10px}
+  #farmersMapModule .map-plot-sub {white-space:normal;line-height:1.5}
+  @media(max-width:1080px) {
+    #farmersMapModule .farmers-map-stage, #farmersMapModule #farmersMap {height:480px !important;min-height:480px !important}
+    #farmersMapModule .farmer-details-header {position:static}
+  }
+  @media(max-width:720px) {
+    #farmersMapModule .farmers-map-stage, #farmersMapModule #farmersMap {height:360px !important;min-height:360px !important}
+    #farmersMapModule .parcel-workspace-shortcuts {gap:4px 16px;padding:10px 14px}
+    #farmersMapModule .parcel-workspace-shortcuts a {min-height:44px}
+    #farmersMapModule .farmer-details-header {align-items:flex-start}
+    #farmersMapModule .farmer-close-btn {height:auto;min-height:44px;white-space:normal}
+  }
 </style>
 @endpush
 

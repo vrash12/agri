@@ -6,7 +6,7 @@ namespace App\Modules\Assistant\Application;
 final class AssistantGroundedAnswer
 {
     /**
-     * @param  list<array{id:string,title:string,text:string}>  $passages
+     * @param  list<array{id:string,title:string,text:string}>  $passages  Ranked retrieval output; the first passage is the required primary workflow evidence.
      * @return array{answer:string,sources:list<array{id:string,title:string}>}|null
      */
     public function validate(mixed $output, array $passages): ?array
@@ -30,6 +30,13 @@ final class AssistantGroundedAnswer
                 return null;
             }
             $sources[$id] = ['id' => $id, 'title' => $byId[$id]['title']];
+        }
+        // Retrieval guarantees primary evidence is first. A supplementary
+        // caution alone cannot establish support for the requested workflow.
+        // This validates provenance, not the truth of every generated sentence.
+        $primary = $passages[0]['id'] ?? null;
+        if (! is_string($primary) || ! isset($sources[$primary])) {
+            return null;
         }
 
         return ['answer' => $answer, 'sources' => array_values($sources)];

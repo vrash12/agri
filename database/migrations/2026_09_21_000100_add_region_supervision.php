@@ -32,8 +32,9 @@ return new class extends Migration
         DB::table('users')->where('role', 'regional_head')->update(['is_active' => false]);
         // Supported by Laravel 12 for SQLite as well as MySQL/MariaDB.
         Schema::table('users', function (Blueprint $table): void {
+            $table->dropForeign(['region_id']);
             $table->dropIndex(['region_id', 'role', 'is_active']);
-            $table->dropConstrainedForeignId('region_id');
+            $table->dropColumn('region_id');
         });
         Schema::table('provinces', fn (Blueprint $table) => $table->dropConstrainedForeignId('region_id'));
         Schema::dropIfExists('regions');

@@ -14,8 +14,8 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        // This repository has no complete migration history, so the nightly dump is
-        // the only way back from a lost database. It runs outside office hours and
+        // Migrations rebuild schema, not operational data. The nightly dump runs
+        // outside office hours to preserve records for recovery, and
         // will not start a second time if the previous one is still writing.
         $schedule->command('db:backup')
             ->dailyAt((string) config('backup.schedule_at', '01:30'))

@@ -60,12 +60,14 @@ return new class extends Migration
         // Laravel 12 supports SQLite foreign-key removal by column. Remove the
         // constraint first so native DROP COLUMN cannot leave an invalid table.
         Schema::table('audit_logs', function (Blueprint $table): void {
+            $table->dropForeign(['province_id']);
             $table->dropIndex(['province_id', 'created_at']);
-            $table->dropConstrainedForeignId('province_id');
+            $table->dropColumn('province_id');
         });
         Schema::table('users', function (Blueprint $table): void {
+            $table->dropForeign(['province_id']);
             $table->dropIndex(['province_id', 'role', 'is_active']);
-            $table->dropConstrainedForeignId('province_id');
+            $table->dropColumn('province_id');
         });
         Schema::table('municipalities', function (Blueprint $table): void {
             $table->dropConstrainedForeignId('province_id');

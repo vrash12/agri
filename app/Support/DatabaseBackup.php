@@ -12,9 +12,9 @@ use Throwable;
  *
  * The dump is produced in PHP rather than by shelling out to mysqldump. The
  * client installed beside a server is not always a matching version, shared
- * hosting frequently forbids shell execution altogether, and this repository has
- * no complete migration history, so the dump is the only way back from a lost
- * database. Doing the work in PHP keeps that path available everywhere the
+ * hosting frequently forbids shell execution altogether. Migrations rebuild
+ * schema but cannot recover operational data. Doing the dump in PHP keeps
+ * record recovery available everywhere the
  * application already runs.
  *
  * Reading happens inside one consistent snapshot, so a dump taken while staff are

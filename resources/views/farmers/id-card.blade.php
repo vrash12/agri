@@ -105,7 +105,7 @@
         <div class="farmer-card-side-label farmer-card-screen-only"><strong>Front</strong><span>Identity and registry details</span></div>
         <div class="farmer-id-card farmer-id-card-front" id="farmerIdCardFront">
           <div @class(['farmer-card-header-brand', 'has-lgu-profile' => $cardIssuer['configured']])>
-            <img class="farmer-card-agriculture-mark" src="{{ asset('images/branding/eagrilgu-system-mark.png') }}" alt="Agriculture mark">
+            <img class="farmer-card-agriculture-mark" src="{{ asset('images/branding/eagrilgu-mark-v1.png') }}?v=20261021-sharp-mark" alt="Agriculture mark" width="1254" height="1254" decoding="async">
             <div>
               <strong data-card-fit="1.8" data-card-min="1.38">{{ mb_strtoupper($cardIssuer['office_name']) }}</strong>
               <b>FARMER REGISTRY CARD</b>
@@ -281,7 +281,7 @@
       background: @json(asset('images/branding/farmer-card-background.svg').'?v=20261020-open-field'),
       frontArt: @json(asset('images/branding/farmer-card-front-art.svg').'?v=20261020-open-field'),
       backArt: @json(asset('images/branding/farmer-card-back-art.svg').'?v=20261020-open-field'),
-      agricultureMark: @json(asset('images/branding/eagrilgu-system-mark.png')),
+      agricultureMark: @json(asset('images/branding/eagrilgu-mark-v1.png').'?v=20261021-sharp-mark'),
       icons: @json($cardIcons),
       signatory: @json($cardSignatory ? ['name' => mb_strtoupper($cardSignatory['name']), 'title' => $cardSignatory['title']] : null),
       holderName: @json($fullName ? mb_strtoupper($fullName) : null),
@@ -332,6 +332,8 @@
 
     // Keep the original standalone mark proportional in screen, print and export.
     function drawAgricultureMark(ctx, wordmark, x, y, width, height) {
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
       const scale = Math.min(width / wordmark.width, height / wordmark.height);
       const w = wordmark.width * scale, h = wordmark.height * scale;
       ctx.drawImage(wordmark, x + (width - w) / 2, y + (height - h) / 2, w, h);

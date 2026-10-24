@@ -83,7 +83,8 @@ return new class extends Migration
                 $table->dropIndex('harvest_records_crop_section_index');
             }
             if (Schema::hasColumn('harvest_records', 'parcel_crop_season_id')) {
-                $table->dropForeign('harvest_records_crop_season_fk');
+                $table->dropForeign(DB::connection()->getDriverName() === 'sqlite'
+                    ? ['parcel_crop_season_id'] : 'harvest_records_crop_season_fk');
                 $table->dropIndex('harvest_records_crop_season_index');
                 $table->dropColumn('parcel_crop_season_id');
             }

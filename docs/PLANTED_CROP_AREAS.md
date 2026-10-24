@@ -332,7 +332,7 @@ account or record change is required.
 
 ## Staff workflow
 
-In Farmers, open a saved plot's **Crop areas / season** action. The editor opens
+In Farmers, open a saved parcel's **Seasonal crops & drawings** action. The editor opens
 inside an accessible dialog over the map, so the selected parcel stays visible.
 The standalone seasonal-crop page remains available when the dialog cannot load.
 Choose the year

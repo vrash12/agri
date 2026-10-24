@@ -25,14 +25,31 @@ final class AssistantAgriculture
             : 'I can help with agriculture and AgriLGU. I cannot answer unrelated questions. Ask about crops, soil, irrigation, pests, farm animals, fish farming or the system’s features.';
     }
 
+    public static function requestsInstructionOverride(string $text): bool
+    {
+        // Instruction clauses are different from literal farmer names such as
+        // "Find farmer Ignore Santos". Run this before lookup/report routing.
+        return (bool) preg_match('/(?:^|[;.!?]|\b(?:and|also|then|at|pati|tsaka)\s+)\s*(?:ignore|disregard|override|forget|bypass|do\s+not\s+follow|balewalain|huwag\s+sundin)\b.{0,80}\b(?:rules|instructions|prompt|restrictions|messages|conversation\s+history|chat\s+history|panuntunan|tagubilin|bilin|mensahe|usapan)\b/iu', $text)
+            || (bool) preg_match('/^(?:act\s+as|you\s+are\s+now|enable|activate)\s+(?:an?\s+)?(?:unrestricted|unfiltered|developer\s+mode|jailbreak)\b/iu', $text);
+    }
+
     /** @return array<string, mixed>|null */
     public function resolve(string $text, int $year, string $language): ?array
     {
         // Reject unrelated/mixed requests before broad workflow keywords can
         // turn a farming noun into an unrelated answer. This is not a classifier
         // guarantee: only reviewed canonical topics can reach the provider.
-        if (preg_match('/\b(?:movies?|celebrit(?:y|ies)|basketball|football|nba|romance|dating|horoscope|astrology|cryptocurrency|bitcoin|video\s+games?|election|president\s+of|capital\s+of)\b|\b(?:write|generate|debug)\b.{0,35}\b(?:code|python|javascript|poem|song|essay)\b|\b(?:ignore|override|forget|bypass)\b.{0,50}\b(?:rules|instructions|prompt|restrictions)\b/iu', $text)) {
+        if (self::requestsInstructionOverride($text)
+            || preg_match('/\b(?:ignore|override|forget|bypass)\b.{0,50}\b(?:rules|instructions|prompt|restrictions)\b/iu', $text)
+            || preg_match('/\b(?:movies?|celebrit(?:y|ies)|basketball|football|nba|romance|dating|horoscope|astrology|cryptocurrency|bitcoin|video\s+games?|election|president\s+of|capital\s+of)\b|\b(?:write|generate|debug)\b.{0,35}\b(?:code|python|javascript|poem|song|essay)\b|\b(?:write|compose|draft|generate|tell(?:\s+me)?|give(?:\s+me)?)\b.{0,40}\b(?:poem|song|essay|story|love\s+letter|joke)\b|\b(?:solve|calculate|compute|evaluate)\b.{0,35}(?:\d\s*(?:[+*\/=\x{00d7}\x{00f7}]|\b(?:plus|minus|times|divided)\b)|\b(?:equation|arithmetic|square\s+root)\b)/iu', $text)
+            || preg_match('/\b(?:software|computer|laptop|desktop|smartphone|gaming\s+pc|windows|macos|android|ios)\b.{0,40}\b(?:maintenance|backups?|settings|repair|troubleshoot)\b|\b(?:backups?|settings|repair|troubleshoot)\b.{0,40}\b(?:computer|laptop|desktop|smartphone|gaming\s+pc|windows|macos|android|ios)\b/iu', $text)) {
             return $this->clarify(self::refusal($language), $year);
+        }
+        if (! preg_match('/\b(?:record|log|track|inventory|e?agrilgu|workbook|spreadsheet|excel|magtala|itala)\b/iu', $text)
+            && preg_match('/\b(?:repair|fix|replace|troubleshoot|overhaul|maintain|maintenance)\b.{0,40}\b(?:engine|gearbox|transmission|fuel\s+pump|carburetor|spark\s+plug|hydraulic\s+pump)\b|\b(?:engine|gearbox|transmission|fuel\s+pump|carburetor|spark\s+plug|hydraulic\s+pump)\b.{0,40}\b(?:repair|repairs|maintenance|overhaul)\b/iu', $text)) {
+            return $this->clarify($language === 'fil'
+                ? 'Maipapaliwanag ko ang machinery inventory at maintenance records sa AgriLGU, pero wala akong sinuring gabay sa pagkumpuni ng makina. Kumonsulta sa kwalipikadong agricultural machinery technician para sa aktuwal na pagkumpuni.'
+                : 'I can explain machinery inventory and maintenance records in AgriLGU, but I do not have reviewed mechanical repair instructions. Ask a qualified agricultural machinery technician for engine or repair work.', $year);
         }
         // Existing record and software requests retain their policies, query
         // scope and exact workflow. Ordinary farm advice has no database path.

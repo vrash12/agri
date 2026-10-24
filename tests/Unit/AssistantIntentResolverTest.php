@@ -334,7 +334,7 @@ final class AssistantIntentResolverTest extends TestCase
     {
         $resolver = new AssistantIntentResolver;
         $first = $resolver->resolve('How do I import rice seeds in Filipino?', [], 'dashboard', 2026);
-        $this->assertSame(['task' => 'help', 'topic' => 'seed-import', 'year' => 2026, 'language' => 'fil'], $first);
+        $this->assertSame(['task' => 'help', 'topic' => 'seed-import', 'year' => 2026, 'language' => 'fil', 'style' => 'plain'], $first);
         $follow = $resolver->resolve('Explain audit trail in English.', ['task' => 'help', 'help_topic' => 'seed-import', 'help_language' => 'fil'], 'dashboard', 2026);
         $this->assertSame('audit', $follow['topic']);
         $this->assertSame('en', $follow['language']);
@@ -344,6 +344,15 @@ final class AssistantIntentResolverTest extends TestCase
     {
         $actual = (new AssistantIntentResolver)->resolve('What about 2025?', ['task' => 'identity', 'year' => 2026], 'dashboard', 2026);
         $this->assertSame('clarification', $actual['task']);
+    }
+
+    public function test_requested_steps_are_honored_on_the_first_workflow_question(): void
+    {
+        $result = (new AssistantIntentResolver)->resolve('How do I print a farmer ID? Give me numbered steps.', [], 'farmers', 2026);
+        $this->assertSame('help', $result['task']);
+        $this->assertSame('farmer-id', $result['topic']);
+        $this->assertSame('steps', $result['style']);
+        $this->assertArrayNotHasKey('message', $result);
     }
 
     public function test_identity_follow_up_explains_capabilities_locally(): void

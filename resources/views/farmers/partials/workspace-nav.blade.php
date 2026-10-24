@@ -2,7 +2,9 @@
   $workspaceUser = auth()->user();
   $workspaceMunicipality = $workspaceMunicipality ?? $selectedMunicipality ?? null;
   $workspaceCanChoose = $workspaceUser->canAccessAllMunicipalities();
-  $scopeFilters = request()->only(['q', 'gender', 'mapping', 'quality', 'per_page']);
+  $workspaceSourceView = isset($registrySourceStatus);
+  $scopeFilters = request()->only($workspaceSourceView ? ['q', 'per_page'] : ['q', 'gender', 'mapping', 'quality', 'per_page']);
+  $workspaceFormUrl = $workspaceSourceView ? route('farmers.registry-sources.index', ['status' => $registrySourceStatus]) : route('farmers.index');
   $scopeParameters = $workspaceParameters ?? ($workspaceMunicipality ? ['municipality_id' => $workspaceMunicipality->id] : []);
   $workspaceLabel = $workspaceName ?? $workspaceMunicipality?->name ?? $workspaceUser->scopeLabel();
   $workspaceProvinceLabel = ($workspaceProvince ?? null)?->name ?? $workspaceMunicipality?->province;
@@ -19,7 +21,7 @@
       .workspace-select{width:100%;min-width:0;min-height:44px;padding:8px;border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit;font-size:16px}
       .workspace-select-row .module-button{flex:0 0 auto;min-width:96px;justify-content:center;text-align:center}
       .workspace-summary{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:14px;border-top:1px solid var(--ui-border);font-size:13px}.workspace-summary strong{color:var(--ui-text)}.workspace-summary span{color:var(--ui-text-muted);text-align:right}
-      .workspace-view-switch{display:flex;gap:8px;width:100%}.workspace-view-link{display:inline-flex;align-items:center;min-height:44px;padding:8px 14px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-control);color:var(--ui-primary);text-decoration:none}.workspace-view-link.is-active{background:var(--ui-accent-soft);border-color:var(--ui-primary)}
+      .workspace-view-switch{display:flex;flex-wrap:wrap;gap:8px;width:100%}.workspace-view-link{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:8px 14px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-control);color:var(--ui-primary);text-decoration:none}.workspace-view-link.is-active{background:var(--ui-accent-soft);border-color:var(--ui-primary)}
       .workspace-select:focus-visible,.workspace-view-link:focus-visible{outline:3px solid var(--ui-focus);outline-offset:3px}
       @media(max-width:720px){.workspace-filters{grid-template-columns:1fr}.workspace-heading,.workspace-summary{align-items:flex-start;flex-direction:column}.workspace-summary span{text-align:left}.workspace-select-row{flex-wrap:wrap}.workspace-select-row button{width:100%}}
     </style>
@@ -42,7 +44,7 @@
   @if($workspaceHasFilters)
   <div class="workspace-filters">
   @if($workspaceUser->isSystemOwner() && isset($workspaceRegions))
-    <form method="GET" action="{{ route('farmers.index') }}" class="workspace-filter" data-workspace-scope-form>
+    <form method="GET" action="{{ $workspaceFormUrl }}" class="workspace-filter" data-workspace-scope-form>
       @foreach($scopeFilters as $key => $value) @if(is_scalar($value))<input type="hidden" name="{{ $key }}" value="{{ $value }}">@endif @endforeach
       <label for="workspaceRegion">Region</label>
       <div class="workspace-select-row">
@@ -54,7 +56,7 @@
       </div>
     </form>
   @elseif($workspaceUser->isRegionalHead() && isset($workspaceProvinces))
-    <form method="GET" action="{{ route('farmers.index') }}" class="workspace-filter" data-workspace-scope-form>
+    <form method="GET" action="{{ $workspaceFormUrl }}" class="workspace-filter" data-workspace-scope-form>
       @foreach($scopeFilters as $key => $value) @if(is_scalar($value))<input type="hidden" name="{{ $key }}" value="{{ $value }}">@endif @endforeach
       <label for="workspaceProvince">Province / City</label>
       <div class="workspace-select-row">
@@ -67,7 +69,7 @@
     </form>
   @endif
   @if($workspaceCanChoose && isset($workspaceRegions))
-    <form method="GET" action="{{ route('farmers.index') }}" class="workspace-filter" data-workspace-scope-form data-workspace-open>
+    <form method="GET" action="{{ $workspaceFormUrl }}" class="workspace-filter" data-workspace-scope-form data-workspace-open>
       @foreach(array_merge($scopeFilters, array_diff_key($scopeParameters, ['municipality_id' => true])) as $key => $value) @if(is_scalar($value))<input type="hidden" name="{{ $key }}" value="{{ $value }}">@endif @endforeach
       <label for="workspaceMunicipality">Municipality / City</label>
       <div class="workspace-select-row">
@@ -80,7 +82,7 @@
             </optgroup>
           @endforeach
         </select>
-        <button class="module-button module-button-primary" type="submit">View farmers</button>
+        <button class="module-button module-button-primary" type="submit">{{ $workspaceSourceView ? 'View records' : 'View farmers' }}</button>
       </div>
     </form>
   @endif
@@ -88,11 +90,14 @@
   @endif
   <div class="workspace-summary" role="status">
     <strong>Showing {{ $workspaceMunicipality?->name ?? $workspaceLabel }}</strong>
-    <span>{{ $workspaceProvinceLabel ? $workspaceProvinceLabel.' · ' : '' }}Registry, parcels and weather</span>
+    <span>{{ $workspaceProvinceLabel ? $workspaceProvinceLabel.' · ' : '' }}{{ $workspaceSourceView ? $registrySourceTitle.' workbook records' : 'Registry, parcels and weather' }}</span>
   </div>
   @if(isset($municipalities) && $municipalities->isEmpty())<p class="module-alert" role="status">No municipalities are available. Ask your administrator to check your assigned area.</p>@endif
   <nav class="workspace-view-switch" aria-label="Choose farmers view">
-    <a class="workspace-view-link is-active" href="{{ route('farmers.index', $scopeParameters) }}#farmerDirectory" data-workspace-target="registry" aria-current="page">Farmer registry</a>
+    <a @class(['workspace-view-link', 'is-active' => !$workspaceSourceView]) href="{{ route('farmers.index', $scopeParameters) }}#farmerDirectory" data-workspace-target="registry" @if(!$workspaceSourceView) aria-current="page" @endif>Farmer registry</a>
     <a class="workspace-view-link" href="{{ route('farmers.index', $scopeParameters) }}#farmersMapModule" data-workspace-target="map">Parcel map</a>
+    @foreach(\App\Modules\Farmers\Application\FarmerRegistrySources::SECTIONS as $section => $label)
+      <a @class(['workspace-view-link', 'is-active' => ($registrySourceStatus ?? null) === $section]) href="{{ route('farmers.registry-sources.index', ['status' => $section] + $scopeParameters) }}" @if(($registrySourceStatus ?? null) === $section) aria-current="page" @endif>{{ $label }}@if(isset($sourceCounts) && ($sourceAvailable ?? false)) <span>({{ number_format($sourceCounts[$section]) }} rows)</span>@endif</a>
+    @endforeach
   </nav>
 </section>

@@ -105,7 +105,7 @@ class FarmerCardSignatoryTest extends TestCase
             ->assertSee('Registry ID')
             ->assertSee($farmer->agri_gov_id)
             ->assertSee(asset('images/branding/agrilgu-wordmark-v2.png'), false)
-            ->assertSee(asset('images/branding/eagrilgu-system-mark.png'), false)
+            ->assertSee(asset('images/branding/eagrilgu-mark-v1.png'), false)
             ->assertSee('agricultureMark:', false)
             ->assertSee('Declared farm area')
             ->assertSee('Mapped parcels')
@@ -200,7 +200,7 @@ class FarmerCardSignatoryTest extends TestCase
         $front = explode('</article>', explode('id="farmerIdCardFront"', $html, 2)[1], 2)[0];
         $back = explode('</article>', explode('id="farmerIdCardBack"', $html, 2)[1], 2)[0];
 
-        $this->assertStringContainsString('eagrilgu-system-mark.png', $front);
+        $this->assertStringContainsString('eagrilgu-mark-v1.png', $front);
         $this->assertStringNotContainsString('eagrilgu-wordmark', $front);
         $this->assertStringContainsString('Declared farm area', $front);
         $this->assertStringContainsString('2.50 hectares', $front);

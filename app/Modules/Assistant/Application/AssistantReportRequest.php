@@ -19,8 +19,17 @@ final class AssistantReportRequest
         if (preg_match('/\b(?:contact(?:s|\s+(?:details|information|numbers?))?|phone(?:s|\s+numbers?)?|mobile(?:\s+numbers?)?|telephone|emails?|address(?:es)?|residence|birthdays?|birthdates?|birth\s+dates?|date\s+of\s+birth|dob|eligibility|arb|pwd|ip\s+members?|notes?|diagnosis|diagnoses|coordinates?|latitude|longitude|passwords?|credentials?|secrets?|api\s+keys?|access\s+tokens?|private\s+keys?)\b|\b(?:lat|lng)\s*(?:=|:)\s*[-\d]|(?<![\p{L}\d])\.env\b/iu', $text)) {
             return 'Private contact, birth, address, eligibility, note and coordinate fields are not available in this chat; credentials are never disclosed. I can show permitted record summaries. Open an authorized record page for other details your role may view.';
         }
-        if ($this->hasNarrowerPeriod($text)) {
+        if ($this->hasNarrowerPeriod($text) || $this->hasMultiplePeriods($text)) {
             return 'I can report one whole year, not a season, month or date range. Open the relevant register for its available period filters, or ask for the complete annual assistance, harvest or Animal Health report.';
+        }
+        if ($this->hasExcludedRecords($text)) {
+            return 'This chat cannot exclude records or reporting years from a total. Open the relevant register for its available filters, or ask for the complete current registry summary or one annual report.';
+        }
+        if ($this->hasDemographicFilter($text)) {
+            return 'This chat cannot apply an age, civil-status or farmer classification filter. Open the farmer registry for its available filters, or ask for the complete current registry summary.';
+        }
+        if ($this->hasListingOrRanking($text)) {
+            return 'This chat provides bounded record summaries, not a complete list or a sorted ranking. Open the relevant register to review and sort its records, or ask for the complete current registry summary or one annual report.';
         }
         if ($this->hasRegistryFilter($text)) {
             return 'This chat cannot filter farmer reports by gender, mapping status or registry follow-up. Open the farmer registry and use its filters, or ask for the complete current registry summary.';
@@ -31,11 +40,35 @@ final class AssistantReportRequest
         if ($this->hasCommodityFilter($text)) {
             return 'This chat cannot apply a crop, commodity or assistance-input filter. Open the harvest or assistance register and choose its commodity or category filter, or ask for the annual summary across all recorded categories.';
         }
-        if (preg_match('/\b(?:pending|approved|rejected|inactive|delisted|eligible|ineligible|unlinked|unclaimed|consent|eligibility)\b|\b(?:active|projected|manual|direct)\s+(?:farmers?|records?|harvests?)\b|\b(?:only|without|missing)\s+(?:a\s+)?(?:farmer\s+)?(?:link|links|quantity|classification|year|date|dates)\b|\b(?:more\s+than|less\s+than|greater\s+than|fewer\s+than|at\s+least|at\s+most|minimum|maximum|over|under|above|below)\s+\d|\b(?:quantity|area|hectares?|ha|kgs?|kilograms?)\s*[<>]=?\s*\d/iu', $text)) {
+        if (preg_match('/\b(?:pending|approved|rejected|inactive|delisted|eligible|ineligible|unlinked|unclaimed|consent|eligibility|deceased|dead|died|relocated|transferred|deregistered|removed)\b|\b(?:active|projected|manual|direct)\s+(?:farmers?|records?|harvests?)\b|\b(?:only|without|missing)\s+(?:a\s+)?(?:farmer\s+)?(?:link|links|quantity|classification|year|date|dates)\b|\b(?:more\s+than|less\s+than|greater\s+than|fewer\s+than|larger\s+than|smaller\s+than|at\s+least|at\s+most|minimum|maximum|over|under|above|below)\s+(?:\d|one\b|two\b|three\b|four\b|five\b|six\b|seven\b|eight\b|nine\b|ten\b)|\b(?:quantity|area|hectares?|ha|kgs?|kilograms?)\s*[<>]=?\s*\d/iu', $text)) {
             return 'This chat cannot apply that status, missing-field or quantity condition. Open the relevant register for its available filters, or ask for the complete current registry summary or one annual report.';
         }
 
         return null;
+    }
+
+    private function hasExcludedRecords(string $text): bool
+    {
+        // A mentioned year is not necessarily the requested year. In particular,
+        // "excluding 2025" must never be answered with the 2025 total.
+        return (bool) preg_match('/\b(?:except|excluding|exclude|omitting|omit|other\s+than|not\s+including|but\s+not|without\s+counting)\b|\bnot\s+(?:(?:in|for|during|from)\s+)?(?:(?:the\s+)?(?:same|that|this|current|previous|prior|last)\s+year|\d{4})\b|\boutside\s+(?:(?:the\s+)?(?:year|period)\s+)?\d{4}\b/iu', $text);
+    }
+
+    private function hasDemographicFilter(string $text): bool
+    {
+        return (bool) preg_match('/\b(?:age|ages|aged|elderly|seniors?|senior\s+citizens?|younger|older|youth|retired|retirees?|married|unmarried|widowed|widows?|widowers?|divorced|separated|civil\s+status|marital\s+status|organic)\b|\bsingle\s+(?:farmers?|magsasaka)\b|\b(?:farmers?|magsasaka)\b.{0,60}\bsingle\b|\b\d+\s*(?:years?\s+old|year[ -]olds?)\b/iu', $text);
+    }
+
+    private function hasMultiplePeriods(string $text): bool
+    {
+        return (bool) preg_match('/\b(?:all|every|each|multiple|several)\s+(?:reporting\s+)?years?\b|\b(?:lifetime|all[ -]time|yearly|annually|ever)\b|\b(?:by|per|across|over)\s+(?:(?:the|reporting)\s+)?years?\b|\b(?:to\s+date|since\s+(?:the\s+)?(?:beginning|start|registration))\b/iu', $text);
+    }
+
+    private function hasListingOrRanking(string $text): bool
+    {
+        // The available readers aggregate records. A total must not masquerade
+        // as the requested complete row listing or ordering.
+        return (bool) preg_match('/\b(?:list|lists|listing|listings|rank|ranks|ranking|ranked|sort|sorted|sorting|alphabetical|alphabetically|top|bottom|highest|lowest|largest|smallest|biggest)\b|\b(?:most|least)\s+(?:recent|productive|assisted)\b/iu', $text);
     }
 
     private function hasNarrowerPeriod(string $text): bool

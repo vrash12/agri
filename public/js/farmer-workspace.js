@@ -6,6 +6,7 @@
   const hasDirectory = !!document.getElementById('farmerDirectory');
   if (hasDirectory) links.forEach(link => { link.href = link.dataset.workspaceTarget === 'map' ? '#farmersMapModule' : '#farmerDirectory'; });
   function syncHash() {
+    if (!hasDirectory) return;
     links.forEach(link => {
       const active = (window.location.hash === '#farmersMapModule' ? 'map' : 'registry') === link.dataset.workspaceTarget;
       link.classList.toggle('is-active', active);
@@ -20,7 +21,7 @@
       form.requestSubmit();
     });
     form.addEventListener('submit', () => {
-      if (form.hasAttribute('data-workspace-open')) {
+      if (hasDirectory && form.hasAttribute('data-workspace-open')) {
         const action = new URL(form.action, window.location.href);
         action.hash = window.location.hash === '#farmersMapModule' ? 'farmersMapModule' : 'farmerDirectory';
         form.action = action.toString();

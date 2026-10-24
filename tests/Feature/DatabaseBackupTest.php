@@ -8,8 +8,8 @@ use RuntimeException;
 use Tests\TestCase;
 
 /**
- * This repository has no complete migration history, so the dump is the only route
- * back from a lost database. These cases run against the real connection because a
+ * Migrations rebuild schema, while dumps recover operational data. These cases
+ * exercise the configured disposable database connection because a
  * backup that has only been exercised against a stand-in proves nothing.
  *
  * Reading is all that touches the database; everything written goes to a temporary
@@ -24,16 +24,21 @@ class DatabaseBackupTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        if (\DB::connection()->getDriverName() !== 'mysql') {
+            $this->markTestSkipped('Logical dumps require the supported MySQL/MariaDB engine; run the separate disposable MariaDB backup/restore check.');
+        }
         $this->directory = sys_get_temp_dir().DIRECTORY_SEPARATOR.'agri-backup-test-'.uniqid();
     }
 
     protected function tearDown(): void
     {
         // Dumps hold farmer personal data; never leave one behind.
-        foreach (glob($this->directory.DIRECTORY_SEPARATOR.'*') ?: [] as $file) {
+        foreach (isset($this->directory) ? (glob($this->directory.DIRECTORY_SEPARATOR.'*') ?: []) : [] as $file) {
             @unlink($file);
         }
-        @rmdir($this->directory);
+        if (isset($this->directory)) {
+            @rmdir($this->directory);
+        }
 
         parent::tearDown();
     }

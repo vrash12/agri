@@ -20,7 +20,7 @@ final class SatelliteIndex
 
         $specific = match ($id) {
             'ndvi' => [
-                'name' => 'Plant greenness', 'choice' => 'NDVI · General crop check',
+                'name' => 'Plant greenness', 'choice' => 'General crop check · NDVI',
                 'formula' => '(B08 − B04) / (B08 + B04)',
                 'help' => 'Shows how green the plants look from space. Start here for a general look at the field.',
                 'reading_help' => 'Higher numbers usually mean more green plants. A low number can also mean bare soil, water or a recent harvest.',
@@ -28,7 +28,7 @@ final class SatelliteIndex
                 'next_step' => 'Look at the picture, then check the plants in the field.',
             ],
             'ndmi' => [
-                'name' => 'Water signal in plants', 'choice' => 'NDMI · Possible lack of water',
+                'name' => 'Water signal in plants', 'choice' => 'Water signal in plants · NDMI',
                 'resolution_m' => 20, 'formula' => '(B08 − B11) / (B08 + B11)',
                 'help' => 'Helps you look for signs that plants may be short of water. Check the field before deciding to water it.',
                 'reading_help' => 'Higher numbers usually suggest more water in the plants. A low number alone does not prove drought. Standing water and bare soil can affect it.',
@@ -39,7 +39,7 @@ final class SatelliteIndex
                 'next_step' => 'Check recent rain and irrigation, then look at the plants and soil.',
             ],
             'savi' => [
-                'name' => 'Plant cover with bare soil', 'choice' => 'SAVI · Young or widely spaced crops',
+                'name' => 'Plant cover with bare soil', 'choice' => 'Young or widely spaced crops · SAVI',
                 'formula' => '1.5 × (B08 − B04) / (B08 + B04 + 0.5)',
                 // With harmonized nonnegative reflectance SAVI lies within ±1.5, not necessarily ±1.
                 'minimum' => -1.5, 'maximum' => 1.5,
@@ -49,7 +49,7 @@ final class SatelliteIndex
                 'next_step' => 'Look at how much of the ground the plants cover. Check thin or empty spots in the field.',
             ],
             'evi' => [
-                'name' => 'Thick, leafy plant cover', 'choice' => 'EVI · Thick, leafy crops',
+                'name' => 'Thick, leafy plant cover', 'choice' => 'Thick, leafy crops · EVI',
                 'formula' => '2.5 × (B08 − B04) / (B08 + 6 × B04 − 7.5 × B02 + 1)',
                 // A numerical safety envelope, not a biological range. Raw EVI can exceed ±1.
                 'minimum' => -1.0e9, 'maximum' => 1.0e9,

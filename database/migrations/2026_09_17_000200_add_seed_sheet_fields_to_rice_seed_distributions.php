@@ -124,7 +124,8 @@ return new class extends Migration
 
         if ($this->hasBatchForeignKey()) {
             Schema::table('rice_seed_distributions', function (Blueprint $table) {
-                $table->dropForeign('rice_seed_distribution_batch_fk');
+                $table->dropForeign(Schema::getConnection()->getDriverName() === 'sqlite'
+                    ? ['batch_id'] : 'rice_seed_distribution_batch_fk');
             });
         }
 
@@ -133,6 +134,9 @@ return new class extends Migration
             ->all();
 
         if ($columns !== []) {
+            if (in_array('batch_id', $columns, true) && Schema::hasIndex('rice_seed_distributions', 'rice_seed_distribution_batch_index')) {
+                Schema::table('rice_seed_distributions', fn (Blueprint $table) => $table->dropIndex('rice_seed_distribution_batch_index'));
+            }
             Schema::table('rice_seed_distributions', function (Blueprint $table) use ($columns) {
                 $table->dropColumn($columns);
             });
@@ -146,6 +150,11 @@ return new class extends Migration
     private function hasBatchForeignKey(): bool
     {
         $connection = Schema::getConnection();
+
+        if ($connection->getDriverName() === 'sqlite') {
+            return collect(Schema::getForeignKeys('rice_seed_distributions'))
+                ->contains(fn (array $foreign): bool => $foreign['columns'] === ['batch_id']);
+        }
 
         if ($connection->getDriverName() !== 'mysql') {
             return false;

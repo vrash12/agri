@@ -14,6 +14,7 @@ use App\Modules\Farmers\Application\FarmerCardLocations;
 use App\Modules\Farmers\Application\FarmerCardSignatory;
 use App\Modules\Farmers\Application\FarmerDataQuality;
 use App\Modules\Farmers\Application\FarmerIdentifier;
+use App\Modules\Farmers\Application\FarmerIdentitySearch;
 use App\Modules\Farmers\Application\FarmerPicker;
 use App\Modules\Farmers\Application\FarmerWorkspace;
 use App\Support\ConcurrentWrite;
@@ -1090,22 +1091,7 @@ class FarmerController extends Controller
             false
         );
 
-        // Escaped so a name containing % or _ searches for those characters rather
-        // than acting as a wildcard.
-        $like = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $term).'%';
-
-        $farmerId = FarmerIdentifier::parse($term);
-        $query->where(function (Builder $search) use ($like, $farmerId) {
-            $search->where('farmers.last_name', 'like', $like)
-                ->orWhere('farmers.first_name', 'like', $like)
-                ->orWhere('farmers.middle_name', 'like', $like)
-                ->orWhere('farmers.ffrs', 'like', $like)
-                ->orWhere('farmers.farm_location', 'like', $like);
-
-            if ($farmerId !== null) {
-                $search->orWhere('farmers.id', $farmerId);
-            }
-        });
+        FarmerIdentitySearch::apply($query, $term, ['ffrs', 'farm_location']);
 
         $total = (clone $query)->count();
 

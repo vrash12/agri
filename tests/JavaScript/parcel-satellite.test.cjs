@@ -4,7 +4,7 @@ const vm = require('node:vm');
 const path = require('node:path');
 const fs = require('node:fs');
 const { execFileSync } = require('node:child_process');
-const { readObservations, createRequestSlot, validDay, responseError, createRetryCooldown, indexScale } = require('../../public/js/parcel-satellite.js');
+const { readObservations, createRequestSlot, validDay, responseError, createRetryCooldown, indexScale, recentPeriod } = require('../../public/js/parcel-satellite.js');
 const scripts = JSON.parse(execFileSync(process.env.PHP_BINARY || 'php', [path.join(__dirname, '../Support/export-sentinel-evalscripts.php')], { encoding: 'utf8' }));
 const period = { from: '2026-08-01', to: '2026-08-03' };
 const row = { date: '2026-08-01', mean: 0, min: -0.2, max: 0.2, valid_pixels: 14, status: 'available' };
@@ -172,20 +172,23 @@ function satellitePage(fetcher) {
     constructor(){this.value='';this.disabled=false;this.style={};this.dataset={};this.children=[];this.events={};this.attributes={};this.classList={toggle(){}};}
     setAttribute(key,value){this.attributes[key]=value;} removeAttribute(key){delete this.attributes[key];} appendChild(child){this.children.push(child);} replaceChildren(...children){this.children=children;}
     addEventListener(name,callback){this.events[name]=callback;} add(child){this.children.push(child);} reportValidity(){return true;}
-    querySelector(){return {value:'synthetic-token'};}
+    querySelector(){return {value:'synthetic-token'};} focus(){this.focused=true;}
   }
   const byId=id=>{if(!elements.has(id))elements.set(id,new Element());return elements.get(id);};
   byId('satelliteConfig').textContent=JSON.stringify({geometry:null,bounds:null,imageUrl:'/image',indexes:scripts.definitions});
   byId('satelliteIndex').value='ndvi';
   byId('satelliteForm').action='/observations';byId('satelliteFrom').value=period.from;byId('satelliteTo').value=period.to;byId('satelliteCloud').value='60';byId('satelliteLayer').value='ndvi';
+  byId('satelliteTo').max='2026-08-03';
+  byId('satelliteTo').dataset.recentEnd='2026-08-02';
   class MockDate extends Date {static now(){return clock;}}
+  const browserWindow={fetch:fetcher,location:{href:'https://example.test/parcel'},addEventListener:(name,callback)=>events.set(name,callback)};
   vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../../public/js/parcel-satellite.js'),'utf8'),{
     document:{getElementById:byId,createElement:()=>new Element(),createElementNS:()=>new Element()},
-    window:{fetch:fetcher,location:{href:'https://example.test/parcel'},addEventListener:(name,callback)=>events.set(name,callback)},
+    window:browserWindow,
     Option:class{constructor(text,value){this.text=text;this.value=value;}},Date:MockDate,URL,URLSearchParams,AbortController,
     setTimeout:fn=>{timers.set(++timerId,fn);return timerId;},clearTimeout:id=>timers.delete(id)
   });
-  return {byId,events,timers,advance:ms=>{clock+=ms;const pending=[...timers.entries()];for(const [id,fn] of pending){if(timers.has(id)){timers.delete(id);fn();}}},submit:()=>byId('satelliteForm').events.submit({preventDefault(){}})};
+  return {byId,events,timers,window:browserWindow,advance:ms=>{clock+=ms;const pending=[...timers.entries()];for(const [id,fn] of pending){if(timers.has(id)){timers.delete(id);fn();}}},submit:()=>byId('satelliteForm').events.submit({preventDefault(){}})};
 }
 
 test('the initial satellite screen has no empty result, image controls or history and starts no search', () => {
@@ -213,10 +216,13 @@ test('a returned period reveals its result and date controls; switching checks h
   assert.equal(page.byId('satelliteHistoryPanel').hidden, false);
   assert.equal(page.byId('satelliteScore').hidden, false);
   assert.equal(page.byId('satelliteDisplayOptions').hidden, true, 'Image-only controls stay hidden if the image fails');
-  assert.match(page.byId('satelliteStatus').textContent, /1 usable picture found/);
+  assert.match(page.byId('satelliteStatus').textContent, /1 usable date found/);
+  assert.match(page.byId('satelliteResultDate').textContent, /2026-08-01.*UTC.*NDVI/);
+  assert.equal(page.byId('satelliteResultJump').hidden, false);
   assert.equal(calls, 2, 'One explicit statistics search and one image request');
   page.byId('satelliteIndex').value = 'ndmi'; page.byId('satelliteIndex').events.change();
   assert.equal(page.byId('satelliteSummary').hidden, true);
+  assert.equal(page.byId('satelliteResultJump').hidden, true);
   assert.equal(page.byId('satelliteMapControls').hidden, true);
   assert.equal(page.byId('satelliteHistoryPanel').hidden, true);
   assert.equal(calls, 2, 'Changing checks never starts provider work');
@@ -234,7 +240,107 @@ test('an empty search explains what to try without exposing a zero score or unus
   assert.equal(page.byId('satelliteMean').textContent, '—');
   assert.equal(page.byId('satelliteMapControls').hidden, true);
   assert.equal(page.byId('satelliteHistoryPanel').hidden, true);
+  assert.equal(page.byId('satelliteAdjustSearch').hidden, false);
+  page.byId('satelliteAdjustSearch').events.click();
+  assert.equal(page.byId('satelliteSearchOptions').open, true);
+  assert.equal(page.byId('satelliteFrom').focused, true);
   assert.equal(calls, 1, 'No image request or automatic retry when the search is empty');
+});
+
+test('recent-date shortcuts use inclusive UTC dates across month/year boundaries without starting a search', () => {
+  assert.deepEqual(recentPeriod('2026-01-02', 14), { from: '2025-12-20', to: '2026-01-02' });
+  assert.deepEqual(recentPeriod('2024-03-01', 30), { from: '2024-02-01', to: '2024-03-01' });
+  for (const args of [['2026-02-30', 14], ['2026-08-03', 32], ['2026-08-03', 0], [null, 14]]) assert.equal(recentPeriod(...args), null);
+  let calls = 0;
+  const page = satellitePage(() => { calls++; throw new Error('Search must be explicit'); });
+  page.byId('satelliteLast14').events.click();
+  assert.equal(page.byId('satelliteFrom').value, '2026-07-20');
+  assert.equal(page.byId('satelliteTo').value, '2026-08-02');
+  assert.equal(page.byId('satelliteLast14').attributes['aria-pressed'], 'true');
+  assert.equal(page.byId('satelliteLast30').attributes['aria-pressed'], 'false');
+  page.byId('satelliteLast30').events.click();
+  assert.equal(page.byId('satelliteFrom').value, '2026-07-04');
+  assert.equal(page.byId('satelliteLast14').attributes['aria-pressed'], 'false');
+  assert.equal(page.byId('satelliteLast30').attributes['aria-pressed'], 'true');
+  assert.match(page.byId('satelliteStatus').textContent, /Select Find pictures/);
+  assert.equal(calls, 0);
+});
+
+test('date and cloud edits hide old readings and cannot fetch or restore a superseded search', async () => {
+  for (const id of ['satelliteFrom', 'satelliteTo', 'satelliteCloud']) {
+    const calls = [];
+    const page = satellitePage((url, options) => new Promise(resolve => calls.push({ url, options, resolve })));
+    const first = page.submit();
+    page.byId(id).events.input();
+    assert.equal(calls[0].options.signal.aborted, true, id);
+    assert.equal(page.byId('satelliteSummary').hidden, true, id);
+    assert.equal(page.byId('satelliteResultJump').hidden, true, id);
+    assert.equal(page.byId('satelliteLoad').disabled, false, id);
+    calls[0].resolve({ ok: true, json: async () => ({ observations: [row] }) });
+    await first;
+    assert.equal(page.byId('satelliteSummary').hidden, true, id);
+    assert.equal(calls.length, 1, 'Editing ' + id + ' does not request provider work');
+  }
+  let calls = 0;
+  const page = satellitePage(async url => {
+    calls++;
+    return url === '/observations' ? { ok: true, json: async () => ({ observations: [row] }) }
+      : { ok: false, status: 502, headers: { get: () => null }, json: async () => ({ message: 'Synthetic image unavailable.' }) };
+  });
+  await page.submit(); await new Promise(resolve => setImmediate(resolve));
+  page.byId('satelliteTo').events.change();
+  assert.equal(page.byId('satelliteScore').hidden, true);
+  assert.equal(page.byId('satelliteHistoryPanel').hidden, true);
+  assert.equal(page.byId('satelliteMapControls').hidden, true);
+  assert.equal(calls, 2);
+});
+
+test('recent dates preserve provider cooldown and invalid date ranges focus the correction', async () => {
+  let calls = 0;
+  const page = satellitePage(async () => { calls++; return { ok: false, status: 429, headers: { get: () => '4' }, json: async () => ({ message: 'Searches limited.' }) }; });
+  await page.submit();
+  page.byId('satelliteLast14').events.click();
+  assert.equal(page.byId('satelliteLoad').disabled, true);
+  await page.submit(); assert.equal(calls, 1);
+  page.advance(5000);
+  assert.equal(page.byId('satelliteLoad').disabled, false);
+  assert.equal(calls, 1, 'The shortcut and cooldown expiry never retry automatically');
+  page.byId('satelliteFrom').value = '2026-08-04';
+  await page.submit();
+  assert.equal(page.byId('satelliteTo').focused, true);
+  assert.match(page.byId('satelliteStatus').textContent, /on or after.*31 days/);
+  assert.equal(calls, 1);
+});
+
+test('closing a retained view stops loading messages and offers an explicit retry without starting work on resume', async () => {
+  const searchCalls = [];
+  const searching = satellitePage((url, options) => new Promise(resolve => searchCalls.push({ options, resolve })));
+  const pending = searching.submit();
+  searching.window.__pauseParcelSatellite(); searching.window.__resumeParcelSatellite();
+  assert.equal(searchCalls[0].options.signal.aborted, true);
+  assert.equal(searching.byId('satelliteLoad').disabled, false);
+  assert.match(searching.byId('satelliteStatus').textContent, /Search stopped.*Find pictures/);
+  searchCalls[0].resolve({ ok: true, json: async () => ({ observations: [row] }) });
+  await pending;
+  assert.equal(searching.byId('satelliteSummary').hidden, true);
+  assert.equal(searchCalls.length, 1);
+
+  let finishImage, calls = 0;
+  const imaging = satellitePage(async url => {
+    calls++;
+    return url === '/observations' ? { ok: true, json: async () => ({ observations: [row] }) }
+      : new Promise(resolve => { finishImage = resolve; });
+  });
+  await imaging.submit(); await new Promise(resolve => setImmediate(resolve));
+  imaging.window.__pauseParcelSatellite(); imaging.window.__resumeParcelSatellite();
+  assert.equal(imaging.byId('satelliteImageRetry').hidden, false);
+  assert.match(imaging.byId('satelliteImageCaption').textContent, /loading stopped.*Retry image/);
+  assert.equal(imaging.byId('satelliteMean').textContent, '0.000', 'Completed readings remain available');
+  finishImage({ ok: true, headers: { get: () => 'image/png' }, blob: async () => new Blob(['synthetic png']) });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(imaging.byId('satellitePreview').hidden, true);
+  assert.equal(imaging.byId('satelliteImageRetry').hidden, false);
+  assert.equal(calls, 2, 'Reopening a retained view never retries provider work automatically');
 });
 
 test('a failed replacement search cannot leave the previous measurements on screen', async () => {
@@ -256,6 +362,39 @@ test('a failed replacement search cannot leave the previous measurements on scre
   assert.equal(page.byId('satelliteMapControls').hidden, true);
   assert.match(page.byId('satelliteStatus').textContent, /unavailable/);
   assert.equal(page.byId('satelliteLoad').disabled, false);
+});
+
+test('browser Back restores readings and explicit retry without repeating provider requests or bypassing cooldowns', async () => {
+  let calls = 0;
+  const page = satellitePage(async url => {
+    calls++;
+    return url === '/observations' ? { ok: true, json: async () => ({ observations: [row] }) }
+      : { ok: false, status: 429, headers: { get: () => '30' }, json: async () => ({ message: 'Wait before loading another image.' }) };
+  });
+  await page.submit(); await new Promise(resolve => setImmediate(resolve));
+  page.events.get('pagehide')({ persisted: true });
+  page.events.get('pageshow')({ persisted: true });
+  assert.equal(calls, 2, 'Returning to the page must not automatically spend another request');
+  assert.equal(page.byId('satelliteMean').textContent, '0.000');
+  assert.equal(page.byId('satelliteImageRetry').hidden, false);
+  assert.equal(page.byId('satelliteImageRetry').disabled, true, 'The original retry deadline still applies');
+  page.advance(31000);
+  assert.equal(page.byId('satelliteImageRetry').disabled, false);
+  assert.equal(calls, 2);
+  page.events.get('pagehide')();
+});
+
+test('returning through browser history unlocks an interrupted search and ignores its late reply', async () => {
+  let finish, calls = 0;
+  const page = satellitePage(() => { calls++; return new Promise(resolve => { finish = resolve; }); });
+  const pending = page.submit();
+  page.events.get('pagehide')({ persisted: true });
+  page.events.get('pageshow')({ persisted: true });
+  assert.equal(page.byId('satelliteLoad').disabled, false);
+  assert.match(page.byId('satelliteStatus').textContent, /Search stopped/);
+  finish({ ok: true, json: async () => ({ observations: [row] }) }); await pending;
+  assert.equal(page.byId('satelliteSummary').hidden, true);
+  assert.equal(calls, 1);
 });
 
 test('the real search controls suppress duplicate requests and pause only until Retry-After expires',async()=>{

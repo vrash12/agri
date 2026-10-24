@@ -169,6 +169,52 @@ class DashboardPresentationTest extends TestCase
         $this->assertStringContainsString('method="GET"', $html);
     }
 
+    public function test_lgu_insights_are_visible_without_scripts_and_keep_periods_units_and_figures_distinct(): void
+    {
+        $this->signInForView(User::ROLE_MUNICIPAL_STAFF);
+        $html = (string) $this->view('dashboard', [
+            'currentYear' => 2026, 'reportYear' => 2025,
+            'stats' => ['total_farmers' => 10, 'mapped_farmers' => 4],
+            'coverageStats' => ['assistance' => [
+                'registered' => 10, 'beneficiaries' => 3, 'without_release' => 7,
+                'reach_percent' => 30, 'releases' => 5, 'unlinked_releases' => 2, 'undated_releases' => 1,
+            ]],
+            'charts' => [
+                'months' => ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                'rice_monthly' => [125.5, 0, 25, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            ],
+        ]);
+        $document = new \DOMDocument;
+        @$document->loadHTML($html);
+        $xpath = new \DOMXPath($document);
+        $insights = $xpath->query('//section[@id="lguInsights"]')->item(0);
+
+        $this->assertNotNull($insights);
+        $this->assertSame(0, $xpath->query('ancestor::details', $insights)->length);
+        $this->assertSame(0, $xpath->query('.//canvas', $insights)->length);
+        $this->assertSame(12, $xpath->query('.//table/tbody/tr', $insights)->length);
+        foreach (['40.0%', '30.0%', 'Assistance · 2025', 'Monthly input weight · 2026', '150.50', '125.50', '0.00', 'kg', 'not harvest or yield', 'farmer link in 2025: 2', 'excluded from annual totals: 1'] as $text) {
+            $this->assertStringContainsString($text, $insights->textContent);
+        }
+        $this->assertStringContainsString('received_from=2025-01-01', $document->saveHTML($insights));
+        $this->assertStringContainsString('received_from=2026-01-01', $document->saveHTML($insights));
+    }
+
+    public function test_lgu_insights_do_not_turn_missing_aggregates_or_empty_denominators_into_zero_percent(): void
+    {
+        $this->signInForView(User::ROLE_MUNICIPAL_STAFF);
+        foreach ([[], ['total_farmers' => 0, 'mapped_farmers' => 0]] as $stats) {
+            $html = (string) $this->view('dashboard', ['stats' => $stats]);
+            $document = new \DOMDocument;
+            @$document->loadHTML($html);
+            $xpath = new \DOMXPath($document);
+            $insights = $xpath->query('//section[@id="lguInsights"]')->item(0);
+            $this->assertSame(3, substr_count($insights->textContent, 'Not available'));
+            $this->assertStringNotContainsString('0.0%', $insights->textContent);
+            $this->assertSame(0, $xpath->query('.//div[contains(@class,"ops-insight-bar")]', $insights)->length);
+        }
+    }
+
     private function signInForView(string $role): void
     {
         $user = new User([

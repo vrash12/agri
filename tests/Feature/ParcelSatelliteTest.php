@@ -9,6 +9,7 @@ use App\Modules\Climate\Application\SentinelImagery;
 use App\Modules\Climate\Application\SentinelParcel;
 use App\Platform\Observability\UsageMetrics;
 use App\Support\ProviderUsage;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;
@@ -53,6 +54,17 @@ class ParcelSatelliteTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_initial_dates_and_shortcuts_share_one_complete_utc_period(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-10-25T01:30:00+08:00'));
+        $this->actingAs(User::find(1))->get(route('farm-plots.satellite.show', 1))->assertOk()
+            ->assertViewHas('today', '2026-10-24')
+            ->assertViewHas('from', '2026-09-24')->assertViewHas('to', '2026-10-23')
+            ->assertSee('data-recent-end="2026-10-23"', false)
+            ->assertSee('last complete UTC day');
+        Http::assertNothingSent();
+    }
+
     public function test_modal_view_explains_ndvi_in_plain_language_and_keeps_scope_authorization(): void
     {
         $this->actingAs(User::find(1))->get(route('farm-plots.satellite.show', ['plot' => 1, 'modal' => 1]))
@@ -63,10 +75,13 @@ class ParcelSatelliteTest extends TestCase
             ->assertSee('NDVI measures plant greenness')
             ->assertSee('Use this to plan a field check')
             ->assertSee('Sentinel-2 images with clouds')
-            ->assertSee('NDMI · Possible lack of water')
-            ->assertSee('SAVI · Young or widely spaced crops')
-            ->assertSee('EVI · Thick, leafy crops')
-            ->assertSee('Help me choose')
+            ->assertSee('Water signal in plants · NDMI')
+            ->assertSee('Young or widely spaced crops · SAVI')
+            ->assertSee('Thick, leafy crops · EVI')
+            ->assertSee('Which check should I use?')
+            ->assertSee('Use pictures to plan a field visit')
+            ->assertSee('Last 14 days')->assertSee('Last 30 days')
+            ->assertSee('id="satelliteResultJump" hidden', false)
             ->assertSee('How satellite checks work')
             ->assertSee('id="satelliteHistoryPanel" hidden', false)
             ->assertSee('id="satelliteMapControls" hidden', false)

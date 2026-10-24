@@ -99,6 +99,32 @@ class FarmerPickerTest extends TestCase
         $this->assertSame(1, $response->json('total'));
     }
 
+    public function test_full_names_match_across_name_fields_in_both_scoped_finders(): void
+    {
+        $this->foreign->update(['first_name' => $this->local->first_name, 'middle_name' => $this->local->middle_name]);
+        foreach (['farmers.lookup', 'farmers.picker'] as $route) {
+            foreach (['Testfirst Testsurname', 'Testsurname, Testfirst', 'Testfirst Testmiddle Testsurname', ' Testfirst   Testsurname '] as $term) {
+                $response = $this->actingAs($this->staff)->getJson(route($route, ['q' => $term]))->assertOk();
+                $this->assertSame(1, $response->json('total'), $route.' must match a full name without crossing LGU scope.');
+                $key = $route === 'farmers.lookup' ? 'id' : 'value';
+                $this->assertSame((string) $this->local->id, (string) $response->json('farmers.0.'.$key));
+            }
+            $this->getJson(route($route, ['q' => 'Testfirst Nonexistent']))->assertOk()->assertJsonPath('total', 0);
+        }
+    }
+
+    public function test_both_finders_treat_name_punctuation_and_wildcards_literally(): void
+    {
+        $this->local->update(['first_name' => 'Anne_100%!', 'last_name' => "O'Neil"]);
+        foreach (['farmers.lookup', 'farmers.picker'] as $route) {
+            foreach (['100%!', "Anne_100%! O'Neil"] as $term) {
+                $this->actingAs($this->staff)->getJson(route($route, ['q' => $term]))
+                    ->assertOk()->assertJsonPath('total', 1);
+            }
+            $this->getJson(route($route, ['q' => "' OR 1=1 --"]))->assertOk()->assertJsonPath('total', 0);
+        }
+    }
+
     public function test_a_submitted_municipality_cannot_widen_the_search(): void
     {
         // A municipal account posting the neighbour's id gets its own scope, not the
@@ -153,6 +179,9 @@ class FarmerPickerTest extends TestCase
 
     public function test_a_term_with_wildcard_characters_searches_for_those_characters(): void
     {
+        foreach (['Literal_Name', 'Literal!Name', 'Literal\\Name', 'LiteralOtherName'] as $name) {
+            Farmer::create(['municipality_id' => $this->municipality->id, 'first_name' => 'Literal', 'last_name' => $name]);
+        }
         Farmer::create([
             'municipality_id' => $this->municipality->id,
             'first_name' => 'Percent',
@@ -166,6 +195,11 @@ class FarmerPickerTest extends TestCase
 
         // Unescaped, "%" would act as a wildcard and match far more than was typed.
         $this->assertSame(1, $response->json('total'));
+        foreach (['Literal_N' => 'Literal_Name', 'Literal!N' => 'Literal!Name', 'Literal\\N' => 'Literal\\Name'] as $term => $name) {
+            $result = $this->actingAs($this->staff)->getJson(route('farmers.picker', ['q' => $term]))->assertOk();
+            $this->assertSame(1, $result->json('total'));
+            $this->assertStringContainsString($name, $result->json('farmers.0.label'));
+        }
     }
 
     public function test_the_limit_is_capped_however_large_a_caller_asks_for(): void

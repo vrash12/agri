@@ -14,25 +14,31 @@
     <div class="module-alert" role="status"><strong>Satellite access needs setup.</strong> Ask your administrator to enable satellite pictures. You can still view the saved parcel boundary.</div>
   @endif
   @if($geometryError)<div class="module-alert module-alert-error" role="alert">{{ $geometryError }}</div>@endif
+  <aside class="satellite-start-guide" aria-labelledby="satelliteGuideHeading">
+    <h2 id="satelliteGuideHeading">Use pictures to plan a field visit</h2>
+    <p>This is a picture from a past date, not a live view or a crop health diagnosis.</p>
+    <ol><li><strong>Start with a general crop check.</strong> Use NDVI if you are unsure which check to choose.</li><li><strong>Look for a clear date.</strong> Clouds may leave blank areas. Blank does not mean damaged crops.</li><li><strong>Check what changed in the field.</strong> Compare with crop stage, harvest, rain and irrigation records.</li></ol>
+  </aside>
   <section class="module-panel satellite-search" aria-labelledby="satelliteSearchHeading">
-    <div class="module-panel-head"><div><h2 id="satelliteSearchHeading"><span class="satellite-step" aria-hidden="true">1</span> Choose a check and dates</h2><p>Search up to 31 days. The latest usable picture will open.</p></div></div>
+    <div class="module-panel-head"><div><h2 id="satelliteSearchHeading"><span class="satellite-step" aria-hidden="true">1</span> Choose a check and dates</h2><p>Start with the suggested check and dates, then select Find pictures.</p></div></div>
     <form id="satelliteForm" class="module-form-body" action="{{ route('farm-plots.satellite.analyse', $plot) }}" method="POST">
       @csrf
       <div class="satellite-filters">
         <div class="module-form-field satellite-index-field"><label for="satelliteIndex">What would you like to check?</label><select class="module-input" id="satelliteIndex" name="index" aria-describedby="satelliteIndexHelp">@foreach($indexes as $id => $definition)<option value="{{ $id }}">{{ $definition['choice'] }}</option>@endforeach</select></div>
-        <div class="module-form-field"><label for="satelliteFrom">Start date</label><input class="module-input" id="satelliteFrom" name="from" type="date" min="2017-03-28" max="{{ now()->utc()->toDateString() }}" value="{{ $from }}" required aria-describedby="satelliteDateHelp"></div>
-        <div class="module-form-field"><label for="satelliteTo">End date</label><input class="module-input" id="satelliteTo" name="to" type="date" min="2017-03-28" max="{{ now()->utc()->toDateString() }}" value="{{ $to }}" required aria-describedby="satelliteDateHelp"></div>
+        <div class="module-form-field"><label for="satelliteFrom">Start date</label><input class="module-input" id="satelliteFrom" name="from" type="date" min="2017-03-28" max="{{ $today }}" value="{{ $from }}" required aria-describedby="satelliteDateHelp"></div>
+        <div class="module-form-field"><label for="satelliteTo">End date</label><input class="module-input" id="satelliteTo" name="to" type="date" min="2017-03-28" max="{{ $today }}" value="{{ $to }}" data-recent-end="{{ $to }}" required aria-describedby="satelliteDateHelp"></div>
         <button class="module-button module-button-primary" id="satelliteLoad" @disabled(!$configured || !$parcel)>Find pictures <span aria-hidden="true">→</span></button>
       </div>
       <p class="satellite-note satellite-check-help" id="satelliteIndexHelp" aria-live="polite" aria-atomic="true">{{ $indexes['ndvi']['help'] }}</p>
-      <p class="satellite-note satellite-date-help" id="satelliteDateHelp">Dates use UTC. Clouds may hide the field.</p>
+      <div class="satellite-date-shortcuts" role="group" aria-label="Choose recent search dates"><span>Recent dates</span><button type="button" class="module-button" id="satelliteLast14" aria-pressed="false">Last 14 days</button><button type="button" class="module-button" id="satelliteLast30" aria-pressed="false">Last 30 days</button></div>
+      <p class="satellite-note satellite-date-help" id="satelliteDateHelp">Choose up to 31 days within the crop cycle you want to inspect. Dates use UTC. Recent dates end with the last complete UTC day; today's readings may still be incomplete. Changing dates or options does not start a search.</p>
       <div class="satellite-search-help">
       <details class="satellite-options">
-        <summary>Help me choose</summary>
+        <summary>Which check should I use?</summary>
         <ul class="satellite-note satellite-option-content">@foreach($indexes as $id => $definition)<li><strong>{{ $definition['choice'] }}</strong> — {{ $definition['help'] }}</li>@endforeach</ul>
       </details>
       <details class="satellite-options" id="satelliteSearchOptions">
-        <summary>Search options</summary>
+        <summary>Cloud options · if no pictures are found</summary>
         <div class="satellite-option-content"><label for="satelliteCloud">Which satellite scenes should we search?</label><select class="module-input" id="satelliteCloud" name="max_cloud" aria-describedby="satelliteCloudHelp"><option value="20">Mostly clear scenes</option><option value="60" selected>Balanced search (recommended)</option><option value="100">All scenes — try if no pictures are found</option></select>
           <p class="satellite-note" id="satelliteCloudHelp">Try All scenes if no pictures are found. This searches a wider set of images; cloudy parts of your parcel are still left out.</p>
         </div>
@@ -41,7 +47,7 @@
     </form>
     <noscript><p class="module-alert">Enable JavaScript to request observations and view the map.</p></noscript>
   </section>
-  <p id="satelliteStatus" class="satellite-status" role="status" aria-live="polite" aria-atomic="true"></p>
+  <div class="satellite-search-feedback"><p id="satelliteStatus" class="satellite-status" role="status" aria-live="polite" aria-atomic="true"></p><a class="module-button" href="#satelliteSummaryHeading" id="satelliteResultJump" hidden>Go to result <span aria-hidden="true">↓</span></a></div>
   <div class="satellite-workspace" id="satelliteWorkspace" data-has-result="false">
     <section class="module-panel satellite-map-panel" aria-label="Parcel and satellite layers">
       <div class="module-panel-head"><div><h2><span class="satellite-step" aria-hidden="true">2</span> View the picture and result</h2><p id="satelliteImageCaption" role="status" aria-live="polite">Your saved parcel boundary. No satellite picture loaded yet.</p></div></div>
@@ -62,7 +68,7 @@
       <p class="satellite-source">Satellite images: Copernicus Sentinel-2. Base map: Google Maps.</p>
     </section>
     <section class="module-panel satellite-summary" id="satelliteSummary" aria-labelledby="satelliteSummaryHeading" hidden>
-      <div class="module-panel-head"><div><h2 id="satelliteSummaryHeading">What this means</h2></div></div>
+      <div class="module-panel-head"><div><h2 id="satelliteSummaryHeading" tabindex="-1">Read the result</h2><p id="satelliteResultDate"></p></div></div>
       <div class="module-form-body">
         <div class="satellite-result" id="satelliteResult" data-state="empty">
           <p class="satellite-result-label" id="satelliteResultTitle">Your result will appear here</p>
@@ -74,7 +80,7 @@
           <div class="satellite-scale-labels"><span id="satelliteScaleLow">−1 · Lower number</span><span id="satelliteScaleHigh">+1 · Higher number</span></div>
           <p class="satellite-note" id="satelliteScoreHelp">{{ $indexes['ndvi']['reading_help'] }}</p>
         </div>
-        <div class="satellite-next-step"><h3>What to do next</h3><p id="satelliteNextStep">Choose dates and select Find pictures.</p></div>
+        <div class="satellite-next-step"><h3><span class="satellite-step" aria-hidden="true">3</span> Confirm in the field</h3><p id="satelliteNextStep">Choose dates and select Find pictures.</p><button class="module-button" id="satelliteAdjustSearch" type="button" hidden>Review dates &amp; cloud options</button></div>
         <details class="satellite-options satellite-result-details"><summary>Measurement details</summary><dl class="satellite-metrics"><div><dt>Picture date (UTC)</dt><dd id="satelliteDay">—</dd></div><div><dt>Lowest / highest number</dt><dd id="satelliteRange">—</dd></div><div><dt>Picture squares used (pixels)</dt><dd id="satellitePixels">—</dd></div></dl><p class="satellite-note" id="satelliteResolution">Each picture square is about 10 metres across. This count is not the percentage of your field that is clear.</p></details>
         <p class="satellite-caution">Use this to plan a field check. The number is not a health grade or proof of drought.</p>
         <a class="module-button" href="{{ route('farm-plots.agronomy.show', $plot) }}">Compare checks &amp; record a field visit</a>
@@ -85,7 +91,7 @@
     <summary><span>Compare dates</span><span class="satellite-note" id="satelliteHistorySummary">Find pictures to see past readings</span></summary>
     <p class="satellite-note">Each dot is a day with a usable reading. Missing days are not zero readings. Compare dates at a similar crop stage.</p>
     <div class="satellite-chart" id="satelliteChart" aria-label="Index observations; complete values in the table below"></div>
-    <div class="module-table-scroll"><table class="module-table"><thead><tr><th scope="col">Date (UTC)</th><th scope="col" id="satelliteHistoryMean">Average NDVI</th><th scope="col">Lowest score</th><th scope="col">Highest score</th><th scope="col">Usable image cells</th><th scope="col">Result</th></tr></thead><tbody id="satelliteHistory"><tr><td colspan="6">Find pictures to see the readings.</td></tr></tbody></table></div>
+    <div class="module-table-scroll"><table class="module-table"><thead><tr><th scope="col">Date (UTC)</th><th scope="col" id="satelliteHistoryMean">Average NDVI</th><th scope="col">Lowest reading</th><th scope="col">Highest reading</th><th scope="col">Usable image cells</th><th scope="col">Result</th></tr></thead><tbody id="satelliteHistory"><tr><td colspan="6">Find pictures to see the readings.</td></tr></tbody></table></div>
   </details>
   <details class="module-panel satellite-method"><summary>How satellite checks work</summary>
     <p>These are dated pictures, not a live view. We use Sentinel-2 images with clouds, shadows and missing data filtered out. A clear picture may cover only part of the parcel; small or narrow parcels may have very few usable pixels. Missing readings never mean zero.</p>

@@ -7,7 +7,7 @@ use App\Modules\Farmers\Application\AssistantDataQuality;
 /** Bounded task routing. Unknown text is never submitted to an external model. */
 final class AssistantIntentResolver
 {
-    public function __construct(private AssistantReportRequest $reports = new AssistantReportRequest, private AssistantAgriculture $agriculture = new AssistantAgriculture) {}
+    public function __construct(private AssistantReportRequest $reports = new AssistantReportRequest, private AssistantAgriculture $agriculture = new AssistantAgriculture, private AssistantRecordTopics $recordTopics = new AssistantRecordTopics) {}
 
     /** @return array{task:string,year:int,farmer_id?:int|null,search?:string,topic?:string,style?:string,kind?:string,language?:string,clarification?:string,clarification_kind?:string,reset_context?:bool,references?:array{task:string,year:int,farmer_id:int|null,pending_scope?:string}} */
     public function resolve(string $message, array $context, string $module, int $currentYear): array
@@ -17,6 +17,9 @@ final class AssistantIntentResolver
         $languageRequest = $this->helpLanguage($text, $context);
         $language = $languageRequest['language'];
         $text = $languageRequest['text'];
+        if (AssistantAgriculture::requestsInstructionOverride($text)) {
+            return $this->clarify(AssistantAgriculture::refusal($language), $year) + ['reset_context' => true];
+        }
         if ($languageRequest['replay']) {
             if (($context['task'] ?? null) === 'help' && is_string($context['help_topic'] ?? null) && isset(OfficeAssistant::TOPICS[$context['help_topic']])) {
                 return ['task' => 'help', 'topic' => $context['help_topic'], 'style' => in_array($context['help_style'] ?? null, OfficeAssistant::STYLES, true) ? $context['help_style'] : 'plain', 'year' => $year, 'language' => $language];
@@ -38,6 +41,7 @@ final class AssistantIntentResolver
         if ($agriculture = $this->agriculture->resolve($text, $year, $language)) {
             return $agriculture;
         }
+        $recordTopic = $this->recordTopics->resolve($text);
         if ($style = $this->helpFollowUpStyle($text)) {
             if (($context['task'] ?? null) === 'identity') {
                 return ['task' => 'identity', 'kind' => 'capabilities', 'year' => $year, 'language' => $language];
@@ -54,10 +58,10 @@ final class AssistantIntentResolver
             || preg_match('/^(?:what\s+can\s+I\s+do\s+here|help\s+me\s+with\s+this\s+page|explain\s+this\s+feature)[.!?\s]*$/iu', $text)) {
             $topic = $this->pageTopic($module);
 
-            return ['task' => 'help', 'topic' => $topic, 'year' => $year, 'language' => $language];
+            return ['task' => 'help', 'topic' => $topic, 'year' => $year, 'language' => $language, 'style' => $this->requestedStyle($text)];
         }
         if (AssistantUtterance::indexComparison($text)) {
-            return ['task' => 'help', 'topic' => 'satellite-indices', 'year' => $year, 'language' => $language];
+            return ['task' => 'help', 'topic' => 'satellite-indices', 'year' => $year, 'language' => $language, 'style' => $this->requestedStyle($text)];
         }
         if (preg_match('/\b(compare|compared|comparison|versus|vs|trend|trends|ihambing|kumpara|year[\s-]+(?:over|on)[\s-]+year)\b/iu', $text)
             || preg_match('/\b(?:this\s+year|ngayong\s+taon)\b.+\b(?:last\s+year|previous\s+year|nakaraang\s+taon)\b|\b(?:last\s+year|previous\s+year|nakaraang\s+taon)\b.+\b(?:this\s+year|ngayong\s+taon)\b/iu', $text)
@@ -76,7 +80,7 @@ final class AssistantIntentResolver
             || (bool) preg_match('/^(?:dashboard|weather|cooperatives?|machinery|backups?|audit\s+trail|geofences?|e?agrilgu|rag|assistant\s+privacy)[.!?\s]*$/iu', $text);
         $workflow = $workflow || (bool) preg_match('/^(?:what\s+(?:is|does|are)|how\s+(?:is|are))\s+(?:(?:the|a|an)\s+)?(?:ndmi|savi|evi)\b|^(?:ndvi|ndmi|savi|evi)[.!?\s]*$/iu', $text);
         $workflow = $workflow || (bool) preg_match('/^(?:what\s+about\s+)?(?:ndvi|ndmi|savi|evi)[.!?\s]*$|^(?:(?:what\s+is|why\s+is|why\s+does)\s+)?(?:the\s+)?(?:el\s+ni[ñn]o(?:\s+readiness)?|climate\s+risk|drought\s+dashboard)\b/iu', $text);
-        if ($workflow) {
+        if ($workflow && $recordTopic === null) {
             if (preg_match('/\b(?:and|also|then|at|pati|tsaka)\s+(?:summarize|show|report|count|buod|ibuod|ipakita|bilangin)\b/iu', $text)) {
                 return $this->clarify('Would you like system instructions or a records report first? I can handle one task at a time.', $year);
             }
@@ -85,7 +89,7 @@ final class AssistantIntentResolver
             }
             $topic = $this->helpTopic($text, $module);
 
-            return $topic ? ['task' => 'help', 'topic' => $topic, 'year' => $year, 'language' => $language]
+            return $topic ? ['task' => 'help', 'topic' => $topic, 'year' => $year, 'language' => $language, 'style' => $this->requestedStyle($text)]
                 : $this->clarify(AssistantAgriculture::refusal($language), $year) + ['reset_context' => true];
         }
         if ($languageRequest['explicit'] || preg_match('/^(?:please\s+)?(?:translate|isalin)\b/iu', $text)) {
@@ -107,10 +111,10 @@ final class AssistantIntentResolver
         // Literal farmer names are not report qualifiers. Recognized subsets
         // must reset pending references before location/year parsing, so a bare
         // follow-up year cannot accidentally return broader office totals.
-        if ($clarification = $this->reportClarification($text, $year)) {
+        if ($recordTopic === null && ($clarification = $this->reportClarification($text, $year))) {
             return $clarification;
         }
-        if ($this->requestsDifferentScope($text)) {
+        if ($recordTopic === null && $this->requestsDifferentScope($text)) {
             return $this->clarify('I can summarize your account’s permitted area. A separate province or municipality filter is not available in this chat yet. Use the register’s location filters for that subset, or ask about your current area.', $year) + ['reset_context' => true];
         }
         preg_match_all('/(?<![\p{L}\d-])\d{4}(?![\p{L}\d-])/u', $text, $matches);
@@ -131,6 +135,17 @@ final class AssistantIntentResolver
         }
         if ($year < 1900 || $year > 2100) {
             return $this->clarify('Choose one reporting year between 1900 and 2100.', $currentYear);
+        }
+        if ($recordTopic !== null) {
+            $explicitPeriod = $years !== [] || preg_match('/\b(?:(?:same|that|last|previous|prior|this|current) year|(?:parehong|nakaraang|ngayong) taon|taong iyon)\b/iu', $text);
+            if ($explicitPeriod && ($clarification = $this->currentSnapshotClarification($recordTopic, $year))) {
+                return $clarification;
+            }
+
+            return ['task' => $recordTopic, 'year' => $year, 'farmer_id' => null];
+        }
+        if ($this->recordTopics->mentionsExtendedRecords($text)) {
+            return $this->clarify('I can read your permitted LGU records for registry sections, cooperatives, machinery, crops and office profiles. Ask for one summary, or “Summarize our LGU records”. For names, status filters, another location or private fields, open the linked register; I will not substitute broader totals.', $year) + ['reset_context' => true];
         }
         $scopeChoice = $this->scopeChoice($text);
         if (in_array($context['pending_scope'] ?? null, ['assistance', 'harvests'], true) && ! empty($context['farmer_id'])) {
@@ -195,7 +210,10 @@ final class AssistantIntentResolver
         if (preg_match('/\b(summary|summarize|overview|workspace|buod)\b/iu', $text)) {
             return ['task' => 'summary', 'year' => $year, 'farmer_id' => null];
         }
-        if ($this->periodFollowUp($text) && in_array($context['task'] ?? null, ['farmers', 'assistance', 'harvests', 'animal-health', 'summary', 'farmer-search', 'farmer', 'farmer-parcels', 'farmer-assistance', 'farmer-harvests'], true)) {
+        if ($this->periodFollowUp($text) && in_array($context['task'] ?? null, ['farmers', 'assistance', 'harvests', 'animal-health', 'summary', 'farmer-search', 'farmer', 'farmer-parcels', 'farmer-assistance', 'farmer-harvests', ...AssistantRecordTopics::TASKS], true)) {
+            if ($clarification = $this->currentSnapshotClarification($context['task'], $year)) {
+                return $clarification;
+            }
             if ($context['task'] === 'farmer-search') {
                 return $this->clarify('Choose a farmer from the search matches first, then ask for that year.', $year);
             }
@@ -203,7 +221,26 @@ final class AssistantIntentResolver
             return ['task' => $context['task'], 'year' => $year, 'farmer_id' => $context['farmer_id'] ?? null];
         }
 
-        return $this->clarify('I help with agriculture, AgriLGU features and permitted office records. I cannot answer unrelated general questions or inspect server files. Ask about crops, soil, irrigation, pests, livestock or fish farming, or name the system feature you need.', $year);
+        return $this->clarify('I help with agriculture, AgriLGU features and permitted office records. I cannot answer unrelated questions or inspect server files. Ask about crops, soil, irrigation, pests, livestock or fish farming, or name the system feature you need.', $year);
+    }
+
+    private function currentSnapshotClarification(string $task, int $year): ?array
+    {
+        if (! in_array($task, AssistantRecordTopics::CURRENT_TASKS, true)) {
+            return null;
+        }
+
+        return $this->clarify('This report reads current saved records; historical snapshots are not available. Ask for the current summary without a year. For annual records, ask about crops, assistance, harvests or Animal Health.', $year) + ['reset_context' => true];
+    }
+
+    private function requestedStyle(string $text): string
+    {
+        return match (true) {
+            (bool) preg_match('/\b(?:steps|step[ -]by[ -]step|numbered|hakbang|isa[ -]isa)\b/iu', $text) => 'steps',
+            (bool) preg_match('/\b(?:briefly|in\s+brief|keep\s+it\s+short|maikli|paikliin)\b/iu', $text) => 'brief',
+            (bool) preg_match('/\b(?:with\s+an?\s+example|give\s+(?:me\s+)?an?\s+example|halimbawa)\b/iu', $text) => 'example',
+            default => 'plain',
+        };
     }
 
     private function reportClarification(string $text, int $year): ?array
@@ -294,6 +331,8 @@ final class AssistantIntentResolver
     private function helpTopic(string $text, string $module): ?string
     {
         return match (true) {
+            (bool) preg_match('/\b(?:outside[ -]lgu|delisted|registry\s+(?:sources?|sections?)|workbook\s+sections?)\b/iu', $text) => 'registry-sections',
+            (bool) preg_match('/\b(?:lgu\s+(?:profiles?|websites?|settings)|office\s+(?:profiles?|details)|issuer\s+settings)\b/iu', $text) => 'lgu-settings',
             (bool) preg_match('/\bprivacy\b|\b(?:send|share|sent|shared)\b.+\b(?:openai|ai|provider)\b|\b(?:openai|provider)\b.+\b(?:record|records|data|conversation)\b|\b(?:protect|protected|protecting)\s+(?:farmer\s+)?(?:data|records)\b/iu', $text) => 'assistant-privacy',
             (bool) preg_match('/\b(rag|retrieval|ai\s+(?:technology|technologies|sdk)|laravel\s+ai|language\s+model|openai)\b/iu', $text) => 'ai-technology',
             (bool) preg_match('/\bel\s+ni[ñn]o\b|\b(?:climate\s+risk|climate\s+readiness|drought\s+dashboard)\b/iu', $text) => 'climate-readiness',
@@ -356,7 +395,9 @@ final class AssistantIntentResolver
         $text = preg_replace('/\b(?:in|for|during|from|sa|noong|ng)\s+(?:the\s+)?(?:same|that|this|current|previous|prior|last)\s+year\b/iu', '', $text);
         $text = preg_replace('/\b(?:sa|noong|ng)\s+(?:parehong|nakaraang|kasalukuyang)\s+taon\b|\b(?:sa|noong|ng)\s+(?:ngayong\s+taon|taong\s+iyon)\b/iu', '', $text);
 
-        return (bool) preg_match('/\b(?:province|provinces|municipality|municipalities|region|regions)\b|\b(?:in|within|from|sa)\s+[\p{L}]/iu', $text);
+        $text = preg_replace('/\b(?:for|at)\s+(?:(?:the|our|my)\s+)?(?:same|that|this|current|previous|prior|last)\s+year\b|\bfor\s+(?:our|my|all)\s+(?:farmers|assistance|harvests|office|area)\b/iu', '', $text);
+
+        return (bool) preg_match('/\b(?:province|provinces|municipality|municipalities|region|regions|barangay|barangays)\b|\b(?:in|within|from|sa|at|for)\s+[\p{L}]/iu', $text);
     }
 
     private function clarify(string $message, int $year): array

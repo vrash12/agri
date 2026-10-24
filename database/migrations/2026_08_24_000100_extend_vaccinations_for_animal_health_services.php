@@ -15,10 +15,10 @@ return new class extends Migration
 
         $driver = DB::connection()->getDriverName();
         if (in_array($driver, ['mysql', 'mariadb'], true)) {
-            DB::statement("ALTER TABLE `anti_rabies_vaccinations` MODIFY `pet_type` VARCHAR(60) NOT NULL");
-            DB::statement("ALTER TABLE `anti_rabies_vaccinations` MODIFY `birthday` DATE NULL");
-            DB::statement("ALTER TABLE `anti_rabies_vaccinations` MODIFY `pet_breed` VARCHAR(120) NULL");
-            DB::statement("ALTER TABLE `anti_rabies_vaccinations` MODIFY `pet_name` VARCHAR(120) NULL");
+            DB::statement('ALTER TABLE `anti_rabies_vaccinations` MODIFY `pet_type` VARCHAR(60) NOT NULL');
+            DB::statement('ALTER TABLE `anti_rabies_vaccinations` MODIFY `birthday` DATE NULL');
+            DB::statement('ALTER TABLE `anti_rabies_vaccinations` MODIFY `pet_breed` VARCHAR(120) NULL');
+            DB::statement('ALTER TABLE `anti_rabies_vaccinations` MODIFY `pet_name` VARCHAR(120) NULL');
         }
 
         Schema::table('anti_rabies_vaccinations', function (Blueprint $table) {
@@ -87,6 +87,9 @@ return new class extends Migration
         ));
 
         if ($existing !== []) {
+            if (Schema::hasIndex('anti_rabies_vaccinations', 'anti_rabies_vaccinations_service_type_index')) {
+                Schema::table('anti_rabies_vaccinations', fn (Blueprint $table) => $table->dropIndex('anti_rabies_vaccinations_service_type_index'));
+            }
             Schema::table('anti_rabies_vaccinations', function (Blueprint $table) use ($existing) {
                 $table->dropColumn($existing);
             });

@@ -47,8 +47,10 @@
     });
     if (exact.length) return exact;
 
+    var parts = query.split(/[\s,]+/).filter(Boolean);
     return entries.filter(function (entry) {
-      return entry.label.toLowerCase().indexOf(query) !== -1;
+      return entry.label.toLowerCase().indexOf(query) !== -1 || (parts.length > 1 && parts.length <= 8 &&
+        parts.every(function (part) { return clean(entry.name).toLowerCase().indexOf(part) !== -1; }));
     });
   }
 
@@ -73,10 +75,10 @@
         Number(json.total).toLocaleString() + ' matches. Enter more of the AgriLGU ID, name or FFRS.';
     }
     if (entries.length === 1) {
-      return 'Ready to locate ' + entries[0].name + '.';
+      return 'Ready to open ' + entries[0].name + '. Choose Open farmer or press Enter.';
     }
 
-    return entries.length.toLocaleString() + ' matches. Enter more of the AgriLGU ID, name or FFRS.';
+    return entries.length.toLocaleString() + ' matches. Choose the matching name and ID from the suggestions, or type more to narrow the search.';
   }
 
   function start() {
@@ -158,6 +160,9 @@
       lastTerm = term;
 
       if (debounce) window.clearTimeout(debounce);
+      // Invalidate immediately, including while the next search is debouncing
+      // or when the box becomes empty. Old requests may finish out of order.
+      inFlight = null;
 
       var selected = entries.filter(function (entry) {
         return entry.label.toLowerCase() === term.toLowerCase();
@@ -166,14 +171,14 @@
         // Selecting a datalist option is not a new server search for its formatted label.
         inFlight = null;
         syncLocateState();
-        setHelp('Ready to locate ' + selected[0].name + '.');
+        setHelp('Ready to open ' + selected[0].name + '. Choose Open farmer or press Enter.');
         return;
       }
 
+      entries = [];
+      renderOptions();
+      locateButton.disabled = true;
       if (term.length < MIN_QUERY) {
-        entries = [];
-        renderOptions();
-        locateButton.disabled = true;
         setHelp(helpTextFor(null, entries, term, workspaceTotal, workspaceLabel));
 
         return;
@@ -192,6 +197,7 @@
       }
 
       if (typeof window.__openFarmer3d !== 'function') {
+        setHelp('The map is not ready yet. Use Reload map if it cannot load, or open the farmer registry to view records.');
         if (typeof window.__mapToast === 'function') {
           window.__mapToast('The map is still loading. Try again in a moment.', 'warn');
         }
@@ -204,6 +210,18 @@
       window.__openFarmer3d(matches[0].id);
       syncLocateState();
     }
+
+    document.querySelectorAll('.parcel-workspace-shortcuts a').forEach(function (link) {
+      link.addEventListener('click', function (event) {
+        if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || (event.button != null && event.button !== 0)) return;
+        var target = document.getElementById(link.getAttribute('href').slice(1));
+        if (!target) return;
+        if (target.tagName === 'DETAILS') {
+          target.open = true;
+        }
+        target.focus();
+      });
+    });
 
     function syncSelectionActions() {
       var value = clean(selectedName ? selectedName.textContent : '');
