@@ -1,6 +1,7 @@
 # Operational UX follow-up — October 25, 2026
 
-Local implementation and isolated verification only. Not pushed or deployed.
+Deployed in runtime `cdbc85c` on October 25, 2026; see [live release evidence](OPERATIONAL_RELEASE_2026_10_25.md).
+The local verification and acceptance limits below describe the development checkpoints.
 
 ## Follow-up refinements
 

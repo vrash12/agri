@@ -1,5 +1,7 @@
 # Design and UX implementation record
 
+October 25 deployment: runtime `cdbc85c` installs the local UX/refinement work described below. Read-only live renders, public HTTPS and all nine served asset checks passed, with database/settings preservation. Browser access remained disabled for this release, so fresh visual/device acceptance remains unverified. See [the release receipt](docs/OPERATIONAL_RELEASE_2026_10_25.md).
+
 October 25 refinement checks (local; not deployed): full-name finder matching, immediate stale-response invalidation, consistent complete-day satellite presets and browser-history retry states have regression coverage. The broad PHP suite passed 2,093 tests with seven MySQL/MariaDB-only backup tests skipped on SQLite; all 357 JavaScript tests passed. Browser access was disabled in Work settings during this follow-up, so its new behavior has no fresh visual/device sign-off. Earlier synthetic browser observations below remain dated evidence. See [the updated receipt](docs/OPERATIONAL_UX_2026_10_25.md).
 
 October 25 local operational UX follow-up (not deployed): visible LGU charts with native figures, parcel-first detail hierarchy with explicit retrieval states, and guided satellite checks reuse existing green/yellow tokens and scoped data. Desktop and emulated-phone browser review used isolated synthetic records; live map/satellite provider rendering, physical devices, screen-reader audio and staff acceptance remain unverified. See [the implementation receipt](docs/OPERATIONAL_UX_2026_10_25.md).

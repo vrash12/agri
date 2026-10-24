@@ -1,6 +1,6 @@
 # LGU-specific office sign-in
 
-Status: October 21, 2026 local implementation; not pushed or deployed. The owner selected an LGU-branded sign-in entry that opens the existing secure central dashboard. This does not move office modules onto tenant hosts or create accounts.
+Status: deployed October 25, 2026 in runtime `cdbc85c`; the live Mayantoc tenant sign-in redirects to its scoped central form. See [the release receipt](OPERATIONAL_RELEASE_2026_10_25.md). The owner selected an LGU-branded sign-in entry that opens the existing secure central dashboard. This does not move office modules onto tenant hosts or create accounts.
 
 ## Workflow
 

@@ -1,6 +1,6 @@
 # LGU record retrieval and Assistant UX
 
-Status: local source and isolated verification, October 24–25, 2026. Not deployed.
+Status: deployed October 25, 2026 in runtime `cdbc85c`; see [the verified release](OPERATIONAL_RELEASE_2026_10_25.md). Local test checkpoints and remaining acceptance limits are retained below.
 
 ## Record coverage
 

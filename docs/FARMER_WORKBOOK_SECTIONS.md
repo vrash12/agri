@@ -1,6 +1,6 @@
 # Farmer workbook reference sections
 
-Status: October 21, 2026 local implementation, not pushed or deployed.
+Status: deployed October 25, 2026 in runtime `cdbc85c`; both live read-only section renders passed without changing source rows. See [the verified release](OPERATIONAL_RELEASE_2026_10_25.md). Earlier local verification notes below retain their checkpoint context.
 
 Farmers navigation now includes **Farmer registry**, **Parcel map**, **Outside
 LGU** and **Delisted**. The last two are read-only views of retained

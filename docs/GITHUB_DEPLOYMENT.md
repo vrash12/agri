@@ -1,5 +1,18 @@
 # GitHub-to-Hostinger deployment
 
+## Verified operational release — October 25, 2026
+
+Runtime `cdbc85c1851c94491bfa0d495eabf31efa15fb19` was pushed to main and
+installed by Hostinger fast-forward pull from `69cb9f5`. The scoped Assistant,
+dashboard/parcel/satellite UX, finder, workbook sections and pending LGU sign-in,
+footer and sharp ID mark are live. All 27 tables / 10,028 rows, schemas, environment,
+migration receipts and provider counters were preserved. No migrations or account
+operations ran; the fresh-installation source was included without execution.
+Nine public assets were mirrored and autoload/configuration/route/view caches
+rebuilt. Live read-only renders, HTTPS routes and served assets passed. The demo
+remains a separate pinned installation. See [the receipt](OPERATIONAL_RELEASE_2026_10_25.md).
+Local-only headings below retain their original checkpoint context.
+
 ## Local operational UX follow-up — October 25, 2026 (not deployed)
 
 [The dashboard, parcel and satellite UX receipt](OPERATIONAL_UX_2026_10_25.md)

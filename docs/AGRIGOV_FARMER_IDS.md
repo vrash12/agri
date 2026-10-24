@@ -14,7 +14,8 @@ signature area. The existing record creation date is labeled Registered.
 Screen/print and canvas use the same artwork version `20261020-open-field`.
 No record, schema, permission, QR destination or parcel-address rule changes.
 
-Sharp-mark follow-up — October 21, 2026 (local, not deployed): the farmer-card
+Sharp-mark follow-up — implemented October 21 and deployed October 25, 2026 in
+runtime `cdbc85c` (see [the receipt](OPERATIONAL_RELEASE_2026_10_25.md)): the farmer-card
 front now uses the existing transparent 1,254 × 1,254 `eagrilgu-mark-v1.png`
 source instead of the 236 × 236 compatibility raster. The same versioned source
 is used by the HTML/print card and canvas PNG export; canvas downsampling enables

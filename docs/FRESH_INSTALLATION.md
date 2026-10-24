@@ -1,6 +1,6 @@
 # Reproducible fresh installation
 
-Status: implemented locally October 24, 2026; not deployed. This guide supersedes the former requirement to obtain a legacy SQL baseline for a **new empty installation**. It does not authorize changes to any existing database.
+Status: source included in runtime `cdbc85c`, deployed October 25, 2026. No production migration or owner bootstrap ran; existing schema/receipts were preserved. This guide supersedes the former requirement to obtain a legacy SQL baseline for a **new empty installation**. It does not authorize changes to any existing database. See [the release receipt](OPERATIONAL_RELEASE_2026_10_25.md).
 
 ## Runtime and prerequisites
 

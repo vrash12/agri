@@ -1,6 +1,6 @@
 # Agriculture scope and gradual replies
 
-Status: local implementation on October 21, 2026; not pushed or deployed. The owner corrected the scope to agriculture and related topics only. The proposed unrestricted General questions feature was removed before deployment.
+Status: deployed October 25, 2026 in runtime `cdbc85c`; see [the release receipt](OPERATIONAL_RELEASE_2026_10_25.md). The owner corrected the scope to agriculture and related topics only. The proposed unrestricted General questions feature was removed before deployment.
 
 ## Scope and privacy
 
