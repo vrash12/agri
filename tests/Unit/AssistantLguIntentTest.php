@@ -42,6 +42,9 @@ final class AssistantLguIntentTest extends TestCase
             ['Ilan ang mga kooperatiba sa aming LGU?', 'cooperatives'],
             ['Paki ipakita ang mga makinarya sa ating LGU', 'machinery'],
             ['Ipakita ang mga pananim noong 2025', 'crops', 2025],
+            ['Summarize our farmers in our LGU', 'farmers'],
+            ['Show harvests in my LGU for 2025', 'harvests', 2025],
+            ['Ilan ang magsasaka sa ating LGU?', 'farmers'],
         ];
     }
 
@@ -66,6 +69,14 @@ final class AssistantLguIntentTest extends TestCase
             'Show their cooperatives', 'Show farmers younger than 30',
             'How many farmers are delisted in Ramos?', 'Ilan ang delisted na magsasaka na babae?',
             'Show LGU profile setup and passwords', 'Paki ipakita ang mga makinarya sa ibang LGU',
+            'Show farmers in our LGU within Foreign municipality',
+            'Show farmers in our LGU in Ramos',
+            'Show farmers in our LGU Ramos',
+            'Show farmers in our LGU and Ramos',
+            'Show harvests in my LGU for 2025 in Ramos',
+            'Show farmers within our area Ramos',
+            'Ilan ang magsasaka sa ating LGU Ramos?',
+            'Show farmers in another LGU',
         ]);
     }
 

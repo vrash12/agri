@@ -159,6 +159,26 @@ class FarmerWorkspaceHierarchyTest extends TestCase
         }
     }
 
+    public function test_insight_breakdowns_follow_the_filtered_registry_without_changing_map_scope(): void
+    {
+        DB::table('farmers')->insert(['id' => 70, 'municipality_id' => 1, 'first_name' => 'Local',
+            'last_name' => 'Unmapped', 'gender' => 'Male', 'farm_location' => 'Local hillside']);
+        $staff = $this->user(User::ROLE_MUNICIPAL_STAFF, ['municipality_id' => 1]);
+        $view = $this->index($staff, ['mapping' => 'unmapped']);
+        $data = $view->getData();
+        $this->assertSame(1, $data['totalFarmers']);
+        $this->assertEquals(['Male' => 1], $data['genderStats']->all());
+        $this->assertEquals(['Local hillside' => 1], $data['locationStats']->all());
+        $this->assertSame(2, $data['mapFarmerCount']);
+        $html = $view->render();
+        $xpath = $this->xpath($html);
+        $insights = $xpath->query('//*[@id="farmerInsights"]')->item(0)->textContent;
+        $this->assertStringContainsString('Parcel status: Needs mapping', $insights);
+        $this->assertStringContainsString('100.0%', $insights);
+        $this->assertStringNotContainsString('Barangay 2', $insights);
+        $this->assertStringNotContainsString('Female', $insights);
+    }
+
     public function test_inactive_municipalities_and_provinces_are_excluded_from_default_records_and_map(): void
     {
         DB::table('municipalities')->where('id', 3)->update(['is_active' => false]);

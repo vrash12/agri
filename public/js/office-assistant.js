@@ -24,6 +24,9 @@
   const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
   let suggestedDraft = null, latestSuggestions = new Set();
   const suggestionControls = new WeakSet();
+  const agricultureTopics = new Set(['agriculture-basics', 'soil-health', 'crop-rotation',
+    'crop-nutrition', 'seed-selection', 'crop-establishment', 'irrigation',
+    'pest-management', 'livestock-care', 'aquaculture']);
 
   const validToken = (value) => typeof value === 'string' && value.length > 0
     && value.length <= 4096 && !/[\u0000-\u0020\u007f]/.test(value);
@@ -52,8 +55,9 @@
       input.focus();
     }
   }
-  function replyLabel(guide, source) {
-    return guide.name + (source === 'records' ? ' · Office records' : source === 'help' ? ' · System guide' : '');
+  function replyLabel(guide, source, topic) {
+    return guide.name + (source === 'records' ? ' · Office records'
+      : source === 'help' ? (agricultureTopics.has(topic) ? ' · Agriculture guide' : ' · System guide') : '');
   }
   function updateCount() { count.textContent = input.value.length + ' / 800'; }
   function refreshControls() {
@@ -383,16 +387,34 @@
     }
     reply.entry.append(evidence);
   }
+  function renderDelivery(reply, data) {
+    if (data.source !== 'help') return;
+    // Delivery describes how this reply was supplied, not whether its claims
+    // have been independently verified. Never render a provider-supplied label.
+    const labels = new Map([
+      ['ai', 'AI-assisted explanation'],
+      ['cache', 'Saved AI-assisted explanation'],
+      ['guide', 'Reviewed guide text'],
+      ['unavailable', 'Guidance unavailable']
+    ]);
+    const label = labels.get(data.delivery);
+    if (!label) return;
+    const note = document.createElement('p');
+    note.className = 'assistant-delivery';
+    note.textContent = label;
+    reply.entry.append(note);
+  }
   function showReply(reply, text, data, animate = false) {
     const atBottom = nearBottom();
     latestSuggestions = new Set();
     clearThinking(reply);
     reply.entry.classList.remove('is-pending', 'is-error');
     reply.entry.removeAttribute('aria-busy');
-    reply.label.textContent = replyLabel(reply.guide, data?.source);
+    reply.label.textContent = replyLabel(reply.guide, data?.source, data?.report);
     reply.content = answerContent(text);
     reply.entry.replaceChildren(reply.label, reply.content);
     if (data) {
+      renderDelivery(reply, data);
       renderEvidence(reply, data);
       const actions = actionContainer(reply);
       (Array.isArray(data.actions) ? data.actions : []).slice(0, 6).forEach((action) => {

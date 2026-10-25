@@ -8,8 +8,22 @@ use App\Support\LocalTime;
 /** Small, application-owned prompts; never inferred from reply text or records. */
 final class AssistantNextSteps
 {
+    /** Application-owned messages, never fragments of the user's question. */
+    private const AGRICULTURE_PROMPTS = [
+        'agriculture-basics' => ['Farming basics', 'What is agriculture?'],
+        'soil-health' => ['Soil health', 'How can I improve soil health?'],
+        'crop-rotation' => ['Crop rotation', 'Explain crop rotation'],
+        'crop-nutrition' => ['Crop nutrition', 'What is NPK fertilizer?'],
+        'seed-selection' => ['Choosing seed', 'How do I choose good seeds?'],
+        'crop-establishment' => ['Planting basics', 'How do I plant rice?'],
+        'irrigation' => ['Water management', 'Explain irrigation'],
+        'pest-management' => ['Pest management', 'What is integrated pest management?'],
+        'livestock-care' => ['Livestock care', 'How do I care for farm animals?'],
+        'aquaculture' => ['Fish farming', 'Explain aquaculture'],
+    ];
+
     /** @return list<array{label:string,message:string}> */
-    public function forReply(User $user, array $reply, array $references = [], ?string $clarificationKind = null): array
+    public function forReply(User $user, array $reply, array $references = [], ?string $clarificationKind = null, array $helpTopics = []): array
     {
         $veterinary = $user->isProvincialVeterinaryOffice();
         if ($reply['source'] === 'help') {
@@ -24,6 +38,23 @@ final class AssistantNextSteps
             ];
         }
         if ($reply['source'] === 'clarification') {
+            if ($clarificationKind === 'agriculture') {
+                $suggestions = [];
+                foreach (array_slice($helpTopics, 0, 3) as $topic) {
+                    if (! is_string($topic) || ! isset(self::AGRICULTURE_PROMPTS[$topic])
+                        || ($veterinary && ! in_array($topic, OfficeAssistant::VETERINARY_TOPICS, true))) {
+                        continue;
+                    }
+                    $suggestions[$topic] = $this->prompt(...self::AGRICULTURE_PROMPTS[$topic]);
+                }
+                if ($suggestions !== []) {
+                    return array_values($suggestions);
+                }
+                if ($veterinary) {
+                    return [$this->prompt(...self::AGRICULTURE_PROMPTS['livestock-care']),
+                        $this->prompt('Animal Health help', 'How do I record animal services?')];
+                }
+            }
             if ($clarificationKind === 'scope' && ! $veterinary) {
                 return [$this->prompt('Selected farmer', 'Selected farmer'), $this->prompt('Whole office', 'Whole office')];
             }

@@ -2,6 +2,73 @@
 
 Status: deployed October 25, 2026 in runtime `cdbc85c`; see [the release receipt](OPERATIONAL_RELEASE_2026_10_25.md). The owner corrected the scope to agriculture and related topics only. The proposed unrestricted General questions feature was removed before deployment.
 
+## October 25 guidance refinement (local; not deployed)
+
+This subsequent improvement is local source only. The previous release above does
+not include it or the separately pending Registry insights redesign.
+
+The local intent resolver now separates several ordinary farming questions from
+software workflows:
+
+- “How do I improve my harvest?” and “How do I increase rice production?” ask
+  whether the user wants soil health, crop nutrition or irrigation guidance.
+- “Why is my rice yellow?” retrieves reviewed pest-management guidance, which
+  explicitly says yellow leaves alone do not diagnose a pest, disease or nutrient
+  problem. “How many times should I water rice?” retrieves general irrigation
+  principles; it does not invent a watering schedule.
+- Multiple recognized farming topics ask which to explain first. Specific dose,
+  diagnosis or live-price questions retain their limitation and offer the related
+  general topic instead of a generic system-help dead end.
+- “Summarize our farmers in our LGU” keeps the authenticated account's scope.
+  Named location suffixes still clarify. “How many irrigation assistance releases
+  are recorded?” clarifies the unsupported input filter instead of returning all
+  assistance releases.
+
+`help_topics` contains at most three unique canonical agriculture keys. It never
+stores the question, farmer references or new conversation authority. The
+application constructs and role-filters suggested prompts; unrelated/override
+requests cannot use this mechanism to create a provider question. Selecting a
+suggestion fills an editable draft and does not submit it. The next request is
+authorized normally, and previous private context is cleared on these agriculture
+clarifications.
+
+The chat welcome includes a collapsed **Explore agriculture topics** disclosure.
+Its ten reviewed topics include soil, planting, irrigation, pests and fish farming;
+veterinary users receive livestock guidance only. Help replies now distinguish
+**Agriculture guide** from **System guide**. A delivery label identifies generated,
+cached, reviewed-text or unavailable guidance. These labels describe delivery,
+not factual certification. Scope, sources, gradual reveal and read-only local
+record reporting are unchanged.
+
+Verification:
+
+- Final complete Assistant PHP run: **1,043 tests / 8,063 assertions passed**.
+  Coverage includes new prompt routing, mixed topics, every rendered topic
+  shortcut, canonical-only provider inputs, cleared private references, role and
+  municipality isolation, unsupported filters, budgets, source checks and failure
+  paths. All provider calls were faked or prevented.
+- **62 chat JavaScript tests passed**, including safe delivery labels, role-specific
+  topic controls, editable drafts, typing, stale replies, retry and source rendering.
+- Separate understanding/architecture/composition run: **104 tests / 2,635
+  assertions passed**. These overlap the complete Assistant run above.
+- Changed PHP passed Pint and syntax checks; the existing POST route was checked,
+  Blade compiled in private isolated storage, and JavaScript syntax/whitespace
+  checks passed.
+- A normal signed-in browser session on the isolated synthetic MariaDB application
+  verified keyboard topic expansion, draft preservation, three harvest-improvement
+  choices, semantic numbered replies and the correct two-farmer account total.
+  Dialog/content/follow-up rows did not overflow a measured 389px viewport.
+  Screenshots were unavailable, so this is DOM/keyboard/layout-measurement evidence,
+  not complete visual, physical-device or screen-reader acceptance. Fake help
+  responses do not establish live-provider answer accuracy.
+
+Release the changed Assistant application classes, shared Assistant partial and
+both public CSS/JavaScript assets together. Hostinger's separate `public_html`
+needs the same public assets; refresh optimized autoloading and normal view caches.
+There is no migration, training upload, dependency/model change, provider-budget
+change or operational data write. Do not clear the general cache or alter the
+separately pinned demo. Production deployment requires the owner's instruction.
+
 ## Scope and privacy
 
 The Assistant explains agriculture, crops, soil, irrigation, pests, livestock and aquaculture through existing reviewed topics. AgriLGU workflows and authorized local office reports remain supported. Unrelated questions are declined locally; unsupported or ambiguous farming questions may need clarification or office advice. No arbitrary general-writing, math, coding or everyday-topic provider path is exposed. Unsupported report subsets still clarify rather than returning broader totals.

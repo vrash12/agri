@@ -53,15 +53,64 @@ final class AssistantAgriculture
         }
         // Existing record and software requests retain their policies, query
         // scope and exact workflow. Ordinary farm advice has no database path.
-        if (preg_match('/\b(?:e?agrilgu|system|assistant|dashboard|records?|recorded|registry|register|registration|import|upload|export|download|workbook|spreadsheet|excel|draw|drawing|plotting|map|mapping|boundary|boundaries|parcel|parcels|plots?|mapa|hangganan|assistance|release|releases|distribution|reports?|summary|summarize|count|listed|selected|his|her|their|niya|kanyang|account|login|password|qr|portal|id|audit|backup|ndvi|ndmi|savi|evi|satellite|pagasa|forecast|readiness|climate\s+risk|magtala|itala|ipakita|buod|hanapin|gumuhit)\b|\b(?:how\s+many|ilan|ilang|who\s+received)\b/iu', $text)) {
+        if (preg_match('/\b(?:e?agrilgu|system|assistant|dashboard|records?|recorded|registry|register|registration|import|upload|export|download|workbook|spreadsheet|excel|draw|drawing|plotting|map|mapping|boundary|boundaries|parcel|parcels|plots?|mapa|hangganan|assistance|release|releases|distribution|reports?|summary|summarize|count|listed|selected|his|her|their|niya|kanyang|account|login|password|qr|portal|id|audit|backup|ndvi|ndmi|savi|evi|satellite|pagasa|forecast|readiness|climate\s+risk|magtala|itala|ipakita|buod|hanapin|gumuhit)\b/iu', $text)) {
+            return null;
+        }
+        // A watering-frequency question is farm guidance, not a record count.
+        // Keep all operational nouns above authoritative, and never invent a
+        // watering schedule from this wording or from a previous farmer reply.
+        $wateringFrequency = (bool) preg_match('/^(?:how\s+many\s+times|how\s+often|ilang\s+beses|gaano\s+kadalas)\b/iu', $text)
+            && (bool) preg_match('/\b(?:water|watering|irrigate|irrigation|diligan|magdilig|patubigan)\b/iu', $text)
+            && (bool) preg_match('/\b(?:rice|corn|crops?|plants?|palay|mais|pananim|halaman|gulay)\b/iu', $text);
+        if (! $wateringFrequency && preg_match('/\b(?:how\s+many|ilan|ilang|who\s+received)\b/iu', $text)) {
             return null;
         }
         if (preg_match('/^(?:seeds?|binhi|lupa)[.!?\s]*$/iu', $text)) {
             return null;
         }
-        $topic = match (true) {
+
+        // A broad yield goal has several causes; offer reviewed starting points
+        // instead of answering with software harvest-entry or crop-drawing help.
+        if (preg_match('/\b(?:improve|increase|boost|raise)\b.{0,40}\b(?:harvest|harvests|yield|yields|crop\s+production|rice\s+production|corn\s+production)\b|\b(?:maparami|mapataas|pagandahin)\b.{0,40}\b(?:ani|produksyon)\b/iu', $text)) {
+            return $this->agricultureClarification($language === 'fil'
+                ? 'Maraming salik ang nakaaapekto sa ani. Alin ang gusto mong unahin: kalusugan ng lupa, nutrisyon ng pananim o patubig? Pangkalahatang gabay lang ito; hindi ko nasuri ang iyong bukid.'
+                : 'Harvest improvement depends on several factors. Which would you like to start with: soil health, crop nutrition or irrigation? I can explain general principles, but I have not assessed your field.',
+                $year, ['soil-health', 'crop-nutrition', 'irrigation']);
+        }
+
+        $topic = $wateringFrequency ? 'irrigation' : $this->topic($text);
+        if ($topic === null) {
+            return null;
+        }
+        $topics = [];
+        foreach (preg_split('/\s+(?:and(?:\s+also)?|also|then|versus|vs\.?|compared\s+to|at|pati|tsaka)\s+|\s*;\s*/iu', $text) as $clause) {
+            if (($clauseTopic = $this->topic($clause)) !== null) {
+                $topics[] = $clauseTopic;
+            }
+        }
+        $topics = array_values(array_unique($topics));
+        if (count($topics) > 1) {
+            return $this->agricultureClarification($language === 'fil'
+                ? 'May higit sa isang paksa sa agrikultura sa tanong mo. Alin ang gusto mong unahin? Pumili ng isang paksa para maipaliwanag ko ang kaugnay na sinuring gabay.'
+                : 'Your question covers more than one agriculture topic. Which would you like to start with? Choose one so I can explain the relevant reviewed guidance.',
+                $year, $topics);
+        }
+        if (preg_match('/\b(?:today|tomorrow|latest|current\s+price|price|prices|market\s+rate|dosage|dose|dosages|mixing\s+ratio|how\s+much|how\s+many\s+(?:bags|kg|kilograms)|ilang\s+sako|magkano|gamot|diagnose|diagnosis|cure|prescribe|sick|dying)\b/iu', $text)) {
+            return $this->agricultureClarification($language === 'fil'
+                ? 'Pangkalahatang gabay sa agrikultura ang maibibigay ko. Wala akong kasalukuyang presyo, pagsusuri ng iyong bukid o hayop, o batayan para sa eksaktong dosis. Kumonsulta sa agriculture office o beterinaryo para sa tiyak na rekomendasyon; maaari kong ipaliwanag muna ang pangkalahatang paksa.'
+                : 'I can explain general agriculture principles. I do not have live prices, an assessment of your field or animals, or evidence for an exact dose. Ask your agriculture office or veterinarian for a specific recommendation, or ask me to explain the general topic.',
+                $year, [$topic]);
+        }
+
+        return ['task' => 'help', 'topic' => $topic, 'year' => $year, 'language' => $language,
+            'style' => preg_match('/\b(?:steps|step.by.step|numbered|list|hakbang|isa.isa)\b/iu', $text) ? 'steps' : 'plain'];
+    }
+
+    private function topic(string $text): ?string
+    {
+        return match (true) {
             (bool) preg_match('/\b(?:crop\s+rotation|rotating\s+crops?|intercropping|crop\s+diversification|pagpapalit(?:-palit)?\s+ng\s+pananim)\b/iu', $text) => 'crop-rotation',
-            (bool) preg_match('/\b(?:pests?|insects?|weeds?|ipm|integrated\s+pest|pesticides?|crop\s+disease|yellow(?:ing)?\s+(?:leaves|leaf)|leaves\s+(?:turning\s+)?yellow|naninilaw|peste|damo|sakit\s+ng\s+(?:halaman|palay|pananim))\b/iu', $text) => 'pest-management',
+            (bool) preg_match('/\b(?:pests?|insects?|weeds?|ipm|integrated\s+pest|pesticides?|crop\s+disease|yellow(?:ing)?\s+(?:leaves|leaf)|leaves\s+(?:turning\s+)?yellow|naninilaw|peste|damo|sakit\s+ng\s+(?:halaman|palay|pananim))\b|\b(?:rice|corn|crops?|plants?|palay|mais|pananim)\b.{0,30}\byellow(?:ing)?\b|\byellow(?:ing)?\s+(?:rice|corn|crops?|plants?)\b/iu', $text) => 'pest-management',
             (bool) preg_match('/\b(?:aquaculture|fish\s+farm(?:ing)?|fish\s+pond|fishpond|fish\s+feed|fingerlings?|tilapia|hito|bangus|catfish|palaisdaan|pag-aalaga\s+ng\s+isda)\b/iu', $text) => 'aquaculture',
             (bool) preg_match('/\b(?:livestock|poultry|cattle|cows?|goats?|pigs?|chickens?|carabao|farm\s+animals?|biosecurity|husbandry|baka|baboy|manok|kambing|kalabaw)\b/iu', $text) => 'livestock-care',
             (bool) preg_match('/\b(?:fertili[sz]ers?|nitrogen|phosphorus|potassium|npk|crop\s+nutri(?:tion|ents)|abono|pataba)\b/iu', $text) => 'crop-nutrition',
@@ -72,17 +121,13 @@ final class AssistantAgriculture
             (bool) preg_match('/\b(?:agriculture|farming|agricultural|agrikultura|pagsasaka|sakahan)\b/iu', $text) => 'agriculture-basics',
             default => null,
         };
-        if ($topic === null) {
-            return null;
-        }
-        if (preg_match('/\b(?:today|tomorrow|latest|current\s+price|price|prices|market\s+rate|dosage|dose|dosages|mixing\s+ratio|how\s+much|how\s+many\s+(?:bags|kg|kilograms)|ilang\s+sako|magkano|gamot|diagnose|diagnosis|cure|prescribe|sick|dying)\b/iu', $text)) {
-            return $this->clarify($language === 'fil'
-                ? 'Pangkalahatang gabay sa agrikultura ang maibibigay ko. Wala akong kasalukuyang presyo, pagsusuri ng iyong bukid o hayop, o batayan para sa eksaktong dosis. Kumonsulta sa agriculture office o beterinaryo para sa tiyak na rekomendasyon; maaari kong ipaliwanag muna ang pangkalahatang paksa.'
-                : 'I can explain general agriculture principles. I do not have live prices, an assessment of your field or animals, or evidence for an exact dose. Ask your agriculture office or veterinarian for a specific recommendation, or ask me to explain the general topic.', $year);
-        }
+    }
 
-        return ['task' => 'help', 'topic' => $topic, 'year' => $year, 'language' => $language,
-            'style' => preg_match('/\b(?:steps|step.by.step|numbered|list|hakbang|isa.isa)\b/iu', $text) ? 'steps' : 'plain'];
+    /** Only canonical topic IDs, never question text or record references. */
+    private function agricultureClarification(string $answer, int $year, array $topics): array
+    {
+        return $this->clarify($answer, $year) + ['clarification_kind' => 'agriculture',
+            'help_topics' => array_slice(array_values(array_unique(array_intersect($topics, array_keys(self::TOPICS)))), 0, 3)];
     }
 
     private function clarify(string $answer, int $year): array

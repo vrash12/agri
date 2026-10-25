@@ -9,7 +9,7 @@ final class AssistantIntentResolver
 {
     public function __construct(private AssistantReportRequest $reports = new AssistantReportRequest, private AssistantAgriculture $agriculture = new AssistantAgriculture, private AssistantRecordTopics $recordTopics = new AssistantRecordTopics) {}
 
-    /** @return array{task:string,year:int,farmer_id?:int|null,search?:string,topic?:string,style?:string,kind?:string,language?:string,clarification?:string,clarification_kind?:string,reset_context?:bool,references?:array{task:string,year:int,farmer_id:int|null,pending_scope?:string}} */
+    /** @return array{task:string,year:int,farmer_id?:int|null,search?:string,topic?:string,style?:string,kind?:string,language?:string,clarification?:string,clarification_kind?:string,help_topics?:list<string>,reset_context?:bool,references?:array{task:string,year:int,farmer_id:int|null,pending_scope?:string}} */
     public function resolve(string $message, array $context, string $module, int $currentYear): array
     {
         $text = AssistantUtterance::normalize($message);
@@ -349,7 +349,7 @@ final class AssistantIntentResolver
             (bool) preg_match('/\bevi\b/iu', $text) => 'evi',
             (bool) preg_match('/\b(ndvi|satellite)\b/iu', $text) => 'ndvi',
             (bool) preg_match('/\b(?:assistance|release|releases|beneficiar(?:y|ies))\s+(?:coverage|map)\b|\bcoverage\s+map\b/iu', $text) => 'assistance-coverage',
-            (bool) preg_match('/\b(harvest|harvests|ani)\b/iu', $text) => 'harvest-entry',
+            (bool) preg_match('/\b(harvest|harvests|(?:crop|rice|corn)\s+production|ani)\b/iu', $text) => 'harvest-entry',
             (bool) preg_match('/\b(animal|animals|vaccination|vaccinations|deworming|dog|dogs|cow|cows|hayop)\b/iu', $text) => 'animals',
             (bool) preg_match('/\b(kml|kmz)\b/iu', $text) => 'parcel-drawing',
             (bool) preg_match('/\b(import(?:ing)?|upload(?:ing)?|workbook|spreadsheet|excel)\b/iu', $text) && (bool) preg_match('/\b(seed|seeds|binhi|nrp|release|releases|assistance)\b/iu', $text) => 'seed-import',
@@ -390,7 +390,10 @@ final class AssistantIntentResolver
     {
         // Remove only known account-area and time references. A remaining named
         // location is not silently replaced with account-wide report totals.
-        $text = preg_replace('/\b(?:my|our|own|current|assigned|permitted|ating|aming)\s+(?:(?:current|assigned|permitted)\s+)?(?:office|area|scope|system)\b/iu', '', $text);
+        // Only a complete account-relative phrase is removable. A name or
+        // unknown qualifier after "our LGU" must still trigger clarification.
+        $period = '(?:(?:for|in|during|from|sa|noong|ng)\s+)?(?:\d{4}|(?:the\s+)?(?:same|that|this|current|previous|prior|last)\s+year|(?:parehong|nakaraang|kasalukuyang|ngayong)\s+taon|taong\s+iyon)';
+        $text = preg_replace('/(?:\b(?:in|for|within|from|sa|at)\s+)?\b(?:my|our|own|current|assigned|permitted|ating|aming)\s+(?:(?:current|assigned|permitted)\s+)?(?:office|area|scope|system|lgu)\b(?=[.!?\s]*$|\s+'.$period.'[.!?\s]*$)/iu', '', $text);
         $text = preg_replace('/\b(?:in|sa)\s+(?:the\s+)?(?:system|records|register)\b/iu', '', $text);
         $text = preg_replace('/\b(?:in|for|during|from|sa|noong|ng)\s+(?:the\s+)?(?:same|that|this|current|previous|prior|last)\s+year\b/iu', '', $text);
         $text = preg_replace('/\b(?:sa|noong|ng)\s+(?:parehong|nakaraang|kasalukuyang)\s+taon\b|\b(?:sa|noong|ng)\s+(?:ngayong\s+taon|taong\s+iyon)\b/iu', '', $text);

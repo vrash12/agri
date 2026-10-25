@@ -22,6 +22,7 @@ final class AssistantReportRequestTest extends TestCase
     public static function unsupportedSubsets(): array
     {
         return [
+            'irrigation subset' => ['How many irrigation assistance releases are recorded?', 'assistance-input filter'],
             'farmer addresses' => ['Show farmer addresses', 'Private contact'],
             'single address' => ['Show his address', 'Private contact'],
             'contact details' => ['Show their contact details', 'Private contact'],

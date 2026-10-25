@@ -44,6 +44,20 @@
       ['label' => 'Find records that need review', 'question' => 'What needs attention in our registry?', 'detail' => 'Check missing references, farm locations and parcels.'],
       ['label' => 'Guide me through this page', 'question' => 'How do I use this page?', 'detail' => 'Get steps based on reviewed AgriLGU guidance.'],
     ];
+  $assistantAgricultureTopics = $assistantVeterinary
+    ? [['label' => 'Livestock care', 'question' => 'Explain livestock biosecurity.']]
+    : [
+      ['label' => 'Agriculture basics', 'question' => 'What is agriculture?'],
+      ['label' => 'Soil & compost', 'question' => 'How does compost improve soil health?'],
+      ['label' => 'Crop rotation', 'question' => 'Explain crop rotation.'],
+      ['label' => 'Crop nutrition', 'question' => 'Explain crop nutrition.'],
+      ['label' => 'Seed selection', 'question' => 'What should I check for seed quality?'],
+      ['label' => 'Planting crops', 'question' => 'Explain the steps for planting rice.'],
+      ['label' => 'Irrigation', 'question' => 'Explain irrigation step by step.'],
+      ['label' => 'Pest management', 'question' => 'What is integrated pest management?'],
+      ['label' => 'Livestock care', 'question' => 'Explain livestock biosecurity.'],
+      ['label' => 'Fish farming', 'question' => 'Explain aquaculture.'],
+    ];
 @endphp
 <div class="office-assistant" data-office-assistant data-endpoint="{{ route('assistant.message') }}" data-module="{{ $assistantModule }}" data-guide="{{ $assistantGuide['id'] }}">
   <button class="assistant-launcher" type="button" data-assistant-open aria-label="Chat with {{ $assistantGuide['name'] }}" aria-haspopup="dialog" aria-controls="officeAssistantDialog" aria-expanded="false" hidden>
@@ -89,6 +103,15 @@
           @endforeach
         </div>
         <p class="assistant-start-hint">Suggestions fill your message so you can review it before sending.</p>
+        <details class="assistant-topics">
+          <summary>Explore agriculture topics</summary>
+          <p>General guidance from reviewed sources. Choose a topic to prepare your question.</p>
+          <div class="assistant-topic-choices" role="group" aria-label="Agriculture topic questions">
+            @foreach($assistantAgricultureTopics as $topic)
+              <button type="button" data-assistant-suggestion data-question="{{ $topic['question'] }}">{{ $topic['label'] }}</button>
+            @endforeach
+          </div>
+        </details>
       </div>
       <div class="assistant-messages" role="log" aria-label="Conversation with {{ $assistantGuide['name'] }}" aria-live="polite" aria-relevant="additions text" data-assistant-messages></div>
     </div>

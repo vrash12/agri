@@ -48,6 +48,12 @@
 .assistant-suggestions button small { color:var(--ui-text-muted); font-size:12px; line-height:1.5; font-weight:400; }
 .assistant-suggestions button > span:last-child { flex-shrink:0; color:var(--ui-primary); font-size:18px; }
 .assistant-welcome .assistant-start-hint { margin-top:12px; font-size:12px; line-height:1.5; }
+.assistant-topics { margin-top:16px; border-top:1px solid var(--ui-border); text-align:left; }
+.assistant-topics > summary { box-sizing:border-box; min-height:44px; padding:12px 0; color:var(--ui-primary); font-weight:600; cursor:pointer; }
+.assistant-topics > p { font-size:12px; line-height:1.5; }
+.assistant-topic-choices { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:12px; }
+.assistant-topic-choices button { min-width:0; min-height:44px; padding:8px 12px; border:1px solid var(--ui-control-border); border-radius:var(--ui-radius-control); background:var(--ui-surface-subtle); color:var(--ui-primary); font:500 14px/1.5 var(--ui-font); text-align:left; overflow-wrap:anywhere; cursor:pointer; }
+.assistant-topic-choices button:hover { background:var(--ui-accent-soft); }
 .assistant-messages { display: flex; flex-direction: column; gap: 24px; }
 .assistant-message { max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
 .assistant-message.is-user { align-self: flex-end; max-width: 92%; padding: 12px 16px; border-radius: var(--ui-radius-panel); background: var(--ui-primary-soft); }
@@ -72,6 +78,7 @@
 .assistant-message.is-pending .assistant-thinking::after { content: '•••'; color: var(--ui-primary); font-size: 16px; letter-spacing: 2px; line-height: 1; animation: assistant-thinking-dots 1.2s ease-in-out infinite; }
 .assistant-message .assistant-message-meta { margin: 8px 0 0; font-size: 12px; color: var(--ui-text-muted); }
 .assistant-message .assistant-checked { margin-top:3px; }
+.assistant-message .assistant-delivery { width:fit-content; max-width:100%; box-sizing:border-box; margin-top:8px; padding:4px 8px; border-left:3px solid var(--ui-control-border); background:var(--ui-surface-subtle); color:var(--ui-text-muted); font-size:12px; line-height:1.5; }
 .assistant-evidence { margin-top:12px; border:1px solid var(--ui-border); border-radius:var(--ui-radius-control); background:var(--ui-surface-subtle); font-size:12px; line-height:1.5; overflow-wrap:anywhere; }
 .assistant-evidence > summary { box-sizing:border-box; min-height:44px; padding:12px; color:var(--ui-primary); font-weight:600; cursor:pointer; }
 .assistant-evidence[open] > summary { border-bottom:1px solid var(--ui-border); }

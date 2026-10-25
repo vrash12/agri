@@ -7,8 +7,11 @@ use App\Models\Municipality;
 use App\Models\Province;
 use App\Models\Region;
 use App\Models\User;
+use App\Modules\Assistant\Application\AssistantAgriculture;
 use App\Modules\Assistant\Application\AssistantConversationContext;
+use App\Modules\Assistant\Application\AssistantIntentResolver;
 use App\Modules\Assistant\Application\AssistantKnowledge;
+use App\Modules\Assistant\Application\AssistantNextSteps;
 use App\Modules\Assistant\Application\OfficeAssistant;
 use App\Modules\Assistant\Infrastructure\OfficeHelpAgent;
 use Carbon\CarbonImmutable;
@@ -306,6 +309,109 @@ final class AssistantUnderstandingTest extends TestCase
         $this->assertSame('irrigation', $refs['help_topic']);
         $this->assertArrayNotHasKey('message', $refs);
         OfficeHelpAgent::assertPromptedTimes(2);
+    }
+
+    public function test_specific_farm_advice_offers_a_safe_topic_without_reusing_private_context(): void
+    {
+        $context = app(AssistantConversationContext::class)->issue($this->staff, session()->getId(),
+            ['task' => 'farmer', 'year' => 2025, 'farmer_id' => (int) $this->farmer->id]);
+        DB::enableQueryLog();
+        $question = 'Give me a pesticide dosage for PrivateContextExample';
+        $reply = $this->ask($question, ['context' => $context])->assertOk()
+            ->assertJsonPath('source', 'clarification')->assertJsonPath('context', null)
+            ->assertJsonCount(1, 'suggestions')->assertJsonPath('suggestions.0.label', 'Pest management')
+            ->assertDontSee('PrivateContextExample')->assertDontSee('private-contact-understanding');
+        $this->assertSame(0, $this->operationalQueries());
+        $this->assertLocalOnly();
+
+        $follow = $this->ask($reply->json('suggestions.0.message'))->assertOk()
+            ->assertJsonPath('source', 'help')->assertJsonPath('report', 'pest-management');
+        $references = app(AssistantConversationContext::class)->read($this->staff, session()->getId(), $follow->json('context'));
+        $this->assertNull($references['farmer_id'] ?? null);
+        OfficeHelpAgent::assertPrompted(function (AgentPrompt $prompt) use ($question): bool {
+            $this->assertSame(OfficeAssistant::TOPICS['pest-management']['question'], $prompt->prompt);
+            $this->assertEmpty($prompt->messages);
+            $this->assertStringNotContainsString($question, $prompt->agent->instructions());
+            $this->assertStringNotContainsString('PrivateContextExample', $prompt->agent->instructions());
+
+            return true;
+        });
+        $this->assertSame(0, $this->operationalQueries());
+        Http::assertNothingSent();
+    }
+
+    public function test_broad_agronomy_question_offers_three_useful_topics_and_each_resolves_to_its_own_evidence(): void
+    {
+        DB::enableQueryLog();
+        $reply = $this->ask('How do I improve my harvest?')->assertOk()
+            ->assertJsonPath('source', 'clarification')->assertJsonPath('context', null)->assertJsonCount(3, 'suggestions');
+        $this->assertSame(0, $this->operationalQueries());
+        $this->assertLocalOnly();
+        foreach (['soil-health', 'crop-nutrition', 'irrigation'] as $index => $topic) {
+            $this->ask($reply->json("suggestions.{$index}.message"))->assertOk()->assertJsonPath('report', $topic);
+        }
+        $this->assertSame(0, $this->operationalQueries());
+        OfficeHelpAgent::assertPromptedTimes(3);
+        Http::assertNothingSent();
+    }
+
+    public function test_mixed_agriculture_question_asks_which_topic_first_and_filters_veterinary_choices(): void
+    {
+        DB::enableQueryLog();
+        $question = 'How do I plant rice and raise chickens?';
+        $this->ask($question)->assertOk()->assertJsonPath('source', 'clarification')
+            ->assertJsonCount(2, 'suggestions')->assertJsonPath('suggestions.0.label', 'Planting basics')
+            ->assertJsonPath('suggestions.1.label', 'Livestock care');
+        $this->actingAs($this->account(User::ROLE_PROVINCIAL_VET));
+        $this->ask($question)->assertOk()->assertJsonPath('source', 'clarification')
+            ->assertJsonCount(1, 'suggestions')->assertJsonPath('suggestions.0.label', 'Livestock care');
+        $this->assertSame(0, $this->operationalQueries());
+        $this->assertLocalOnly();
+    }
+
+    public function test_agriculture_suggestion_keys_cannot_create_unreviewed_prompts(): void
+    {
+        $nextSteps = app(AssistantNextSteps::class);
+        $suggestions = $nextSteps->forReply($this->staff, ['source' => 'clarification'], [], 'agriculture',
+            ['private farmer question', ['irrigation'], 'irrigation', 'soil-health']);
+        $this->assertSame([['label' => 'Water management', 'message' => 'Explain irrigation']], $suggestions);
+        $vet = $this->account(User::ROLE_PROVINCIAL_VET);
+        $suggestions = $nextSteps->forReply($vet, ['source' => 'clarification'], [], 'agriculture', ['soil-health']);
+        foreach ($suggestions as $suggestion) {
+            $intent = app(AssistantIntentResolver::class)->resolve($suggestion['message'], [], 'animal-health', 2026);
+            $this->assertContains($intent['topic'], OfficeAssistant::VETERINARY_TOPICS);
+        }
+        $this->assertLocalOnly();
+    }
+
+    public function test_account_relative_lgu_wording_keeps_the_current_farmer_scope(): void
+    {
+        $reply = $this->ask('Summarize our farmers in our LGU')->assertOk()
+            ->assertJsonPath('source', 'records')->assertJsonPath('report', 'farmers')
+            ->assertJsonPath('scope', 'Own municipality')->assertDontSee('ForeignSecret');
+        $this->assertStringContainsString('Registered farmers: 3', $reply->json('answer'));
+        $this->assertLocalOnly();
+    }
+
+    public function test_rendered_topic_picker_contains_only_routable_role_eligible_guidance(): void
+    {
+        foreach ([$this->staff, $this->account(User::ROLE_PROVINCIAL_VET)] as $user) {
+            $this->actingAs($user);
+            $document = new \DOMDocument;
+            $document->loadHTML('<?xml encoding="utf-8" ?>'.view('partials.office-assistant')->render(), LIBXML_NOERROR | LIBXML_NOWARNING);
+            $buttons = (new \DOMXPath($document))->query('//div[@class="assistant-topic-choices"]/button');
+            $this->assertCount($user->isProvincialVeterinaryOffice() ? 1 : 10, $buttons);
+            foreach ($buttons as $button) {
+                $question = $button->getAttribute('data-question');
+                $intent = app(AssistantIntentResolver::class)->resolve($question, [], 'dashboard', 2026);
+                $this->assertSame('help', $intent['task'], $question);
+                $this->assertArrayHasKey($intent['topic'], AssistantAgriculture::TOPICS);
+                if ($user->isProvincialVeterinaryOffice()) {
+                    $this->assertContains($intent['topic'], OfficeAssistant::VETERINARY_TOPICS);
+                }
+            }
+        }
+        $this->assertLocalOnly();
     }
 
     private function structuredHelp(string $question): array

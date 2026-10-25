@@ -296,6 +296,68 @@ test('retrieved source titles are bounded plain text and never rendered as HTML 
   assert.equal(entry.querySelectorAll('img').length, 0);
 });
 
+test('agriculture help is distinguished from system help using only known topic keys', async () => {
+  const agriculture = ['agriculture-basics', 'soil-health', 'crop-rotation', 'crop-nutrition',
+    'seed-selection', 'crop-establishment', 'irrigation', 'pest-management', 'livestock-care', 'aquaculture'];
+  for (const report of [...agriculture, 'parcel-drawing', 'unknown', '<script>soil-health</script>', null]) {
+    const ui = setup(async () => reply('General guidance.', { report }));
+    ui.input.value = 'Explain this topic'; await ui.form.fire('submit');
+    assert.equal(ui.messages.children.at(-1).children[0].textContent,
+      agriculture.includes(report) ? 'Ka Berto · Agriculture guide' : 'Ka Berto · System guide');
+    assert.equal(ui.messages.children.at(-1).querySelectorAll('script').length, 0);
+  }
+  const ui = setup(async () => reply('Recorded figures.', { source: 'records', report: 'soil-health' }));
+  ui.input.value = 'Show records'; await ui.form.fire('submit');
+  assert.equal(ui.messages.children.at(-1).children[0].textContent, 'Ka Berto · Office records');
+});
+
+test('help delivery labels distinguish generated, saved and reviewed guidance without verification claims', async () => {
+  const labels = new Map([['ai', 'AI-assisted explanation'], ['cache', 'Saved AI-assisted explanation'],
+    ['guide', 'Reviewed guide text'], ['unavailable', 'Guidance unavailable']]);
+  for (const [delivery, expected] of labels) {
+    const ui = setup(async () => reply('A helpful answer.', { delivery, report: 'soil-health' }));
+    ui.input.value = 'Explain soil health'; await ui.form.fire('submit');
+    const note = ui.messages.children.at(-1).children.find(child => child.className === 'assistant-delivery');
+    assert.equal(note?.textContent, expected);
+    assert.doesNotMatch(note.textContent, /verified|accurate|correct/i);
+    assert.equal(content(ui), 'A helpful answer.');
+  }
+});
+
+test('delivery metadata cannot inject labels or make a record reply appear AI generated', async () => {
+  for (const options of [
+    { delivery: '<img src=x onerror=alert(1)>' }, { delivery: 'verified' }, { delivery: 'constructor' },
+    { delivery: { toString: 'ai' } }, { delivery: null },
+    { source: 'records', delivery: 'ai' }, { source: 'clarification', delivery: 'guide' }
+  ]) {
+    const ui = setup(async () => reply('A safe answer.', options));
+    ui.input.value = 'Question'; await ui.form.fire('submit');
+    assert.equal(ui.messages.children.at(-1).children.some(child => child.className === 'assistant-delivery'), false);
+    assert.equal(ui.messages.children.at(-1).querySelectorAll('img').length, 0);
+    assert.equal(content(ui), 'A safe answer.');
+  }
+});
+
+test('agriculture shortcuts reuse editable starters and never overwrite a draft or send automatically', async () => {
+  const blade = fs.readFileSync(path.join(__dirname, '../../resources/views/partials/office-assistant.blade.php'), 'utf8');
+  const topicBlock = blade.slice(blade.indexOf('$assistantAgricultureTopics ='), blade.indexOf('@endphp'));
+  const questions = [...new Set([...topicBlock.matchAll(/'question' => '([^']+)'/g)].map(match => match[1]))];
+  assert.equal(questions.length, 10);
+  assert.match(topicBlock, /\$assistantVeterinary\s*\? \[\['label' => 'Livestock care', 'question' => 'Explain livestock biosecurity\.'\]\]/);
+  assert.match(blade, /<details class="assistant-topics">\s*<summary>Explore agriculture topics<\/summary>/);
+  for (const question of questions) {
+    const ui = setup(async () => reply('A useful reply.'));
+    ui.starters[0].dataset.question = question;
+    ui.input.value = 'Keep my current draft'; await ui.starters[0].fire('click');
+    assert.equal(ui.input.value, 'Keep my current draft');
+    ui.input.value = ''; await ui.starters[0].fire('click');
+    assert.equal(ui.input.value, question);
+    assert.equal(ui.requests.length, 0);
+    await ui.form.fire('submit');
+    assert.deepEqual(payload(ui), { message: question, module: 'crops', guide: 'ka-berto' });
+  }
+});
+
 test('record evidence shows current scope, period and checked time with bounded source coverage', async () => {
   const ui = setup(async () => reply('There are 12 registered farmers.', { source: 'records', year: 2025, scope: 'Old fallback',
     evidence: { checked_at: '2026-10-24T02:35:00+00:00', scope: 'Ramos', period: 'Current saved records',

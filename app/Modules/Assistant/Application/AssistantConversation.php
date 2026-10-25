@@ -71,7 +71,7 @@ final class AssistantConversation
                 $contextToken = $this->token($user, $sessionId, $intent['references']);
             }
 
-            return $this->clarification($user, $intent['clarification'], $contextToken, $intent['references'] ?? [], $intent['clarification_kind'] ?? null);
+            return $this->clarification($user, $intent['clarification'], $contextToken, $intent['references'] ?? [], $intent['clarification_kind'] ?? null, $intent['help_topics'] ?? []);
         }
         if ($intent['task'] === 'help') {
             if ($user->isProvincialVeterinaryOffice() && ! in_array($intent['topic'], OfficeAssistant::VETERINARY_TOPICS, true)) {
@@ -129,16 +129,16 @@ final class AssistantConversation
         return $sessionId === '' ? null : $this->contexts->issue($user, $sessionId, $references);
     }
 
-    private function clarification(User $user, string $answer, ?string $context, array $references = [], ?string $kind = null): array
+    private function clarification(User $user, string $answer, ?string $context, array $references = [], ?string $kind = null, array $helpTopics = []): array
     {
         return $this->withNextSteps($user, ['answer' => $answer, 'source' => 'clarification', 'report' => 'clarification', 'year' => null,
             'scope' => $this->scope($user), 'actions' => [], 'links' => [], 'context' => $context,
-            '_audit' => ['source' => 'clarification', 'topic' => 'clarification']], $references, $kind);
+            '_audit' => ['source' => 'clarification', 'topic' => 'clarification']], $references, $kind, $helpTopics);
     }
 
-    private function withNextSteps(User $user, array $reply, array $references = [], ?string $kind = null): array
+    private function withNextSteps(User $user, array $reply, array $references = [], ?string $kind = null, array $helpTopics = []): array
     {
-        $reply['suggestions'] = $this->nextSteps->forReply($user, $reply, $references, $kind);
+        $reply['suggestions'] = $this->nextSteps->forReply($user, $reply, $references, $kind, $helpTopics);
 
         return $reply;
     }

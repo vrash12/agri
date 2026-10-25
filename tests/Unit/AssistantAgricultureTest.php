@@ -38,6 +38,46 @@ final class AssistantAgricultureTest extends TestCase
             ['What is integrated pest management?', 'pest-management'],
             ['How do I care for chickens?', 'livestock-care'],
             ['Tell me about tilapia farming', 'aquaculture'],
+            ['Why is my rice yellow?', 'pest-management'],
+            ['Why are my corn plants turning yellow?', 'pest-management'],
+            ['Bakit naninilaw ang palay?', 'pest-management'],
+            ['How many times should I water rice?', 'irrigation'],
+            ['How often should I irrigate corn?', 'irrigation'],
+            ['Ilang beses ko dapat diligan ang pananim?', 'irrigation'],
+            ['Gaano kadalas magdilig ng halaman?', 'irrigation'],
+            ['How do I plant rice and prepare vegetables for planting?', 'crop-establishment'],
+            ['Explain irrigation and drainage', 'irrigation'],
+        ];
+    }
+
+    #[DataProvider('guidedQuestions')]
+    public function test_agriculture_clarifications_offer_only_fixed_reviewed_topics(string $question, array $topics): void
+    {
+        $actual = (new AssistantIntentResolver)->resolve($question, ['task' => 'farmer', 'farmer_id' => 17, 'year' => 2025], 'farmers', 2026);
+
+        $this->assertSame('clarification', $actual['task']);
+        $this->assertSame('agriculture', $actual['clarification_kind']);
+        $this->assertSame($topics, $actual['help_topics']);
+        $this->assertTrue($actual['reset_context']);
+        $this->assertArrayNotHasKey('references', $actual);
+        $this->assertArrayNotHasKey('farmer_id', $actual);
+        $this->assertArrayNotHasKey('search', $actual);
+        $this->assertArrayNotHasKey('message', $actual);
+    }
+
+    public static function guidedQuestions(): array
+    {
+        return [
+            ['How do I improve my harvest?', ['soil-health', 'crop-nutrition', 'irrigation']],
+            ['How do I increase rice production?', ['soil-health', 'crop-nutrition', 'irrigation']],
+            ['Paano mapataas ang ani?', ['soil-health', 'crop-nutrition', 'irrigation']],
+            ['How do I plant rice and raise chickens?', ['crop-establishment', 'livestock-care']],
+            ['What are the differences between soil health and crop nutrition?', ['soil-health', 'crop-nutrition']],
+            ['Explain irrigation, and soil health', ['irrigation', 'soil-health']],
+            ['Explain irrigation and soil health and NPK and chickens', ['irrigation', 'soil-health', 'crop-nutrition']],
+            ['How much fertilizer should I use?', ['crop-nutrition']],
+            ['Give me a pesticide dosage', ['pest-management']],
+            ['My chickens are sick', ['livestock-care']],
         ];
     }
 
@@ -71,6 +111,8 @@ final class AssistantAgricultureTest extends TestCase
             $this->assertArrayNotHasKey('topic', $result);
             $this->assertArrayNotHasKey('search', $result);
             $this->assertArrayNotHasKey('references', $result);
+            $this->assertArrayNotHasKey('help_topics', $result);
+            $this->assertArrayNotHasKey('clarification_kind', $result);
         }
     }
 
@@ -130,6 +172,9 @@ final class AssistantAgricultureTest extends TestCase
             ['How do I record animal services?', 'help', 'animals'],
             ['How do I record tractor engine repairs?', 'help', 'machinery'],
             ['How do I use the Backup Folder?', 'help', 'backups'],
+            ['How do I improve recorded harvest information?', 'help', 'harvest-entry'],
+            ['How do I record rice production?', 'help', 'harvest-entry'],
+            ['How many assistance releases are recorded?', 'assistance', null],
         ];
     }
 }

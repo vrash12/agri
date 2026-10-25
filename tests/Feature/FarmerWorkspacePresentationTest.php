@@ -36,10 +36,66 @@ class FarmerWorkspacePresentationTest extends TestCase
         $this->assertSame(1, $xpath->query('//details[@id="farmerMapWorkspace" and @open]')->length);
         $this->assertSame(1, $xpath->query('//details[@id="farmerInsights" and not(@open)]')->length);
         $view->assertSee('Details &amp; history', false)->assertSee('Digital ID')->assertSee('Edit profile')->assertSee('Open parcel map');
-        $view->assertSee('Registry figures for the current filters')->assertSee('farmersMapModule')
+        $view->assertSee('Gender breakdown')->assertSee('farmersMapModule')
             ->assertSee('parcelSatelliteModal')->assertSee('Satellite field check')
             ->assertSee('All parcels with saved crops')->assertSee('Filter parcels by saved crop')
             ->assertSee('White outlines mark parcel boundaries.');
+    }
+
+    public function test_registry_insights_are_readable_bars_with_counts_without_a_table_or_chart_loader(): void
+    {
+        $data = $this->fixture(User::ROLE_MUNICIPAL_STAFF);
+        $data['totalFarmers'] = 10;
+        $data['genderStats'] = ['Female' => 3, 'Male' => 7];
+        $data['locationStats'] = ['North' => 3, 'South' => 2, 'East' => 1, 'West' => 1, 'Hillside' => 1, 'Riverside' => 1];
+        $view = $this->view('farmers.index', $data);
+        $html = (string) $view;
+        $xpath = $this->xpath($html);
+        $section = '//*[@id="farmerInsights"]';
+
+        $this->assertSame(0, $xpath->query($section.'//table | '.$section.'//canvas')->length);
+        $this->assertSame(2, $xpath->query($section.'//figure[@aria-labelledby]')->length);
+        $this->assertSame(7, $xpath->query($section.'//figure/dl/div[@data-insight-row]')->length);
+        $this->assertSame(1, $xpath->query($section.'//details[not(@open)]/dl/div[@data-insight-row]')->length);
+        $view->assertSee('10</strong> matching farmers', false)->assertSee('30.0%')->assertSee('70.0%')
+            ->assertSee('Location 6')->assertSee('1</strong> profile in other or unrecorded locations', false)
+            ->assertSee('width:30.000%', false)->assertSee('css/farmer-registry-insights.css');
+        $view->assertDontSee('genderChart')->assertDontSee('__genderStats')->assertDontSee('showCharts');
+    }
+
+    public function test_insights_explain_empty_results_and_missing_breakdowns_without_nan_or_false_percentages(): void
+    {
+        $data = $this->fixture(User::ROLE_MUNICIPAL_STAFF);
+        $data['totalFarmers'] = 0;
+        $data['genderStats'] = [];
+        $data['locationStats'] = [];
+        $view = $this->view('farmers.index', $data);
+        $xpath = $this->xpath((string) $view);
+        $this->assertSame(0, $xpath->query('//*[@id="farmerInsights"]//figure')->length);
+        $view->assertSee('No matching farmer profiles');
+        $emptyInsights = $xpath->query('//*[@id="farmerInsights"]')->item(0)->textContent;
+        $this->assertStringNotContainsString('NaN', $emptyInsights);
+        $this->assertStringNotContainsString('INF', $emptyInsights);
+
+        $data['totalFarmers'] = 4;
+        $data['locationStats'] = ['' => 1, 'UNKNOWN' => 3];
+        $view = $this->view('farmers.index', $data);
+        $view->assertSee('No gender figures are available')->assertSee('No recorded farm locations are available')
+            ->assertSee('4</strong> profiles in other or unrecorded locations', false);
+    }
+
+    public function test_insights_escape_labels_and_keep_small_shares_and_location_counts_bounded(): void
+    {
+        $data = $this->fixture(User::ROLE_MUNICIPAL_STAFF);
+        $data['totalFarmers'] = 10000;
+        $data['genderStats'] = ['' => 1, '<script>bad()</script>' => 9999];
+        $data['locationStats'] = collect(range(1, 12))->mapWithKeys(fn ($i) => ['Long farm location '.$i => 1])->all();
+        $view = $this->view('farmers.index', $data);
+        $xpath = $this->xpath((string) $view);
+        $this->assertSame(10, $xpath->query('//*[@aria-labelledby="registryLocationHeading"]//*[@data-insight-row]')->length);
+        $view->assertSee('Not recorded')->assertSee('&lt;0.1%', false)->assertSee('width:0.010%', false)
+            ->assertSee('&lt;script&gt;bad()&lt;/script&gt;', false)->assertDontSee('<script>bad()</script>', false)
+            ->assertSee('9,990</strong> profiles in other or unrecorded locations', false);
     }
 
     public function test_super_admin_directory_keeps_read_only_actions(): void

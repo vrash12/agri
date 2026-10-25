@@ -316,27 +316,7 @@
     ])
   </details>
 
-  <details class="module-more" id="farmerInsights">
-    <summary>Registry insights <span>Gender and high-volume farm locations</span></summary>
-    <div class="module-more-content">
-      <p class="module-hint" id="farmerInsightsStatus" role="status">Figures reflect the current registry filters.</p>
-      <div class="module-table-scroll">
-        <table class="module-table"><caption>Registry figures for the current filters</caption><thead><tr><th>Breakdown</th><th>Group</th><th>Farmers</th></tr></thead><tbody>
-          @foreach(['Gender' => $genderStats, 'Farm location' => $locationStats] as $group => $figures)
-            @forelse($figures as $label => $count)
-              <tr><td>{{ $group }}</td><td>{{ $label }}</td><td>{{ number_format($count) }}</td></tr>
-            @empty
-              <tr><td>{{ $group }}</td><td colspan="2">No records in this result set.</td></tr>
-            @endforelse
-          @endforeach
-        </tbody></table>
-      </div>
-      <div class="module-analytics-grid">
-        <article class="module-chart"><div class="module-chart-head"><h3>Profile gender distribution</h3><p>Composition of the filtered farmer set.</p></div><div class="module-chart-body"><canvas id="genderChart"></canvas>@if (collect($genderStats)->isEmpty())<div class="module-chart-empty">No gender data to chart.</div>@endif</div></article>
-        <article class="module-chart"><div class="module-chart-head"><h3>Top farm locations</h3><p>Locations with the most matching farmer profiles.</p></div><div class="module-chart-body"><canvas id="locationChart"></canvas>@if (collect($locationStats)->isEmpty())<div class="module-chart-empty">No location data to chart.</div>@endif</div></article>
-      </div>
-    </div>
-  </details>
+  @include('farmers.partials.registry-insights')
 
   @if($canManageOperations)
   <details class="module-more" id="farmerImport" @if($errors->has('file') || $errors->has('municipality_id')) open @endif>
@@ -368,17 +348,10 @@
   @endif
 </div>
 
-<script>
-  window.__genderStats = @json($genderStats ?? []);
-  window.__locationStats = @json($locationStats ?? []);
-  {{-- The parcel map owns this data and emits it in farmers/maps.blade.php, which this
-       page includes above. Emitting it here as well serialised the whole workspace a
-       second time — 886 KB on a provincial account — and the second copy never even
-       took effect, because the partial had already assigned it. --}}
-</script>
 @endsection
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('css/farmer-registry-insights.css') }}?v={{ filemtime(public_path('css/farmer-registry-insights.css')) }}">
 <style>
   .farmers-registry-page{scroll-behavior:smooth}
   #farmerDirectory,#farmersMapModule{scroll-margin-top:16px}
@@ -404,42 +377,6 @@
 @push('scripts')
 <script>
   document.addEventListener('DOMContentLoaded', function () {
-    const insights = document.getElementById('farmerInsights');
-    let chartsLoaded = false;
-    async function showCharts() {
-      if (!insights?.open || chartsLoaded) return;
-      chartsLoaded = true;
-      try {
-        if (!window.Chart) await new Promise((resolve, reject) => {
-          // Pinned and hashed in config/cdn.php.
-          const chartAsset = @json(\App\Support\Cdn::asset('chart_js'));
-          const script = document.createElement('script');
-          script.src = chartAsset.url;
-          script.integrity = chartAsset.integrity;
-          script.crossOrigin = 'anonymous';
-          script.referrerPolicy = 'no-referrer';
-          script.onload = resolve;
-          script.onerror = reject;
-          document.head.appendChild(script);
-        });
-    const gender = window.__genderStats || {};
-    const locations = window.__locationStats || {};
-    const genderCanvas = document.getElementById('genderChart');
-    if (genderCanvas && Object.keys(gender).length) {
-      new Chart(genderCanvas, {type:'doughnut',data:{labels:Object.keys(gender),datasets:[{data:Object.values(gender),backgroundColor:['#17643a','#d8a438','#6986a4','#9a7ab2'],borderColor:'#fff',borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{position:'right',labels:{usePointStyle:true,boxWidth:7,font:{size:12}}}}}});
-    }
-    const locationCanvas = document.getElementById('locationChart');
-    if (locationCanvas && Object.keys(locations).length) {
-      new Chart(locationCanvas, {type:'bar',data:{labels:Object.keys(locations),datasets:[{data:Object.values(locations),backgroundColor:'#4f8765',borderRadius:4,maxBarThickness:32}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0,font:{size:12}},grid:{color:'#edf1ee'}},x:{ticks:{font:{size:12}},grid:{display:false}}}}});
-    }
-
-      } catch (_) {
-        insights.querySelector('.module-analytics-grid').hidden = true;
-        document.getElementById('farmerInsightsStatus').textContent = 'Charts could not load. Use the registry figures below.';
-      }
-    }
-    insights?.addEventListener('toggle', showCharts);
-
     function revealTarget(hash) {
       let target;
       try { target = document.getElementById(decodeURIComponent(hash.slice(1))); } catch (_) { return; }

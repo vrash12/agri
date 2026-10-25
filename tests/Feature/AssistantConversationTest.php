@@ -419,6 +419,7 @@ class AssistantConversationTest extends TestCase
     public static function unsupportedReportSubsets(): array
     {
         return array_map(fn (string $question): array => [$question], [
+            'How many irrigation assistance releases are recorded?',
             'Show corn harvests for dry season 2025', 'How many female farmers?',
             'Show vaccinations for dogs this year', 'Show fertilizer releases for 2025',
             'Show assistance received in January 2025', 'Show our harvests this month',

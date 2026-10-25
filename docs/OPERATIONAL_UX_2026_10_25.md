@@ -3,6 +3,50 @@
 Deployed in runtime `cdbc85c` on October 25, 2026; see [live release evidence](OPERATIONAL_RELEASE_2026_10_25.md).
 The local verification and acceptance limits below describe the development checkpoints.
 
+## Registry-insight redesign — subsequent local change, not deployed
+
+The Farmers Registry insights disclosure now has a filtered total and applied-filter
+labels, then separate gender and ranked farm-location panels. Each row combines its
+label, exact count, percentage of the filtered farmer total and a proportional bar.
+Values are server-rendered; no chart library, extra request or duplicate table is
+needed. Five locations appear first; the remaining supplied top-ten entries use a
+native keyboard-accessible disclosure. The remainder is labeled other/unrecorded,
+and blank/UNKNOWN labels are excluded from the ranked location display.
+
+The existing controller queries, role policies, municipality ownership, registry
+filters and separately unfiltered map scope are unchanged. No migration, data write
+or environment change is needed. Ship `farmers/index.blade.php`, the
+`registry-insights` / `registry-insight-row` partials and
+`public/css/farmer-registry-insights.css` together, mirror the stylesheet where
+hosting uses a separate public root, and rebuild compiled views.
+
+Verification: 28 focused PHP tests / 324 assertions passed for presentation and
+filtered geographic scope; 15 related finder/workspace JavaScript tests passed.
+Tests cover empty/missing breakdowns, exact percentages, very small shares, escaped
+labels, bounded ranked rows, local filters and preserving independent map scope.
+Pint, changed syntax, Blade compilation, route checks and diff checks passed.
+
+A normal signed-in synthetic MariaDB page at `mapping=unmapped` showed one matching
+farmer with an unrecorded location and the correct filter label. A preview generated
+from the same shared partial with synthetic figures was checked at measured 1,253px
+and 389px viewport widths: panels fit without horizontal overflow, labels/counts
+remain visible, and Enter opens/closes extra locations while preserving focus.
+This is local browser evidence, not a physical-phone or staff acceptance sign-off.
+The screenshot is `output/acceptance-2026-10-25/registry-insights-preview.png` (ignored).
+The change has not been committed, pushed or deployed.
+
+The subsequent requested color treatment adds violet/blue gender categories,
+neutral unspecified values and a five-color location-rank cycle, including the
+expanded rows. The summary has a warm-yellow surface; panels, tracks and count/rank
+badges use soft matching fills. Colors supplement the visible labels, percentages
+and rank numbers, and do not indicate record status or permanent location identity.
+The scoped palette consumes shared primary, info, accent and text tokens, with local
+violet/teal/darker-gold chart colors. Stored parcel colors are untouched.
+After this follow-up the presentation suite passed 10 tests / 93 assertions.
+Browser computed styles confirmed the category colors and no horizontal overflow
+at measured 389px and 1,253px widths. Fresh screenshot capture was unavailable;
+the earlier screenshot above predates the added colors. No deployment ran.
+
 ## Follow-up refinements
 
 - Map and beneficiary pickers share a scoped, bounded literal-name matcher. Names

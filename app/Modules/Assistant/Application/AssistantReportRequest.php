@@ -90,7 +90,8 @@ final class AssistantReportRequest
 
     private function hasCommodityFilter(string $text): bool
     {
-        return $this->matchesTaxonomy($text, HarvestRecord::COMMODITY_LABELS, ['other'])
+        return (bool) preg_match('/\b(?:irrigation|patubig)\b/iu', $text)
+            || $this->matchesTaxonomy($text, HarvestRecord::COMMODITY_LABELS, ['other'])
             || $this->matchesTaxonomy($text, ParcelCropSeason::CROPS, ['mixed', 'other', 'not_recorded'])
             || $this->matchesTaxonomy($text, RiceSeedDistribution::INPUT_CATEGORY_LABELS, ['other_input', 'other_fisheries'])
             || (bool) preg_match('/\b(?:maize|mais|gulay|prutas|tilapia|bangus|hito|catfish|fingerlings?|fertilisers?|fertilizers?|abono|fisheries|hybrid|inbred|certified\s+seed|nsic|rc\s*\d+)\b|\bagricultur(?:e|al)\s+assistance\b|\bother\s+(?:commodity|crop|farm\s+input|fisheries(?:\s+assistance)?)\b|\b(?:crop|commodity|variety|input\s+category|category)\s*(?:=|:)\s*\S|\b(?:only|specific|selected)\s+(?:crop|commodity|variety|input\s+category|category)\b/iu', $text);
