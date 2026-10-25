@@ -4,8 +4,10 @@ Status: deployed October 25, 2026 in runtime `cdbc85c`; see [the release receipt
 
 ## October 25 guidance refinement (local; not deployed)
 
-This subsequent improvement is local source only. The previous release above does
-not include it or the separately pending Registry insights redesign.
+This subsequent improvement and the Registry insights redesign were deployed on
+October 26 in runtime `6cdf65a`; see [the verified release](ASSISTANT_REGISTRY_RELEASE_2026_10_26.md).
+The heading retains the original local checkpoint date; verification below describes
+development, with live deployment evidence in the receipt.
 
 The local intent resolver now separates several ordinary farming questions from
 software workflows:

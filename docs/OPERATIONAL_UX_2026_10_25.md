@@ -5,6 +5,10 @@ The local verification and acceptance limits below describe the development chec
 
 ## Registry-insight redesign — subsequent local change, not deployed
 
+Deployment update: this redesign and its color follow-up are now live in runtime
+`6cdf65a` on October 26. See [the verified release](ASSISTANT_REGISTRY_RELEASE_2026_10_26.md).
+The heading and local verification below retain the original development checkpoint.
+
 The Farmers Registry insights disclosure now has a filtered total and applied-filter
 labels, then separate gender and ranked farm-location panels. Each row combines its
 label, exact count, percentage of the filtered farmer total and a proportional bar.

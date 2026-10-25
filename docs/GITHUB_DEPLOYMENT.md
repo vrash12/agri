@@ -1,5 +1,16 @@
 # GitHub-to-Hostinger deployment
 
+## Verified Assistant and Registry insights release — October 26, 2026
+
+Runtime `6cdf65a8aee3c5e0be451b3a218aae4fec6d7e09` was pushed to main and
+installed by Hostinger fast-forward pull from `1010d53`. Agriculture routing,
+topic choices, delivery labels and colorful filtered registry charts are live.
+All 27 tables / 10,030 rows, schemas, migration receipts, environment and provider
+counters were preserved. No migration, dependency installation or provider call
+ran. Three public assets were mirrored and autoload/configuration/route/view
+caches rebuilt; scoped server reads and public HTTPS/asset checks passed.
+See [the complete receipt and acceptance limits](ASSISTANT_REGISTRY_RELEASE_2026_10_26.md).
+
 ## Verified operational release — October 25, 2026
 
 Runtime `cdbc85c1851c94491bfa0d495eabf31efa15fb19` was pushed to main and
