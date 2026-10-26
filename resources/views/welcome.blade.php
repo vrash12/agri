@@ -8,8 +8,10 @@
     <title>Farmer services | AgriLGU</title>
     @include('partials.design-tokens')
     <link rel="stylesheet" href="{{ asset('css/welcome.css') }}?v={{ filemtime(public_path('css/welcome.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/welcome-showcase.css') }}?v={{ filemtime(public_path('css/welcome-showcase.css')) }}">
     <script src="{{ asset('js/welcome.js') }}?v={{ filemtime(public_path('js/welcome.js')) }}" defer></script>
     <script src="{{ asset('js/welcome-slideshow.js') }}?v={{ filemtime(public_path('js/welcome-slideshow.js')) }}" defer></script>
+    <script src="{{ asset('js/welcome-showcase.js') }}?v={{ filemtime(public_path('js/welcome-showcase.js')) }}" defer></script>
     @include('partials.branding-head')
 </head>
 <body class="welcome-page" id="top">
@@ -44,10 +46,18 @@
                 <h1 id="welcome-title" lang="fil"><span class="welcome-title-line">Mas malapit </span><span class="welcome-title-line">ang serbisyo </span><span class="welcome-title-highlight">sa magsasaka.</span></h1>
                 <p class="welcome-hero-intro">Find local agriculture services, view your farm records, and get ready for your next office visit.</p>
                 <div class="welcome-hero-actions"><a class="welcome-button" href="#services">Find farmer services <span aria-hidden="true">↓</span></a><a class="welcome-button welcome-button-secondary" href="{{ route('farmer-portal.login') }}">Farmer sign in <span aria-hidden="true">→</span></a></div>
+                <a class="welcome-tour-link" href="#system"><span class="welcome-tour-link-icon" aria-hidden="true">↗</span><span>See AgriLGU in action <small>Explore the tools with sample data</small></span></a>
                 <div class="welcome-hero-help"><span class="welcome-help-symbol" aria-hidden="true">i</span><p class="welcome-hero-note"><strong>Need help signing in?</strong> Contact your agriculture office for help with your farmer ID or password.</p></div>
             </div>
             @include('partials.welcome-slideshow')
         </section>
+
+        <div class="welcome-tour-strip">
+            <div class="welcome-container">
+                <p><strong>One connected agriculture workspace.</strong><span>Farmer records. Field maps. Local services.</span></p>
+                <a href="#system">Take the visual tour <span aria-hidden="true">↘</span></a>
+            </div>
+        </div>
 
         <section class="welcome-season" aria-label="Season planning">
             <div class="welcome-container welcome-season-inner">

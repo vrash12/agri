@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -82,12 +83,67 @@ class WelcomePageTest extends TestCase
             ->assertHeader('X-Frame-Options', 'SAMEORIGIN')
             ->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
             ->assertSee(asset('css/welcome.css'), false)
-            ->assertSee(asset('js/welcome.js'), false);
+            ->assertSee(asset('js/welcome.js'), false)
+            ->assertSee(asset('css/welcome-showcase.css'), false)
+            ->assertSee(asset('js/welcome-showcase.js'), false);
 
         $this->assertStringContainsString(
             "frame-ancestors 'self'",
             $response->headers->get('Content-Security-Policy')
         );
+    }
+
+    public function test_every_feature_has_a_labeled_public_sample_without_database_or_provider_access(): void
+    {
+        DB::connection()->enableQueryLog();
+        Http::preventStrayRequests();
+
+        $response = $this->get('/');
+        $response->assertOk()
+            ->assertSeeText('Sample data only')
+            ->assertSeeText('All names, figures, maps and messages in these previews are fictional.')
+            ->assertSeeText('Outside LGU and Delisted')
+            ->assertSee('aria-labelledby="welcome-preview-title"', false)
+            ->assertSee('data-preview-close', false);
+
+        $html = new \DOMDocument;
+        @$html->loadHTML('<?xml encoding="UTF-8">'.$response->getContent());
+        $xpath = new \DOMXPath($html);
+        $links = $xpath->query('//a[@data-welcome-preview]');
+        $this->assertCount(28, $links);
+        $paths = [];
+        foreach ($links as $link) {
+            $path = parse_url($link->getAttribute('href'), PHP_URL_PATH);
+            $this->assertMatchesRegularExpression('#^/images/showcase/(people|maps|climate|programs|operations|connected|administration)-0[1-4]\.svg$#', $path);
+            $this->assertNotSame('', $link->getAttribute('data-preview-title'));
+            $this->assertStringContainsString('Enlarge sample:', $link->getAttribute('aria-label'));
+            $image = $link->getElementsByTagName('img')->item(0);
+            $this->assertNotNull($image);
+            $this->assertSame('lazy', $image->getAttribute('loading'));
+            $this->assertStringContainsString('fictional sample data', $image->getAttribute('alt'));
+            $paths[] = $path;
+        }
+        $this->assertCount(28, array_unique($paths));
+        $this->assertSame([], DB::connection()->getQueryLog());
+        Http::assertNothingSent();
+    }
+
+    public function test_showcase_images_are_self_contained_non_executable_fictional_illustrations(): void
+    {
+        $images = glob(public_path('images/showcase/*.svg'));
+        $this->assertCount(28, $images);
+        foreach ($images as $path) {
+            $source = file_get_contents($path);
+            $svg = new \DOMDocument;
+            $this->assertTrue($svg->loadXML($source, LIBXML_NONET), basename($path));
+            $this->assertSame('960 600', $svg->documentElement->getAttribute('width').' '.$svg->documentElement->getAttribute('height'));
+            $this->assertStringContainsString('SAMPLE DATA', $svg->textContent);
+            $this->assertStringContainsString('fictional records', $svg->textContent);
+            $this->assertStringContainsString('Sample LGU', $svg->textContent);
+            $this->assertDoesNotMatchRegularExpression('/<(?:script|foreignObject|iframe|image|a)(?:\s|>)/i', $source);
+            $this->assertDoesNotMatchRegularExpression('/\s(?:on[a-z]+|(?:xlink:)?href)\s*=|<!DOCTYPE|<!ENTITY/i', $source);
+            $this->assertLessThan(65000, strlen($source), 'Preview payload must remain bounded: '.basename($path));
+        }
     }
 
     #[DataProvider('authenticatedDestinations')]

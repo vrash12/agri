@@ -1,5 +1,54 @@
 # Homepage feature catalog
 
+## October 27 sample showcase (local; not deployed)
+
+The homepage retains its AgriLGU identity, farmer services, official resource
+links and seven workflow groups while adding a revised introduction and an
+original SVG preview for each of the **28 feature areas**. The previews are
+illustrated interfaces with explicitly fictional sample records and figures,
+not production screenshots, live statistics or newly inserted operational data.
+The public page continues to require **no database or provider requests**.
+
+`scripts/build-homepage-previews.mjs` generates the static images in
+`public/images/showcase/` using only its application-owned sample content:
+
+```sh
+node scripts/build-homepage-previews.mjs
+```
+
+Keep visible sample labels in the page and artwork. Previewed IDs, maps, records,
+reports and controls explain the feature; they do not issue cards, disclose real
+records or perform office actions. Existing authorization and role destinations
+remain unchanged.
+
+`public/js/welcome-showcase.js` enhances same-origin preview links with a native
+dialog, Previous/Next controls, Escape dismissal and focus return to the opener.
+Loading and failure messages identify the selected image; late image responses
+cannot replace the current preview. Direct image links work when JavaScript or
+native-dialog support is unavailable. Existing native feature disclosures and
+category anchors remain available.
+
+Verification so far: **eight focused PHP tests / 469 assertions** and **24 related
+JavaScript tests passed**, including the query-free public-page contract and
+viewer behavior. Browser checks loaded all 28 full-size previews, verified the
+last-item navigation boundary, keyboard opening, Escape and return of focus to
+the initiating link. Native disclosures and page widths passed at 320, 390,
+768 and 1024 pixel iframe widths (including the browser scrollbar); the 1440
+pixel desktop layout passed too. The narrow dialog fits without horizontal
+scrolling. These checks do not establish physical-device, screen-reader or staff
+acceptance. Deployment remains pending; older receipts below describe their
+original releases.
+
+Deploy `resources/views/welcome.blade.php`,
+`resources/views/partials/welcome-features.blade.php`,
+`public/css/welcome-showcase.css`, `public/js/welcome-showcase.js` and all 28 SVG
+files together. Mirror public assets into the served `public_html` directories
+and rebuild compiled views. No migration, operational seed, dependency,
+configuration, provider or permission change is required. Preserve general cache
+and provider counters.
+
+## Original catalog release
+
 Status: deployed and verified on October 20, 2026 in runtime
 `95e831a661370f223d17c059d2f5d025370a5030` through GitHub main and Hostinger
 fast-forward pull from `4623873`.

@@ -1,4 +1,4 @@
-{{-- Public descriptions only: this catalog must not query or display office records. --}}
+{{-- Public descriptions and fictional illustrations only. Never query office records for previews. --}}
 @php
     $featureGroups = [
         [
@@ -10,7 +10,7 @@
                     'items' => [
                         'Maintain farmer profiles, photographs, RSBSA and FFRS references, farm details and sector classifications.',
                         'Find farmers by name or registry ID, filter records and review their linked parcels and services.',
-                        'Retain approved imported source rows alongside the farmer profile for office reference.',
+                        'Retain imported source rows alongside the farmer profile, with separate Outside LGU and Delisted reference sections.',
                     ],
                 ],
                 [
@@ -275,37 +275,54 @@
         <div class="welcome-container welcome-system-layout">
             <div class="welcome-system-intro">
                 <p class="welcome-section-label"><span class="welcome-section-number" aria-hidden="true">02</span> Inside AgriLGU</p>
-                <h2 id="system-title" data-welcome-reveal>One workspace.<br><span>For farmers</span><br>and their offices.</h2>
+                <h2 id="system-title" data-welcome-reveal>See the tools.<br><span>Follow the work.</span></h2>
                 <div class="welcome-system-copy">
-                    <p>Explore the full system, from farmer records and field maps to office services, climate evidence and LGU websites.</p>
-                    <a class="welcome-button welcome-system-entry" href="{{ route('login') }}">Enter your office workspace <span aria-hidden="true">→</span></a>
+                    <p>From the first farmer record to a mapped parcel, an assistance release and an office report. Explore how AgriLGU brings the work together.</p>
+                    <div class="welcome-tour-facts" aria-label="About this visual tour"><span><strong>28</strong> feature previews</span><span><strong>7</strong> connected workflows</span></div>
+                    <a class="welcome-button welcome-system-entry" href="#feature-workflows">Explore the sample screens <span aria-hidden="true">↓</span></a>
                 </div>
             </div>
-            <div class="welcome-catalog-guide">
-                <p class="welcome-catalog-eyebrow">Explore by workflow</p>
-                <nav class="welcome-catalog-nav" aria-label="Feature categories">
-                    @foreach ($featureGroups as $group)
-                        <a href="#features-{{ $group['id'] }}"><span>{{ $group['title'] }}</span><span aria-hidden="true">↘</span></a>
-                    @endforeach
-                </nav>
-                <p class="welcome-system-note">Your role and assigned area determine which tools and records you can use. Expand a feature below to see what it includes.</p>
-            </div>
+            <figure class="welcome-tour-overview">
+                <div class="welcome-tour-overview-heading"><span>YOUR OFFICE AT A GLANCE</span><span class="welcome-sample-badge">Sample data</span></div>
+                <a href="#features-operations" aria-label="Explore the dashboard and office-work samples"><img src="{{ asset('images/showcase/operations-04.svg') }}" width="960" height="600" loading="lazy" decoding="async" alt="Illustrated Sample LGU dashboard with 48 fictional farmers, 36 mapped and 12 awaiting mapping."></a>
+                <figcaption><strong>A clear starting point for the day.</strong><span>Illustrated interface using fictional records.</span></figcaption>
+            </figure>
         </div>
     </div>
+    <div class="welcome-tour-disclosure">
+        <div class="welcome-container"><span class="welcome-sample-badge">Sample data only</span><p>All names, figures, maps and messages in these previews are fictional. They illustrate the features; they are not live LGU records or official assessments.</p></div>
+    </div>
     <div class="welcome-container welcome-catalog">
+        <div class="welcome-workflows" id="feature-workflows">
+            <div class="welcome-workflows-heading"><p class="welcome-catalog-eyebrow">Choose a workflow</p><p>Open any sample to explore it in detail.</p></div>
+                <nav class="welcome-catalog-nav" aria-label="Feature categories">
+                    @foreach ($featureGroups as $group)
+                        <a href="#features-{{ $group['id'] }}"><span class="welcome-workflow-number" aria-hidden="true">{{ str_pad((string) $loop->iteration, 2, '0', STR_PAD_LEFT) }}</span><span>{{ $group['title'] }}</span><span aria-hidden="true">↘</span></a>
+                    @endforeach
+                </nav>
+            <p class="welcome-system-note">Your role and assigned area determine which tools and records you can use after signing in.</p>
+        </div>
         @foreach ($featureGroups as $group)
             <section class="welcome-feature-group" id="features-{{ $group['id'] }}" aria-labelledby="features-{{ $group['id'] }}-title">
                 <div class="welcome-feature-group-heading">
                     <span class="welcome-catalog-index" aria-hidden="true">{{ str_pad((string) $loop->iteration, 2, '0', STR_PAD_LEFT) }}</span>
                     <h3 id="features-{{ $group['id'] }}-title">{{ $group['title'] }}</h3>
                     <p>{{ $group['intro'] }}</p>
+                    <a class="welcome-workflow-return" href="#feature-workflows">All workflows <span aria-hidden="true">↑</span></a>
                 </div>
                 <div class="welcome-feature-list">
                     @foreach ($group['features'] as $feature)
-                        <details class="welcome-tool">
-                            <summary><span class="welcome-tool-caption"><strong>{{ $feature['title'] }}</strong><small>{{ $feature['summary'] }}</small></span><span class="welcome-plus" aria-hidden="true"></span></summary>
-                            <div class="welcome-tool-body"><ul>@foreach ($feature['items'] as $item)<li>{{ $item }}</li>@endforeach</ul></div>
-                        </details>
+                        @php($previewId = $group['id'].'-'.str_pad((string) $loop->iteration, 2, '0', STR_PAD_LEFT))
+                        <article class="welcome-feature-card" aria-labelledby="feature-{{ $previewId }}-title">
+                            <a class="welcome-preview-link" href="{{ asset('images/showcase/'.$previewId.'.svg') }}" data-welcome-preview data-preview-title="{{ $feature['title'] }}" data-preview-description="{{ $feature['summary'] }}" aria-label="Enlarge sample: {{ $feature['title'] }}">
+                                <img src="{{ asset('images/showcase/'.$previewId.'.svg') }}" width="960" height="600" loading="lazy" decoding="async" alt="{{ $feature['title'] }} — illustrated interface using fictional sample data.">
+                                <span class="welcome-preview-action">View sample <span aria-hidden="true">↗</span></span>
+                            </a>
+                            <details class="welcome-tool">
+                                <summary><span class="welcome-tool-caption"><strong id="feature-{{ $previewId }}-title">{{ $feature['title'] }}</strong><small>{{ $feature['summary'] }}</small></span><span class="welcome-plus" aria-hidden="true"></span></summary>
+                                <div class="welcome-tool-body"><ul>@foreach ($feature['items'] as $item)<li>{{ $item }}</li>@endforeach</ul></div>
+                            </details>
+                        </article>
                     @endforeach
                 </div>
             </section>
@@ -316,3 +333,15 @@
         </div>
     </div>
 </section>
+
+<dialog class="welcome-preview-dialog" id="welcome-preview-dialog" aria-labelledby="welcome-preview-title" aria-describedby="welcome-preview-notice">
+    <div class="welcome-preview-dialog-header">
+        <div><span class="welcome-sample-badge">Sample data</span><h2 id="welcome-preview-title">Feature preview</h2><p data-preview-description></p></div>
+        <button class="welcome-preview-close" type="button" data-preview-close autofocus>Close <span aria-hidden="true">×</span></button>
+    </div>
+    <div class="welcome-preview-canvas"><img id="welcome-preview-image" width="960" height="600" alt=""><p data-preview-status role="status" aria-live="polite"></p></div>
+    <div class="welcome-preview-dialog-footer">
+        <div class="welcome-preview-caption"><p id="welcome-preview-notice">Illustrated preview. All data is fictional.</p><a href="#" data-preview-original>Open full-size image <span aria-hidden="true">↗</span></a></div>
+        <div class="welcome-preview-paging"><button type="button" data-preview-previous><span aria-hidden="true">←</span> Previous</button><span data-preview-counter aria-live="polite"></span><button type="button" data-preview-next>Next <span aria-hidden="true">→</span></button></div>
+    </div>
+</dialog>
