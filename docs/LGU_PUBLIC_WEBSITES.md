@@ -1,5 +1,11 @@
 # LGU public websites
 
+October 27 central-domain update: `APP_URL=https://agri-lgu.online` now serves the
+main application. `LGU_WEBSITE_DOMAIN=agritarlac.online` is deliberately retained
+for existing LGU hostnames; their branded sign-in redirects to the new central
+domain. The demo remains separate. No new-domain LGU hostnames or wildcard were
+provisioned in this cutover. See [the domain receipt](DOMAIN_CUTOVER_2026_10_27.md).
+
 October 21 LGU office sign-in follow-up (local; not deployed): published LGU pages link to a dedicated branded entry for their municipal head/staff accounts. Tenant GET/HEAD `/login` redirects to the matching central form; credentials and private modules remain central. See [the workflow, security checks and release requirements](LGU_OFFICE_SIGN_IN.md).
 
 October 21 footer correction (local; not deployed): the public stylesheet now targets the current `agrilgu-logo` class, restoring the intended header, ID-panel and directory sizing. The footer uses the existing transparent 1,254-pixel mark at a fixed 44 × 44 CSS pixels with lazy loading, rather than enlarging the low-resolution compact icon. Routes, public content, permissions and publication state are unchanged. Release `resources/views/public-lgu/layout.blade.php` and `public/css/lgu-website.css` together, mirror the stylesheet to `public_html/css`, and rebuild views. The existing high-resolution mark must remain available in `public_html/images/branding` (also reached through the LGU document-root symlink).
@@ -29,7 +35,7 @@ A hostname selects public content only and never replaces office ownership/polic
 The selected public domain is `agritarlac.online`. Leave `LGU_WEBSITE_DOMAIN` blank while hosting is being prepared; the central `/lgus/{slug}` links remain safe and usable. After an LGU hostname has been created and its HTTPS certificate is working, set the production value to `agritarlac.online` so its public address becomes `https://{slug}.agritarlac.online/`.
 
 ```dotenv
-APP_URL=https://agritarlac.online
+APP_URL=https://agri-lgu.online
 LGU_WEBSITE_DOMAIN=agritarlac.online
 SESSION_DOMAIN=
 SESSION_SECURE_COOKIE=true

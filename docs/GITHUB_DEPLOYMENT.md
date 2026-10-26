@@ -1,5 +1,16 @@
 # GitHub-to-Hostinger deployment
 
+## Primary production domain — October 27, 2026
+
+The primary URL is now `https://agri-lgu.online`, a Hostinger parked alias of the
+existing installation. Keep deploying into
+`/home/u330835917/domains/agritarlac.online`; its document root, scheduled command,
+database and Git checkout have not moved. `APP_URL` changed to the new HTTPS
+address, with exact-host GET/HEAD redirects from the old root/www. Current LGU
+subdomains and the isolated demo remain on the original domain. Do not duplicate
+the operational database or replace host-only session settings. See the
+[verified domain receipt and rollback instructions](DOMAIN_CUTOVER_2026_10_27.md).
+
 ## Verified Assistant and Registry insights release — October 26, 2026
 
 Runtime `6cdf65a8aee3c5e0be451b3a218aae4fec6d7e09` was pushed to main and
