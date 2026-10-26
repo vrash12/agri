@@ -1,6 +1,6 @@
 # Homepage feature catalog
 
-## October 27 sample showcase (local; not deployed)
+## October 27 sample showcase
 
 The homepage retains its AgriLGU identity, farmer services, official resource
 links and seven workflow groups while adding a revised introduction and an
@@ -36,7 +36,7 @@ the initiating link. Native disclosures and page widths passed at 320, 390,
 768 and 1024 pixel iframe widths (including the browser scrollbar); the 1440
 pixel desktop layout passed too. The narrow dialog fits without horizontal
 scrolling. These checks do not establish physical-device, screen-reader or staff
-acceptance. Deployment remains pending; older receipts below describe their
+acceptance. Runtime `a095aaa` is deployed; older receipts below describe their
 original releases.
 
 Deploy `resources/views/welcome.blade.php`,
@@ -46,6 +46,32 @@ files together. Mirror public assets into the served `public_html` directories
 and rebuild compiled views. No migration, operational seed, dependency,
 configuration, provider or permission change is required. Preserve general cache
 and provider counters.
+
+### October 27 production receipt
+
+Runtime `a095aaaa78003700a89789ac8b396e65c45c4f1c` was pushed to GitHub main
+and installed on Hostinger by an exact-commit fast-forward from `9f9de81`.
+The central site is `https://agri-lgu.online/`. All 30 new served assets matched
+the reviewed source bytes over HTTPS, and the public page shows 28 previews.
+
+The verified private database backup covers **27 tables / 10,039 rows**, with
+3,414,973 compressed bytes and SHA-256
+`f6bdb38d44c744bab40a962835da86757fce3ebd66cb4021601c3bf7b872a40c`.
+Recovery assets and receipts are outside the document root at
+`/home/u330835917/.private/homepage-showcase-20261027`. Every schema and row
+fingerprint matched before and after installation. Environment bytes, cached
+configuration/routes, autoload files, private web rules and provider counters
+also matched. Only compiled views were rebuilt; no migrations, seeds, account
+changes, dependencies or general-cache clear ran.
+
+The PHP 8.3.36 live matched-route check rendered the guest homepage with zero
+database queries, external requests or started sessions. Live browser checks
+verified the fictional-data notice, map preview, paging, Escape, focus return
+and workflow navigation. Office sign-in, farmer sign-in, the LGU directory,
+the existing Mayantoc site and isolated demo returned HTTP 200. The old central
+domain still redirects to the new domain while preserving query parameters.
+Maintenance is off. The sample SVGs total 121,446 bytes and remain static;
+they add no operational records or real public statistics.
 
 ## Original catalog release
 
