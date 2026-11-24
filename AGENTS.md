@@ -1144,14 +1144,14 @@ Functions:
 - create, edit, delete, search, and paginate municipality-owned sheets carrying a reference, planting season/year, optional harvest season/year, an optional default seed-bag weight, and notes;
 - attach a release to a sheet through the nullable `rice_seed_distributions.batch_id`; releases recorded before sheets existed keep a null batch and stay fully editable;
 - record the sheet fields on each release: `registered_rice_area_ha` (declared rice area, separate from the total `farm_area_ha`), `seed_bags`, `seed_bag_kg` (seed bag weight, separate from the harvest `avg_weight_per_bag_kg`), explicit `harvest_season`/`harvest_year`, `consent_status`, `kp_kits_received`, and `representative_name`;
-- derive the released total from `seed_bags * seed_bag_kg` in `App\Support\SeedReleaseQuantity` and store it in the existing `kgs_received` column — never add a second total column;
+- derive the released total from `seed_bags * seed_bag_kg` in `App\Modules\Agriculture\Application\SeedReleaseQuantity` and store it in the existing `kgs_received` column — never add a second total column;
 - render the sheet on screen and as a wide grouped `.xlsx` workbook with merged season headings, a header block repeated on every printed page, a printed totals row, and a blank signature column.
 
 `consent_status` is exactly `unrecorded`, `yes` or `no` and defaults to `unrecorded`. A consent that was never asked must stay unrecorded; do not read it as a refusal or as agreement, and do not backfill it.
 
 Season headings are always built from the stored season and year through `RiceDistributionBatch::seasonHeading()`. Never hardcode a season such as "2025 DS", and never infer the harvest season from the planting season or from today's date.
 
-`App\Support\RiceSeedDistributionSheet` owns the sheet's meaning — titles, column groups, row values, the filtered release query and the aggregated totals — and is shared by the screen and the export, so the two cannot disagree. `App\Support\RiceSeedDistributionSheetWorkbook` only draws the worksheet, and writes every title, heading, label and value through `App\Support\CsvExport::value()` as an explicit string so a stored value cannot execute as a spreadsheet formula. That stores figures as text, which suits a sheet that is printed and signed. Workbook exports are capped at `RiceSeedDistributionSheetWorkbook::MAX_ROWS` (5000) because PhpSpreadsheet holds the whole workbook in memory; a larger scope is directed to the streaming CSV export.
+`App\Modules\Agriculture\Application\RiceSeedDistributionSheet` owns the sheet's meaning — titles, column groups, row values, the filtered release query and the aggregated totals — and is shared by the screen and the export, so the two cannot disagree. `App\Modules\Agriculture\Application\RiceSeedDistributionSheetWorkbook` only draws the worksheet, and writes every title, heading, label and value through `App\Support\CsvExport::value()` as an explicit string so a stored value cannot execute as a spreadsheet formula. That stores figures as text, which suits a sheet that is printed and signed. Workbook exports are capped at `RiceSeedDistributionSheetWorkbook::MAX_ROWS` (5000) because PhpSpreadsheet holds the whole workbook in memory; a larger scope is directed to the streaming CSV export.
 
 Deleting a sheet is refused while it still groups releases, re-checked inside the row lock. Sheet exports are audited with `exported`, and create/update/delete flow through `AuditModelObserver` under the `Assistance distributions` module.
 
@@ -1160,7 +1160,7 @@ Deleting a sheet is refused while it still groups releases, re-checked inside th
 `GET /assistance-coverage` (`assistance-coverage.index`) is a read-only planning
 report linked from Agriculture & Fisheries. It authorizes `viewAny` on
 `RiceSeedDistribution` before validating filters through `AssistanceCoverageRequest`.
-`App\Support\AssistanceCoverage` applies `MunicipalityAccess` and active province/
+`App\Modules\Agriculture\Application\AssistanceCoverage` applies `MunicipalityAccess` and active province/
 municipality scope before aggregation, program suggestions, and boundary access.
 System Owner can switch province or independent-city scope; other accounts retain
 their assigned scope and veterinary accounts remain excluded.
@@ -1200,7 +1200,7 @@ production-by-commodity report reads.
 Two ways a harvest gets here:
 
 - **Projected from an assistance release.** The Rice Seed Distribution Sheet already
-  has a production section staff fill in on paper. `App\Support\HarvestFromRelease`
+  has a production section staff fill in on paper. `App\Modules\Agriculture\Application\HarvestFromRelease`
   writes the matching harvest whenever a release is saved, updated or imported, and
   removes it when the production fields are cleared. A unique index on
   `harvest_records.rice_seed_distribution_id` keeps that a projection rather than an
@@ -1231,7 +1231,7 @@ Other rules:
 
 ### 5.5.3 Shared beneficiary picker
 
-`App\Support\FarmerPicker`, `partials/farmer-picker.blade.php`,
+`App\Modules\Farmers\Application\FarmerPicker`, `partials/farmer-picker.blade.php`,
 `public/js/farmer-picker.js`, endpoint `farmers.picker`.
 
 Both the assistance form and the harvest form choose a farmer. Both used to
@@ -1465,7 +1465,7 @@ Functions:
 
 Overlap containment uses a verified interior point: a concave polygon centroid may lie in a neighbouring municipality or in a hole. The scanline fallback preserves identical/contained concave geometry checks without changing source coordinates or tolerances.
 
-`App\Support\GeoGeometry` is the authoritative geometry implementation and `App\Support\MunicipalityBoundaryGuard` is the farm-plot enforcement boundary. Do not copy point-in-polygon or overlap logic into controllers or JavaScript. A missing active boundary does not block existing parcel work; the review workspace reports those parcels as unconfigured until the Super Admin activates an official boundary.
+`App\Support\GeoGeometry` is the authoritative geometry implementation and `App\Modules\Land\Application\MunicipalityBoundaryGuard` is the farm-plot enforcement boundary. Do not copy point-in-polygon or overlap logic into controllers or JavaScript. A missing active boundary does not block existing parcel work; the review workspace reports those parcels as unconfigured until the Super Admin activates an official boundary.
 
 The boundary editor preserves full source precision for untouched vertices and does not round edited coordinates before saving. Rounding a shared border independently can create false overlaps. Name/color-only edits omit geometry; the controller preserves geometry and its measurements when unchanged, while changed shapes require normal confirmation and overlap checks after the record-version check. Regression commands: `node --test tests/JavaScript/municipality-boundary-editor.test.cjs` and the isolated `MunicipalityGeofenceTest` / `ProvinceAccessIsolationTest` suites.
 
@@ -1520,20 +1520,31 @@ Distribution records intentionally keep a farmer snapshot in addition to `farmer
 
 - `routes/web.php`: guest, authenticated, public QR, resource, geocoding, and admin routes
 - `routes/api.php`: default Sanctum current-user route
-- `app/Http/Controllers`: request validation, authorization, queries, imports/exports, and responses
-- `app/Models`: fillable fields, casts, relationships, scopes, and role helpers
+- `app/Http/Controllers`: HTTP adapters for request handling, authorization, imports/exports, and responses; reusable business workflows belong in a module's `Application` services
+- `app/Models`: fillable fields, casts, relationships, scopes, and role helpers. All Eloquent models stay in `App\Models`, shared by the modules, so persisted audit types, route binding and record-version identities remain stable
 - `app/Policies`: record-level and module-level permissions
 - `app/Policies/Concerns/AuthorizesMunicipalityRecords.php`: shared operational policy behavior
+- `app/Modules/<Module>/Application`: the public business services of the eight modules — `Farmers`, `Land`, `Agriculture`, `AnimalHealth`, `Climate`, `Assistant`, `Reporting` and `LocalGovernment`. `Contracts/` holds the narrow cross-module interfaces, and `Infrastructure/` holds provider clients (the weather and CHIRPS clients, the Assistant help agent). See `docs/MODULAR_MONOLITH.md`
+- `app/Modules/ModuleMap.php`: the allowlist of cross-module imports and shared Support classes, enforced by `tests/Unit/ModularArchitectureTest.php`. A new cross-module dependency must be declared here
+- `app/Providers/ModuleServiceProvider.php`: composition root binding `OfficeRecordReader` to Reporting's `AssistantRecords` and `HarvestSectionGuard` to Land's `CropSectionHarvestGuard`
+- `app/Support`: shared platform capabilities only (`ModuleMap::SHARED_SUPPORT`); domain workflows must not accumulate here again
 - `app/Support/MunicipalityAccess.php`: shared tenancy scoping and ownership resolution
 - `app/Support/AuditTrail.php`: safe audit-event creation and secret filtering
 - `app/Support/ConcurrentWrite.php`: record versioning, row locks, retried transactions, and stale-write rejection
 - `app/Support/GeoGeometry.php`: GeoJSON normalization, validation, simplification, measurement, overlap, containment, and near-boundary calculations
-- `app/Support/MunicipalityBoundaryGuard.php`: active-boundary lookup and parcel write enforcement
-- `app/Support/MunicipalityBoundaryImporter.php`: KML, KMZ, and GeoJSON boundary parsing
+- `app/Modules/Land/Application/MunicipalityBoundaryGuard.php`: active-boundary lookup and parcel write enforcement
+- `app/Modules/Land/Application/MunicipalityBoundaryImporter.php`: KML, KMZ, and GeoJSON boundary parsing
+- `app/Platform/Observability` and `app/Providers/UsageMetricsServiceProvider.php`: bounded usage/performance aggregates with no business-module dependencies; `MeasureApplicationUsage` is their global middleware
+- `app/Console/Kernel.php`: the scheduled database backup and climate-source refreshes, run by Hostinger's `schedule:run` cron because no queue worker is used
 - `app/Http/Middleware/SecurityHeaders.php`: content-security, framing, referrer, permissions, and transport headers for every response; its source lists must gain any new CDN or provider host added to a Blade view
+- `app/Http/Middleware/ResolveLguWebsiteHost.php`: global middleware that serves published LGU websites on their subdomains
 - `app/Http/Middleware/SynchronizeMutatingRequests.php`: per-account and per-record/cache mutexes for state-changing requests
+- `app/Http/Middleware/SynchronizeAssistantRequests.php`: the bounded Assistant-only coordination used instead of operational write locks on `assistant.message`
 - `app/Http/Middleware/EnforceIdleSession.php`: server-side 15-minute inactivity enforcement and timeout auditing
+- `app/Http/Middleware/EnsureAccountScope.php`: returns 403 through `User::hasUsableScope()` for inactive accounts, unsupported roles, expired evaluators, or a missing, inactive or inconsistent region/province/municipality assignment
 - `app/Http/Middleware/RestrictProvincialVeterinaryAccess.php`: route-level Animal Health-only boundary for `provincial_vet`
+- `app/Http/Middleware/RestrictGisEvaluatorAccess.php` and `RestrictVisitorAccess.php`: confine evaluator and visitor accounts to their limited read-only pages
+- `app/Http/Middleware/EnsureFarmerPortalSession.php`: farmer-portal session, ownership and idle checks on the separate `farmer` guard
 - `app/Observers/AuditModelObserver.php`: automatic model change logging
 - `app/Providers/AuthServiceProvider.php`: model/policy registration
 - `app/Providers/AppServiceProvider.php`: audit observers and custom pagination views
@@ -1549,14 +1560,17 @@ The geofence renderer reuses unchanged overlays, culls overview boundaries outsi
 Boundary saves disable duplicate submissions and show a persistent, focusable error inside the editor. Name/color-only changes compare geometry type and coordinates rather than GeoJSON property order, and omit unchanged geometry; active shape edits still require explicit replacement confirmation. HTTP 401/419 and HTML login responses explain that the session needs renewal instead of treating the response as a successful save. Failed saves retain current form values. A response from an older editor cannot close or replace a subsequently opened editor. These behaviors are covered by the rendering and editor JavaScript suites and `MunicipalityGeofenceTest`; see `docs/BOUNDARY_SAVE_FEEDBACK.md`.
 - `public/js/farmers-maps.js`: the authenticated plotting workspace script, loaded by `resources/views/farmers/partials/maps-scripts.blade.php`. It is a plain file rather than a Blade template so editors and linters can read it and the template compiler cannot swallow part of it, and it stays a classic script because it shares `var` declarations across what used to be two `<script>` blocks and exports its API to the rest of the page as `window.__*`. Everything the server decides reaches it through the `window.__*` config block in `resources/views/farmers/maps.blade.php`; never reintroduce a Blade directive or `{{ }}` into the script itself. Adding a new server value means adding it to that block.
 - `resources/views/farmers/partials/maps-*`: authenticated plotting workspace CSS and the loader for the script above
-- `app/Support/RiceSeedDistributionSheet.php`: Rice Seed Distribution Sheet titles, column groups, row values, filtered release query, and aggregated totals shared by the screen and the export
-- `app/Support/RiceSeedDistributionSheetWorkbook.php`: the printable `.xlsx` writer for that sheet; every cell goes through `CsvExport::value()`
-- `app/Support/SeedReleaseQuantity.php`: the single bags x bag-weight to kilograms rule, stored in the existing `kgs_received` column
+- `app/Modules/Agriculture/Application/RiceSeedDistributionSheet.php`: Rice Seed Distribution Sheet titles, column groups, row values, filtered release query, and aggregated totals shared by the screen and the export
+- `app/Modules/Agriculture/Application/RiceSeedDistributionSheetWorkbook.php`: the printable `.xlsx` writer for that sheet; every cell goes through `CsvExport::value()`
+- `app/Modules/Agriculture/Application/SeedReleaseQuantity.php`: the single bags x bag-weight to kilograms rule, stored in the existing `kgs_received` column
 - `app/Support/CsvExport.php`: the single spreadsheet-formula guard for CSV exports. It replaced three byte-identical private copies; a new export must use it rather than growing a fourth.
 - `resources/views/components/module/field.blade.php`: the `<x-module.field>` form-field component. See DESIGN_SYSTEM.md section 13 for its contract and the list of forms still to migrate.
 - `app/Http/Requests`: form requests for the farmer, farm parcel, assistance release, and municipality geofence write endpoints. Each runs its policy in `authorize()`, which Laravel checks before the rules, so an unauthorized account is refused rather than handed a description of the form.
 - `database/migrations`: incremental schema changes; see the warning below
 - `tests/Feature`: role, municipality isolation, dashboard, QR map, machinery, user-management, and audit coverage
+- `tests/Unit`: domain-service and architecture coverage, including the module-boundary checks in `ModularArchitectureTest`
+- `tests/JavaScript/*.test.cjs`: `node --test` suites for the plain scripts in `public/js`
+- `resources/assistant/knowledge`: the reviewed, allowlisted Markdown passages that are the Assistant's only retrieval evidence; see `docs/ASSISTANT_RAG.md`
 
 `App\Models\FarmPlot` is the only model for the farm parcel table. The duplicate legacy `FarmerPlot` model was removed after confirming no route, view, job, test, CLI, or seeder referenced it; do not reintroduce a second model for that table.
 
@@ -1619,7 +1633,7 @@ The Bulacan import resolves the legacy `BUL` code, `BULACAN`, PSGC code, or unam
 
 Because a province polygon contains every municipality inside it, the province-level and municipality-level Bulacan references cannot both stay active under the overlap rule. This seeder therefore archives exactly one named reference — `Bulacan Province Planning Reference · geoBoundaries 2020`, and only while it is active and owned by a Bulacan municipality — with an `archived` audit event carrying `reason: superseded_by_municipality_references`. The province workspace keeps its ID, code, name, province assignment, and archived history, and re-running `BulacanProvinceBoundarySeeder` restores the province-level view. An identically named boundary in another province is never archived. Every other conflict still stops the whole import, and the supersession rolls back with it because archival, workspace creation, and boundary writes share one activation lock and one transaction. See `database/seeders/data/README.md` for provenance, metrics, checksum, and the explicit command.
 
-The Benguet, remaining-Benguet, remaining-Tarlac, and Bulacan municipality seeders delegate to `App\Support\ReferenceMunicipalityBoundaryImporter`. This service validates the complete pinned source before writing, resolves unambiguous active workspaces, and imports the entire set under the shared activation lock and one retried transaction. It refuses ambiguous identities, wrong provinces, inactive workspaces, overlaps, and different active or changed/deactivated reference boundaries. An identity may set `workspace_name` when the workspace must not carry the source `shapeName`, and a caller may name one coarser active reference in the same province to archive as superseded inside the same transaction; nothing else is ever archived automatically. Successful application clears each target's boundary cache; new boundaries receive attributed import audit events through the existing best-effort audit mechanism. Repeated imports do not duplicate boundaries or events. These seeders are intentionally excluded from `DatabaseSeeder` and automatic production deployment.
+The Benguet, remaining-Benguet, remaining-Tarlac, and Bulacan municipality seeders delegate to `App\Modules\Land\Application\ReferenceMunicipalityBoundaryImporter`. This service validates the complete pinned source before writing, resolves unambiguous active workspaces, and imports the entire set under the shared activation lock and one retried transaction. It refuses ambiguous identities, wrong provinces, inactive workspaces, overlaps, and different active or changed/deactivated reference boundaries. An identity may set `workspace_name` when the workspace must not carry the source `shapeName`, and a caller may name one coarser active reference in the same province to archive as superseded inside the same transaction; nothing else is ever archived automatically. Successful application clears each target's boundary cache; new boundaries receive attributed import audit events through the existing best-effort audit mechanism. Repeated imports do not duplicate boundaries or events. These seeders are intentionally excluded from `DatabaseSeeder` and automatic production deployment.
 
 `IlocosNorteMunicipalityBoundarySeeder`, `IlocosSurMunicipalityBoundarySeeder`, `LaUnionMunicipalityBoundarySeeder`, and `PangasinanMunicipalityBoundarySeeder` explicitly import Region I’s 125 planning references (23, 34, 20, and 48). They use the shared importer, preserve existing identities and boundaries, qualify nationally repeated names by province, and create no accounts or operational data. Each province is atomic and idempotent; an all-region deployment wraps the four imports in an outer transaction during maintenance. Paoay retains the source’s lake-inclusive outline and validates against the matching GeoRiskPH exterior-area convention; the 3% tolerance is unchanged. Dagupan is grouped geographically under Pangasinan without changing its independent-component-city status. Source identities, checksums, limitations and explicit commands are in `docs/REGION_I_BOUNDARY_SOURCES.md`. Keep these seeders out of `DatabaseSeeder` and automatic deployments.
 
