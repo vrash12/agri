@@ -1,5 +1,7 @@
 # Period reports, municipality comparison and harvest reminder — November 24, 2026
 
+Release status: deployed in `43e9b9b` on November 25. See [verification and remaining limits](NOVEMBER24_RELEASE_2026_11_25.md). Local-only descriptions below are historical implementation checkpoints.
+
 Status: **local, not deployed.** Built at the owner's request after the office
 reporting decisions were settled in chat on November 24, 2026:
 

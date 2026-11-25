@@ -1,5 +1,7 @@
 # Ask the map and field-visit priority layer
 
+Release status: deployed in `43e9b9b` on November 25. See [verification and remaining limits](NOVEMBER24_RELEASE_2026_11_25.md). Local-only descriptions below are historical implementation checkpoints.
+
 Status: local, not deployed (November 25, 2026). No migration, dependency,
 configuration value, account operation, provider call or data write is involved.
 

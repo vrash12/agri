@@ -1,5 +1,7 @@
 # Harvest Excel template and import — November 24, 2026
 
+Release status: deployed in `43e9b9b` on November 25. See [verification and remaining limits](NOVEMBER24_RELEASE_2026_11_25.md). Local-only descriptions below are historical implementation checkpoints.
+
 Status: **local, not deployed.** Makes routine recording of non-rice harvests
 practical: offices that keep harvest figures in spreadsheets can download a template
 and upload it, instead of typing each record. Single-record entry is unchanged.

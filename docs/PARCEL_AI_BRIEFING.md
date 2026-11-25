@@ -1,5 +1,7 @@
 # Parcel summary and AI crop advice
 
+Release status: deployed in `43e9b9b` on November 25. See [verification and remaining limits](NOVEMBER24_RELEASE_2026_11_25.md). Local-only descriptions below are historical implementation checkpoints.
+
 Status: local, not deployed (owner-approved November 24, 2026). No migration,
 dependency, environment setting or account change is required.
 
