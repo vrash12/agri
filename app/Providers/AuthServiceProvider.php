@@ -10,6 +10,7 @@ use App\Models\Farmer;
 use App\Models\FarmerPortalAccount;
 use App\Models\FarmersCooperative;
 use App\Models\FarmPlot;
+use App\Models\GeneratedReport;
 use App\Models\HarvestRecord;
 use App\Models\MunicipalityBoundary;
 use App\Models\MunicipalityProfile;
@@ -28,6 +29,7 @@ use App\Policies\FarmerPolicy;
 use App\Policies\FarmerPortalAccountPolicy;
 use App\Policies\FarmersCooperativePolicy;
 use App\Policies\FarmPlotPolicy;
+use App\Policies\GeneratedReportPolicy;
 use App\Policies\HarvestRecordPolicy;
 use App\Policies\MunicipalityBoundaryPolicy;
 use App\Policies\MunicipalityProfilePolicy;
@@ -58,6 +60,7 @@ class AuthServiceProvider extends ServiceProvider
         Farmer::class => FarmerPolicy::class,
         FarmPlot::class => FarmPlotPolicy::class,
         HarvestRecord::class => HarvestRecordPolicy::class,
+        GeneratedReport::class => GeneratedReportPolicy::class,
         MunicipalityBoundary::class => MunicipalityBoundaryPolicy::class,
         RiceSeedDistribution::class => RiceSeedDistributionPolicy::class,
         RiceDistributionBatch::class => RiceDistributionBatchPolicy::class,

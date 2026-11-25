@@ -367,6 +367,7 @@ class ProvinceReportingScopeTest extends TestCase
                     $table->integer('animal_count')->default(1);
                 }
                 if ($name === 'harvest_records') {
+                    $table->unsignedBigInteger('farmer_id')->nullable();
                     $table->integer('harvest_year')->nullable();
                     $table->double('quantity')->nullable();
                 }

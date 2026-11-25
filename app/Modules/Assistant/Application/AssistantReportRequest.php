@@ -17,31 +17,31 @@ final class AssistantReportRequest
     {
         $text = preg_replace('/[_\s]+/u', ' ', $text);
         if (preg_match('/\b(?:contact(?:s|\s+(?:details|information|numbers?))?|phone(?:s|\s+numbers?)?|mobile(?:\s+numbers?)?|telephone|emails?|address(?:es)?|residence|birthdays?|birthdates?|birth\s+dates?|date\s+of\s+birth|dob|eligibility|arb|pwd|ip\s+members?|notes?|diagnosis|diagnoses|coordinates?|latitude|longitude|passwords?|credentials?|secrets?|api\s+keys?|access\s+tokens?|private\s+keys?)\b|\b(?:lat|lng)\s*(?:=|:)\s*[-\d]|(?<![\p{L}\d])\.env\b/iu', $text)) {
-            return 'Private contact, birth, address, eligibility, note and coordinate fields are not available in this chat; credentials are never disclosed. I can show permitted record summaries. Open an authorized record page for other details your role may view.';
+            return 'Private contact, birth, address, eligibility, note and coordinate fields stay out of this chat, and credentials are never disclosed. I can give counts and summaries instead, for example “How many farmers do we have?”. Open an authorized record page for other details your role may view.';
         }
         if ($this->hasNarrowerPeriod($text) || $this->hasMultiplePeriods($text)) {
-            return 'I can report one whole year, not a season, month or date range. Open the relevant register for its available period filters, or ask for the complete annual assistance, harvest or Animal Health report.';
+            return 'I report one whole year at a time, not a season, month or date range — for example “Show harvests for 2026”. Open the relevant register for its period filters.';
         }
         if ($this->hasExcludedRecords($text)) {
-            return 'This chat cannot exclude records or reporting years from a total. Open the relevant register for its available filters, or ask for the complete current registry summary or one annual report.';
+            return 'This chat cannot exclude records or reporting years from a total. Ask for one complete year instead, for example “Show assistance for 2026”. Open the relevant register for its filters.';
         }
         if ($this->hasDemographicFilter($text)) {
-            return 'This chat cannot apply an age, civil-status or farmer classification filter. Open the farmer registry for its available filters, or ask for the complete current registry summary.';
+            return 'I can’t filter farmers by age, civil-status or farmer classification here. Ask “How many farmers do we have?” for the full count. Open the farmer registry to use its filters.';
         }
         if ($this->hasListingOrRanking($text)) {
-            return 'This chat provides bounded record summaries, not a complete list or a sorted ranking. Open the relevant register to review and sort its records, or ask for the complete current registry summary or one annual report.';
+            return 'I give counts and short summaries, not a complete list or a sorted ranking — for example “How many farmers do we have?”. Open the relevant register to review and sort its records.';
         }
         if ($this->hasRegistryFilter($text)) {
-            return 'This chat cannot filter farmer reports by gender, mapping status or registry follow-up. Open the farmer registry and use its filters, or ask for the complete current registry summary.';
+            return 'I can count farmers with no saved parcel, no FFRS reference or no farm location — for example “How many farmers have no parcel?” — but not by gender, mapping status or other registry follow-up filters. Open the farmer registry and use its filters for that.';
         }
         if ($this->hasAnimalFilter($text)) {
-            return 'I can summarize all Animal Health services for one year, but cannot filter by animal species or service type. Open Animal Health and choose its animal or service filters, or ask for the complete annual summary.';
+            return 'I can total all Animal Health services for one year — for example “Animal Health summary for 2026” — but I can’t separate them by animal species or service type, such as vaccinations only. Open Animal Health and use its animal or service filters for that.';
         }
         if ($this->hasCommodityFilter($text)) {
-            return 'This chat cannot apply a crop, commodity or assistance-input filter. Open the harvest or assistance register and choose its commodity or category filter, or ask for the annual summary across all recorded categories.';
+            return 'I can total one harvest crop or one assistance input for a year — for example “Corn harvest 2026” or “How much fertilizer did we give out in 2026?” — but not this crop, commodity or assistance-input filter. Open the harvest or assistance register and use its commodity or category filter.';
         }
         if (preg_match('/\b(?:pending|approved|rejected|inactive|delisted|eligible|ineligible|unlinked|unclaimed|consent|eligibility|deceased|dead|died|relocated|transferred|deregistered|removed)\b|\b(?:active|projected|manual|direct)\s+(?:farmers?|records?|harvests?)\b|\b(?:only|without|missing)\s+(?:a\s+)?(?:farmer\s+)?(?:link|links|quantity|classification|year|date|dates)\b|\b(?:more\s+than|less\s+than|greater\s+than|fewer\s+than|larger\s+than|smaller\s+than|at\s+least|at\s+most|minimum|maximum|over|under|above|below)\s+(?:\d|one\b|two\b|three\b|four\b|five\b|six\b|seven\b|eight\b|nine\b|ten\b)|\b(?:quantity|area|hectares?|ha|kgs?|kilograms?)\s*[<>]=?\s*\d/iu', $text)) {
-            return 'This chat cannot apply that status, missing-field or quantity condition. Open the relevant register for its available filters, or ask for the complete current registry summary or one annual report.';
+            return 'I can’t apply that status, missing-field or quantity condition here. Ask for a full count instead, for example “Show assistance for 2026”. Open the relevant register for its filters.';
         }
 
         return null;

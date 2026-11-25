@@ -19,7 +19,7 @@ class VerifyCsrfToken extends Middleware
     {
         // Verification still ran before chat. A delayed read-only reply must
         // not replace the CSRF cookie created by a concurrent logout/login.
-        if ($request->routeIs('assistant.message')
+        if ($request->routeIs('assistant.message', 'farm-plots.agronomy.advice')
             && $request->attributes->get('assistant_session_committed') === true) {
             return $response;
         }

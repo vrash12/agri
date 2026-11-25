@@ -6,19 +6,18 @@ use App\Models\Farmer;
 use App\Models\FarmPlot;
 use App\Models\HarvestRecord;
 use App\Models\ParcelCropSeason;
-use App\Support\LocalTime;
+use App\Modules\Agriculture\Application\HarvestFieldRules;
 use App\Support\MunicipalityAccess;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 /**
  * Validation for recording or editing a harvest.
  *
- * The commodity, season and unit lists come from the model constants rather than a
- * copy kept beside the rules, so what is accepted here cannot drift from what the
- * production report understands.
+ * The harvest fields themselves (commodity, season, year, quantity, unit and the
+ * date-within-year rule) come from `HarvestFieldRules`, which the Excel import uses
+ * too, so a single form and a bulk upload accept exactly the same harvest.
  *
  * A harvest is deliberately allowed to be thin. The farmer and the parcel are both
  * optional, because a municipality reporting its corn tonnage for a season has a real
@@ -62,29 +61,15 @@ class StoreHarvestRecordRequest extends FormRequest
             ? ['exists:parcel_crop_seasons,id']
             : [];
 
-        return [
+        // Ownership and linkage fields are specific to this form; the harvest fields
+        // themselves are shared with the Excel import so the two cannot drift.
+        return array_merge([
             'municipality_id' => ['nullable', 'integer', 'exists:municipalities,id'],
             'farmer_id' => ['nullable', 'integer', 'exists:farmers,id'],
             'farm_plot_id' => ['nullable', 'integer', 'exists:farm_plots,id'],
             'parcel_crop_season_id' => array_merge(['nullable', 'integer'], $sectionReference),
             'planted_area_key' => ['nullable', 'string', 'max:64', 'regex:/^[a-f0-9]{8}-[a-f0-9-]{27,36}$/i'],
-
-            'commodity' => ['required', Rule::in(array_keys(HarvestRecord::COMMODITY_LABELS))],
-            'variety' => ['nullable', 'string', 'max:120'],
-            'season' => ['nullable', Rule::in(array_keys(HarvestRecord::SEASON_LABELS))],
-
-            // A harvest cannot be reported before records began or into a year that has
-            // not started. The upper bound allows next year, because a dry-season
-            // harvest is planned and recorded across a year boundary.
-            'harvest_year' => ['required', 'integer', 'min:1990', 'max:'.(LocalTime::now()->year + 1)],
-            'date_harvested' => ['nullable', 'date', 'before_or_equal:today'],
-
-            'area_harvested_ha' => ['nullable', 'numeric', 'min:0', 'max:100000'],
-            'quantity' => ['required', 'numeric', 'min:0', 'max:99999999'],
-            'quantity_unit' => ['required', Rule::in(array_keys(HarvestRecord::QUANTITY_UNIT_LABELS))],
-
-            'notes' => ['nullable', 'string', 'max:1000'],
-        ];
+        ], HarvestFieldRules::rules());
     }
 
     /**
@@ -92,16 +77,7 @@ class StoreHarvestRecordRequest extends FormRequest
      */
     public function messages(): array
     {
-        return [
-            'commodity.required' => 'Choose what was harvested.',
-            'commodity.in' => 'Choose one of the listed commodities.',
-            'harvest_year.required' => 'Enter the year this harvest is reported in.',
-            'harvest_year.max' => 'A harvest cannot be recorded for a year that has not started yet.',
-            'quantity.required' => 'Enter how much was harvested.',
-            'quantity_unit.required' => 'Choose the unit the harvest was counted in.',
-            'quantity_unit.in' => 'Choose one of the listed units.',
-            'date_harvested.before_or_equal' => 'A harvest date cannot be in the future.',
-        ];
+        return HarvestFieldRules::messages();
     }
 
     public function withValidator(Validator $validator): void
@@ -110,7 +86,11 @@ class StoreHarvestRecordRequest extends FormRequest
             $this->rejectOutOfScopeFarmer($validator);
             $this->rejectMismatchedParcel($validator);
             $this->rejectMismatchedCropSection($validator);
-            $this->rejectDateOutsideReportedYear($validator);
+            HarvestFieldRules::rejectDateOutsideReportedYear(
+                $validator,
+                $this->input('date_harvested'),
+                $this->input('harvest_year')
+            );
         });
     }
 
@@ -168,37 +148,6 @@ class StoreHarvestRecordRequest extends FormRequest
 
         if (! $belongs) {
             $validator->errors()->add('farm_plot_id', 'That parcel belongs to a different farmer.');
-        }
-    }
-
-    /**
-     * A harvest date has to fall in the year the harvest is reported in.
-     *
-     * Not a formality: the year is what the production report groups by, so a date in
-     * one year reported under another produces a chart nobody can reconcile against
-     * the paper record. One year either side is allowed, because a dry-season harvest
-     * genuinely straddles the turn of the year.
-     */
-    private function rejectDateOutsideReportedYear(Validator $validator): void
-    {
-        $date = $this->input('date_harvested');
-        $year = $this->input('harvest_year');
-
-        if ($date === null || $year === null) {
-            return;
-        }
-
-        if ($validator->errors()->has('date_harvested') || $validator->errors()->has('harvest_year')) {
-            return;
-        }
-
-        $dateYear = (int) date('Y', strtotime((string) $date));
-
-        if (abs($dateYear - (int) $year) > 1) {
-            $validator->errors()->add(
-                'date_harvested',
-                'The harvest date is in '.$dateYear.' but this harvest is reported under '.$year.'.'
-            );
         }
     }
 

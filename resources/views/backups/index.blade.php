@@ -118,26 +118,26 @@
   </section>
 
   <section class="module-panel" id="backupFiles">
-    <div class="module-table-tools"><div><strong>Repository files</strong><span>Open a file for preview or editing; download preserves its original filename.</span></div><span>{{ $formatBytes($filteredBytes) }} in results</span></div>
+    <div class="module-table-tools"><div><strong id="backupFilesTitle">Repository files</strong><span>Open a file for preview or editing; download preserves its original filename.</span></div><span>{{ $formatBytes($filteredBytes) }} in results</span></div>
     <div class="module-table-scroll">
-      <table class="module-table backup-table">
-        <thead><tr><th>File</th><th>Folder and scope</th><th>File details</th><th>Uploaded</th><th style="text-align:right">Actions</th></tr></thead>
-        <tbody>
+      <table class="module-table module-table-cards backup-table" role="table" aria-labelledby="backupFilesTitle">
+        <thead role="rowgroup"><tr role="row"><th scope="col" role="columnheader">File</th><th scope="col" role="columnheader">Folder and scope</th><th scope="col" role="columnheader">File details</th><th scope="col" role="columnheader">Uploaded</th><th scope="col" role="columnheader" style="text-align:right">Actions</th></tr></thead>
+        <tbody role="rowgroup">
           @forelse($files as $file)
             @php
               $extension = strtolower(pathinfo($file->original_name ?? '', PATHINFO_EXTENSION)) ?: 'file';
               $previewable = true;
             @endphp
-            <tr>
-              <td><div class="backup-file-cell"><span class="backup-file-icon">{!! $fileIcon !!}<b>{{ strtoupper(substr($extension,0,5)) }}</b></span><span><strong title="{{ $file->original_name }}">{{ $file->original_name }}</strong><small class="module-mono">ID {{ $file->id }} · {{ $extension }}</small></span></div></td>
-              <td><strong>{{ $file->folder ?: 'Root' }}</strong><small>{{ optional($file->municipality)->name ?: 'Provincial / unassigned' }}</small></td>
-              <td><strong>{{ $formatBytes($file->size) }}</strong><details class="backup-file-details"><summary>File details</summary><dl><dt>File type</dt><dd>{{ $file->mime ?: 'Unknown file type' }}</dd><dt>Notes</dt><dd>{{ $file->notes ?: 'No notes' }}</dd><dt>Integrity fingerprint (SHA-256)</dt><dd class="module-mono">{{ $file->sha256 ?: 'Unavailable' }}</dd></dl></details></td>
+            <tr role="row">
+              <td role="cell"><div class="backup-file-cell"><span class="backup-file-icon">{!! $fileIcon !!}<b>{{ strtoupper(substr($extension,0,5)) }}</b></span><span><strong title="{{ $file->original_name }}">{{ $file->original_name }}</strong><small class="module-mono">ID {{ $file->id }} · {{ $extension }}</small></span></div></td>
+              <td role="cell"><span class="module-cell-label" aria-hidden="true">Folder and scope</span><strong>{{ $file->folder ?: 'Root' }}</strong><small>{{ optional($file->municipality)->name ?: 'Provincial / unassigned' }}</small></td>
+              <td role="cell"><span class="module-cell-label" aria-hidden="true">File details</span><strong>{{ $formatBytes($file->size) }}</strong><details class="backup-file-details"><summary>File details</summary><dl><dt>File type</dt><dd>{{ $file->mime ?: 'Unknown file type' }}</dd><dt>Notes</dt><dd>{{ $file->notes ?: 'No notes' }}</dd><dt>Integrity fingerprint (SHA-256)</dt><dd class="module-mono">{{ $file->sha256 ?: 'Unavailable' }}</dd></dl></details></td>
               @php($localUploadedAt = \App\Support\LocalTime::fromUtc($file->created_at))
-              <td><strong>{{ $localUploadedAt?->format('M d, Y') ?: '—' }}</strong><small>{{ optional($file->uploader)->name ?: 'Unknown uploader' }} · {{ $localUploadedAt?->format('h:i A') ?: '—' }}</small></td>
-              <td><div class="module-row-actions"><a class="module-button module-button-small" href="{{ route('backups.preview', $file) }}">Open</a><a class="module-button module-button-small" href="{{ route('backups.download', $file) }}">Download</a>@can('delete',$file)<details class="module-action-menu"><summary aria-label="More actions">⋯</summary><div class="module-action-menu-list"><a href="{{ route('backups.preview', [$file, 'mode' => 'edit']) }}">Open editor</a><button type="button" class="js-copy-hash" data-hash="{{ $file->sha256 }}" @disabled(!$file->sha256)>Copy SHA-256</button><form method="POST" action="{{ route('backups.destroy', $file) }}" data-file-name="{{ $file->original_name }}" onsubmit="return confirm('Delete ' + this.dataset.fileName + '? This permanently removes the stored file.');">@csrf @method('DELETE')<button class="danger" type="submit">Delete file</button></form></div></details>@endcan</div></td>
+              <td role="cell"><span class="module-cell-label" aria-hidden="true">Uploaded</span><strong>{{ $localUploadedAt?->format('M d, Y') ?: '—' }}</strong><small>{{ optional($file->uploader)->name ?: 'Unknown uploader' }} · {{ $localUploadedAt?->format('h:i A') ?: '—' }}</small></td>
+              <td role="cell" class="module-cell-actions"><div class="module-row-actions"><a class="module-button module-button-small" href="{{ route('backups.preview', $file) }}">Open</a><a class="module-button module-button-small" href="{{ route('backups.download', $file) }}">Download</a>@can('delete',$file)<details class="module-action-menu"><summary aria-label="More actions">⋯</summary><div class="module-action-menu-list"><a href="{{ route('backups.preview', [$file, 'mode' => 'edit']) }}">Open editor</a><button type="button" class="js-copy-hash" data-hash="{{ $file->sha256 }}" @disabled(!$file->sha256)>Copy SHA-256</button><form method="POST" action="{{ route('backups.destroy', $file) }}" data-file-name="{{ $file->original_name }}" onsubmit="return confirm('Delete ' + this.dataset.fileName + '? This permanently removes the stored file.');">@csrf @method('DELETE')<button class="danger" type="submit">Delete file</button></form></div></details>@endcan</div></td>
             </tr>
           @empty
-            <tr><td colspan="5"><div class="module-empty"><span class="module-empty-icon"><svg viewBox="0 0 24 24"><path d="M3 7h7l2 2h9v11H3V7Z"/></svg></span><strong>No backup files match</strong><span>{{ $activeFilterCount ? 'Clear or adjust the repository filters.' : 'No backup files have been uploaded yet.' }}</span>@can('create', \App\Models\BackupFile::class)<button class="module-button module-button-primary" type="button" id="emptyBackupUpload">Upload files</button>@endcan</div></td></tr>
+            <tr role="row"><td role="cell" colspan="5"><div class="module-empty"><span class="module-empty-icon"><svg viewBox="0 0 24 24"><path d="M3 7h7l2 2h9v11H3V7Z"/></svg></span><strong>No backup files match</strong><span>{{ $activeFilterCount ? 'Clear or adjust the repository filters.' : 'No backup files have been uploaded yet.' }}</span>@can('create', \App\Models\BackupFile::class)<button class="module-button module-button-primary" type="button" id="emptyBackupUpload">Upload files</button>@endcan</div></td></tr>
           @endforelse
         </tbody>
       </table>
@@ -157,6 +157,7 @@
   @media(max-width:980px){.backup-advanced-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
   @media(max-width:650px){.backup-upload-fields,.backup-advanced-grid{grid-template-columns:1fr}.backup-upload-actions{align-items:stretch;flex-direction:column}.backup-upload-actions .module-button{width:100%}}
   .backup-file-details {max-width:260px;margin-top:6px}.backup-file-details summary{color:var(--ui-primary);min-height:38px;display:flex;align-items:center;font-size:14px;cursor:pointer}.backup-file-details dl{margin:0;white-space:normal;overflow-wrap:anywhere}.backup-file-details dt{margin-top:8px;font-size:12px;color:var(--ui-text-muted)}.backup-file-details dd{margin:2px 0 0;font-size:14px}.backup-advanced>summary{display:flex;align-items:center;min-height:44px;font-size:14px;gap:12px}.backup-type-options span{min-height:44px;display:flex;align-items:center;font-size:14px}.backup-type-options input:focus-visible+span{outline:3px solid var(--ui-focus);outline-offset:3px}.backup-file-icon b{display:none}.backup-dropzone strong{font-size:14px}.backup-dropzone input{font-size:14px;max-width:100%;min-height:44px}
+  @media(max-width:900px){.backup-table .backup-file-cell{min-width:0;align-items:flex-start}.backup-table .backup-file-cell strong{max-width:none;white-space:normal;overflow-wrap:anywhere}.backup-table .backup-file-details{max-width:none}.backup-table .backup-file-details summary{min-height:44px}}
 </style>
 @endpush
 

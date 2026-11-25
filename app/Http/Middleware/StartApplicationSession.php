@@ -27,7 +27,7 @@ final class StartApplicationSession extends StartSession
     {
         // A slow read-only reply must not restore an old session or overwrite
         // the cookie/flash changes made by a concurrent logout or office edit.
-        return $request->routeIs('assistant.message')
+        return $request->routeIs('assistant.message', 'farm-plots.agronomy.advice')
             && $request->attributes->get('assistant_session_committed') === true;
     }
 }

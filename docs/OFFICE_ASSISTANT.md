@@ -212,8 +212,9 @@ status/quantity and protected fields. These paths make no operational query or
 provider call and clear pending context, so a bare year cannot widen the rejected
 request. Literal farmer names and feature-help instructions stay separate. This
 is a bounded recognizer, not exhaustive language understanding. Unqualified
-annual reports remain supported; legacy generic seeds/binhi aliases still select
-all-category assistance, not a seed-only filter. Simple farmer-ID/parcel/seasonal-
+annual reports remain supported; legacy generic seeds/binhi aliases selected
+all-category assistance until the November 24 natural-reply follow-up (local, not deployed),
+which makes them select seed categories only; see docs/ASSISTANT_LGU_RECORDS.md. Simple farmer-ID/parcel/seasonal-
 crop definitions now resolve to reviewed help instead of record counts.
 
 HTTP 429 responses produce a visible memory-only retry countdown. Seconds and

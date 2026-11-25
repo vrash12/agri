@@ -97,7 +97,8 @@ final class AssistantConversation
         if ($user->isProvincialVeterinaryOffice() && ! in_array($intent['task'], ['animal-health', 'summary'], true)) {
             return $this->clarification($user, 'Your veterinary account can view Animal Health reports only. Ask for your Animal Health summary and reporting year.', $contextToken);
         }
-        $result = $this->records->answerTask($user, $intent['task'], $intent['year'], $intent['search'] ?? '', $intent['farmer_id'] ?? null);
+        $focus = is_string($intent['focus'] ?? null) && AssistantRecordFocus::valid($intent['task'], $intent['focus']) ? $intent['focus'] : null;
+        $result = $this->records->answerTask($user, $intent['task'], $intent['year'], $intent['search'] ?? '', $intent['farmer_id'] ?? null, $focus);
         if (mb_strlen($result['answer']) > 6000) {
             throw new AssistantUnavailable('That summary is too long to display. Open the register for the full report.');
         }
@@ -114,12 +115,14 @@ final class AssistantConversation
         $references = [
             'task' => $result['report'], 'year' => $result['year'],
             'farmer_id' => $result['_farmer_id'] ?? $intent['farmer_id'] ?? null, 'choices' => $ids,
-        ];
+        ] + ($focus !== null && $result['report'] === $intent['task'] ? ['focus' => $focus] : []);
         unset($result['_farmer_id']);
         $result['actions'] = $actions;
         $result['scope'] = $this->scope($user);
         $result['context'] = $this->token($user, $sessionId, $references);
-        $result['_audit'] = ['source' => 'records', 'report' => $result['report'], 'year' => $result['year'], 'returned_matches' => count($actions)];
+        // The focus is an application-owned vocabulary key, never question text.
+        $result['_audit'] = ['source' => 'records', 'report' => $result['report'], 'year' => $result['year'], 'returned_matches' => count($actions)]
+            + (isset($references['focus']) ? ['focus' => $references['focus']] : []);
 
         return $this->withNextSteps($user, $result, $references);
     }

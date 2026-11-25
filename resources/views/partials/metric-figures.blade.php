@@ -45,6 +45,8 @@
   {{-- Shown rather than folded into a zero bucket: the records exist, the grouping value does not. --}}
   <p class="module-hint">{{ $metric['not_recorded']['label'] }}: {{ number_format((int) $metric['not_recorded']['count']) }}. These records are excluded from the figures above.</p>
 @endif
-@if(! empty($metric['undated']))
-  <p class="module-hint">{{ $metric['undated']['label'] }}: {{ number_format((int) $metric['undated']['count']) }}. No reporting year can be assigned.</p>
-@endif
+@foreach(['undated', 'undated_releases'] as $undatedKey)
+  @if(! empty($metric[$undatedKey]))
+    <p class="module-hint">{{ $metric[$undatedKey]['label'] }}: {{ number_format((int) $metric[$undatedKey]['count']) }}. No reporting year can be assigned.</p>
+  @endif
+@endforeach

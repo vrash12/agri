@@ -30,7 +30,9 @@ entry and retrieval/permission tests; changing the content changes its digest.
 Raw chat and records never enter model context. Operational summaries are fresh,
 authorized reads through `AssistantRecords`, not generated or cached answers.
 Live coverage includes retained workbook sections, cooperative memberships,
-machinery availability/maintenance, seasonal crop counts and LGU profile setup.
+machinery availability/maintenance, seasonal crop counts, LGU profile setup,
+farm-location (barangay) breakdowns and single-subject questions (one input,
+one commodity, recipients or one registry gap).
 Each record reply shows source registers, scope, period, query time and limits.
 It does not inspect every private field, attachment, account or climate reading.
 Identity/greetings can be answered locally. Current-page questions and bounded

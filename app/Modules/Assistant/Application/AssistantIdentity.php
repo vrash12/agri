@@ -26,14 +26,24 @@ final class AssistantIdentity
                 : 'May sinuring gabay ako sa pananim, lupa, patubig, peste, alagang hayop at palaisdaan, at sa mga feature ng AgriLGU: farmer registry, parcels, crop plotting, satellite indices, El Niño readiness, assistance, harvests, Animal Health, cooperatives, machinery, dashboard, weather, geofences, accounts, backups at audit tools.')
             : ($veterinary
                 ? 'I can explain general farm-animal care, help you use Animal Health and understand permitted reports. I can also explain Assistant access and privacy.'
-                : 'I explain reviewed agriculture topics such as soil, crops, irrigation, pests, livestock and fish farming, and AgriLGU features: farmer registry, parcels, crop plotting, satellite indices, El Niño readiness, assistance, harvests, Animal Health, cooperatives, machinery, dashboard, weather, geofences, accounts, backups and audit tools.');
+                : 'I can answer quick questions about your office records and explain how AgriLGU works.
+
+'
+                    .'1. Your records: farmers, parcels, assistance, harvests, Animal Health, cooperatives, machinery and crops, for example “How many farmers do we have?” or “How much fertilizer did we give out this year?”
+'
+                    .'2. AgriLGU features: farmer registry, parcels, crop plotting, satellite indices, El Niño readiness, dashboard, weather, geofences, accounts, backups and audit tools
+'
+                    .'3. Farming help from reviewed agriculture topics: soil, crops, irrigation, pests, livestock and fish farming
+');
         $pageContext = $this->pageContext($module, $filipino);
 
         return match ($kind) {
             'guide' => $this->guideDescription($subjectGuide ?? $guide, $filipino).' '.$limits,
             'greeting' => ($filipino ? 'Kumusta! Ako si '.$name.', ang digital na gabay mo sa AgriLGU. Ano ang maitutulong ko?' : 'Hello! I’m '.$name.', your digital farm guide. How can I help with AgriLGU?').' '.$limits,
             'thanks' => $filipino ? 'Walang anuman! Sabihin lang kung may iba ka pang tanong tungkol sa AgriLGU.' : 'You’re welcome! Let me know if you have another question about AgriLGU.',
-            'capabilities' => $capabilities.' '.$pageContext.' '.$limits.' '.$this->fileLimits($filipino),
+            'capabilities' => $capabilities.(str_ends_with($capabilities, '
+') ? '
+' : ' ').$pageContext.' '.$limits.' '.$this->fileLimits($filipino),
             'context' => $pageContext.' '.$limits,
             'account' => $this->accountContext($user, $filipino).' '.$limits,
             'awareness' => $this->awareness($filipino, $name).' '.$pageContext.' '.$limits,

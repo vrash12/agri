@@ -39,6 +39,8 @@
   @endif
   @if($assessment && !($assessment['context_current'] ?? false))<div class="ag-missing" role="status"><strong>This parcel has changed since the last field check.</strong> Earlier checks remain in the history. Record a new check for the current land and ownership.</div>@endif
 
+  @include('farm_plots.partials.agronomy-briefing')
+
   <section class="ag-lead" data-status="{{ $stress['status'] }}" aria-labelledby="agronomyStatusTitle">
     <div class="ag-lead-main"><span class="ag-status" data-status="{{ $stress['status'] }}">Field-check guidance</span><h2 id="agronomyStatusTitle">{{ $stress['label'] }}</h2><p>{{ $stress['summary'] }}</p>
       <p class="ag-meta">@if($stress['observed_on'] ?? null)Field checked {{ $dateLabel($stress['observed_on']) }} · {{ $stress['stage_label'] ?? 'Stage not recorded' }}@else No current field check recorded for this parcel.@endif</p>

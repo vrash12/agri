@@ -373,6 +373,9 @@
   .ops-comparison-header { flex-wrap: wrap; }
   .ops-comparison-header > div { flex: 1 1 320px; }
   .ops-comparison-header > .ops-metric-picker { flex: 1 1 300px; max-width: 430px; }
+  .ops-comparison-header > .ops-comparison-controls { display: flex; flex: 1 1 300px; flex-wrap: wrap; align-items: flex-end; gap: 10px; max-width: 560px; }
+  .ops-comparison-controls .ops-metric-picker { flex: 1 1 200px; }
+  .ops-comparison-controls .ops-button { min-height: 42px; }
   @media (max-width:620px) {
     .ops-metric-grid { grid-template-columns: 1fr; padding: 12px; gap: 12px; }
     .ops-metric-canvas { height: 240px; }

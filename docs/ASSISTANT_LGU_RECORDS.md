@@ -2,6 +2,61 @@
 
 Status: deployed October 25, 2026 in runtime `cdbc85c`; see [the verified release](OPERATIONAL_RELEASE_2026_10_25.md). Local test checkpoints and remaining acceptance limits are retained below.
 
+## Natural, direct record replies — November 25, 2026 (local, not deployed)
+
+Record replies now open with one or two plain sentences that answer the question
+with the area name and period ("Sample Town has 8 registered farmers. 4 of them
+(50.0%) have a saved parcel boundary."), then a short numbered breakdown and at
+most one "Note:". Jargon such as "unique linked beneficiaries" is replaced with
+plain words. Composition stays local (`App\Modules\Reporting\Application\RecordReplyText`);
+no record value, raw message or thread reaches a provider.
+
+`App\Modules\Assistant\Application\AssistantRecordFocus` recognizes one supported
+subject — one assistance input from `RiceSeedDistribution::INPUT_CATEGORY_LABELS`
+(plus seed/fisheries groups), one commodity from `HarvestRecord::COMMODITY_LABELS`,
+recipient counts, or one registry gap (no parcel, no FFRS, no farm location) — and
+answers it directly. The rest of the question still passes the existing subset,
+place and period guards, so a second subject or extra filter clarifies with no
+record query. The subject persists as an optional, validated `focus` in the
+encrypted follow-up context (invalid values fail closed; older tokens still work).
+Generic "seeds"/"binhi" now means seed categories only. Clarifications now say
+what can be answered with an example. "How many animals were vaccinated" still
+clarifies (no service-type focus yet). `OfficeRecordReader::answerTask()` gained an
+optional `?string $focus = null`. Evaluation: `tests/Feature/AssistantAnswerQualityTest.php`
+(49 realistic questions; 17 previously clarified or returned the wrong report).
+
+## Barangay breakdown — November 24, 2026 (local, not deployed)
+
+A new `barangays` record task answers questions such as "farmers per barangay",
+"assistance by barangay 2026", "brgy breakdown", "magsasaka sa bawat barangay" or
+"ani kada barangay" for the signed-in account's own area. It is local and read-only:
+no provider call, no record text in prompts, no generated SQL, scope from
+`MunicipalityAccess`.
+
+- **Grouping:** municipality plus the trimmed, case-insensitive `farmers.farm_location`.
+  Blank, null and `UNKNOWN` go on a separate "location not recorded" line. Provincial
+  and regional accounts see `Location (Municipality)`, so equal names in different
+  towns never merge. Farm location is free text, not an official barangay list.
+- **Figures:** current registered farmers and farmers with saved parcels; for the
+  reporting year, assistance releases and farmers served and harvest record counts,
+  placed by the linked farmer's location only when the link is valid and
+  same-municipality (others are counted as not placed). Harvest quantities and units
+  are never added together.
+- **Bounds:** top 10 locations by registered farmers plus a remainder line; about
+  eight grouped queries regardless of the number of locations. No farmer names or IDs.
+- **Still clarifies:** a named barangay, another municipality, rankings ("top", "rank"),
+  commodity/gender/private-field filters, months and multiple years. Farmer-name
+  lookups such as "Find farmer Barangay …" keep working.
+- Veterinary, visitor and inactive accounts are refused. Files:
+  `app/Modules/Reporting/Application/AssistantBarangayReport.php`, wiring in
+  `AssistantRecordTopics`, `AssistantIntentResolver`, `AssistantNextSteps`,
+  `AssistantOperationalReports`, `AssistantRecords`, and one phrase in
+  `resources/assistant/knowledge/office-assistant-help.md`. Tests:
+  `tests/Feature/AssistantBarangayReportTest.php` (9) and
+  `tests/Unit/AssistantBarangayIntentTest.php` (64 cases); all existing Assistant suites pass.
+  Verified on SQLite only; on MySQL's case-insensitive collation accented and plain
+  spellings may group together.
+
 ## Record coverage
 
 The Assistant answers supported record questions through fixed local database

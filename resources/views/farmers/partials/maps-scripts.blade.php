@@ -7,9 +7,20 @@ window.__plantedAreaLayerUrl = @json(route('farm-plots.planted-area-layer'));
 window.__parcelCropEditUrl = @json(route('farm-plots.seasonal-crops.edit', ['plot' => '__ID__']));
 window.__parcelAgronomyUrl = @json(route('farm-plots.agronomy.show', ['plot' => '__ID__']));
 window.__parcelCropModalUrl = @json(route('farm-plots.seasonal-crops.edit', ['plot' => '__ID__']));
+@php
+  // Same workspace filters as the parcel request: answers can only narrow this view.
+  $mapAskScope = $workspaceParameters ?? array_filter(['municipality_id' => ($mapWorkspaceMunicipality ?? null)?->id]);
+  $mapAskConfig = [
+      'askUrl' => route('farm-plots.map-questions', $mapAskScope),
+      'matchUrl' => route('farm-plots.map-matches', $mapAskScope),
+      'priorityUrl' => route('farm-plots.visit-priority', $mapAskScope),
+  ];
+@endphp
+window.__parcelMapAssistant = @json($mapAskConfig);
 window.__mapUsage = @json(['url' => route('usage.map-events'), 'token' => csrf_token()]);
 </script>
 <script src="{{ asset('js/reusable-google-map.js') }}?v={{ @filemtime(public_path('js/reusable-google-map.js')) ?: 1 }}"></script>
+<script src="{{ asset('js/parcel-map-assistant.js') }}?v={{ @filemtime(public_path('js/parcel-map-assistant.js')) ?: 1 }}"></script>
 <script src="{{ asset('js/parcel-crop-layer.js') }}?v={{ @filemtime(public_path('js/parcel-crop-layer.js')) ?: 1 }}"></script>
 <script src="{{ asset('js/planted-area-layer.js') }}?v={{ @filemtime(public_path('js/planted-area-layer.js')) ?: 1 }}"></script>
 <script src="{{ asset('js/crop-area-badges.js') }}?v={{ @filemtime(public_path('js/crop-area-badges.js')) ?: 1 }}"></script>

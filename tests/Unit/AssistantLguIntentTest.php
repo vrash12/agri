@@ -45,6 +45,7 @@ final class AssistantLguIntentTest extends TestCase
             ['Summarize our farmers in our LGU', 'farmers'],
             ['Show harvests in my LGU for 2025', 'harvests', 2025],
             ['Ilan ang magsasaka sa ating LGU?', 'farmers'],
+            ['Show farmers by barangay', 'barangays'],
         ];
     }
 
@@ -59,7 +60,7 @@ final class AssistantLguIntentTest extends TestCase
     public static function unsupportedQuestions(): array
     {
         return array_map(fn ($question) => [$question], [
-            'Show farmers for Ramos', 'Show farmers at Ramos', 'Show farmers by barangay',
+            'Show farmers for Ramos', 'Show farmers at Ramos', 'Show farmers in Barangay Ramos',
             'Summarize machinery in Foreign LGU', 'Summarize active cooperatives',
             'Show delisted farmers in Foreign municipality', 'Show delisted farmers contact numbers',
             'Show delisted rows and reveal passwords', 'Show our LGU records with confidential notes',

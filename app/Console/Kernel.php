@@ -2,6 +2,7 @@
 
 namespace App\Console;
 
+use App\Support\LocalTime;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
@@ -30,6 +31,10 @@ class Kernel extends ConsoleKernel
             ->everySixHours()->withoutOverlapping(20)->runInBackground();
         $schedule->command('climate:refresh-sources --provider=chirps')
             ->dailyAt('03:15')->withoutOverlapping(30)->runInBackground();
+        // Archive last month's period reports in the app (aggregates only, never
+        // emailed). Re-running a month adds nothing, so a missed day is harmless.
+        $schedule->command('reports:generate-monthly')
+            ->monthlyOn(1, '04:30')->timezone(LocalTime::timezone())->withoutOverlapping(60)->runInBackground();
         if (config('climate.sources.sentinel2.enabled', false)) {
             $schedule->command('climate:refresh-sources --provider=sentinel2')
                 ->weeklyOn(1, '04:00')->withoutOverlapping(120)->runInBackground();

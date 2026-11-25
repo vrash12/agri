@@ -10,6 +10,7 @@ use App\Models\FarmersCooperative;
 use App\Models\FarmPlot;
 use App\Models\Municipality;
 use App\Models\MunicipalityBoundary;
+use App\Models\Province;
 use App\Models\RiceSeedDistribution;
 use App\Models\User;
 use App\Modules\Farmers\Application\FarmerDataQuality;
@@ -19,6 +20,7 @@ use App\Support\MunicipalityAccess;
 use App\Support\ProviderUsage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 
 class DashboardController extends Controller
 {
@@ -52,7 +54,7 @@ class DashboardController extends Controller
             return view('dashboard_visitor', [
                 'boundaryCount' => MunicipalityBoundary::query()->where('status', 'active')->count(),
                 'municipalityCount' => Municipality::query()->active()->count(),
-                'provinceCount' => \App\Models\Province::query()->active()->count(),
+                'provinceCount' => Province::query()->active()->count(),
             ]);
         }
 
@@ -469,6 +471,7 @@ class DashboardController extends Controller
             'assistance' => $this->coverage->assistance($user, $reportYear),
             'geofences' => $this->coverage->geofences($user),
         ];
+        $harvestStatus = $user->isVisitor() ? null : $this->metrics->harvestRecordingStatus($user, $reportYear);
 
         $providerUsage = $this->providerUsage->forUser($user);
 
@@ -478,6 +481,7 @@ class DashboardController extends Controller
             'charts',
             'dashboardMetrics',
             'coverageStats',
+            'harvestStatus',
             'recentRecipients',
             'recentVaccinations',
             'recentPlots',
@@ -495,7 +499,7 @@ class DashboardController extends Controller
      * The aggregates are calculated in grouped queries so the dashboard does
      * not issue one query per municipality.
      *
-     * @return array{0: \Illuminate\Support\Collection, 1: array<string, int>}
+     * @return array{0: Collection, 1: array<string, int>}
      */
     private function buildMunicipalityOverview(User $user): array
     {

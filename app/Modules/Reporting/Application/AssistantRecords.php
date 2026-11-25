@@ -18,13 +18,24 @@ use App\Support\MunicipalityAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
-/** Private, read-only answers. Nothing from this service goes to an AI provider. */
+/**
+ * Private, read-only answers. Nothing from this service goes to an AI provider.
+ *
+ * Each reply opens with plain sentences that answer the question with its key
+ * figures, area and period, then a short breakdown and at most one note. The
+ * wording is application-owned; units are never combined, missing values are
+ * never shown as zero, and current registry figures are kept apart from yearly
+ * records. Detailed limitations travel in the evidence disclosure.
+ */
 final class AssistantRecords implements OfficeRecordReader
 {
+    private const GROUPS = 10;
+
     public function __construct(private MunicipalityAccess $access, private AssistantDataQuality $quality, private AssistantOperationalReports $operations) {}
 
     /** @return array{answer:string,source:string,report:string,year:int,actions:array,links:array} */
@@ -46,7 +57,7 @@ final class AssistantRecords implements OfficeRecordReader
     }
 
     /** Resolves an application-owned task; raw text is used only for local name lookup. */
-    public function answerTask(User $user, string $topic, int $year, string $search = '', ?int $farmerId = null): array
+    public function answerTask(User $user, string $topic, int $year, string $search = '', ?int $farmerId = null, ?string $focus = null): array
     {
         Gate::forUser($user)->authorize('use', OfficeRecordReader::class);
         if (! config('assistant.enabled')) {
@@ -58,22 +69,25 @@ final class AssistantRecords implements OfficeRecordReader
         if ($user->isProvincialVeterinaryOffice() && ! in_array($topic, ['summary', 'animal-health', 'guidance'], true)) {
             abort(403, 'Your veterinary account can view Animal Health reports only.');
         }
+        // The focus is re-validated here against the model vocabularies; it is
+        // never user text and an unknown key fails closed.
+        abort_unless($focus === null || $this->validFocus($topic, $focus), 422, 'Choose a supported report.');
         try {
             $result = match ($topic) {
                 'farmer-search' => $this->farmer($user, 'Find farmer '.$search, $year, null),
                 'farmer', 'farmer-parcels', 'farmer-assistance', 'farmer-harvests' => $this->farmer($user, $search, $year, $farmerId, $topic),
                 'farmers' => $this->result($this->farmerSummary($user), 'farmers', $year, links: [$this->link('Open farmer registry', 'farmers.index')]),
-                'assistance' => $this->result($this->assistance($user, $year), 'assistance', $year, links: [$this->link('Open assistance register', 'rice-seed-distributions.index')]),
-                'harvests' => $this->result($this->harvests($user, $year), 'harvests', $year, links: [$this->link('Open harvest register', 'harvest-records.index')]),
+                'assistance' => $this->result($this->assistance($user, $year, $focus), 'assistance', $year, links: [$this->link('Open assistance register', 'rice-seed-distributions.index')]),
+                'harvests' => $this->result($this->harvests($user, $year, $focus), 'harvests', $year, links: [$this->link('Open harvest register', 'harvest-records.index')]),
                 'animal-health' => $this->result($this->animals($user, $year), 'animal-health', $year, links: [$this->link('Open Animal Health', 'anti-rabies-vaccinations.index')]),
-                'data-quality' => $this->qualityResult($user, $year),
-                'registry-sources', 'outside-lgu', 'delisted', 'cooperatives', 'machinery', 'lgu-profile', 'crops' => $this->result(
+                'data-quality' => $this->qualityResult($user, $year, $focus),
+                'registry-sources', 'outside-lgu', 'delisted', 'cooperatives', 'machinery', 'lgu-profile', 'crops', 'barangays' => $this->result(
                     $this->operations->answer($user, $topic, $year), $topic, $year, links: $this->reportLinks($topic)
                 ),
                 'summary' => $user->isProvincialVeterinaryOffice()
                     ? $this->result($this->animals($user, $year), 'animal-health', $year)
                     : $this->result($this->overview($user, $year), 'summary', $year),
-                default => $this->result('I can summarize your farmer registry, retained workbook sections, seasonal crops, assistance, harvests, Animal Health, cooperatives, machinery and LGU profile setup. To find one person, type “Find farmer” followed by a name or AgriLGU ID. Reports use your account’s permitted area and one reporting year.', 'guidance', $year),
+                default => $this->result('I can answer questions about your farmers, farm-location (barangay) breakdowns, imported workbook sections, seasonal crops, assistance, harvests, Animal Health, cooperatives, machinery and LGU profile setup — for example “How many farmers do we have?” or “Show assistance for '.$year.'”. To find one person, type “Find farmer” followed by a name or AgriLGU ID. Reports cover your account’s permitted area and one reporting year.', 'guidance', $year),
             };
 
             return $result + ['evidence' => $this->evidence($user, $result['report'], $year)];
@@ -108,86 +122,236 @@ final class AssistantRecords implements OfficeRecordReader
         };
     }
 
-    private function farmerSummary(User $user): string
+    /** @return array{total:int,mapped:int,plots:int,area:float,missing_ffrs:int} */
+    private function farmerFigures(User $user): array
     {
         $farmers = $this->query(Farmer::class, $user);
         Gate::forUser($user)->authorize('viewAny', FarmPlot::class);
-        $total = (clone $farmers)->count();
         $plots = FarmPlot::query()->whereIn('farmer_id', (clone $farmers)->select('farmers.id'));
-        $mapped = (clone $plots)->distinct()->count('farmer_id');
-        $missing = FarmerDataQuality::missingFfrs(clone $farmers)->count();
 
-        return "Farmer registry · current records\n".$this->scopeLabel($user)."\n"
-            ."Registered farmers: {$total}\nFarmers with saved parcels: {$mapped}\n"
-            .'Mapping coverage: '.($total ? number_format($mapped / $total * 100, 1).'%' : 'No farmers recorded')."\n"
-            .'Saved parcels: '.(clone $plots)->count()."\nMapped area: ".number_format((float) (clone $plots)->sum('area_ha'), 4)." ha\n"
-            ."Missing FFRS reference: {$missing}\nRegistry/mapping figures are current, not a historical snapshot. Saved boundaries are planning records, not proof of ownership.";
+        return [
+            'total' => (clone $farmers)->count(),
+            'mapped' => (clone $plots)->distinct()->count('farmer_id'),
+            'plots' => (clone $plots)->count(),
+            'area' => (float) (clone $plots)->sum('area_ha'),
+            'missing_ffrs' => FarmerDataQuality::missingFfrs(clone $farmers)->count(),
+        ];
     }
 
-    private function assistance(User $user, int $year, ?Farmer $farmer = null): string
+    private function farmerSummary(User $user): string
+    {
+        $figures = $this->farmerFigures($user);
+        if ($figures['total'] === 0) {
+            return RecordReplyText::areaHas($user).' no registered farmers in AgriLGU yet.';
+        }
+        $mapped = $figures['mapped'];
+        $lead = RecordReplyText::areaHas($user).' '.RecordReplyText::count($figures['total'], 'registered farmer').'. '.match (true) {
+            $figures['total'] === 1 => $mapped === 1 ? 'That farmer has a saved parcel boundary.' : 'That farmer has no saved parcel boundary yet.',
+            $mapped === 0 => 'None of them has a saved parcel boundary yet.',
+            $mapped === $figures['total'] => 'All of them have a saved parcel boundary.',
+            default => RecordReplyText::number($mapped).' of them ('.RecordReplyText::percent($mapped, $figures['total']).') '.($mapped === 1 ? 'has' : 'have').' a saved parcel boundary.',
+        };
+
+        return RecordReplyText::compose($lead, [
+            'Saved parcels: '.RecordReplyText::number($figures['plots']).', covering '.RecordReplyText::hectares($figures['area']).' of mapped area',
+            'Farmers without a saved parcel: '.RecordReplyText::number($figures['total'] - $mapped),
+            'Farmers without an FFRS reference: '.RecordReplyText::number($figures['missing_ffrs']),
+        ], note: 'These are today’s registry figures, not a past-year snapshot, and saved boundaries are planning records, not proof of ownership.');
+    }
+
+    /**
+     * Receipt-year releases. Only a valid same-municipality link represents a
+     * known recipient; quantities stay grouped by input and unit.
+     *
+     * @param  list<string>|null  $categories
+     * @return array{records:int,people:int,unlinked:int,groups:Collection,more:bool,incomplete:int,undated:int}
+     */
+    private function assistanceFigures(User $user, int $year, ?Farmer $farmer = null, ?array $categories = null): array
     {
         $base = $this->query(RiceSeedDistribution::class, $user);
         if ($farmer) {
             $base->where('farmer_id', $farmer->id)->where('municipality_id', $farmer->municipality_id);
         }
+        if ($categories !== null) {
+            $base->whereIn('input_category', $categories);
+        }
         $dated = (clone $base)->where('date_received', '>=', "{$year}-01-01")->where('date_received', '<', ($year + 1).'-01-01');
-        // Only a valid same-municipality link represents a known beneficiary.
         $linked = (clone $dated)->whereHas('farmer', fn (Builder $q) => $q->whereColumn('farmers.municipality_id', 'rice_seed_distributions.municipality_id'));
         $rows = (clone $dated)->whereNotNull('kgs_received')
             ->whereIn('input_category', array_keys(RiceSeedDistribution::INPUT_CATEGORY_LABELS))
             ->where(fn (Builder $q) => $q->whereIn('quantity_unit', array_keys(RiceSeedDistribution::QUANTITY_UNIT_LABELS))->orWhereNull('quantity_unit')->orWhere('quantity_unit', ''))
             ->selectRaw("input_category, COALESCE(NULLIF(quantity_unit, ''), 'kg') as unit, SUM(kgs_received) as quantity")
-            ->groupBy('input_category', 'unit')->orderBy('input_category')->orderBy('unit')->limit(11)->get();
-        $lines = ["Assistance · received in {$year}", $this->scopeLabel($user), 'Release records: '.(clone $dated)->count(),
-            'Unique linked beneficiaries: '.(clone $linked)->distinct()->count('farmer_id'),
-            'Releases without a valid same-municipality farmer link: '.((clone $dated)->count() - (clone $linked)->count())];
-        foreach ($rows->take(10) as $row) {
-            $lines[] = RiceSeedDistribution::INPUT_CATEGORY_LABELS[$row->input_category].': '.number_format((float) $row->quantity, 3).' '.RiceSeedDistribution::QUANTITY_UNIT_LABELS[$row->unit];
-        }
-        if ($rows->count() > 10) {
-            $lines[] = 'Showing the first 10 quantity groups; open the register for the full breakdown.';
-        }
-        $incomplete = (clone $dated)->where(fn (Builder $q) => $q->whereNull('kgs_received')->orWhereNull('input_category')->orWhereNotIn('input_category', array_keys(RiceSeedDistribution::INPUT_CATEGORY_LABELS))
-            ->orWhere(fn (Builder $q) => $q->whereNotNull('quantity_unit')->where('quantity_unit', '!=', '')->whereNotIn('quantity_unit', array_keys(RiceSeedDistribution::QUANTITY_UNIT_LABELS))))->count();
-        $lines[] = "Quantity/category needing review: {$incomplete}";
-        $lines[] = 'Undated releases excluded from this year: '.(clone $base)->whereNull('date_received')->count();
-        $lines[] = 'Quantities stay separate by input and unit. Legacy blank release units mean kg. Releases are not harvest production.';
+            ->groupBy('input_category', 'unit')->orderBy('input_category')->orderBy('unit')->limit(self::GROUPS + 1)->get();
+        $records = (clone $dated)->count();
 
-        return implode("\n", $lines);
+        return [
+            'records' => $records,
+            'people' => (clone $linked)->distinct()->count('farmer_id'),
+            'unlinked' => $records - (clone $linked)->count(),
+            'groups' => $rows->take(self::GROUPS)->map(fn ($row) => [
+                'label' => RiceSeedDistribution::INPUT_CATEGORY_LABELS[$row->input_category],
+                'quantity' => (float) $row->quantity, 'unit' => RiceSeedDistribution::QUANTITY_UNIT_LABELS[$row->unit],
+            ]),
+            'more' => $rows->count() > self::GROUPS,
+            'incomplete' => (clone $dated)->where(fn (Builder $q) => $q->whereNull('kgs_received')->orWhereNull('input_category')->orWhereNotIn('input_category', array_keys(RiceSeedDistribution::INPUT_CATEGORY_LABELS))
+                ->orWhere(fn (Builder $q) => $q->whereNotNull('quantity_unit')->where('quantity_unit', '!=', '')->whereNotIn('quantity_unit', array_keys(RiceSeedDistribution::QUANTITY_UNIT_LABELS))))->count(),
+            'undated' => (clone $base)->whereNull('date_received')->count(),
+        ];
     }
 
-    private function harvests(User $user, int $year, ?Farmer $farmer = null): string
+    private function assistance(User $user, int $year, ?string $focus = null): string
+    {
+        $area = RecordReplyText::area($user);
+        $subject = $this->assistanceSubject($focus);
+        $figures = $this->assistanceFigures($user, $year, null, $subject['categories']);
+        $records = $figures['records'];
+        $people = RecordReplyText::count($figures['people'], 'farmer');
+        $details = [
+            $figures['unlinked'] > 0 ? RecordReplyText::count($figures['unlinked'], 'release has', 'releases have').' no farmer linked in '.$area.', so '
+                .($figures['unlinked'] === 1 ? 'its recipient isn’t' : 'their recipients aren’t').' counted among the farmers.' : '',
+            $figures['incomplete'] > 0 ? RecordReplyText::count($figures['incomplete'], 'release is', 'releases are').' missing a quantity, input type or unit and '.($figures['incomplete'] === 1 ? 'needs' : 'need').' review.' : '',
+            $figures['undated'] > 0 ? RecordReplyText::count($figures['undated'], 'release has', 'releases have').' no received date, so '.($figures['undated'] === 1 ? 'it isn’t' : 'they aren’t').' counted in any year.' : '',
+            $figures['more'] ? 'Showing the first 10 quantity groups; open the assistance register for the full breakdown.' : '',
+        ];
+        $countsNotNames = 'I give counts here, not names; the assistance register lists each recipient.';
+        if ($focus === 'beneficiaries') {
+            $lead = $records === 0
+                ? "I found no assistance releases received in {$year} for {$area}, so no farmers are counted as recipients."
+                : RecordReplyText::sentence($people).' in '.$area.' received assistance in '.$year.', through '.RecordReplyText::count($records, 'release').'.';
+
+            return RecordReplyText::compose($lead, details: $details, note: $countsNotNames);
+        }
+        if ($subject['categories'] !== null) {
+            $groups = $figures['groups'];
+            $recipients = $figures['people'] > 0 ? ' to '.$people : '';
+            $lead = match (true) {
+                $records === 0 => "I found no {$subject['adjective']} releases received in {$year} for {$area}.",
+                $groups->isEmpty() => "In {$year}, {$area} recorded ".RecordReplyText::count($records, $subject['adjective'].' release').$recipients.', but none has a usable quantity yet.',
+                $groups->count() === 1 => "In {$year}, {$area} gave out ".$this->amount($groups->first()['quantity'], $groups->first()['unit']).' of '.mb_strtolower(trim(explode('/', $groups->first()['label'])[0]))
+                    .' in '.RecordReplyText::count($records, 'release').$recipients.'.',
+                default => "In {$year}, {$area} gave out {$subject['name']} in ".RecordReplyText::count($records, 'release').$recipients.'.',
+            };
+            $items = $groups->count() > 1 ? $groups->map(fn (array $group) => $group['label'].': '.$this->amount($group['quantity'], $group['unit']))->values()->all() : [];
+
+            return RecordReplyText::compose($lead, $items, 'Totals by input and unit:', $details, $countsNotNames);
+        }
+        if ($records === 0) {
+            return RecordReplyText::compose("I found no assistance releases received in {$year} for {$area}.", details: $details);
+        }
+
+        return RecordReplyText::compose(
+            "In {$year}, {$area} recorded ".RecordReplyText::count($records, 'assistance release').($figures['people'] > 0 ? ', reaching '.$people : '').'.',
+            $figures['groups']->map(fn (array $group) => $group['label'].': '.$this->amount($group['quantity'], $group['unit']))->values()->all(),
+            'What was released:', $details,
+            'Each input and unit is totaled separately (blank legacy units count as kg), and releases are not harvests.',
+        );
+    }
+
+    /** @return array{categories:list<string>|null,name:string,adjective:string} */
+    private function assistanceSubject(?string $focus): array
+    {
+        $labels = RiceSeedDistribution::INPUT_CATEGORY_LABELS;
+
+        return match (true) {
+            $focus === 'seed' => ['categories' => array_values(array_filter(array_keys($labels), fn (string $key) => str_ends_with($key, '_seed'))), 'name' => 'seeds', 'adjective' => 'seed'],
+            $focus === 'fisheries' => ['categories' => RiceSeedDistribution::FISHERIES_INPUT_CATEGORIES, 'name' => 'fisheries assistance', 'adjective' => 'fisheries assistance'],
+            is_string($focus) && str_starts_with($focus, 'input:') => ['categories' => [substr($focus, 6)],
+                'name' => $name = mb_strtolower(trim(explode('/', $labels[substr($focus, 6)])[0])), 'adjective' => $name],
+            default => ['categories' => null, 'name' => 'assistance', 'adjective' => 'assistance'],
+        };
+    }
+
+    /** @return array{records:int,groups:Collection,more:bool,incomplete:int,undated:int} */
+    private function harvestFigures(User $user, int $year, ?Farmer $farmer = null, ?string $commodity = null): array
     {
         $base = $this->query(HarvestRecord::class, $user);
         if ($farmer) {
             $base->where('farmer_id', $farmer->id)->where('municipality_id', $farmer->municipality_id);
         }
+        if ($commodity !== null) {
+            $base->where('commodity', $commodity);
+        }
         $period = (clone $base)->where('harvest_year', $year);
         $complete = (clone $period)->whereNotNull('quantity')->whereIn('commodity', array_keys(HarvestRecord::COMMODITY_LABELS))->whereIn('quantity_unit', array_keys(HarvestRecord::QUANTITY_UNIT_LABELS));
-        $rows = (clone $complete)->selectRaw('commodity, quantity_unit, SUM(quantity) as quantity')->groupBy('commodity', 'quantity_unit')->orderBy('commodity')->orderBy('quantity_unit')->limit(11)->get();
-        $lines = ["Harvests · stated crop year {$year}", $this->scopeLabel($user), 'Harvest records: '.(clone $period)->count()];
-        foreach ($rows->take(10) as $row) {
-            $lines[] = HarvestRecord::COMMODITY_LABELS[$row->commodity].': '.number_format((float) $row->quantity, 3).' '.HarvestRecord::QUANTITY_UNIT_LABELS[$row->quantity_unit];
-        }
-        if ($rows->count() > 10) {
-            $lines[] = 'Showing the first 10 commodity/unit groups; open the register for the full breakdown.';
-        }
-        $lines[] = 'Records with incomplete quantity/classification: '.((clone $period)->count() - (clone $complete)->count());
-        $lines[] = 'Records with no stated harvest year excluded: '.(clone $base)->whereNull('harvest_year')->count();
-        $lines[] = 'Units and commodities are not combined or converted. A missing value is not a recorded zero. No crop-section linkage or yield estimate is inferred.';
+        $rows = (clone $complete)->selectRaw('commodity, quantity_unit, SUM(quantity) as quantity')->groupBy('commodity', 'quantity_unit')->orderBy('commodity')->orderBy('quantity_unit')->limit(self::GROUPS + 1)->get();
+        $records = (clone $period)->count();
 
-        return implode("\n", $lines);
+        return [
+            'records' => $records,
+            'groups' => $rows->take(self::GROUPS)->map(fn ($row) => [
+                'label' => HarvestRecord::COMMODITY_LABELS[$row->commodity], 'quantity' => (float) $row->quantity, 'unit' => $this->harvestUnit($row->quantity_unit),
+            ]),
+            'more' => $rows->count() > self::GROUPS,
+            'incomplete' => $records - (clone $complete)->count(),
+            'undated' => (clone $base)->whereNull('harvest_year')->count(),
+        ];
     }
 
-    private function animals(User $user, int $year): string
+    private function harvests(User $user, int $year, ?string $focus = null): string
+    {
+        $area = RecordReplyText::area($user);
+        $commodity = is_string($focus) && str_starts_with($focus, 'commodity:') ? substr($focus, 10) : null;
+        $figures = $this->harvestFigures($user, $year, null, $commodity);
+        $records = $figures['records'];
+        $groups = $figures['groups'];
+        $details = [
+            $figures['incomplete'] > 0 ? RecordReplyText::count($figures['incomplete'], 'record is', 'records are').' missing a quantity, crop type or unit, so '.($figures['incomplete'] === 1 ? 'it isn’t' : 'they aren’t').' in the totals.' : '',
+            $figures['undated'] > 0 ? RecordReplyText::count($figures['undated'], 'record has', 'records have').' no harvest year, so '.($figures['undated'] === 1 ? 'it isn’t' : 'they aren’t').' counted in any year.' : '',
+            $figures['more'] ? 'Showing the first 10 commodity/unit groups; open the harvest register for the full breakdown.' : '',
+        ];
+        $note = 'Units are kept separate and never converted, and a missing quantity is not a zero harvest.';
+        if ($commodity !== null) {
+            $name = mb_strtolower(trim(explode('/', HarvestRecord::COMMODITY_LABELS[$commodity])[0]));
+            $lead = match (true) {
+                $records === 0 => "I found no {$name} harvest records for {$area} in {$year}.",
+                $groups->isEmpty() => "In {$year}, {$area} has ".RecordReplyText::count($records, $name.' harvest record').', but none has a usable quantity yet.',
+                $groups->count() === 1 => "In {$year}, {$area} harvested ".$this->amount($groups->first()['quantity'], $groups->first()['unit'])." of {$name}, from ".RecordReplyText::count($records, 'harvest record').'.',
+                default => "In {$year}, {$area} recorded ".RecordReplyText::count($records, $name.' harvest record').', saved in more than one unit, so the totals stay separate.',
+            };
+            $items = $groups->count() > 1 ? $groups->map(fn (array $group) => $this->amount($group['quantity'], $group['unit']))->values()->all() : [];
+
+            return RecordReplyText::compose($lead, $items, details: $details, note: $note);
+        }
+        if ($records === 0) {
+            return RecordReplyText::compose("I found no harvest records for {$area} with {$year} as the harvest year.", details: $details);
+        }
+        $crops = $groups->pluck('label')->unique()->map(fn (string $label) => mb_strtolower($label))->values()->all();
+
+        return RecordReplyText::compose(
+            "In {$year}, {$area} recorded ".RecordReplyText::count($records, 'harvest record').($crops === [] ? '.' : ', covering '.RecordReplyText::join($crops).'.'),
+            $groups->map(fn (array $group) => $group['label'].': '.$this->amount($group['quantity'], $group['unit']))->values()->all(),
+            'What was harvested:', $details, $note,
+        );
+    }
+
+    /** @return array{records:int,animals:int,undated:int} */
+    private function animalFigures(User $user, int $year): array
     {
         $base = $this->query(AntiRabiesVaccination::class, $user);
         $period = (clone $base)->where('vaccination_year', $year);
 
-        return "Animal Health · recorded service year {$year}\n".$this->scopeLabel($user)."\nService records: ".(clone $period)->count()
-            ."\nAnimal service instances: ".(int) (clone $period)->selectRaw('COALESCE(SUM(CASE WHEN animal_count IS NULL OR animal_count < 1 THEN 1 ELSE animal_count END), 0) as total')->value('total')
-            ."\nRecords missing a service year: ".(clone $base)->whereNull('vaccination_year')->count()
-            ."\nRepeat visits can count the same animal more than once. These are recorded services, not the number of unique animals or medical advice.";
+        return [
+            'records' => (clone $period)->count(),
+            // Existing one-animal fallback for missing or zero legacy counts.
+            'animals' => (int) (clone $period)->selectRaw('COALESCE(SUM(CASE WHEN animal_count IS NULL OR animal_count < 1 THEN 1 ELSE animal_count END), 0) as total')->value('total'),
+            'undated' => (clone $base)->whereNull('vaccination_year')->count(),
+        ];
+    }
+
+    private function animals(User $user, int $year): string
+    {
+        $figures = $this->animalFigures($user, $year);
+        $area = RecordReplyText::area($user);
+        $details = [$figures['undated'] > 0 ? RecordReplyText::count($figures['undated'], 'record has', 'records have').' no service year, so '.($figures['undated'] === 1 ? 'it isn’t' : 'they aren’t').' counted in any year.' : ''];
+        if ($figures['records'] === 0) {
+            return RecordReplyText::compose("I found no Animal Health services recorded for {$area} in {$year}.", details: $details);
+        }
+
+        return RecordReplyText::compose(
+            "In {$year}, {$area} recorded ".RecordReplyText::count($figures['records'], 'Animal Health service record').', covering '.RecordReplyText::count($figures['animals'], 'animal service').' in total.',
+            details: $details,
+            note: 'An animal served on two visits is counted twice, so this is not the number of unique animals, and it is not medical advice.',
+        );
     }
 
     private function farmer(User $user, string $question, int $year, ?int $farmerId, string $detail = 'farmer'): array
@@ -196,10 +360,11 @@ final class AssistantRecords implements OfficeRecordReader
         if (! $farmerId && preg_match('/\b(?:AGRI-F|PAIS-FRM)-\d{1,16}\b/i', $question, $match)) {
             $farmerId = FarmerIdentifier::parse($match[0]);
         }
+        $area = RecordReplyText::area($user);
         if (! $farmerId) {
             $search = trim(preg_replace('/^(?:find|search|show|hanapin)\s+(?:farmer|magsasaka)\s+/iu', '', trim($question)));
             if (mb_strlen($search) < 2 || mb_strlen($search) > 80) {
-                return $this->result('Type “Find farmer” followed by 2–80 characters of a name or a complete AgriLGU ID.', 'farmer-search', $year);
+                return $this->result('Type “Find farmer” followed by 2–80 characters of a name or a complete AgriLGU ID, for example “Find farmer Juan Dela Cruz”.', 'farmer-search', $year);
             }
             $words = preg_split('/\s+/u', $search, 6);
             foreach ($words as $word) {
@@ -214,53 +379,167 @@ final class AssistantRecords implements OfficeRecordReader
                 $actions[] = ['label' => $this->name($match).' · '.$match->agri_gov_id, 'farmer_id' => $match->id];
             }
 
-            return $this->result($matches->isEmpty() ? 'No matching farmer is available in your permitted area. Check the name or use a complete AgriLGU ID.'
-                : 'Choose a farmer below to see their recorded summary.'.($matches->count() > 6 ? ' Showing the first six matches; use a fuller name to narrow the search.' : ''), 'farmer-search', $year, $actions);
+            return $this->result(match (true) {
+                $matches->isEmpty() => "I couldn’t find a farmer with that name or ID in {$area}. Check the spelling, or use their complete AgriLGU ID.",
+                $matches->count() === 1 => "I found 1 matching farmer in {$area}. Choose them below to see their summary.",
+                $matches->count() > 6 => "I found more than six matching farmers in {$area}. Showing the first six matches; use a fuller name to narrow the search.",
+                default => 'I found '.$matches->count()." matching farmers in {$area}. Choose one below to see their summary.",
+            }, 'farmer-search', $year, $actions);
         }
         $farmer = $base->whereKey($farmerId)->first(['id', 'municipality_id', 'first_name', 'middle_name', 'last_name', 'farm_area_ha']);
         abort_unless($farmer, 404, 'That farmer is unavailable in your permitted area.');
         Gate::forUser($user)->authorize('view', $farmer);
-        $heading = $this->name($farmer).' · '.$farmer->agri_gov_id."\n".$this->scopeLabel($user);
-        if (in_array($detail, ['farmer-assistance', 'farmer-harvests'], true)) {
-            $text = $heading."\n\n".($detail === 'farmer-assistance' ? $this->assistance($user, $year, $farmer) : $this->harvests($user, $year, $farmer));
+        $who = $this->name($farmer).' ('.$farmer->agri_gov_id.')';
+        $links = [['label' => 'Open farmer record', 'url' => route('farmers.records', $farmer)]];
+        if ($detail === 'farmer-assistance') {
+            $assistance = $this->assistanceFigures($user, $year, $farmer);
 
-            return $this->result($text, $detail, $year, links: [['label' => 'Open farmer record', 'url' => route('farmers.records', $farmer)]]) + ['_farmer_id' => $farmer->id];
+            return $this->result(RecordReplyText::compose($assistance['records'] === 0
+                ? "I found no assistance received by {$who} in {$year}."
+                : "In {$year}, {$who} received ".RecordReplyText::count($assistance['records'], 'assistance release').'.',
+                $this->groupLines($assistance['groups']), 'What was released:', [
+                    $assistance['incomplete'] > 0 ? RecordReplyText::count($assistance['incomplete'], 'release is', 'releases are').' missing a quantity, input type or unit.' : '',
+                    $assistance['more'] ? 'Showing the first 10 quantity groups; open the farmer record for the full breakdown.' : '',
+                ]), $detail, $year, links: $links) + ['_farmer_id' => $farmer->id];
+        }
+        if ($detail === 'farmer-harvests') {
+            $harvests = $this->harvestFigures($user, $year, $farmer);
+
+            return $this->result(RecordReplyText::compose($harvests['records'] === 0
+                ? "I found no harvest records for {$who} in {$year}."
+                : "In {$year}, {$who} has ".RecordReplyText::count($harvests['records'], 'harvest record').'.',
+                $this->groupLines($harvests['groups']), 'What was harvested:', [
+                    $harvests['incomplete'] > 0 ? RecordReplyText::count($harvests['incomplete'], 'record is', 'records are').' missing a quantity, crop type or unit.' : '',
+                    $harvests['more'] ? 'Showing the first 10 commodity/unit groups; open the farmer record for the full breakdown.' : '',
+                ], 'Units are kept separate and never converted.'), $detail, $year, links: $links) + ['_farmer_id' => $farmer->id];
         }
         $office = $farmer->municipality()->first(['id', 'name', 'province']);
         $plots = FarmPlot::query()->where('farmer_id', $farmer->id);
         Gate::forUser($user)->authorize('viewAny', FarmPlot::class);
         $crops = $this->query(ParcelCropSeason::class, $user)->where('municipality_id', $farmer->municipality_id)->whereIn('farm_plot_id', (clone $plots)->select('id'))->where('crop_year', $year)
             ->whereIn('crop', array_keys(ParcelCropSeason::CROPS))->select('crop')->distinct()->limit(9)->get();
-        $text = $heading
-            ."\nRegistry office: ".($office ? mb_substr($office->name.', '.$office->province, 0, 180) : 'Not assigned')
-            ."\nDeclared farm area: ".($farmer->farm_area_ha === null ? 'Not recorded' : number_format((float) $farmer->farm_area_ha, 2).' ha')
-            ."\nSaved parcels: ".(clone $plots)->count()."\nMapped area: ".number_format((float) (clone $plots)->sum('area_ha'), 4).' ha'
-            ."\nRecorded crops in {$year}: ".($crops->isEmpty() ? 'No classified seasonal crops recorded' : $crops->map(fn ($row) => ParcelCropSeason::CROPS[$row->crop])->implode(', '));
+        $plotCount = (clone $plots)->count();
+        $lead = $who.' is registered in '.($office ? mb_substr($office->name.', '.$office->province, 0, 180) : 'no assigned office').'. '
+            .'They have '.RecordReplyText::count($plotCount, 'saved parcel').($plotCount > 0 ? ' covering '.RecordReplyText::hectares((float) (clone $plots)->sum('area_ha')) : '')
+            .($farmer->farm_area_ha === null ? ', and no declared farm area is recorded.' : ', and a declared farm area of '.RecordReplyText::hectares((float) $farmer->farm_area_ha).'.');
+        $items = ["Crops recorded for {$year}: ".($crops->isEmpty() ? 'none classified yet' : $crops->map(fn ($row) => ParcelCropSeason::CROPS[$row->crop])->implode(', '))];
         if ($detail !== 'farmer-parcels') {
-            $text .= "\n\n".$this->assistance($user, $year, $farmer)."\n\n".$this->harvests($user, $year, $farmer);
+            $assistance = $this->assistanceFigures($user, $year, $farmer);
+            $harvests = $this->harvestFigures($user, $year, $farmer);
+            $items[] = "Assistance received in {$year}: ".($assistance['records'] === 0 ? 'none recorded'
+                : RecordReplyText::count($assistance['records'], 'release').($assistance['groups']->isEmpty() ? '' : ' — '.implode(', ', $this->groupLines($assistance['groups']))));
+            $items[] = "Harvests in {$year}: ".($harvests['records'] === 0 ? 'none recorded'
+                : RecordReplyText::count($harvests['records'], 'record').($harvests['groups']->isEmpty() ? '' : ' — '.implode(', ', $this->groupLines($harvests['groups']))));
         }
 
-        return $this->result($text, $detail, $year, links: [['label' => 'Open farmer record', 'url' => route('farmers.records', $farmer)]]) + ['_farmer_id' => $farmer->id];
+        return $this->result(RecordReplyText::compose($lead, $items, note: 'Saved boundaries are planning records, not proof of ownership; quantities keep their own units.'), $detail, $year, links: $links) + ['_farmer_id' => $farmer->id];
     }
 
-    private function qualityResult(User $user, int $year): array
+    /** @return list<string> */
+    private function groupLines(Collection $groups): array
     {
-        $summary = $this->quality->summary($user);
+        return $groups->map(fn (array $group) => $group['label'].' '.$this->amount($group['quantity'], $group['unit']))->values()->all();
+    }
 
-        return $this->result($summary['answer'], 'data-quality', $year, links: $summary['links']);
+    private function qualityResult(User $user, int $year, ?string $focus = null): array
+    {
+        $figures = $this->quality->figures($user);
+        $links = $this->quality->links();
+        $total = $figures['total'];
+        $area = RecordReplyText::areaPossessive($user);
+        $focused = ['unmapped' => ['without_parcels', 'no saved parcel yet', 'a saved parcel'],
+            'missing-ffrs' => ['missing_ffrs', 'no FFRS reference recorded', 'an FFRS reference'],
+            'missing-location' => ['missing_location', 'no farm location recorded', 'a farm location']];
+        if (isset($focused[$focus])) {
+            [$key, $gap, $present] = $focused[$focus];
+            $count = $figures[$key];
+            $lead = match (true) {
+                $total === 0 => RecordReplyText::sentence($area).' registry has no farmer profiles yet, so there is nothing to check.',
+                $count === 0 => 'All '.RecordReplyText::count($total, 'registered farmer').' in '.RecordReplyText::area($user).' have '.$present.'.',
+                default => RecordReplyText::number($count).' of '.$area.' '.RecordReplyText::count($total, 'registered farmer').' ('.RecordReplyText::percent($count, $total).') '.($count === 1 ? 'has' : 'have').' '.$gap.'.',
+            };
+            // The matching review queue comes first; the others stay available.
+            $ordered = [$links[$key], ...array_values(array_diff_key($links, [$key => true]))];
+
+            return $this->result(RecordReplyText::compose($lead, note: 'This is a review list, not a fraud finding; a blank field is not a recorded “no”. Use the review link below to see them in the registry.'),
+                'data-quality', $year, links: $ordered);
+        }
+        $gaps = array_filter([
+            $figures['without_parcels'] > 0 ? RecordReplyText::number($figures['without_parcels']).' without a saved parcel' : '',
+            $figures['missing_ffrs'] > 0 ? RecordReplyText::number($figures['missing_ffrs']).' without an FFRS reference' : '',
+            $figures['missing_location'] > 0 ? RecordReplyText::number($figures['missing_location']).' without a farm location' : '',
+        ]);
+        $lead = match (true) {
+            $total === 0 => RecordReplyText::sentence($area).' registry has no farmer profiles yet, so there is nothing to check.',
+            $gaps === [] => 'Every farmer profile in '.$area.' registry ('.RecordReplyText::number($total).') has a saved parcel, an FFRS reference and a farm location.',
+            default => 'Here is what needs attention in '.$area.' registry of '.RecordReplyText::count($total, 'farmer profile').': '.RecordReplyText::join($gaps).'.',
+        };
+
+        return $this->result(RecordReplyText::compose($lead, $total === 0 ? [] : [
+            'Farmers without a saved parcel: '.RecordReplyText::number($figures['without_parcels']),
+            'Farmers without an FFRS reference: '.RecordReplyText::number($figures['missing_ffrs']),
+            'Farmers without a farm location: '.RecordReplyText::number($figures['missing_location']),
+            'Saved plots without a drawn boundary: '.RecordReplyText::number($figures['plots_without_geometry']),
+        ], note: 'These are review lists, not fraud findings; a blank field is not a recorded “no”.'), 'data-quality', $year, links: array_values($links));
     }
 
     private function overview(User $user, int $year): string
     {
-        $parts = [$this->farmerSummary($user), $this->assistance($user, $year), $this->harvests($user, $year), $this->animals($user, $year)];
+        $farmers = $this->farmerFigures($user);
+        $assistance = $this->assistanceFigures($user, $year);
+        $harvests = $this->harvestFigures($user, $year);
+        $animals = $this->animalFigures($user, $year);
+        $items = [
+            'Farmers: '.RecordReplyText::number($farmers['total']).' registered, '.RecordReplyText::number($farmers['mapped']).' with a saved parcel ('.RecordReplyText::percent($farmers['mapped'], $farmers['total']).'), '
+                .RecordReplyText::number($farmers['missing_ffrs']).' without an FFRS reference.',
+            "Assistance in {$year}: ".RecordReplyText::count($assistance['records'], 'release').' to '.RecordReplyText::count($assistance['people'], 'farmer').'.',
+            "Harvests in {$year}: ".RecordReplyText::count($harvests['records'], 'record').($harvests['incomplete'] > 0 ? ' ('.RecordReplyText::number($harvests['incomplete']).' without a usable quantity)' : '').'.',
+            "Animal Health in {$year}: ".RecordReplyText::count($animals['records'], 'service record').', covering '.RecordReplyText::count($animals['animals'], 'animal service').'.',
+        ];
         foreach (['registry-sources', 'crops', 'cooperatives', 'machinery'] as $topic) {
-            // The overview presents only the leading labeled aggregates; each
-            // dedicated report supplies its bounded breakdown and caveats.
-            $parts[] = implode("\n", array_slice(explode("\n", $this->operations->answer($user, $topic, $year)), 0, 5));
+            // Each dedicated report supplies its own breakdown and caveats.
+            $items[] = $this->operations->overviewLine($user, $topic, $year);
         }
-        $parts[] = 'Workbook figures count rows, not people. Crop figures count parcel-season records, not hectares or production. Memberships require same-LGU farmer links; machinery counts reflect saved inventory status. Ask for an individual module report for its breakdown and limitations. LGU profile setup is available separately.';
 
-        return implode("\n\n", $parts);
+        return RecordReplyText::compose(
+            'Here’s '.RecordReplyText::area($user).' at a glance: '.RecordReplyText::count($farmers['total'], 'registered farmer').' today, with '
+                .RecordReplyText::count($assistance['records'], 'assistance release').' and '.RecordReplyText::count($harvests['records'], 'harvest record')." recorded for {$year}.",
+            $items,
+            note: "Farmer, workbook, cooperative and machinery figures are current; the rest are for {$year}. Ask about any one for its details — LGU profile setup is available separately.",
+        );
+    }
+
+    /** Fixed vocabularies only; mirrors the Assistant's focus recognizer without importing it. */
+    private function validFocus(string $topic, string $focus): bool
+    {
+        return match ($topic) {
+            'assistance' => in_array($focus, ['beneficiaries', 'seed', 'fisheries'], true)
+                || (str_starts_with($focus, 'input:') && isset(RiceSeedDistribution::INPUT_CATEGORY_LABELS[substr($focus, 6)]) && ! str_starts_with(substr($focus, 6), 'other_')),
+            'harvests' => str_starts_with($focus, 'commodity:') && isset(HarvestRecord::COMMODITY_LABELS[substr($focus, 10)]) && $focus !== 'commodity:other',
+            'data-quality' => in_array($focus, ['unmapped', 'missing-ffrs', 'missing-location'], true),
+            default => false,
+        };
+    }
+
+    /** "6 sacks", "1 sack", "35 kg". */
+    private function amount(float $quantity, string $unit): string
+    {
+        $text = RecordReplyText::quantity($quantity);
+        if ($text === '1' && ! in_array($unit, ['kg', 'g', 'L', 'mL'], true)) {
+            $unit = match ($unit) {
+                'boxes' => 'box', 'metric tons' => 'metric ton', default => rtrim($unit, 's'),
+            };
+        }
+
+        return $text.' '.$unit;
+    }
+
+    private function harvestUnit(string $unit): string
+    {
+        return match ($unit) {
+            'kg' => 'kg', 'ton' => 'metric tons',
+            default => mb_strtolower(HarvestRecord::QUANTITY_UNIT_LABELS[$unit]),
+        };
     }
 
     /** All source links and descriptions are application-owned, never generated by a provider. */
@@ -276,6 +555,12 @@ final class AssistantRecords implements OfficeRecordReader
             'machinery' => [$this->link('Open machinery inventory', 'machinery-inventory.index')],
             'lgu-profile' => [$this->link('Open LGU profiles', 'settings.lgu.index')],
             'crops' => [$this->link('Open farmers and parcel records', 'farmers.index')],
+            'barangays' => [
+                $this->link('Open farmer registry', 'farmers.index'),
+                ['label' => 'Review missing locations', 'url' => route('farmers.index', ['quality' => 'missing_location'])],
+                $this->link('Open assistance register', 'rice-seed-distributions.index'),
+                $this->link('Open harvest register', 'harvest-records.index'),
+            ],
             default => [],
         };
     }
@@ -292,9 +577,11 @@ final class AssistantRecords implements OfficeRecordReader
             'machinery' => ['Machinery inventory', 'machinery-inventory.index', 'Current saved availability and maintenance records.'],
             'lgu-profile' => ['LGU profile and website settings', 'settings.lgu.index', 'Active office configuration; page publication does not verify DNS/HTTPS.'],
             'crops' => ['Seasonal parcel crop records', 'farmers.index', "Stated crop year {$year}; valid same-LGU parcel-season records, not planted hectares."],
+            'barangays' => ['Farmer registry farm locations', 'farmers.index', 'Current free-text farm location on each profile, grouped per municipality; not an official barangay list.'],
         ];
         $topics = match ($report) {
             'summary' => ['farmers', 'assistance', 'harvests', 'animal-health', 'registry-sources', 'crops', 'cooperatives', 'machinery'],
+            'barangays' => ['barangays', 'assistance', 'harvests'],
             'farmer' => ['farmers', 'crops', 'assistance', 'harvests'],
             'farmer-parcels' => ['farmers', 'crops'],
             'farmer-assistance' => ['farmers', 'assistance'],
@@ -309,7 +596,7 @@ final class AssistantRecords implements OfficeRecordReader
             'harvests' => ['harvest_records'], 'animal-health' => ['anti_rabies_vaccinations'],
             'registry-sources' => ['farmer_registry_source_rows'], 'cooperatives' => ['farmers_cooperatives', 'cooperative_farmer'],
             'machinery' => ['agricultural_machineries'], 'lgu-profile' => ['municipality_profiles', 'municipality_websites'],
-            'crops' => ['parcel_crop_seasons'],
+            'crops' => ['parcel_crop_seasons'], 'barangays' => ['farmers', 'farm_plots'],
         ];
         foreach ($topics as $topic) {
             [$title, $route, $detail] = $catalog[$topic];
@@ -331,6 +618,7 @@ final class AssistantRecords implements OfficeRecordReader
             'harvests', 'farmer-harvests' => "Stated harvest year {$year}",
             'animal-health' => "Recorded service year {$year}",
             'crops' => "Stated crop year {$year}",
+            'barangays' => "Current registry locations plus {$year} releases and harvest records",
             'summary', 'farmer', 'farmer-parcels' => "Current registry/setup plus explicitly labeled {$year} records",
             default => 'Current saved records; not a historical snapshot',
         };
@@ -350,11 +638,6 @@ final class AssistantRecords implements OfficeRecordReader
         Gate::forUser($user)->authorize('viewAny', $model);
 
         return $this->access->scope($model::query(), $user);
-    }
-
-    private function scopeLabel(User $user): string
-    {
-        return 'Scope: '.mb_substr($user->scopeLabel(), 0, 180);
     }
 
     private function name(Farmer $farmer): string

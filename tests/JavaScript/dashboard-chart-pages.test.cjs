@@ -285,3 +285,23 @@ test('small municipality lists do not display unused search and paging controls'
     assert.deepEqual(h.latest().labels, source.labels);
   }
 });
+
+test('ordering follows the one chosen indicator, keeps rows aligned and puts not recorded last', () => {
+  const { orderMetric } = require('../../public/js/dashboard-chart-pages.js');
+  const metric = {
+    title: 'Municipality comparison',
+    labels: ['Alpha', 'Bravo', 'Charlie', 'Delta'],
+    series: [{ name: 'Assistance reach 2026', unit: '%', decimals: 1, values: [12.5, null, 40, 12.5] }],
+  };
+
+  const highest = orderMetric(metric, 'desc');
+  assert.deepEqual(highest.labels, ['Charlie', 'Alpha', 'Delta', 'Bravo']);
+  assert.deepEqual(highest.series[0].values, [40, 12.5, 12.5, null]);
+
+  const lowest = orderMetric(metric, 'asc');
+  assert.deepEqual(lowest.labels, ['Alpha', 'Delta', 'Charlie', 'Bravo']);
+
+  // Name order is the server's alphabetical order, returned unchanged.
+  assert.equal(orderMetric(metric, 'name'), metric);
+  assert.deepEqual(metric.labels, ['Alpha', 'Bravo', 'Charlie', 'Delta']);
+});

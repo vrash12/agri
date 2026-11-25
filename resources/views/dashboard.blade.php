@@ -379,7 +379,7 @@
             </select>
           </label>
           <button type="submit" class="ops-button ops-button-primary">Apply year</button>
-          <p id="dashboardReportYearHelp">Applies to assistance reach, monthly animal-health services, fingerling quantities, and production in the municipality comparison. Other program totals cover all recorded dates; machinery and geofence coverage show current records.</p>
+          <p id="dashboardReportYearHelp">Applies to assistance reach, monthly animal-health services, fingerling quantities, and the assistance, harvest follow-up and production figures in the municipality comparison. Other program totals cover all recorded dates; machinery and geofence coverage show current records.</p>
         </form>
         @include('dashboard.partials.coverage')
         <div class="ops-metric-grid">
@@ -457,22 +457,84 @@
         </div>
       </section>
 
+      @if(! empty($harvestStatus['rows'] ?? null))
+        <section class="ops-panel" aria-labelledby="dashboardHarvestStatusHeading">
+          <div class="ops-panel-header">
+            <div>
+              <span class="ops-panel-kicker">Harvest recording</span>
+              <h2 id="dashboardHarvestStatusHeading">
+                {{ $harvestStatus['missing'] > 0
+                    ? $harvestStatus['missing'].' planted '.\Illuminate\Support\Str::plural('season', $harvestStatus['missing']).' in '.$harvestStatus['year'].' with no harvest recorded yet'
+                    : 'Every planted season in '.$harvestStatus['year'].' has a harvest record' }}
+              </h2>
+              <p>Compares saved parcel crop seasons with saved harvest records for the same year, season and commodity. A reminder of what may still need recording — not a measure of missing production.</p>
+            </div>
+            @if($user->canManageOperationalData() && Route::has('harvest-records.import.form'))
+              <div class="ops-comparison-controls">
+                <a class="ops-button ops-button-secondary" href="{{ route('harvest-records.import.form') }}">Import harvests</a>
+                <a class="ops-button ops-button-primary" href="{{ route('harvest-records.create') }}">Record harvest</a>
+              </div>
+            @endif
+          </div>
+          <div class="ops-table-wrap">
+            <table class="ops-table">
+              <caption class="sr-only">Planted crop seasons and harvest records for {{ $harvestStatus['year'] }}</caption>
+              <thead><tr><th scope="col">Season</th><th scope="col">Commodity</th><th scope="col" class="ops-numeric">Parcel-seasons planted</th><th scope="col" class="ops-numeric">Harvest records</th><th scope="col">Status</th></tr></thead>
+              <tbody>
+                @foreach($harvestStatus['rows'] as $harvestRow)
+                  <tr>
+                    <td>{{ $harvestRow['season_label'] }}</td>
+                    <th scope="row">{{ $harvestRow['commodity_label'] }}</th>
+                    <td class="module-numeric">{{ number_format($harvestRow['planted']) }}</td>
+                    <td class="module-numeric">{{ number_format($harvestRow['harvests']) }}</td>
+                    <td>
+                      @if($harvestRow['needs_harvest'])
+                        <span class="ops-status-pill ops-status-needs-mapping">No harvest recorded yet</span>
+                      @elseif($harvestRow['planted'] === 0)
+                        <span class="ops-status-pill ops-status-no-records">Harvest without a saved planting</span>
+                      @else
+                        <span class="ops-status-pill ops-status-operational">Harvest recorded</span>
+                      @endif
+                    </td>
+                  </tr>
+                @endforeach
+              </tbody>
+            </table>
+          </div>
+          @if($harvestStatus['unseasoned'] > 0)
+            <p class="ops-municipality-note">{{ number_format($harvestStatus['unseasoned']) }} {{ $harvestStatus['year'] }} harvest {{ \Illuminate\Support\Str::plural('record', $harvestStatus['unseasoned']) }} have no season, so they cannot be matched to a season’s plantings.</p>
+          @endif
+        </section>
+      @endif
+
       @if($dashboardMetrics['municipality_comparison'])
         <section class="ops-panel" aria-labelledby="dashboardComparisonHeading">
           <div class="ops-panel-header ops-comparison-header">
             <div>
               <span class="ops-panel-kicker">Comparison</span>
               <h2 id="dashboardComparisonHeading">Municipalities, one indicator at a time</h2>
-              <p>Compare one indicator at a time. Production uses {{ $reportYear }} harvest records, with each commodity and unit kept separate. Farmer and assistance counts cover all recorded dates. Missing production is shown as “Not recorded,” not zero.</p>
+              <p>Compare one indicator at a time. Registered farmers and mapping are current records; assistance, harvest follow-up and production use {{ $reportYear }}. Rates put municipalities of different sizes on equal terms. No combined score or ranking is calculated. A rate with nothing to measure, and missing production, show as “Not recorded,” not zero.</p>
             </div>
-            <label class="ops-metric-picker">
-              <span>Indicator</span>
-              <select id="municipalityIndicatorPicker">
-                @foreach($comparison['series'] as $comparisonIndex => $comparisonSeries)
-                  <option value="{{ $comparisonIndex }}">{{ $comparisonSeries['name'] }} ({{ $comparisonSeries['unit'] }})</option>
-                @endforeach
-              </select>
-            </label>
+            <div class="ops-comparison-controls">
+              <label class="ops-metric-picker">
+                <span>Indicator</span>
+                <select id="municipalityIndicatorPicker">
+                  @foreach($comparison['series'] as $comparisonIndex => $comparisonSeries)
+                    <option value="{{ $comparisonIndex }}">{{ $comparisonSeries['name'] }} ({{ $comparisonSeries['unit'] }})</option>
+                  @endforeach
+                </select>
+              </label>
+              <label class="ops-metric-picker">
+                <span>Order</span>
+                <select id="municipalityOrderPicker" aria-describedby="municipalityOrderHelp">
+                  <option value="name">Municipality name</option>
+                  <option value="desc">Highest value first</option>
+                  <option value="asc">Lowest value first</option>
+                </select>
+              </label>
+              <p id="municipalityOrderHelp" class="sr-only">Orders municipalities by the selected indicator only. Not recorded values stay last.</p>
+              <a class="ops-button ops-button-secondary" href="{{ route('dashboard.comparison.export', ['report_year' => $reportYear]) }}">Download CSV</a>
+            </div>
           </div>
           <div class="ops-comparison-body">
             @include('partials.dashboard-municipality-chart', ['metric' => $comparison, 'metricId' => 'chartMunicipalityComparison'])
@@ -965,17 +1027,18 @@
       }));
     };
     const comparisonPicker = document.getElementById('municipalityIndicatorPicker');
+    const comparisonOrder = document.getElementById('municipalityOrderPicker');
     const drawComparison = () => {
       const metric = METRICS.municipality_comparison;
       if (!metric) return;
       const index = Number(comparisonPicker ? comparisonPicker.value : 0) || 0;
       const chosen = metric.series[index] || metric.series[0];
-      drawMunicipalities('chartMunicipalityComparison', {
+      drawMunicipalities('chartMunicipalityComparison', DashboardChartPages.orderMetric({
         title: metric.title,
         labels: metric.labels,
         series: [chosen],
         not_recorded: metric.not_recorded,
-      }, [SERIES_COLORS[0]]);
+      }, comparisonOrder ? comparisonOrder.value : 'name'), [SERIES_COLORS[0]]);
     };
 
     const productionPicker = document.getElementById('productionIndicatorPicker');
@@ -1005,11 +1068,11 @@
       };
     }
 
-    if (comparisonPicker) {
-      comparisonPicker.addEventListener('change', () => {
+    [comparisonPicker, comparisonOrder].forEach(control => {
+      control?.addEventListener('change', () => {
         if (typeof Chart !== 'undefined') drawComparison();
       });
-    }
+    });
     if (productionPicker) {
       productionPicker.addEventListener('change', () => {
         if (typeof Chart !== 'undefined') drawProduction();

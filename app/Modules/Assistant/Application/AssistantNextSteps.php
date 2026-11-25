@@ -84,6 +84,9 @@ final class AssistantNextSteps
             return array_merge($this->previousReport('animal-health', $year),
                 [$this->prompt('Record an animal service', 'How do I record animal services?')]);
         }
+        if (is_string($references['focus'] ?? null) && AssistantRecordFocus::valid($report, $references['focus'])) {
+            return $this->focused($report, $references['focus'], $year);
+        }
         if ($report === 'data-quality') {
             return [$this->prompt('How to review quality', 'How do I review data quality?'),
                 $this->prompt('Farmer summary', 'Summarize our farmers'),
@@ -118,6 +121,11 @@ final class AssistantNextSteps
                 $this->prompt('LGU overview', 'Summarize our LGU records')],
             'crops' => array_merge($this->previousReport('crops', $year),
                 [$this->prompt('Office harvests', "Show our harvests for {$year}"), $this->prompt('Crop drawing help', 'How do I draw crop sections?')]),
+            'barangays' => array_merge($year > 1900 ? [$this->prompt('View '.($year - 1), 'Show farmers per barangay for '.($year - 1))] : [],
+                [$this->prompt('Registry data quality', 'What needs attention in our registry?'), $this->prompt('Farmer registry summary', 'Summarize our farmers')]),
+            'farmers' => [$this->prompt('Farmers per barangay', 'Show farmers per barangay'),
+                $this->prompt('Office assistance', "Show our assistance for {$year}"),
+                $this->prompt('Find a farmer', 'How do I use the farmer registry?')],
             'assistance' => array_merge($this->previousReport($report, $year),
                 [$this->prompt('Office harvests', "Show our harvests for {$year}"), $this->prompt('How to record assistance', 'How do I record assistance releases?')]),
             'harvests' => array_merge($this->previousReport($report, $year),
@@ -128,6 +136,33 @@ final class AssistantNextSteps
                 $this->prompt('Office harvests', "Show our harvests for {$year}"),
                 $this->prompt('Find a farmer', 'How do I use the farmer registry?')],
         };
+    }
+
+    /**
+     * Static prompts that the focus recognizer resolves back to the same
+     * vocabulary key; no reply text or record value is reused.
+     *
+     * @return list<array{label:string,message:string}>
+     */
+    private function focused(string $report, string $focus, int $year): array
+    {
+        if ($report === 'data-quality') {
+            return [$this->prompt('Full registry check', 'What needs attention in our registry?'),
+                $this->prompt('Farmer registry summary', 'How many farmers do we have?')];
+        }
+        $previous = $year - 1;
+        $phrase = AssistantRecordFocus::phrase($focus);
+        $again = match (true) {
+            $focus === 'beneficiaries' => 'How many farmers received assistance in ',
+            $report === 'harvests' => 'Show '.$phrase.' harvests for ',
+            default => 'How much '.$phrase.' did we give out in ',
+        };
+        $steps = $year > 1900 ? [$this->prompt('View '.$previous, $again.$previous.($report === 'harvests' ? '' : '?'))] : [];
+
+        return [...$steps, $report === 'harvests'
+            ? $this->prompt('All harvests for '.$year, "Show our harvests for {$year}")
+            : $this->prompt('All assistance for '.$year, "Show our assistance for {$year}"),
+            $this->prompt('By barangay', ($report === 'harvests' ? 'Harvests' : 'Assistance')." by barangay for {$year}")];
     }
 
     /** @return list<array{label:string,message:string}> */

@@ -108,7 +108,7 @@ final class AssistantUnderstandingTest extends TestCase
     public function test_person_questions_cannot_find_or_directly_open_a_foreign_farmer(): void
     {
         $this->ask('Who is Juan ForeignSecret?')->assertOk()->assertJsonPath('report', 'farmer-search')
-            ->assertJsonCount(0, 'actions')->assertSee('No matching farmer')->assertDontSee('ForeignSecret');
+            ->assertJsonCount(0, 'actions')->assertSee('find a farmer with that name')->assertDontSee('ForeignSecret');
         $foreign = $this->ask('Please find farmer '.$this->foreign->agri_gov_id)->assertNotFound();
         $missing = $this->ask('Please find farmer AGRI-F-999999')->assertNotFound();
         $this->assertSame($foreign->json('message'), $missing->json('message'));
@@ -130,7 +130,7 @@ final class AssistantUnderstandingTest extends TestCase
         $context = app(AssistantConversationContext::class)->issue($this->staff, session()->getId(), ['task' => 'farmers', 'year' => 2025]);
         DB::enableQueryLog();
         $this->ask($question, ['context' => $context])->assertOk()->assertJsonPath('source', 'clarification')
-            ->assertJsonPath('context', null)->assertDontSee('Registered farmers:')->assertDontSee('private-contact-understanding');
+            ->assertJsonPath('context', null)->assertDontSee('registered farmer')->assertDontSee('private-contact-understanding');
         $this->assertSame(0, $this->operationalQueries());
         $this->assertLocalOnly();
     }
@@ -284,7 +284,7 @@ final class AssistantUnderstandingTest extends TestCase
             DB::flushQueryLog();
             DB::enableQueryLog();
             $this->ask($question, ['context' => $context])->assertOk()->assertJsonPath('source', 'clarification')
-                ->assertJsonPath('context', null)->assertDontSee('Registered farmers:')->assertDontSee('private-contact-understanding');
+                ->assertJsonPath('context', null)->assertDontSee('registered farmer')->assertDontSee('private-contact-understanding');
             $this->assertSame(0, $this->operationalQueries());
             $this->assertLocalOnly();
         }
@@ -389,7 +389,7 @@ final class AssistantUnderstandingTest extends TestCase
         $reply = $this->ask('Summarize our farmers in our LGU')->assertOk()
             ->assertJsonPath('source', 'records')->assertJsonPath('report', 'farmers')
             ->assertJsonPath('scope', 'Own municipality')->assertDontSee('ForeignSecret');
-        $this->assertStringContainsString('Registered farmers: 3', $reply->json('answer'));
+        $this->assertStringContainsString('Own municipality has 3 registered farmers.', $reply->json('answer'));
         $this->assertLocalOnly();
     }
 

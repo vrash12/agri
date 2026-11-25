@@ -7,6 +7,7 @@ use App\Models\Farmer;
 use App\Models\FarmPlot;
 use App\Models\HarvestRecord;
 use App\Models\ParcelCropSeason;
+use App\Modules\Agriculture\Application\HarvestWorkbook;
 use App\Modules\Agriculture\Application\RecordHarvest;
 use App\Modules\Farmers\Application\FarmerIdentifier;
 use App\Modules\Farmers\Application\FarmerPicker;
@@ -152,6 +153,64 @@ class HarvestRecordController extends Controller
         return redirect()
             ->route('harvest-records.index')
             ->with('success', 'Harvest deleted.');
+    }
+
+    public function importForm(Request $request)
+    {
+        $this->authorize('import', HarvestRecord::class);
+
+        return view('harvest_records.import', [
+            'municipalities' => $this->municipalityAccess->choices($request->user()),
+            'canChooseMunicipality' => $request->user()->canAccessAllMunicipalities(),
+            'maxRows' => HarvestWorkbook::MAX_ROWS,
+        ]);
+    }
+
+    public function template(HarvestWorkbook $workbook)
+    {
+        // Blank, but still limited to accounts that can import: the template is the
+        // first step of a write workflow, not a public form.
+        $this->authorize('import', HarvestRecord::class);
+
+        $template = $workbook->template();
+
+        return response()
+            ->download($template['path'], $template['filename'], [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Cache-Control' => 'private, no-store, max-age=0',
+                'X-Content-Type-Options' => 'nosniff',
+            ])
+            ->deleteFileAfterSend(true);
+    }
+
+    public function import(Request $request, HarvestWorkbook $workbook)
+    {
+        // Authorized before validation, so an account that cannot write is refused
+        // rather than told what the upload form expects.
+        $this->authorize('import', HarvestRecord::class);
+
+        $validated = $request->validate([
+            // Bounded, and stopping at the first failure so a rejected upload is never
+            // handed to the spreadsheet reader. Same limits as the assistance import.
+            'file' => ['bail', 'required', 'file', 'max:10240', 'mimes:xlsx,xls'],
+            'municipality_id' => ['nullable', 'integer'],
+        ]);
+
+        $municipalityId = $this->municipalityAccess->resolveForWrite(
+            $request->user(),
+            $validated['municipality_id'] ?? null
+        );
+
+        $result = $workbook->import($request->user(), $request->file('file')->getRealPath(), $municipalityId);
+
+        return redirect()
+            ->route('harvest-records.index')
+            ->with('success', sprintf(
+                'Import done. Created: %s, Already recorded: %s, Repeated in file: %s.',
+                number_format($result['created']),
+                number_format($result['already_recorded']),
+                number_format($result['repeated_in_file'])
+            ));
     }
 
     public function export(Request $request)

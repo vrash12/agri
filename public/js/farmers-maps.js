@@ -1385,12 +1385,37 @@ var PopoverElement = maps3d.PopoverElement;
       return cropLayer.load(cropSettings, savedPlotOverlays.map(function (overlay) { return overlay.plotId; }), !!force);
     }
     function queueCropLayer() {
+      // Question/priority highlights follow the loaded parcel set (debounced there).
+      if (parcelMapQuestions) parcelMapQuestions.plotsChanged();
       if (!cropLayer) return;
       if (cropLayerTimer) clearTimeout(cropLayerTimer);
       cropLayerTimer = setTimeout(function () { loadCropLayer(false); }, 200);
     }
     var cropApply = document.getElementById('parcelCropApply');
     if (cropApply) cropApply.disabled = !cropLayer;
+    // "Ask the map" reuses the crop controls above for its period/crop filter
+    // and only recolors strokes of parcels that are already loaded.
+    var parcelMapQuestions = window.__parcelMapAssistantController || null;
+    var parcelHighlights = parcelMapQuestions ? parcelMapQuestions.connect({
+      getPlotIds: function () {
+        return savedPlotOverlays.filter(function (overlay) { return !overlay.disposed; }).map(function (overlay) { return overlay.plotId; });
+      },
+      getPeriod: function () { return { year: cropSettings.year, season: cropSettings.season }; },
+      applyCropView: function (view) {
+        var year = document.getElementById('parcelCropYear'), season = document.getElementById('parcelCropSeason');
+        var mode = document.getElementById('parcelCropMode'), filter = document.getElementById('parcelCropFilter');
+        if (!year || !season || !mode || !filter || !cropApply || cropApply.disabled) return;
+        year.value = view.year; season.value = view.season;
+        mode.value = view.crop ? 'crops' : 'saved';
+        filter.value = view.crop || 'all';
+        cropApply.click();
+      },
+      onChange: function () {
+        hideParcelHoverCard();
+        refreshPlotListMetadata();
+        schedulePlotDisplayRefresh({immediate: true});
+      }
+    }) : null;
     var cropInitialStatus = document.getElementById('parcelCropStatus');
     if (cropInitialStatus) cropInitialStatus.textContent = cropLayer
       ? 'White outlines mark parcels. Saved crop colors, icons and drawings appear automatically for the selected year and season.'
@@ -1693,9 +1718,13 @@ var PopoverElement = maps3d.PopoverElement;
 
     function applySavedPlotAppearance(overlay) {
       var selected = selectedPlotId !== null && String(overlay.plotId) === selectedPlotId;
+      // Highlights change only the stroke; crop fills and the red selection win.
+      var mark = parcelHighlights ? parcelHighlights.style(overlay.plotId) : null;
+      overlay.highlightKey = mark ? mark.color + '/' + mark.width : '';
       overlay.poly.fillColor = overlay.hovered ? overlay.style.fillHover : overlay.style.fillSoft;
-      overlay.poly.strokeColor = selected ? '#EF4444' : overlay.style.strokeStrong;
-      overlay.poly.strokeWidth = selected ? 2.5 : overlay.hovered ? overlay.style.polyHoverWidth : overlay.style.polyWidth;
+      overlay.poly.strokeColor = selected ? '#EF4444' : mark ? mark.color : overlay.style.strokeStrong;
+      overlay.poly.strokeWidth = selected ? 2.5 : mark ? mark.width + (overlay.hovered ? 0.4 : 0)
+        : overlay.hovered ? overlay.style.polyHoverWidth : overlay.style.polyWidth;
     }
 
     function selectSavedPlot(plotId) {
@@ -2162,6 +2191,8 @@ function reloadSelectedFarmerPlots(autoZoom) {
         : '';
       var ffrs = farmer ? String(farmer.ffrs || '').trim() : '';
       var plotName = String(plot && plot.name ? plot.name : 'Saved parcel').trim();
+      var flag = parcelHighlights && window.ParcelMapAssistant ? parcelHighlights.entry(plot && plot.id) : null;
+      var flagHtml = flag ? (flag.question ? window.ParcelMapAssistant.questionChip(flag) : window.ParcelMapAssistant.chipsHtml(flag)) : '';
 
       parcelHoverCardEl.innerHTML =
         '<span class="parcel-hover-card-label">Parcel owner</span>' +
@@ -2172,7 +2203,7 @@ function reloadSelectedFarmerPlots(autoZoom) {
           (Number.isFinite(Number(area)) ? '<span>' + Number(area).toFixed(2) + ' ha</span>' : '') +
           (ffrs ? '<span>FFRS ' + escapeHtml(ffrs) + '</span>' : '') +
           (location ? '<span>' + escapeHtml(location) + '</span>' : '') +
-        '</span>' +
+        '</span>' + flagHtml +
         '<span class="parcel-hover-card-action">Click to view only this farmer\'s land</span>';
       parcelHoverCardEl.setAttribute('aria-hidden', 'false');
       parcelHoverSize = null;
@@ -2358,6 +2389,7 @@ function shouldShowSavedPlot(overlay) {
   var toggle = document.getElementById('togglePlots');
   return (!toggle || toggle.checked) && !savedPlotsHiddenForEditing
     && (!cropLayer || cropLayer.visible(overlay.plotId))
+    && (!parcelHighlights || parcelHighlights.visible(overlay.plotId))
     && (!focusedParcelFarmerId || String(overlay.farmerId) === String(focusedParcelFarmerId))
     && (!editingPlotId || String(overlay.plotId) !== String(editingPlotId));
 }
@@ -2393,6 +2425,7 @@ async function refreshSavedPlotDisplay() {
       var overlay = overlays[index++];
       if (overlay.disposed) continue;
       applyCropStyle(overlay);
+      if (parcelHighlights && overlay.highlightKey !== parcelHighlights.styleKey(overlay.plotId)) applySavedPlotAppearance(overlay);
       var detailed = needsFullPlotDetail(overlay);
       if (overlay.detailed !== detailed) {
         overlay.poly.path = detailed ? overlay.ring : overlay.overviewRing;
@@ -3991,6 +4024,12 @@ window.__handleDownloadAllPlots = handleDownloadAllPlots;
       var text = parcelCropSummary(element.getAttribute('data-parcel-crop-summary'));
       if (element.textContent !== text) element.textContent = text;
     });
+    list.querySelectorAll('[data-parcel-flags]').forEach(function (element) {
+      var flag = parcelHighlights && window.ParcelMapAssistant ? parcelHighlights.entry(element.getAttribute('data-parcel-flags')) : null;
+      var html = flag ? (flag.question ? window.ParcelMapAssistant.questionChip(flag) : window.ParcelMapAssistant.chipsHtml(flag)) : '';
+      if (element.innerHTML !== html) element.innerHTML = html;
+      element.hidden = !html;
+    });
     list.querySelectorAll('[data-parcel-selected]').forEach(function (element) {
       var selected = selectedPlotId != null && String(selectedPlotId) === element.getAttribute('data-parcel-selected');
       element.hidden = !selected;
@@ -4038,6 +4077,7 @@ window.__handleDownloadAllPlots = handleDownloadAllPlots;
             '<span class="map-plot-name"><span class="plot-swatch" aria-hidden="true" style="background:' + escapeHtml(c) + ';"></span>' + escapeHtml(name) + '</span>' +
             '<span class="map-plot-sub">' + escapeHtml(sub) + '</span>' +
             '<span class="map-plot-crop" data-parcel-crop-summary="' + escapeHtml(pl.id) + '">' + escapeHtml(parcelCropSummary(pl.id)) + '</span>' +
+            '<span class="map-plot-flags" data-parcel-flags="' + escapeHtml(pl.id) + '" hidden></span>' +
             '<span class="map-plot-selected" data-parcel-selected="' + escapeHtml(pl.id) + '" hidden>Selected on map</span>' +
             '<span class="map-plot-toggle-label"><span class="map-plot-show-label">Show actions</span><span class="map-plot-hide-label">Hide actions</span></span>' +
           '</span>' +

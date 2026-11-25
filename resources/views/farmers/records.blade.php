@@ -139,23 +139,23 @@
   @endif
 
   <section class="module-panel">
-    <div class="module-table-tools"><div><strong>Distribution ledger</strong><span>All agriculture and fisheries assistance linked to {{ $farmerName ?: 'this beneficiary' }}.</span></div><span>{{ number_format($totalKgs, 2) }} kg in weight-based results</span></div>
+    <div class="module-table-tools"><div><strong id="distributionLedgerTitle">Distribution ledger</strong><span>All agriculture and fisheries assistance linked to {{ $farmerName ?: 'this beneficiary' }}.</span></div><span>{{ number_format($totalKgs, 2) }} kg in weight-based results</span></div>
     <div class="module-table-scroll">
-      <table class="module-table farmer-history-table">
-        <thead><tr><th>Date received</th><th>Input issued</th><th class="module-numeric">Received</th><th class="module-numeric">Claimed area</th><th class="module-numeric">Claimed seeds</th><th>Lot / batch</th><th style="text-align:right">Actions</th></tr></thead>
-        <tbody>
+      <table class="module-table module-table-cards farmer-history-table" role="table" aria-labelledby="distributionLedgerTitle">
+        <thead role="rowgroup"><tr role="row"><th scope="col" role="columnheader">Date received</th><th scope="col" role="columnheader">Input issued</th><th scope="col" role="columnheader" class="module-numeric">Received</th><th scope="col" role="columnheader" class="module-numeric">Claimed area</th><th scope="col" role="columnheader" class="module-numeric">Claimed seeds</th><th scope="col" role="columnheader">Lot / batch</th><th scope="col" role="columnheader" style="text-align:right">Actions</th></tr></thead>
+        <tbody role="rowgroup">
           @forelse ($records as $record)
-            <tr>
-              <td><strong>{{ $record->date_received ? \Illuminate\Support\Carbon::parse($record->date_received)->format('M d, Y') : '—' }}</strong><small>{{ $record->date_received ? \Illuminate\Support\Carbon::parse($record->date_received)->diffForHumans() : 'Date not recorded' }}</small></td>
-              <td><strong>{{ $record->seed_variety_claimed ?: 'Unspecified' }}</strong><small><span class="module-badge {{ $record->isSeedInput() ? 'module-badge-green' : ($record->input_category === 'fertilizer' ? 'module-badge-amber' : 'module-badge-blue') }}">{{ $record->inputCategoryLabel() }}</span> · {{ $record->assistanceSectorLabel() }}</small></td>
-              <td class="module-numeric"><strong>{{ number_format((float) $record->kgs_received, 2) }} {{ $record->quantityUnitLabel() }}</strong></td>
-              <td class="module-numeric">{{ $record->claimed_area_ha !== null ? number_format((float) $record->claimed_area_ha, 2).' ha' : '—' }}</td>
-              <td class="module-numeric">{{ $record->claimed_seeds_kg !== null ? number_format((float) $record->claimed_seeds_kg, 2).' kg' : '—' }}</td>
-              <td><strong class="module-mono">{{ $record->lot_series ?: '—' }}</strong><small>{{ $record->input_notes ?: ($record->date_of_sowing_label ?: 'No additional notes') }}</small></td>
-              <td>@if($canManageOperations)<div class="module-row-actions"><a class="module-button module-button-small" href="{{ route('rice-seed-distributions.edit', $record) }}">Edit</a><form method="POST" action="{{ route('rice-seed-distributions.destroy', $record) }}" onsubmit="return confirm('Delete this distribution record?');">@csrf @method('DELETE')<button class="module-button module-button-small module-button-danger" type="submit">Delete</button></form></div>@else<span class="module-badge module-badge-green">Read only</span>@endif</td>
+            <tr role="row">
+              <td role="cell"><span class="module-cell-label" aria-hidden="true">Date received</span><strong>{{ $record->date_received ? \Illuminate\Support\Carbon::parse($record->date_received)->format('M d, Y') : '—' }}</strong><small>{{ $record->date_received ? \Illuminate\Support\Carbon::parse($record->date_received)->diffForHumans() : 'Date not recorded' }}</small></td>
+              <td role="cell"><span class="module-cell-label" aria-hidden="true">Input issued</span><strong>{{ $record->seed_variety_claimed ?: 'Unspecified' }}</strong><small><span class="module-badge {{ $record->isSeedInput() ? 'module-badge-green' : ($record->input_category === 'fertilizer' ? 'module-badge-amber' : 'module-badge-blue') }}">{{ $record->inputCategoryLabel() }}</span> · {{ $record->assistanceSectorLabel() }}</small></td>
+              <td role="cell" class="module-numeric module-cell-half"><span class="module-cell-label" aria-hidden="true">Received</span><strong>{{ number_format((float) $record->kgs_received, 2) }} {{ $record->quantityUnitLabel() }}</strong></td>
+              <td role="cell" class="module-numeric module-cell-half"><span class="module-cell-label" aria-hidden="true">Claimed area</span>{{ $record->claimed_area_ha !== null ? number_format((float) $record->claimed_area_ha, 2).' ha' : '—' }}</td>
+              <td role="cell" class="module-numeric module-cell-half"><span class="module-cell-label" aria-hidden="true">Claimed seeds</span>{{ $record->claimed_seeds_kg !== null ? number_format((float) $record->claimed_seeds_kg, 2).' kg' : '—' }}</td>
+              <td role="cell" class="module-cell-half"><span class="module-cell-label" aria-hidden="true">Lot / batch</span><strong class="module-mono">{{ $record->lot_series ?: '—' }}</strong><small>{{ $record->input_notes ?: ($record->date_of_sowing_label ?: 'No additional notes') }}</small></td>
+              <td role="cell" class="module-cell-actions">@if($canManageOperations)<div class="module-row-actions"><a class="module-button module-button-small" href="{{ route('rice-seed-distributions.edit', $record) }}">Edit</a><form method="POST" action="{{ route('rice-seed-distributions.destroy', $record) }}" onsubmit="return confirm('Delete this distribution record?');">@csrf @method('DELETE')<button class="module-button module-button-small module-button-danger" type="submit">Delete</button></form></div>@else<span class="module-badge module-badge-green">Read only</span>@endif</td>
             </tr>
           @empty
-            <tr><td colspan="7"><div class="module-empty"><span class="module-empty-icon"><svg viewBox="0 0 24 24"><path d="M12 22V8M7 13c-3-1-4-4-4-7 3 0 6 1 7 4M17 13c3-1 4-4 4-7-3 0-6 1-7 4"/></svg></span><strong>No distribution records found</strong><span>{{ $filterCount ? 'No records match the current filters.' : 'No releases have been recorded for this farmer.' }}</span>@if($canManageOperations)<a class="module-button module-button-primary" href="{{ route('rice-seed-distributions.create', ['farmer_id' => $farmer->id]) }}">Add distribution</a>@endif</div></td></tr>
+            <tr role="row"><td role="cell" colspan="7"><div class="module-empty"><span class="module-empty-icon"><svg viewBox="0 0 24 24"><path d="M12 22V8M7 13c-3-1-4-4-4-7 3 0 6 1 7 4M17 13c3-1 4-4 4-7-3 0-6 1-7 4"/></svg></span><strong>No distribution records found</strong><span>{{ $filterCount ? 'No records match the current filters.' : 'No releases have been recorded for this farmer.' }}</span>@if($canManageOperations)<a class="module-button module-button-primary" href="{{ route('rice-seed-distributions.create', ['farmer_id' => $farmer->id]) }}">Add distribution</a>@endif</div></td></tr>
           @endforelse
         </tbody>
       </table>

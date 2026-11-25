@@ -14,7 +14,7 @@ final class AssistantConversationContext
 
     public const HELP_STYLES = ['plain', 'brief', 'steps', 'example', 'more'];
 
-    /** @param array{task?:string,year?:int,farmer_id?:int|null,choices?:list<int>,help_topic?:string,help_style?:string,help_language?:string,pending_scope?:string} $references */
+    /** @param array{task?:string,year?:int,farmer_id?:int|null,choices?:list<int>,help_topic?:string,help_style?:string,help_language?:string,pending_scope?:string,focus?:string} $references */
     public function issue(User $user, string $sessionId, array $references, string $type = 'context'): string
     {
         $now = now('UTC')->timestamp;
@@ -33,6 +33,11 @@ final class AssistantConversationContext
             && in_array($references['pending_scope'] ?? null, ['assistance', 'harvests'], true) && $type === 'context') {
             $help['pending_scope'] = $references['pending_scope'];
         }
+        // Optional bounded report focus (one input, commodity, recipient count
+        // or registry gap). Older tokens without it remain valid.
+        if (is_string($references['focus'] ?? null) && AssistantRecordFocus::valid((string) ($references['task'] ?? ''), $references['focus']) && $type === 'context') {
+            $help['focus'] = $references['focus'];
+        }
 
         return Crypt::encryptString(json_encode([
             'version' => 1, 'type' => $type, 'user' => (int) $user->id,
@@ -44,7 +49,7 @@ final class AssistantConversationContext
         ] + $help, JSON_THROW_ON_ERROR));
     }
 
-    /** @return array{task:string,year:int,farmer_id:int|null,choices:list<int>,help_topic?:string,help_style?:string,help_language?:string,pending_scope?:string}|null */
+    /** @return array{task:string,year:int,farmer_id:int|null,choices:list<int>,help_topic?:string,help_style?:string,help_language?:string,pending_scope?:string,focus?:string}|null */
     public function read(User $user, string $sessionId, string $token, string $type = 'context'): ?array
     {
         if ($sessionId === '' || strlen($token) > 4096) {
@@ -67,7 +72,8 @@ final class AssistantConversationContext
                 || (array_key_exists('help_style', $value) && (! isset($value['help_topic']) || ! in_array($value['help_style'], self::HELP_STYLES, true)))
                 || (array_key_exists('help_language', $value) && (! isset($value['help_topic']) || ! in_array($value['help_language'], ['en', 'fil'], true)))
                 || (array_key_exists('pending_scope', $value) && ($type !== 'context' || $value['task'] !== 'farmer' || empty($value['farmer_id'])
-                    || ! in_array($value['pending_scope'], ['assistance', 'harvests'], true) || $value['choices'] !== []))) {
+                    || ! in_array($value['pending_scope'], ['assistance', 'harvests'], true) || $value['choices'] !== []))
+                || (array_key_exists('focus', $value) && ($type !== 'context' || ! is_string($value['focus']) || ! AssistantRecordFocus::valid($value['task'], $value['focus'])))) {
                 return null;
             }
             foreach ($value['choices'] as $id) {
@@ -76,7 +82,7 @@ final class AssistantConversationContext
                 }
             }
 
-            return array_intersect_key($value, array_flip(['task', 'year', 'farmer_id', 'choices', 'help_topic', 'help_style', 'help_language', 'pending_scope']));
+            return array_intersect_key($value, array_flip(['task', 'year', 'farmer_id', 'choices', 'help_topic', 'help_style', 'help_language', 'pending_scope', 'focus']));
         } catch (Throwable) {
             // Never log tokens or decryption failures: an invalid hint is reset.
             return null;

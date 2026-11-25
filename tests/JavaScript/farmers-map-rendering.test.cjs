@@ -48,7 +48,7 @@ test('hover motion batches pointer events and measures the card only when its co
   let reads = 0;
   const card = {style: {}, classList: {contains: () => true, add() {}}, setAttribute() {},
     get offsetWidth() {reads++; return 250;}, get offsetHeight() {reads++; return 110;}};
-  const context = vm.createContext({
+  const context = vm.createContext({parcelHighlights: null,
     window: {requestAnimationFrame: callback => {frames.push(callback); return frames.length;}},
     parcelHoverCardEl: card, parcelHoverSize: null, parcelHoverPositionFrame: null, lastParcelPointer: null,
     stageEl: {getBoundingClientRect: () => ({left: 0, top: 0, width: 800, height: 600})},
@@ -75,7 +75,7 @@ function harness(plots = []) {
   const mounted = new Set();
   let clock = 0;
   const toggle = { checked: true };
-  const context = vm.createContext({
+  const context = vm.createContext({parcelHighlights: null,
     console, setTimeout, clearTimeout, Map, Set,
     performance: { now: () => (clock += 2) },
     document: { getElementById: () => toggle },
@@ -988,7 +988,7 @@ const parcelListHarness = () => {
     querySelector(selector) {return selector === '[data-parcel-list-retry]' && this.innerHTML.includes('data-parcel-list-retry') ? retry : null;},
     querySelectorAll() {return [];}};
   const count = {textContent:''}, period = {textContent:''};
-  const context = vm.createContext({document:{getElementById:id=>({plotList:list,parcelListCount:count,parcelListPeriod:period})[id] || null},
+  const context = vm.createContext({parcelHighlights: null, document:{getElementById:id=>({plotList:list,parcelListCount:count,parcelListPeriod:period})[id] || null},
     window:{__canManageOperationalData:true,__parcelSatelliteUrl:'/parcels/__ID__/satellite',__parcelCropEditUrl:'/parcels/__ID__/crops'},
     selectedFarmerId:'1',selectedPlotId:null,cropSettings:{year:2026,season:'dry'},cropLayer:null,
     syncSuggestedPlotName:()=>{},escapeHtml:value=>String(value).replace(/[&<>"']/g, value=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[value]))});
@@ -1064,4 +1064,32 @@ test('crop and selection refresh updates text without rebuilding an expanded par
   assert.equal(card.classList['is-selected'],true);
   assert.match(crop.textContent,/Saved crop: Rice/);
   assert.match(period.textContent,/2026 · Dry season/);
+});
+
+test('map question and visit-priority highlights recolor existing strokes, respect selection and clean up', async () => {
+  const highlightsApi = require('../../public/js/parcel-map-assistant.js');
+  const {context, metrics} = harness();
+  const plots = [{id:1,farmer_id:1,polygon_json:ring()}, {id:2,farmer_id:1,polygon_json:ring(.01)}];
+  const original = JSON.stringify(plots);
+  context.parcelHighlights = highlightsApi.createHighlights();
+  context.renderPlotsForFarmer('1', plots);
+  const [first, second] = context.savedPlotOverlays;
+  Object.assign(context.parcelHighlights.state, {source:'priority', status:'ready', entries:new Map([['2', {level:'high', reasons:[]}]])});
+  await context.refreshSavedPlotDisplay();
+  assert.equal(second.poly.strokeColor, highlightsApi.COLORS.high);
+  assert.equal(first.poly.strokeColor, '#FFFFFF');
+  assert.equal(second.poly.fillColor, '#FFFFFF', 'Highlights never replace the parcel fill');
+  context.selectSavedPlot(2);
+  assert.equal(second.poly.strokeColor, '#EF4444', 'The selected parcel keeps its red boundary');
+  context.selectSavedPlot(null);
+  context.parcelHighlights.state.onlyMatches = true;
+  await context.refreshSavedPlotDisplay();
+  assert.equal(first.poly.isConnected, false);
+  assert.equal(second.poly.isConnected, true);
+  context.parcelHighlights.reset();
+  await context.refreshSavedPlotDisplay();
+  assert.equal(first.poly.isConnected, true);
+  assert.equal(second.poly.strokeColor, '#FFFFFF');
+  assert.equal(metrics.constructed, 2, 'No extra overlays are created for highlights');
+  assert.equal(JSON.stringify(plots), original);
 });

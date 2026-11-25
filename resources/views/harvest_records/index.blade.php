@@ -34,6 +34,10 @@
         Export current view
       </a>
       @if($canManageOperations)
+        <a class="module-button" href="{{ route('harvest-records.import.form') }}">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"></path></svg>
+          Import from Excel
+        </a>
         <a class="module-button module-button-primary" href="{{ route('harvest-records.create') }}">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
           Record harvest

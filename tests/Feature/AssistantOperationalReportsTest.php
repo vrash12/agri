@@ -60,8 +60,8 @@ class AssistantOperationalReportsTest extends TestCase
         $this->source('unexpected', $this->own->id);
         $this->source('outside_lgu', $this->foreign->id, $this->foreignFarmer->id);
         $report = $this->read('registry-sources');
-        foreach (['Retained rows in this report: 6', 'Active source rows: 1', 'Outside LGU rows: 3', 'Delisted rows: 1',
-            'unrecognized status: 1', 'valid local farmer links: 2', 'Distinct linked farmers in Outside LGU rows: 1', 'without valid local farmer links: 1'] as $expected) {
+        foreach (['workbook has 6 retained rows: 1 active, 3 Outside LGU and 1 Delisted.', '1 row has a status I don’t recognize',
+            'Of the 3 Outside LGU rows, 2 are linked to a farmer registered here (1 distinct farmer), and 1 is not linked.', 'not people'] as $expected) {
             $this->assertStringContainsString($expected, $report['answer']);
         }
         $this->assertStringNotContainsString('PRIVATE-PAYLOAD', json_encode($report));
@@ -78,11 +78,11 @@ class AssistantOperationalReportsTest extends TestCase
         $this->source('delisted', $this->own->id);
         $outside = $this->read('outside-lgu');
         $delisted = $this->read('delisted');
-        $this->assertStringContainsString('Retained rows in this report: 1', $outside['answer']);
-        $this->assertStringNotContainsString('Delisted rows: 2', $outside['answer']);
-        $this->assertStringContainsString('Retained rows in this report: 2', $delisted['answer']);
-        $this->assertStringNotContainsString('Outside LGU rows:', $delisted['answer']);
-        $this->assertStringNotContainsString('Distinct linked farmers', $delisted['answer']);
+        $this->assertStringContainsString('workbook has 1 Outside LGU row. Of those, 1 is linked to a farmer registered here', $outside['answer']);
+        $this->assertStringNotContainsString('Delisted', $outside['answer']);
+        $this->assertStringContainsString('workbook has 2 Delisted rows.', $delisted['answer']);
+        $this->assertStringNotContainsString('Outside LGU', $delisted['answer']);
+        $this->assertStringNotContainsString('distinct farmer', $delisted['answer']);
         $this->assertSame([], $delisted['actions']);
         $this->assertStringEndsWith('/farmers/registry-sources/delisted', $delisted['links'][0]['url']);
     }
@@ -97,7 +97,7 @@ class AssistantOperationalReportsTest extends TestCase
             DB::table('cooperative_farmer')->insert(['farmers_cooperative_id' => $cooperative, 'farmer_id' => $farmer]);
         }
         $report = $this->read('cooperatives');
-        foreach (['Cooperatives: 3', 'with valid local members: 2', 'without valid local members: 1', 'Distinct member farmers: 1'] as $expected) {
+        foreach (['Own LGU has 3 cooperatives on record, with 1 member farmer in total.', '2 cooperatives have at least one member registered here; 1 has none yet.', 'counted once'] as $expected) {
             $this->assertStringContainsString($expected, $report['answer']);
         }
         $this->assertStringNotContainsString('PRIVATE-CONTACT', json_encode($report));
@@ -112,7 +112,7 @@ class AssistantOperationalReportsTest extends TestCase
         $this->machine(['availability_status' => 'unexpected']);
         $this->machine(['municipality_id' => $this->foreign->id]);
         $report = $this->read('machinery');
-        foreach (['Asset records: 5', 'Available: 1', 'In use: 1', 'Under maintenance: 1', 'Inactive: 1', 'Availability needing review: 1', 'Maintenance attention: 3'] as $expected) {
+        foreach (['Own LGU has 5 machinery assets on record: 1 available, 1 in use, 1 under maintenance and 1 inactive.', '1 asset has an availability status that needs review.', '3 assets need maintenance attention'] as $expected) {
             $this->assertStringContainsString($expected, $report['answer']);
         }
         $this->assertStringNotContainsString('PRIVATE-MACHINE-NOTES', json_encode($report));
@@ -128,7 +128,7 @@ class AssistantOperationalReportsTest extends TestCase
         $this->crop($foreignPlot, $this->foreign->id, 'wet', 'fruit');
         $this->crop($ownPlot, $this->own->id, 'dry', 'legumes', 2025);
         $report = $this->read('crops');
-        foreach (['Valid parcel-season records: 2', 'Distinct mapped parcels with crop records: 1', 'cross-LGU parcel links: 1', 'Rice / Palay: 1', 'Corn: 1', 'not individual planted sections'] as $expected) {
+        foreach (['In 2026, Own LGU has 2 seasonal crop records on 1 mapped parcel.', '1 record was left out because the parcel link is missing or belongs to another LGU.', 'Rice / Palay: 1 parcel-season', 'Corn: 1 parcel-season', 'not individual planted sections'] as $expected) {
             $this->assertStringContainsString($expected, $report['answer']);
         }
         foreach (['Vegetables:', 'Fruit:', 'Legumes:', 'PRIVATE-CROP-NOTES', '9999'] as $private) {
@@ -144,7 +144,7 @@ class AssistantOperationalReportsTest extends TestCase
             DB::table('municipality_websites')->insert(['municipality_id' => $municipality->id, 'slug' => 'synthetic-'.$municipality->id, 'headline' => 'Synthetic office website', 'is_published' => true]);
         }
         $report = $this->read('lgu-profile');
-        foreach (['Active offices in your scope: 1', 'Offices with saved profiles: 1', 'Offices awaiting a profile: 0', 'LGU logo: 1', 'signatory pair: 1', 'Published LGU pages: 1', 'does not prove'] as $expected) {
+        foreach (['Your scope has 1 active LGU office. It has a saved LGU profile.', 'Profiles with an LGU logo: 1', 'signatory name and title: 1', 'Published LGU pages: 1', 'doesn’t confirm'] as $expected) {
             $this->assertStringContainsString($expected, $report['answer']);
         }
         $this->assertStringNotContainsString('PRIVATE-', json_encode($report));
@@ -155,7 +155,8 @@ class AssistantOperationalReportsTest extends TestCase
         Schema::drop('farmer_registry_source_rows');
         $report = $this->read('outside-lgu');
         $this->assertStringContainsString('unavailable', $report['answer']);
-        $this->assertStringNotContainsString('rows: 0', $report['answer']);
+        $this->assertStringNotContainsString(' 0 ', $report['answer']);
+        $this->assertStringNotContainsString('has 0', $report['answer']);
         $this->assertStringContainsString('unavailable', $report['evidence']['sources'][0]['detail']);
     }
 
@@ -179,7 +180,7 @@ class AssistantOperationalReportsTest extends TestCase
         $this->source('delisted', $this->foreign->id);
         foreach ([[User::ROLE_SUPER_ADMIN, 1], [User::ROLE_REGIONAL_HEAD, 1], [User::ROLE_SYSTEM_OWNER, 2]] as [$role, $expected]) {
             $report = app(AssistantRecords::class)->answerTask($this->user($role), 'delisted', 2026);
-            $this->assertStringContainsString('Delisted rows: '.$expected, $report['answer']);
+            $this->assertStringContainsString('workbook has '.$expected.' Delisted row', $report['answer']);
         }
     }
 
@@ -204,9 +205,9 @@ class AssistantOperationalReportsTest extends TestCase
 
     public function test_repeated_questions_read_newly_saved_data_instead_of_a_stale_cached_answer(): void
     {
-        $this->assertStringContainsString('Delisted rows: 0', $this->read('delisted')['answer']);
+        $this->assertStringContainsString('workbook has 0 Delisted rows.', $this->read('delisted')['answer']);
         $this->source('delisted', $this->own->id);
-        $this->assertStringContainsString('Delisted rows: 1', $this->read('delisted')['answer']);
+        $this->assertStringContainsString('workbook has 1 Delisted row.', $this->read('delisted')['answer']);
     }
 
     public function test_large_breakdowns_are_bounded_and_overview_remains_displayable(): void
@@ -224,11 +225,19 @@ class AssistantOperationalReportsTest extends TestCase
             }
         }
         $this->own->withoutEvents(fn () => $this->own->update(['name' => str_repeat('Synthetic ', 18)]));
+        // The overview is one line per module; the dedicated reports carry the bounded breakdowns.
         $report = $this->read('summary');
-        $this->assertStringContainsString('first 10 quantity groups', $report['answer']);
-        $this->assertStringContainsString('first 10 commodity/unit groups', $report['answer']);
-        $this->assertLessThan(6000, mb_strlen($report['answer']));
+        $this->assertStringNotContainsString('999', $report['answer']);
+        $this->assertLessThan(2000, mb_strlen($report['answer']));
         $this->assertCount(8, $report['evidence']['sources']);
+        $assistance = $this->read('assistance');
+        $this->assertStringContainsString('first 10 quantity groups', $assistance['answer']);
+        $this->assertSame(10, preg_match_all('/^\d+\. /m', $assistance['answer']));
+        $this->assertLessThan(6000, mb_strlen($assistance['answer']));
+        $harvests = $this->read('harvests');
+        $this->assertStringContainsString('first 10 commodity/unit groups', $harvests['answer']);
+        $this->assertSame(10, preg_match_all('/^\d+\. /m', $harvests['answer']));
+        $this->assertLessThan(6000, mb_strlen($harvests['answer']));
     }
 
     private function read(string $task): array

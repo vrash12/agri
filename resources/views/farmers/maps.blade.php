@@ -881,6 +881,7 @@
     <a href="#mapFarmerSearch">1. Find a farmer</a>
     <a href="#farmerSavedParcels">2. Review saved parcels</a>
     <a href="#parcelCropControls">3. Choose crop year &amp; season</a>
+    <a href="#mapAskPanel">4. Ask the map</a>
   </nav>
 
   <div class="parcel-command-bar">
@@ -946,6 +947,7 @@
       </div>
     </div>
     @include('farmers.partials.crop-layer-controls')
+    @include('farmers.partials.map-ask')
   </div>
 
   {{-- MAIN MAP STAGE --}}
@@ -2053,6 +2055,16 @@
     #farmersMapModule .parcel-workspace-shortcuts a {min-height:44px}
     #farmersMapModule .farmer-details-header {align-items:flex-start}
     #farmersMapModule .farmer-close-btn {height:auto;min-height:44px;white-space:normal}
+    /* Phone: keep every control reachable without horizontal page scroll. */
+    #farmersMapModule .parcel-map-legend {left:8px;right:8px;bottom:8px;flex-wrap:wrap;gap:4px 10px;font-size:11px}
+    #farmersMapModule .parcel-search-row {flex-wrap:wrap}
+    #farmersMapModule .parcel-search-row .parcel-search-input {flex:1 1 100%;min-width:0;font-size:16px}
+    #farmersMapModule .parcel-search-row .btn, #farmersMapModule .parcel-tool-actions .btn,
+    #farmersMapModule .parcel-tool-actions .map-toggle {min-height:44px}
+    #farmersMapModule .parcel-search-row .btn {flex:1 1 100%}
+    #farmersMapModule .map-hint {display:none}
+    #farmersMapModule .parcel-scope-strip {flex-wrap:wrap}
+    #farmersMapModule .parcel-scope-strip > div {min-width:0;overflow-wrap:anywhere}
   }
 </style>
 @endpush

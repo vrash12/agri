@@ -9,7 +9,7 @@ final class ModuleMap
         'Agriculture' => [Land\Contracts\HarvestSectionGuard::class],
         'AnimalHealth' => [],
         'Assistant' => [Farmers\Application\AssistantDataQuality::class],
-        'Climate' => [Land\Application\BarangayBoundaryReferences::class],
+        'Climate' => [Land\Application\BarangayBoundaryReferences::class, Land\Application\ParcelCropSeasons::class],
         'Farmers' => [Land\Application\BarangayBoundaryReferences::class],
         'Land' => [Agriculture\Application\SeedReleaseQuantity::class],
         'LocalGovernment' => [],

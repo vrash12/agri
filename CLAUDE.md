@@ -15,6 +15,29 @@ pending-state UX, crop-editor correction and Ramos farmer-card changes are
 covered by the release receipt in `docs/GITHUB_DEPLOYMENT.md`. No migration,
 account operation, environment change or operational data write ran.
 
+## Pending local reporting and harvest follow-up — November 24, 2026
+
+Owner decisions (November 24): automated reports are an in-app archive (on-demand
+plus a monthly scheduled run, never emailed); municipality comparison uses rates
+for one reporting year and single-indicator ordering, with no composite score or
+ranking; non-rice harvest recording gets an Excel template/import and a dashboard
+reminder; the Assistant gains a local barangay (farm location) breakdown. Local and
+not deployed. Release needs the additive `generated_reports` migration by explicit
+path after a verified backup, plus the files listed in
+`docs/PERIOD_REPORTS_AND_COMPARISON.md`, `docs/HARVEST_IMPORT.md` and
+`docs/ASSISTANT_LGU_RECORDS.md`. Keep reports aggregate-only and policy-rechecked.
+
+The same batch (owner request, November 24–25) also adds: natural, direct local
+record replies with a bounded single-subject `focus` (`AssistantRecordFocus`,
+`RecordReplyText`; optional `focus` in the encrypted context, validated and
+fail-closed). Generic "seeds"/"binhi" now selects seed categories only, replacing
+the older all-category alias described below. GIS adds local Ask-the-map and a
+field-visit priority layer (`docs/GIS_MAP_ASSISTANT.md`) and the parcel page adds a
+local briefing plus an explicit OpenAI crop-advice button that sends only seven
+allowlisted categories under the shared allowance/cache
+(`docs/PARCEL_AI_BRIEFING.md`). Phone card layouts cover farmer history, audit trail
+and Backup Folder. All local and not deployed.
+
 ## Pending local Assistant awareness improvement — October 12, 2026
 
 The Assistant may answer bounded questions about itself, the current

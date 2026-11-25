@@ -95,7 +95,7 @@ class AssistantRecordsTest extends TestCase
     public function test_municipal_summary_is_scoped_and_does_not_use_openai_or_allowance(): void
     {
         $this->actingAs($this->staff)->postJson(route('assistant.message'), $this->payload('Summarize my farmers'))
-            ->assertOk()->assertJsonPath('source', 'records')->assertSee('Registered farmers: 1')->assertSee('Saved parcels: 1')->assertSee('0.7500 ha')->assertDontSee('ForeignSecret');
+            ->assertOk()->assertJsonPath('source', 'records')->assertSee('Own municipality has 1 registered farmer.')->assertSee('Saved parcels: 1')->assertSee('0.75 ha')->assertDontSee('ForeignSecret');
         OfficeHelpAgent::assertNeverPrompted();
         Http::assertNothingSent();
         $this->assertNull(Cache::get('assistant:requests:day:'.now('UTC')->format('Ymd')));
@@ -108,7 +108,7 @@ class AssistantRecordsTest extends TestCase
         $cityMunicipality = $this->municipality($city, 'Independent city');
         Farmer::withoutEvents(fn () => Farmer::create(['municipality_id' => $cityMunicipality->id, 'first_name' => 'City']));
         foreach ([[User::ROLE_SUPER_ADMIN, 1], [User::ROLE_REGIONAL_HEAD, 2], [User::ROLE_SYSTEM_OWNER, 3]] as [$role, $count]) {
-            $this->actingAs($this->account($role))->postJson(route('assistant.message'), $this->payload('Summarize my farmers'))->assertOk()->assertSee('Registered farmers: '.$count);
+            $this->actingAs($this->account($role))->postJson(route('assistant.message'), $this->payload('Summarize my farmers'))->assertOk()->assertSee(' '.$count.' registered farmer');
         }
         OfficeHelpAgent::assertNeverPrompted();
     }
@@ -122,7 +122,7 @@ class AssistantRecordsTest extends TestCase
         $this->assertArrayNotHasKey('farmer_id', $search->json('actions.0'));
         $this->withCredentials()->withCookie(config('session.cookie'), session()->getId());
         $response = $this->postJson(route('assistant.message'), $this->payload('Show farmer summary', ['choice' => $search->json('actions.0.choice')]))
-            ->assertOk()->assertSee('Juan Fixture')->assertSee('Corn')->assertSee('15.000 kg')->assertSee('200.000')->assertSee('1.50 ha')
+            ->assertOk()->assertSee('Juan Fixture')->assertSee('Corn')->assertSee('Rice seed 15 kg')->assertSee('Corn 200 kg')->assertSee('declared farm area of 1.5 ha')
             ->assertDontSee('private-contact-fixture')->assertDontSee('1954-02-13')->assertDontSee('15.5555555')->assertDontSee('Secret plot name');
         $this->assertLessThan(6000, mb_strlen($response->json('answer')));
         $audit = AuditLog::where('module', 'Office Assistant')->get()->toJson();
@@ -137,7 +137,7 @@ class AssistantRecordsTest extends TestCase
         $this->harvest(['municipality_id' => $this->other->id, 'farmer_id' => $this->farmer->id, 'quantity' => 8888]);
         DB::table('parcel_crop_seasons')->insert(['municipality_id' => $this->other->id, 'farm_plot_id' => 1, 'crop_year' => 2026, 'crop' => 'rice']);
         $this->actingAs($this->account(User::ROLE_SYSTEM_OWNER))->postJson(route('assistant.message'), $this->payload('Find farmer '.$this->farmer->agri_gov_id))
-            ->assertOk()->assertSee('Corn')->assertSee('Registry office: Own municipality')->assertDontSee('Rice / Palay')->assertDontSee('7777')->assertDontSee('8888');
+            ->assertOk()->assertSee('Corn')->assertSee('is registered in Own municipality')->assertSee('Assistance received in 2026: none recorded')->assertDontSee('Rice / Palay')->assertDontSee('7777')->assertDontSee('7,777')->assertDontSee('8888')->assertDontSee('8,888');
     }
 
     public function test_farmer_id_search_is_local_and_foreign_or_missing_ids_have_identical_failures(): void
@@ -171,9 +171,9 @@ class AssistantRecordsTest extends TestCase
         $this->release(['kgs_received' => 1, 'farmer_id' => $this->foreign->id]);
         $this->release(['kgs_received' => 7000, 'municipality_id' => $this->other->id, 'farmer_id' => $this->foreign->id]);
         $this->actingAs($this->staff)->postJson(route('assistant.message'), $this->payload('Summarize assistance'))
-            ->assertOk()->assertSee('Release records: 6')->assertSee('19.000 kg')->assertSee('2.000 sacks')->assertSee('100.000 pieces')
-            ->assertSee('Unique linked beneficiaries: 1')->assertSee('farmer link: 1')->assertSee('needing review: 1')->assertSee('excluded from this year: 1')
-            ->assertDontSee('7000')->assertDontSee('8000')->assertDontSee('9000');
+            ->assertOk()->assertSee('recorded 6 assistance releases, reaching 1 farmer.')->assertSee('Rice seed: 19 kg')->assertSee('Rice seed: 2 sacks')->assertSee('Fish fingerlings: 100 pieces')
+            ->assertSee('1 release has no farmer linked')->assertSee('1 release is missing a quantity')->assertSee('1 release has no received date')
+            ->assertDontSee('7000')->assertDontSee('7,000')->assertDontSee('8000')->assertDontSee('8,000')->assertDontSee('9000')->assertDontSee('9,000');
     }
 
     public function test_harvests_use_stated_year_and_do_not_combine_units_or_missing_quantities(): void
@@ -185,8 +185,8 @@ class AssistantRecordsTest extends TestCase
         $this->harvest(['quantity' => 8000, 'harvest_year' => 2025]);
         $this->harvest(['quantity' => 7000, 'municipality_id' => $this->other->id]);
         $this->actingAs($this->staff)->postJson(route('assistant.message'), $this->payload('Summarize harvests'))->assertOk()
-            ->assertSee('Harvest records: 3')->assertSee('200.000')->assertSee('2.000 Sacks')->assertSee('classification: 1')->assertSee('year excluded: 1')
-            ->assertDontSee('7000')->assertDontSee('8000')->assertDontSee('9000');
+            ->assertSee('recorded 3 harvest records')->assertSee('Corn: 200 kg')->assertSee('Corn: 2 sacks')->assertSee('1 record is missing a quantity')->assertSee('1 record has no harvest year')
+            ->assertDontSee('7000')->assertDontSee('7,000')->assertDontSee('8000')->assertDontSee('8,000')->assertDontSee('9000')->assertDontSee('9,000');
     }
 
     public function test_data_quality_review_is_local_scoped_and_links_existing_queues(): void
@@ -201,12 +201,12 @@ class AssistantRecordsTest extends TestCase
             ->assertOk()
             ->assertJsonPath('source', 'records')
             ->assertJsonPath('report', 'data-quality')
-            ->assertSee('Registered farmer profiles: 1')
-            ->assertSee('Missing FFRS reference: 1')
-            ->assertSee('Missing farm location: 1')
-            ->assertSee('Farmers without saved parcels: 0')
-            ->assertSee('Saved plots without boundary geometry: 1')
-            ->assertSee('These are review queues, not fraud findings.')
+            ->assertSee('registry of 1 farmer profile: 1 without an FFRS reference and 1 without a farm location.')
+            ->assertSee('Farmers without an FFRS reference: 1')
+            ->assertSee('Farmers without a farm location: 1')
+            ->assertSee('Farmers without a saved parcel: 0')
+            ->assertSee('Saved plots without a drawn boundary: 1')
+            ->assertSee('These are review lists, not fraud findings')
             ->assertJsonPath('links.0.label', 'Review missing FFRS')
             ->assertJsonPath('links.1.label', 'Review missing locations');
 
@@ -220,8 +220,7 @@ class AssistantRecordsTest extends TestCase
         $this->actingAs($this->staff)->postJson(route('assistant.message'), $this->payload('Show data quality for 2025'))
             ->assertOk()
             ->assertJsonPath('source', 'clarification')
-            ->assertSee('current registry records')
-            ->assertSee('not a historical reporting year');
+            ->assertSee('registry records, not a historical reporting year');
 
         OfficeHelpAgent::assertNeverPrompted();
         Http::assertNothingSent();
@@ -232,7 +231,7 @@ class AssistantRecordsTest extends TestCase
         $this->actingAs($this->staff)->postJson(route('assistant.message'), $this->payload('What needs attention?'))
             ->assertOk()
             ->assertJsonPath('source', 'clarification')
-            ->assertDontSee('Registered farmer profiles:');
+            ->assertDontSee('farmer profile');
 
         OfficeHelpAgent::assertNeverPrompted();
         Http::assertNothingSent();
@@ -241,7 +240,7 @@ class AssistantRecordsTest extends TestCase
     public function test_report_year_from_question_is_explicit_and_multiple_years_need_clarification(): void
     {
         $this->harvest(['quantity' => 150, 'harvest_year' => 2025]);
-        $this->actingAs($this->staff)->postJson(route('assistant.message'), $this->payload('Summarize harvests for 2025'))->assertOk()->assertJsonPath('year', 2025)->assertSee('150.000');
+        $this->actingAs($this->staff)->postJson(route('assistant.message'), $this->payload('Summarize harvests for 2025'))->assertOk()->assertJsonPath('year', 2025)->assertSee('Corn: 150 kg');
         $this->postJson(route('assistant.message'), $this->payload('Compare harvests 2025 and 2026'))->assertOk()->assertSee('Choose one reporting year');
     }
 
@@ -262,7 +261,7 @@ class AssistantRecordsTest extends TestCase
             ['municipality_id' => $this->own->id, 'vaccination_year' => 2026, 'animal_count' => null],
             ['municipality_id' => $this->other->id, 'vaccination_year' => 2026, 'animal_count' => 99],
         ]);
-        $this->actingAs($this->account(User::ROLE_PROVINCIAL_VET))->postJson(route('assistant.message'), $this->payload('Workspace summary'))->assertOk()->assertSee('Service records: 2')->assertSee('instances: 4');
+        $this->actingAs($this->account(User::ROLE_PROVINCIAL_VET))->postJson(route('assistant.message'), $this->payload('Workspace summary'))->assertOk()->assertSee('recorded 2 Animal Health service records, covering 4 animal services')->assertDontSee('99');
         DB::enableQueryLog();
         $this->postJson(route('assistant.message'), $this->payload('Summarize my farmers'))->assertOk()->assertJsonPath('source', 'clarification');
         $this->assertEmpty(array_filter(array_column(DB::getQueryLog(), 'query'), fn ($sql) => str_contains($sql, 'from "farmers"')));

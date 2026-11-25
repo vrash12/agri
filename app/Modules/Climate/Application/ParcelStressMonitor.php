@@ -130,6 +130,8 @@ final class ParcelStressMonitor
                 default => 'Record crop stage, field condition and water availability. Existing weather and satellite checks will be shown here when usable.',
             },
             'observed_on' => $observed?->toDateString(), 'stage_label' => $stageLabels[$stage] ?? 'Stage not confirmed',
+            // Validated categorical keys (null when missing, stale or unsourced) for local summaries.
+            'stage' => $stage, 'condition' => $condition, 'water' => $water,
             'signals' => $signals, 'missing' => $missing, 'satellite' => $satellite, 'follow_up' => $followUp,
             'limits' => 'Inspection support only. Weather describes the surrounding area; satellite changes may reflect crop growth, harvest, clouds or other causes. Confirm stress and its cause on the farm. This does not declare drought or mark a parcel as affected.',
         ];

@@ -33,6 +33,27 @@
         };
     }
 
+    // Orders rows by the first series only — one indicator, never a combined score.
+    // Not recorded (null) values stay last in either direction; ties keep name order.
+    function orderMetric(metric, order = 'name') {
+        if (order !== 'asc' && order !== 'desc') return metric;
+        const values = metric.series[0]?.values || [];
+        const direction = order === 'asc' ? 1 : -1;
+        const indices = metric.labels.map((label, index) => index).sort((a, b) => {
+            const left = values[a];
+            const right = values[b];
+            const leftMissing = left === null || left === undefined;
+            const rightMissing = right === null || right === undefined;
+            if (leftMissing || rightMissing) return leftMissing === rightMissing ? a - b : (leftMissing ? 1 : -1);
+            return (Number(left) - Number(right)) * direction || a - b;
+        });
+        return {
+            ...metric,
+            labels: indices.map(index => metric.labels[index]),
+            series: metric.series.map(series => ({ ...series, values: indices.map(index => series.values[index]) })),
+        };
+    }
+
     function mount(root, metric, render) {
         const controls = root.querySelector('[data-chart-controls]');
         const search = root.querySelector('[data-chart-search]');
@@ -63,5 +84,5 @@
         return refresh;
     }
 
-    return { pageMetric, mount };
+    return { pageMetric, orderMetric, mount };
 });

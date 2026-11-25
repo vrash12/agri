@@ -8,11 +8,13 @@ use App\Models\Farmer;
 use App\Models\FarmPlot;
 use App\Models\HarvestRecord;
 use App\Models\Municipality;
+use App\Models\ParcelCropSeason;
 use App\Models\RiceSeedDistribution;
 use App\Models\User;
 use App\Support\MunicipalityAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Scoped aggregates behind the dashboard charts.
@@ -70,9 +72,7 @@ class DashboardMetrics
      */
     private array $scopeCache = [];
 
-    public function __construct(private MunicipalityAccess $municipalityAccess)
-    {
-    }
+    public function __construct(private MunicipalityAccess $municipalityAccess) {}
 
     /**
      * Registered farmers per municipality.
@@ -539,6 +539,13 @@ class DashboardMetrics
      * `DashboardController::buildMunicipalityOverview()` puts in the table beneath, so
      * the chart and that table can never disagree.
      *
+     * Registry and mapping figures describe current records. Every activity figure —
+     * releases, beneficiaries, harvest follow-up and production — uses the one
+     * reporting year, so no indicator mixes all-time totals with a single year.
+     * Municipalities differ greatly in size, so each count that depends on size has
+     * a rate beside it. A rate whose denominator is zero is "Not recorded" (null),
+     * never 0%, because there was nothing to measure.
+     *
      * @return array<string, mixed>|null
      */
     public function municipalityComparison(User $user, ?int $reportYear = null): ?array
@@ -550,6 +557,7 @@ class DashboardMetrics
         }
 
         $ids = $municipalities->pluck('id');
+        $reportYear ??= (int) now()->year;
 
         // None of these models uses soft deletes or a global scope, so filtering by
         // the already-scoped municipality ids is equivalent to MunicipalityAccess.
@@ -562,30 +570,44 @@ class DashboardMetrics
                 ->whereIn('id', FarmPlot::query()->select('farm_plots.farmer_id')->whereNotNull('farm_plots.farmer_id')),
             'COUNT(*) as total'
         );
-        $releases = $this->keyedTotals(
-            RiceSeedDistribution::query()->whereIn('municipality_id', $ids),
-            'COUNT(*) as total'
-        );
-        $beneficiaries = $this->keyedTotals(
-            RiceSeedDistribution::query()->whereIn('municipality_id', $ids),
+        $yearReleases = $this->inYear(RiceSeedDistribution::query()->whereIn('municipality_id', $ids), 'date_received', $reportYear);
+        $releases = $this->keyedTotals(clone $yearReleases, 'COUNT(*) as total');
+        // Only a valid same-municipality link identifies a beneficiary; the same rule
+        // DashboardCoverage and the Assistant use, so the figures agree everywhere.
+        $linkedReleases = (clone $yearReleases)->whereHas('farmer', fn (Builder $query) => $query
+            ->whereColumn('farmers.municipality_id', 'rice_seed_distributions.municipality_id'));
+        $beneficiaries = $this->keyedTotals(clone $linkedReleases, 'COUNT(DISTINCT farmer_id) as total');
+        $followedUp = $this->keyedTotals(
+            HarvestRecord::query()->whereIn('municipality_id', $ids)->where('harvest_year', $reportYear)
+                ->whereIn('farmer_id', (clone $linkedReleases)->select('rice_seed_distributions.farmer_id')
+                    ->whereColumn('rice_seed_distributions.municipality_id', 'harvest_records.municipality_id')),
             'COUNT(DISTINCT farmer_id) as total'
         );
 
-        $columns = ['farmers' => [], 'mapped' => [], 'releases' => [], 'beneficiaries' => []];
+        $columns = array_fill_keys(['farmers', 'mapped', 'coverage', 'releases', 'beneficiaries', 'reach', 'followed', 'followRate'], []);
         foreach ($municipalities as $municipality) {
-            $columns['farmers'][] = (int) ($farmers[$municipality->id] ?? 0);
+            $registered = (int) ($farmers[$municipality->id] ?? 0);
+            $served = (int) ($beneficiaries[$municipality->id] ?? 0);
+            $columns['farmers'][] = $registered;
             $columns['mapped'][] = (int) ($mapped[$municipality->id] ?? 0);
+            $columns['coverage'][] = $this->rate((int) ($mapped[$municipality->id] ?? 0), $registered);
             $columns['releases'][] = (int) ($releases[$municipality->id] ?? 0);
-            $columns['beneficiaries'][] = (int) ($beneficiaries[$municipality->id] ?? 0);
+            $columns['beneficiaries'][] = $served;
+            $columns['reach'][] = $this->rate($served, $registered);
+            $columns['followed'][] = (int) ($followedUp[$municipality->id] ?? 0);
+            $columns['followRate'][] = $this->rate((int) ($followedUp[$municipality->id] ?? 0), $served);
         }
 
         $series = [
             $this->series('Registered farmers', 'farmers', $columns['farmers']),
             $this->series('Farmers with a mapped parcel', 'farmers', $columns['mapped']),
-            $this->series('Assistance releases', 'releases', $columns['releases']),
-            $this->series('Unique beneficiaries', 'farmers', $columns['beneficiaries']),
+            $this->series('Mapping coverage', '% of registered farmers', $columns['coverage'], 1),
+            $this->series('Assistance releases '.$reportYear, 'releases', $columns['releases']),
+            $this->series('Unique beneficiaries '.$reportYear, 'farmers', $columns['beneficiaries']),
+            $this->series('Assistance reach '.$reportYear, '% of registered farmers', $columns['reach'], 1),
+            $this->series('Beneficiaries with a recorded harvest '.$reportYear, 'farmers', $columns['followed']),
+            $this->series('Harvest follow-up '.$reportYear, '% of beneficiaries', $columns['followRate'], 1),
         ];
-        $reportYear ??= (int) now()->year;
         $harvests = HarvestRecord::query()->whereIn('municipality_id', $ids)->where('harvest_year', $reportYear);
         $production = (clone $harvests)->whereNotNull('commodity')->where('commodity', '!=', '')
             ->whereNotNull('quantity')->whereIn('quantity_unit', array_keys(HarvestRecord::QUANTITY_UNIT_LABELS))
@@ -610,7 +632,80 @@ class DashboardMetrics
             $this->missing($missing, 'Harvest records in '.$reportYear.' with a missing commodity, quantity, or recognized unit')) + [
                 'undated' => $this->missing(HarvestRecord::query()->whereIn('municipality_id', $ids)
                     ->whereNull('harvest_year')->count(), 'Harvest records with no harvest year recorded'),
+                'undated_releases' => $this->missing(RiceSeedDistribution::query()->whereIn('municipality_id', $ids)
+                    ->whereNull('date_received')->count(), 'Assistance releases with no release date recorded'),
+                'report_year' => $reportYear,
             ];
+    }
+
+    /**
+     * Which planted commodities still have no harvest recorded, per season.
+     *
+     * A reminder, not a measurement of missing production: a parcel-season with a
+     * saved crop shows that something was planted, so a season with plantings and
+     * no harvest records is worth a look. Nothing here infers a quantity, and a
+     * crop with no harvest commodity (mixed or not recorded) is left out.
+     *
+     * @return array{year:int, rows:array<int, array<string, mixed>>, missing:int, unseasoned:int}|null
+     */
+    public function harvestRecordingStatus(User $user, int $year): ?array
+    {
+        if (! Schema::hasTable('parcel_crop_seasons') || ! Schema::hasTable('harvest_records')) {
+            return null;
+        }
+
+        $commodityFor = [
+            'rice' => 'rice', 'corn' => 'corn', 'vegetables' => 'vegetable', 'root_crops' => 'rootcrop',
+            'fruit' => 'fruit', 'legumes' => 'other', 'other' => 'other',
+        ];
+        $rows = [];
+        $this->scoped(ParcelCropSeason::query(), $user)->where('crop_year', $year)
+            ->whereIn('crop', array_keys($commodityFor))->whereIn('season', array_keys(HarvestRecord::SEASON_LABELS))
+            ->groupBy('season', 'crop')->selectRaw('season, crop, COUNT(*) as total')->get()
+            ->each(function ($row) use (&$rows, $commodityFor): void {
+                $key = $row->season.'|'.$commodityFor[$row->crop];
+                $rows[$key] = ($rows[$key] ?? ['planted' => 0, 'harvests' => 0]);
+                $rows[$key]['planted'] += (int) $row->total;
+            });
+        $harvests = $this->scoped(HarvestRecord::query(), $user)->where('harvest_year', $year);
+        (clone $harvests)->whereIn('season', array_keys(HarvestRecord::SEASON_LABELS))
+            ->whereIn('commodity', array_keys(HarvestRecord::COMMODITY_LABELS))
+            ->groupBy('season', 'commodity')->selectRaw('season, commodity, COUNT(*) as total')->get()
+            ->each(function ($row) use (&$rows): void {
+                $key = $row->season.'|'.$row->commodity;
+                $rows[$key] = ($rows[$key] ?? ['planted' => 0, 'harvests' => 0]);
+                $rows[$key]['harvests'] += (int) $row->total;
+            });
+
+        $seasonOrder = array_flip(array_keys(HarvestRecord::SEASON_LABELS));
+        $commodityOrder = array_flip(array_keys(HarvestRecord::COMMODITY_LABELS));
+        $result = collect($rows)->map(function (array $figures, string $key): array {
+            [$season, $commodity] = explode('|', $key);
+
+            return [
+                'season' => $season,
+                'season_label' => HarvestRecord::SEASON_LABELS[$season],
+                'commodity' => $commodity,
+                'commodity_label' => HarvestRecord::COMMODITY_LABELS[$commodity],
+                'planted' => $figures['planted'],
+                'harvests' => $figures['harvests'],
+                'needs_harvest' => $figures['planted'] > 0 && $figures['harvests'] === 0,
+            ];
+        })->sortBy(fn (array $row) => [$seasonOrder[$row['season']], $commodityOrder[$row['commodity']]])->values()->all();
+
+        return [
+            'year' => $year,
+            'rows' => $result,
+            'missing' => count(array_filter($result, fn (array $row) => $row['needs_harvest'])),
+            // Harvests without a season cannot be matched to a season's plantings.
+            'unseasoned' => (clone $harvests)->whereNull('season')->count(),
+        ];
+    }
+
+    /** A percentage of a non-zero denominator; null means there was nothing to measure. */
+    private function rate(int $part, int $whole): ?float
+    {
+        return $whole > 0 ? round($part / $whole * 100, 1) : null;
     }
 
     /** @return Collection<int, Municipality> */

@@ -10,6 +10,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\BarangayBoundaryController;
 use App\Http\Controllers\ClimateRiskController;
+use App\Http\Controllers\DashboardComparisonExportController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EvaluatorPasswordController;
 use App\Http\Controllers\FarmerController;
@@ -19,6 +20,7 @@ use App\Http\Controllers\FarmerPortalController;
 use App\Http\Controllers\FarmerRegistrySourceController;
 use App\Http\Controllers\FarmersCooperativeController;
 use App\Http\Controllers\FarmPlotController;
+use App\Http\Controllers\GeneratedReportController;
 use App\Http\Controllers\HarvestRecordController;
 use App\Http\Controllers\LguLoginController;
 use App\Http\Controllers\MapUsageController;
@@ -27,6 +29,7 @@ use App\Http\Controllers\MunicipalityProfileController;
 use App\Http\Controllers\MunicipalityWebsiteController;
 use App\Http\Controllers\ParcelAgronomyController;
 use App\Http\Controllers\ParcelCropSeasonController;
+use App\Http\Controllers\ParcelMapQuestionController;
 use App\Http\Controllers\ParcelSatelliteController;
 use App\Http\Controllers\PublicLguWebsiteController;
 use App\Http\Controllers\RiceDistributionBatchController;
@@ -168,6 +171,18 @@ Route::middleware([
     */
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->name('dashboard');
+    Route::get('/dashboard/comparison/export', DashboardComparisonExportController::class)
+        ->middleware('throttle:20,1')->name('dashboard.comparison.export');
+
+    /*
+    | Period reports: generated on demand or by the monthly scheduler, kept in a
+    | scoped in-app archive. Aggregates only; nothing is emailed.
+    */
+    Route::get('/reports', [GeneratedReportController::class, 'index'])->name('reports.index');
+    Route::get('/reports/create', [GeneratedReportController::class, 'create'])->name('reports.create');
+    Route::post('/reports', [GeneratedReportController::class, 'store'])->middleware('throttle:6,1')->name('reports.store');
+    Route::get('/reports/{generatedReport}', [GeneratedReportController::class, 'show'])->whereNumber('generatedReport')->name('reports.show');
+    Route::get('/reports/{generatedReport}/download', [GeneratedReportController::class, 'download'])->whereNumber('generatedReport')->middleware('throttle:20,1')->name('reports.download');
 
     Route::get('/settings/lgu', [MunicipalityProfileController::class, 'index'])->name('settings.lgu.index');
     Route::get('/settings/lgu/{municipality}', [MunicipalityProfileController::class, 'edit'])->name('settings.lgu.edit');
@@ -317,6 +332,14 @@ Route::middleware([
         [FarmPlotController::class, 'all']
     )->name('farm-plots.all');
 
+    // Ask the map and the field-visit priority layer: read-only, scoped to the
+    // map workspace, at most 200 loaded parcel IDs per batch, no provider calls.
+    Route::post('/farm-plots/map-questions', [ParcelMapQuestionController::class, 'ask'])
+        ->withoutMiddleware('synchronized')->middleware('throttle:map-questions')->name('farm-plots.map-questions');
+    Route::get('/farm-plots/map-matches', [ParcelMapQuestionController::class, 'matches'])
+        ->middleware('throttle:map-layer-batches')->name('farm-plots.map-matches');
+    Route::get('/farm-plots/visit-priority', [ParcelMapQuestionController::class, 'priority'])
+        ->middleware('throttle:map-layer-batches')->name('farm-plots.visit-priority');
     Route::get('/farm-plots/crop-layer', [ParcelCropSeasonController::class, 'layer'])
         ->name('farm-plots.crop-layer');
     Route::get('/farm-plots/planted-area-layer', [ParcelCropSeasonController::class, 'plantedLayer'])
@@ -325,6 +348,11 @@ Route::middleware([
         ->whereNumber('plot')->name('farm-plots.agronomy.show');
     Route::post('/farm-plots/{plot}/agronomy', [ParcelAgronomyController::class, 'store'])
         ->whereNumber('plot')->name('farm-plots.agronomy.store');
+    // Read-only, explicit provider request: Assistant-only coordination instead of
+    // operational write locks; a prefixed throttle isolates it from numeric limits.
+    Route::post('/farm-plots/{plot}/agronomy/advice', [ParcelAgronomyController::class, 'advice'])
+        ->whereNumber('plot')->withoutMiddleware('synchronized')
+        ->middleware(['throttle:4,1,parcel-crop-advice', SynchronizeAssistantRequests::class])->name('farm-plots.agronomy.advice');
     Route::get('/farm-plots/{plot}/satellite', [ParcelSatelliteController::class, 'show'])
         ->whereNumber('plot')->name('farm-plots.satellite.show');
     Route::post('/farm-plots/{plot}/satellite/observations', [ParcelSatelliteController::class, 'analyse'])
@@ -561,6 +589,21 @@ Route::middleware([
         '/harvest-records/export',
         [HarvestRecordController::class, 'export']
     )->name('harvest-records.export');
+
+    Route::get(
+        '/harvest-records/import',
+        [HarvestRecordController::class, 'importForm']
+    )->name('harvest-records.import.form');
+
+    Route::get(
+        '/harvest-records/import/template',
+        [HarvestRecordController::class, 'template']
+    )->name('harvest-records.import.template');
+
+    Route::post(
+        '/harvest-records/import',
+        [HarvestRecordController::class, 'import']
+    )->middleware('throttle:6,1')->name('harvest-records.import');
 
     Route::resource(
         'harvest-records',

@@ -326,26 +326,97 @@ class DashboardMetricsTest extends TestCase
         $mapped = $this->farmer($this->ownMunicipality);
         $this->plot($mapped);
         $this->farmer($this->ownMunicipality);
-        $this->release($this->ownMunicipality, ['farmer_id' => $mapped]);
-        $this->release($this->ownMunicipality, ['farmer_id' => $mapped]);
+        $this->release($this->ownMunicipality, ['farmer_id' => $mapped, 'date_received' => '2026-03-01']);
+        $this->release($this->ownMunicipality, ['farmer_id' => $mapped, 'date_received' => '2026-04-01']);
         $this->farmer($this->siblingMunicipality);
 
-        $metric = $this->metrics->municipalityComparison($this->provincialUser());
+        $metric = $this->metrics->municipalityComparison($this->provincialUser(), 2026);
 
         $this->assertSame(['Own Municipality', 'Sibling Municipality'], $metric['labels']);
         $this->assertSame(
-            ['Registered farmers', 'Farmers with a mapped parcel', 'Assistance releases', 'Unique beneficiaries'],
+            ['Registered farmers', 'Farmers with a mapped parcel', 'Mapping coverage',
+                'Assistance releases 2026', 'Unique beneficiaries 2026', 'Assistance reach 2026',
+                'Beneficiaries with a recorded harvest 2026', 'Harvest follow-up 2026'],
             array_column($metric['series'], 'name')
         );
         $this->assertSame([2, 1], $this->seriesValues($metric, 'Registered farmers'));
         $this->assertSame([1, 0], $this->seriesValues($metric, 'Farmers with a mapped parcel'));
-        $this->assertSame([2, 0], $this->seriesValues($metric, 'Assistance releases'));
-        $this->assertSame([1, 0], $this->seriesValues($metric, 'Unique beneficiaries'));
+        $this->assertSame([2, 0], $this->seriesValues($metric, 'Assistance releases 2026'));
+        $this->assertSame([1, 0], $this->seriesValues($metric, 'Unique beneficiaries 2026'));
 
         // No weighting, index, total or rank is produced anywhere in the result.
         foreach (array_column($metric['series'], 'name') as $name) {
             $this->assertDoesNotMatchRegularExpression('/score|index|rank|overall|total/i', $name);
         }
+    }
+
+    public function test_comparison_rates_use_one_year_valid_links_and_never_invent_a_zero(): void
+    {
+        $served = $this->farmer($this->ownMunicipality);
+        $this->plot($served);
+        $unserved = $this->farmer($this->ownMunicipality);
+        $foreign = $this->farmer($this->siblingMunicipality);
+
+        $this->release($this->ownMunicipality, ['farmer_id' => $served, 'date_received' => '2026-02-01']);
+        // Another year, an undated release and a cross-municipality link never count.
+        $this->release($this->ownMunicipality, ['farmer_id' => $unserved, 'date_received' => '2025-12-31']);
+        $this->release($this->ownMunicipality, ['farmer_id' => $unserved, 'date_received' => null]);
+        $this->release($this->ownMunicipality, ['farmer_id' => $foreign, 'date_received' => '2026-05-01']);
+        $this->harvest(['farmer_id' => $served, 'harvest_year' => 2026]);
+        $this->harvest(['farmer_id' => $unserved, 'harvest_year' => 2026]);
+
+        $metric = $this->metrics->municipalityComparison($this->provincialUser(), 2026);
+
+        $this->assertSame([50.0, 0.0], $this->seriesValues($metric, 'Mapping coverage'));
+        $this->assertSame([2, 0], $this->seriesValues($metric, 'Assistance releases 2026'));
+        $this->assertSame([1, 0], $this->seriesValues($metric, 'Unique beneficiaries 2026'));
+        $this->assertSame([50.0, 0.0], $this->seriesValues($metric, 'Assistance reach 2026'));
+        // Only a harvest by a farmer served that year is follow-up.
+        $this->assertSame([1, 0], $this->seriesValues($metric, 'Beneficiaries with a recorded harvest 2026'));
+        // The sibling served nobody, so its follow-up rate has nothing to measure.
+        $this->assertSame([100.0, null], $this->seriesValues($metric, 'Harvest follow-up 2026'));
+        $this->assertSame(1, $metric['undated_releases']['count']);
+        $this->assertSame(2026, $metric['report_year']);
+    }
+
+    public function test_comparison_rates_are_not_recorded_for_a_municipality_with_no_farmers(): void
+    {
+        $this->farmer($this->ownMunicipality);
+
+        $metric = $this->metrics->municipalityComparison($this->provincialUser(), 2026);
+
+        $this->assertSame([0.0, null], $this->seriesValues($metric, 'Mapping coverage'));
+        $this->assertSame([0.0, null], $this->seriesValues($metric, 'Assistance reach 2026'));
+    }
+
+    public function test_harvest_reminder_flags_planted_seasons_without_harvests_inside_scope_only(): void
+    {
+        $plant = fn (int $municipality, string $season, string $crop, int $year = 2026) => DB::table('parcel_crop_seasons')->insert([
+            'municipality_id' => $municipality, 'crop_year' => $year, 'season' => $season, 'crop' => $crop,
+        ]);
+        $plant($this->ownMunicipality, 'dry', 'corn');
+        $plant($this->ownMunicipality, 'dry', 'corn');
+        $plant($this->ownMunicipality, 'wet', 'rice');
+        $plant($this->ownMunicipality, 'wet', 'mixed');
+        $plant($this->ownMunicipality, 'dry', 'vegetables', 2025);
+        $plant($this->siblingMunicipality, 'dry', 'fruit');
+        $this->harvest(['season' => 'wet', 'commodity' => 'rice']);
+        $this->harvest(['season' => null, 'commodity' => 'corn']);
+
+        $status = $this->metrics->harvestRecordingStatus($this->municipalUser(), 2026);
+
+        $this->assertSame(2026, $status['year']);
+        $rows = collect($status['rows'])->keyBy(fn ($row) => $row['season'].'|'.$row['commodity']);
+        $this->assertSame(['dry|corn', 'wet|rice'], $rows->keys()->all());
+        $this->assertTrue($rows['dry|corn']['needs_harvest']);
+        $this->assertSame(2, $rows['dry|corn']['planted']);
+        $this->assertFalse($rows['wet|rice']['needs_harvest']);
+        // The sibling's fruit, another year's vegetables and a mixed crop never appear.
+        $this->assertSame(1, $status['missing']);
+        $this->assertSame(1, $status['unseasoned']);
+
+        $wide = $this->metrics->harvestRecordingStatus($this->provincialUser(), 2026);
+        $this->assertSame(2, $wide['missing']);
     }
 
     public function test_the_comparison_leaves_out_municipalities_the_office_has_deactivated(): void
@@ -802,6 +873,15 @@ class DashboardMetricsTest extends TestCase
             $table->unsignedSmallInteger('harvest_year')->nullable();
             $table->decimal('quantity', 14, 3)->nullable();
             $table->string('quantity_unit')->nullable();
+            $table->timestamps();
+        });
+        Schema::create('parcel_crop_seasons', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('municipality_id')->nullable();
+            $table->unsignedBigInteger('farm_plot_id')->nullable();
+            $table->unsignedSmallInteger('crop_year');
+            $table->string('season');
+            $table->string('crop');
             $table->timestamps();
         });
         Schema::create('agricultural_machineries', function (Blueprint $table) {

@@ -1156,6 +1156,17 @@
         ],
       ];
 
+      if (Route::has('reports.index') && $user->can('viewAny', \App\Models\GeneratedReport::class)) {
+        array_splice($navigationGroups['operations']['items'], 1, 0, [[
+          'label' => 'Reports',
+          'description' => 'Monthly and period summaries',
+          'icon' => 'audit',
+          'route' => 'reports.index',
+          'patterns' => ['reports.*'],
+          'badge' => null,
+        ]]);
+      }
+
       if ($user->isProvincialVeterinaryOffice()) {
         $navigationGroups['operations']['label'] = 'Veterinary Operations';
         $navigationGroups['operations']['items'] = collect(

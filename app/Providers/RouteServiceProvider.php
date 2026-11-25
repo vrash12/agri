@@ -64,6 +64,18 @@ class RouteServiceProvider extends ServiceProvider
                 ->by($request->user()?->getAuthIdentifier() ?? $request->ip()));
         }
 
+        // Ask the map: one question per submit, then bounded 200-ID batches.
+        foreach (['map-questions' => [20, 'Map questions'], 'map-layer-batches' => [60, 'Map highlight batches']] as $name => [$maximum, $label]) {
+            RateLimiter::for($name, function (Request $request) use ($maximum, $label) {
+                return Limit::perMinute($maximum)
+                    ->by($request->user()?->getAuthIdentifier() ?? $request->ip())
+                    ->response(fn (Request $request, array $headers) => response()->json([
+                        'message' => $label.' are temporarily limited. Wait a moment, then try again.',
+                        'retry_after' => max(1, (int) ($headers['Retry-After'] ?? 60)),
+                    ], 429, $headers));
+            });
+        }
+
         // Numeric throttles share one account signature across unrelated routes.
         // Named satellite limits isolate searches, images and ordinary map work.
         foreach (['satellite-observations' => [6, 'picture searches'], 'satellite-images' => [12, 'picture loads']] as $name => [$maximum, $action]) {

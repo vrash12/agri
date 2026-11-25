@@ -13,6 +13,7 @@
     @media(max-width:1050px){.audit-overview{grid-template-columns:1fr}.audit-event-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:560px){.audit-event-grid{grid-template-columns:1fr}}
     .audit-advanced{margin-top:16px}.audit-advanced>.module-filter-grid{padding:16px}.audit-reports>.module-more-content{display:grid;gap:24px}.audit-security-note,.audit-event-link,.audit-module-row{font-size:14px}.audit-security-note{padding:16px}
+    @media(max-width:900px){.audit-ledger-table .audit-event{min-width:0}}
   </style>
 @endpush
 
@@ -133,27 +134,27 @@
 
   <section class="module-panel">
     <div class="module-table-tools">
-      <div><strong>Activity ledger</strong><span>{{ number_format($records->total()) }} {{ Str::plural('record', $records->total()) }} · newest first</span></div>
+      <div><strong id="auditLedgerTitle">Activity ledger</strong><span>{{ number_format($records->total()) }} {{ Str::plural('record', $records->total()) }} · newest first</span></div>
       @if($records->isNotEmpty())<span class="module-badge module-badge-green">Read-only history</span>@endif
     </div>
     @if($records->isNotEmpty())
       <div class="module-table-scroll">
-        <table class="module-table">
-          <thead><tr><th>Date & time</th><th>Event</th><th>Module & activity</th><th>Actor</th><th>Municipality</th><th><span class="sr-only">View</span></th></tr></thead>
-          <tbody>
+        <table class="module-table module-table-cards audit-ledger-table" role="table" aria-labelledby="auditLedgerTitle">
+          <thead role="rowgroup"><tr role="row"><th scope="col" role="columnheader">Date & time</th><th scope="col" role="columnheader">Event</th><th scope="col" role="columnheader">Module & activity</th><th scope="col" role="columnheader">Actor</th><th scope="col" role="columnheader">Municipality</th><th scope="col" role="columnheader"><span class="sr-only">View</span></th></tr></thead>
+          <tbody role="rowgroup">
             @foreach($records as $record)
               @php
                 $initials = collect(preg_split('/\s+/', trim($record->actor_name ?: 'System')))->filter()->take(2)->map(fn ($word) => mb_strtoupper(mb_substr($word, 0, 1)))->implode('');
                 $roleLabel = $roleLabels[$record->actor_role] ?? ($record->actor_role ? Str::headline($record->actor_role) : 'Unattributed event');
                 $localCreatedAt = \App\Support\LocalTime::fromUtc($record->created_at);
               @endphp
-              <tr>
-                <td class="audit-time"><strong>{{ $localCreatedAt?->format('M d, Y') }}</strong><small>{{ $localCreatedAt?->format('h:i:s A') }} · {{ $localCreatedAt?->diffForHumans() }}</small></td>
-                <td><div class="audit-event"><span class="audit-event-dot audit-event-dot-{{ $record->event_tone }}"></span><span class="module-badge module-badge-{{ $record->event_tone === 'neutral' ? 'neutral' : $record->event_tone }}">{{ $record->event_label }}</span></div></td>
-                <td class="audit-module-copy"><strong>{{ $record->module }}</strong><small>{{ $record->description }}</small></td>
-                <td><div class="module-person"><span class="module-avatar">{{ $initials ?: 'SY' }}</span><span class="module-person-copy"><strong>{{ $record->actor_name ?: 'System / unknown' }}</strong><small>{{ $record->actor_email ?: $roleLabel }}</small></span></div></td>
-                <td><strong>{{ $record->municipality?->name ?? ($record->province?->name ?: 'System-wide / unassigned') }}</strong><small>{{ $roleLabel }}</small></td>
-                <td><a class="module-button module-button-small audit-read-button" href="{{ route('audit-logs.show', $record) }}">Inspect</a></td>
+              <tr role="row">
+                <td role="cell" class="audit-time module-cell-half"><span class="module-cell-label" aria-hidden="true">Date & time</span><strong>{{ $localCreatedAt?->format('M d, Y') }}</strong><small>{{ $localCreatedAt?->format('h:i:s A') }} · {{ $localCreatedAt?->diffForHumans() }}</small></td>
+                <td role="cell" class="module-cell-half"><span class="module-cell-label" aria-hidden="true">Event</span><div class="audit-event"><span class="audit-event-dot audit-event-dot-{{ $record->event_tone }}"></span><span class="module-badge module-badge-{{ $record->event_tone === 'neutral' ? 'neutral' : $record->event_tone }}">{{ $record->event_label }}</span></div></td>
+                <td role="cell" class="audit-module-copy"><span class="module-cell-label" aria-hidden="true">Module & activity</span><strong>{{ $record->module }}</strong><small>{{ $record->description }}</small></td>
+                <td role="cell"><span class="module-cell-label" aria-hidden="true">Actor</span><div class="module-person"><span class="module-avatar">{{ $initials ?: 'SY' }}</span><span class="module-person-copy"><strong>{{ $record->actor_name ?: 'System / unknown' }}</strong><small>{{ $record->actor_email ?: $roleLabel }}</small></span></div></td>
+                <td role="cell"><span class="module-cell-label" aria-hidden="true">Municipality</span><strong>{{ $record->municipality?->name ?? ($record->province?->name ?: 'System-wide / unassigned') }}</strong><small>{{ $roleLabel }}</small></td>
+                <td role="cell" class="module-cell-actions"><a class="module-button module-button-small audit-read-button" href="{{ route('audit-logs.show', $record) }}">Inspect</a></td>
               </tr>
             @endforeach
           </tbody>

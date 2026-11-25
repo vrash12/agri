@@ -121,10 +121,10 @@ class AssistantConversationTest extends TestCase
 
     public function test_follow_up_reuses_the_year_without_a_form_or_provider_call(): void
     {
-        $first = $this->ask('Show assistance for 2025')->assertOk()->assertJsonPath('source', 'records')->assertJsonPath('year', 2025)->assertSee('15.000 kg')->assertDontSee('27.000');
+        $first = $this->ask('Show assistance for 2025')->assertOk()->assertJsonPath('source', 'records')->assertJsonPath('year', 2025)->assertSee('15 kg')->assertDontSee('27 kg');
         $this->assertNotNull(app(AssistantConversationContext::class)->read($this->staff, session()->getId(), $first->json('context')));
         $this->ask('What about harvests for the same year?', ['context' => $first->json('context')])
-            ->assertOk()->assertJsonPath('source', 'records')->assertJsonPath('year', 2025)->assertSee('200.000')->assertDontSee('400.000');
+            ->assertOk()->assertJsonPath('source', 'records')->assertJsonPath('year', 2025)->assertSee('200 kg')->assertDontSee('400 kg');
         OfficeHelpAgent::assertNeverPrompted();
         Http::assertNothingSent();
         $this->assertNull(Cache::get('assistant:requests:day:'.now('UTC')->format('Ymd')));
@@ -170,11 +170,11 @@ class AssistantConversationTest extends TestCase
             ->assertSee($name)->assertSee('software mascot, not a person')->assertSee('not an official decision-maker');
         $this->assertSame(0, $this->operationalQueries());
         $report = $this->ask('Show assistance for 2025', ['guide' => $id])->assertOk()
-            ->assertJsonPath('year', 2025)->assertSee('15.000 kg')->assertDontSee('ForeignSecret');
+            ->assertJsonPath('year', 2025)->assertSee('15 kg')->assertDontSee('ForeignSecret');
         $this->ask('Hello!', ['guide' => 'kiko', 'context' => $report->json('context')])->assertOk()
             ->assertSee('Kiko')->assertJsonPath('context', $report->json('context'));
         $this->ask('What about harvests for the same year?', ['guide' => 'aling-maya', 'context' => $report->json('context')])
-            ->assertOk()->assertJsonPath('source', 'records')->assertJsonPath('year', 2025)->assertSee('200.000')->assertDontSee('400.000');
+            ->assertOk()->assertJsonPath('source', 'records')->assertJsonPath('year', 2025)->assertSee('200 kg')->assertDontSee('400 kg');
         OfficeHelpAgent::assertNeverPrompted();
         Http::assertNothingSent();
         $this->assertNull(Cache::get('assistant:requests:day:'.now('UTC')->format('Ymd')));
@@ -212,7 +212,7 @@ class AssistantConversationTest extends TestCase
         $this->assertSame($report->json('context'), $account->json('context'));
         $this->assertSame(0, $this->operationalQueries());
         $this->ask('2025', ['context' => $account->json('context')])->assertOk()
-            ->assertJsonPath('source', 'records')->assertJsonPath('year', 2025)->assertSee('15.000 kg');
+            ->assertJsonPath('source', 'records')->assertJsonPath('year', 2025)->assertSee('15 kg');
         OfficeHelpAgent::assertNeverPrompted();
         Http::assertNothingSent();
         $this->assertNull(Cache::get('assistant:requests:day:'.now('UTC')->format('Ymd')));
@@ -372,7 +372,7 @@ class AssistantConversationTest extends TestCase
         DB::enableQueryLog();
         DB::flushQueryLog();
         $language = $this->ask('In Filipino', ['context' => $report->json('context')])->assertOk()->assertJsonPath('source', 'clarification')
-            ->assertSee('not sent to AI for translation')->assertDontSee('15.000 kg')->assertDontSee('Juan Fixture');
+            ->assertSee('not sent to AI for translation')->assertDontSee('15 kg')->assertDontSee('Juan Fixture');
         $this->assertSame($report->json('context'), $language->json('context'));
         $this->assertSame(0, $this->operationalQueries());
         $this->ask('2026', ['context' => $language->json('context')])->assertOk()->assertJsonPath('report', 'assistance')->assertJsonPath('year', 2026);
@@ -406,7 +406,7 @@ class AssistantConversationTest extends TestCase
         DB::flushQueryLog();
         $response = $this->ask($question, ['context' => $report->json('context')])->assertOk()
             ->assertJsonPath('source', 'clarification')->assertJsonPath('context', null)
-            ->assertDontSee('15.000 kg')->assertDontSee('Registered farmers:')->assertDontSee('Juan Fixture');
+            ->assertDontSee('15 kg')->assertDontSee('registered farmer')->assertDontSee('Juan Fixture');
         $this->assertSame(0, $this->operationalQueries());
         $this->ask('2025', ['context' => $response->json('context')])->assertOk()->assertJsonPath('source', 'clarification');
         $this->assertSame(0, $this->operationalQueries());
@@ -421,14 +421,33 @@ class AssistantConversationTest extends TestCase
         return array_map(fn (string $question): array => [$question], [
             'How many irrigation assistance releases are recorded?',
             'Show corn harvests for dry season 2025', 'How many female farmers?',
-            'Show vaccinations for dogs this year', 'Show fertilizer releases for 2025',
+            'Show vaccinations for dogs this year', 'Show fertilizer releases for female farmers in 2025',
             'Show assistance received in January 2025', 'Show our harvests this month',
-            'Show unmapped farmers', 'Show farmers without saved parcels',
-            'Show farmers missing FFRS', 'Show assistance quantity > 50',
+            'Show unmapped female farmers', 'Show farmers without saved parcels for 2025',
+            'Show farmers missing FFRS in Barangay Uno', 'Show assistance quantity > 50',
             'Show harvests before 2025', 'Show farmer addresses', 'Show farmer address', 'Show farmer email', 'Show farmers contact numbers',
-            'Show corn harvests for 2024 and 2025',
-            'Compare corn harvests for 2024 and 2025', 'Compare female farmers with last year',
+            // A supported subject plus a second subject or narrower filter still clarifies.
+            'Show fertilizer and seed releases for 2025', 'Show corn and rice harvests for 2025',
+            'How much hybrid rice seed did we release in 2025?', 'Show corn harvests in January 2025',
+            'Compare female farmers with last year',
         ]);
+    }
+
+    public function test_focused_multi_year_request_keeps_only_its_own_subject_for_the_year_follow_up(): void
+    {
+        foreach (['Show corn harvests for 2024 and 2025', 'Compare corn harvests for 2024 and 2025'] as $question) {
+            DB::enableQueryLog();
+            DB::flushQueryLog();
+            $clarification = $this->ask($question)->assertOk()->assertJsonPath('source', 'clarification')
+                ->assertSee('Which single year')->assertDontSee('200 kg')->assertDontSee('400 kg');
+            $this->assertSame(0, $this->operationalQueries());
+            $this->assertSame('commodity:corn', app(AssistantConversationContext::class)->read($this->staff, session()->getId(), $clarification->json('context'))['focus']);
+            // The bare year resumes the corn total only, never a broader report.
+            $this->ask('2025', ['context' => $clarification->json('context')])->assertOk()->assertJsonPath('report', 'harvests')->assertJsonPath('year', 2025)
+                ->assertSee('harvested 200 kg of corn')->assertDontSee('400 kg');
+            $this->travel(61)->seconds();
+        }
+        OfficeHelpAgent::assertNeverPrompted();
     }
 
     public function test_qualified_selected_farmer_report_cannot_be_replaced_with_a_whole_farmer_summary(): void
@@ -437,7 +456,7 @@ class AssistantConversationTest extends TestCase
         DB::enableQueryLog();
         DB::flushQueryLog();
         $this->ask('Show his corn harvests', ['context' => $selected->json('context')])->assertOk()
-            ->assertJsonPath('source', 'clarification')->assertJsonPath('context', null)->assertDontSee('400.000');
+            ->assertJsonPath('source', 'clarification')->assertJsonPath('context', null)->assertDontSee('400 kg');
         $this->assertSame(0, $this->operationalQueries());
         OfficeHelpAgent::assertNeverPrompted();
     }
@@ -515,7 +534,7 @@ class AssistantConversationTest extends TestCase
         DB::flushQueryLog();
         foreach (['Make it shorter.', 'Explain more.', 'Give an example.'] as $question) {
             $this->ask($question, ['context' => $summary->json('context')])->assertOk()->assertJsonPath('source', 'clarification')
-                ->assertDontSee('15.000 kg')->assertDontSee('Juan Fixture');
+                ->assertDontSee('15 kg')->assertDontSee('Juan Fixture');
         }
         $this->assertSame(0, $this->operationalQueries());
         $this->assertNull(Cache::get('assistant:requests:day:'.now('UTC')->format('Ymd')));
@@ -534,7 +553,7 @@ class AssistantConversationTest extends TestCase
         $this->assertSame('crop-drawing', $hint['help_topic']);
         OfficeHelpAgent::assertPrompted(function (AgentPrompt $prompt): bool {
             $providerText = $prompt->prompt.$prompt->agent->instructions().json_encode($prompt->messages);
-            foreach (['Juan', 'Fixture', $this->farmer->agri_gov_id, 'Secret plot name', '15.000', '400.000', 'private-contact-fixture'] as $private) {
+            foreach (['Juan', 'Fixture', $this->farmer->agri_gov_id, 'Secret plot name', '15 kg', '400 kg', 'private-contact-fixture'] as $private) {
                 $this->assertStringNotContainsString($private, $providerText);
             }
 
@@ -542,7 +561,7 @@ class AssistantConversationTest extends TestCase
                 && str_contains($prompt->agent->instructions(), 'clearly hypothetical');
         });
         $this->assertSame(0, $this->operationalQueries());
-        $this->ask('Show his parcels.', ['context' => $follow->json('context')])->assertOk()->assertJsonPath('source', 'records')->assertSee('Saved parcels: 1');
+        $this->ask('Show his parcels.', ['context' => $follow->json('context')])->assertOk()->assertJsonPath('source', 'records')->assertSee('1 saved parcel');
         $audit = AuditLog::where('module', 'Office Assistant')->get()->toJson();
         foreach (['Juan', $this->farmer->agri_gov_id, 'Give an example', 'Secret plot name'] as $private) {
             $this->assertStringNotContainsString($private, $audit);
@@ -581,7 +600,7 @@ class AssistantConversationTest extends TestCase
         $this->ask('Make it shorter.', ['context' => $legacyHelp])->assertOk()->assertJsonPath('source', 'clarification');
         $legacyReport = $contexts->issue($this->staff, session()->getId(), ['task' => 'assistance', 'year' => 2025]);
         $this->ask('What about harvests for the same year?', ['context' => $legacyReport])->assertOk()->assertJsonPath('source', 'records')
-            ->assertJsonPath('year', 2025)->assertSee('200.000');
+            ->assertJsonPath('year', 2025)->assertSee('200 kg');
         OfficeHelpAgent::assertNeverPrompted();
     }
 
@@ -612,7 +631,7 @@ class AssistantConversationTest extends TestCase
         ])->assertRedirect(route('dashboard'))->assertCookie(config('session.cookie'))->assertCookie('XSRF-TOKEN');
         $this->assertAuthenticatedAs($this->staff, 'web');
         $this->withHeader('X-CSRF-TOKEN', session()->token())->ask('Summarize my farmers')
-            ->assertOk()->assertJsonPath('source', 'records')->assertSee('Registered farmers: 1')->assertDontSee('ForeignSecret');
+            ->assertOk()->assertJsonPath('source', 'records')->assertSee('Own municipality has 1 registered farmer.')->assertDontSee('ForeignSecret');
         OfficeHelpAgent::assertNeverPrompted();
         Http::assertNothingSent();
     }
@@ -650,9 +669,9 @@ class AssistantConversationTest extends TestCase
         $this->assertArrayNotHasKey('farmer_id', $search->json('actions.0'));
         $selected = $this->ask('Show this farmer', ['choice' => $choice])->assertOk()->assertJsonPath('year', 2025)->assertSee('Juan Fixture');
         $individual = $this->ask('Show his parcels and seeds received', ['context' => $selected->json('context')])
-            ->assertOk()->assertJsonPath('source', 'records')->assertJsonPath('year', 2025)->assertSee('0.7500 ha')->assertSee('15.000 kg')->assertDontSee('57.000');
+            ->assertOk()->assertJsonPath('source', 'records')->assertJsonPath('year', 2025)->assertSee('0.75 ha')->assertSee('15 kg')->assertDontSee('57 kg');
         $this->ask('Summarize our assistance for the same year', ['context' => $individual->json('context')])
-            ->assertOk()->assertJsonPath('source', 'records')->assertSee('57.000 kg');
+            ->assertOk()->assertJsonPath('source', 'records')->assertSee('57 kg');
         OfficeHelpAgent::assertNeverPrompted();
     }
 
@@ -664,7 +683,7 @@ class AssistantConversationTest extends TestCase
         OfficeHelpAgent::assertPrompted(function (AgentPrompt $prompt): bool {
             $this->assertSame(OfficeAssistant::TOPICS['crop-drawing']['question'], $prompt->prompt);
             $this->assertEmpty($prompt->messages);
-            foreach (['Juan', 'Fixture', '400.000', 'private-contact-fixture', $this->farmer->agri_gov_id] as $private) {
+            foreach (['Juan', 'Fixture', '400 kg', 'private-contact-fixture', $this->farmer->agri_gov_id] as $private) {
                 $this->assertStringNotContainsString($private, $prompt->prompt.$prompt->agent->instructions());
             }
 
@@ -678,9 +697,9 @@ class AssistantConversationTest extends TestCase
     {
         $selected = $this->ask('Find farmer '.$this->farmer->agri_gov_id)->assertOk();
         $this->ask('Show assistance', ['context' => $selected->json('context')])
-            ->assertOk()->assertJsonPath('source', 'clarification')->assertDontSee('27.000');
+            ->assertOk()->assertJsonPath('source', 'clarification')->assertDontSee('27 kg');
         $this->ask('Show his crops', ['context' => $selected->json('context')])
-            ->assertOk()->assertJsonPath('source', 'records')->assertSee('Corn')->assertSee('Saved parcels: 1');
+            ->assertOk()->assertJsonPath('source', 'records')->assertSee('Corn')->assertSee('1 saved parcel');
         $this->ask('Show his address', ['context' => $selected->json('context')])
             ->assertOk()->assertJsonPath('source', 'clarification')->assertDontSee('private-contact-fixture')->assertDontSee('1954-02-13');
         OfficeHelpAgent::assertNeverPrompted();
@@ -718,8 +737,8 @@ class AssistantConversationTest extends TestCase
     public static function pendingScopeReports(): array
     {
         return [
-            'assistance' => ['assistance', 'farmer-assistance', '15.000 kg', '57.000 kg'],
-            'harvests' => ['harvests', 'farmer-harvests', '200.000', '300.000'],
+            'assistance' => ['assistance', 'farmer-assistance', '15 kg', '57 kg'],
+            'harvests' => ['harvests', 'farmer-harvests', '200 kg', '300 kg'],
         ];
     }
 
@@ -730,14 +749,14 @@ class AssistantConversationTest extends TestCase
         DB::enableQueryLog();
         DB::flushQueryLog();
         $year = $this->ask('2025', ['context' => $pending->json('context')])->assertOk()
-            ->assertJsonPath('source', 'clarification')->assertDontSee('15.000 kg')->assertDontSee('27.000 kg');
+            ->assertJsonPath('source', 'clarification')->assertDontSee('15 kg')->assertDontSee('27 kg');
         $this->assertSame(0, $this->operationalQueries());
         $references = app(AssistantConversationContext::class)->read($this->staff, session()->getId(), $year->json('context'));
         $this->assertSame('assistance', $references['pending_scope']);
         $this->assertSame(2025, $references['year']);
         $thanks = $this->ask('Thanks', ['context' => $year->json('context')])->assertOk()->assertJsonPath('report', 'identity');
         $this->ask('Napiling magsasaka', ['context' => $thanks->json('context')])->assertOk()
-            ->assertJsonPath('report', 'farmer-assistance')->assertJsonPath('year', 2025)->assertSee('15.000 kg')->assertDontSee('27.000 kg');
+            ->assertJsonPath('report', 'farmer-assistance')->assertJsonPath('year', 2025)->assertSee('15 kg')->assertDontSee('27 kg');
         OfficeHelpAgent::assertNeverPrompted();
     }
 
@@ -751,7 +770,7 @@ class AssistantConversationTest extends TestCase
         $year = $this->ask('2025', ['context' => $multiple->json('context')])->assertOk()->assertJsonPath('source', 'clarification');
         $this->assertSame(0, $this->operationalQueries());
         $this->ask('Selected farmer', ['context' => $year->json('context')])->assertOk()
-            ->assertJsonPath('report', 'farmer-harvests')->assertJsonPath('year', 2025)->assertSee('200.000')->assertDontSee('400.000');
+            ->assertJsonPath('report', 'farmer-harvests')->assertJsonPath('year', 2025)->assertSee('200 kg')->assertDontSee('400 kg');
         OfficeHelpAgent::assertNeverPrompted();
     }
 
@@ -760,15 +779,15 @@ class AssistantConversationTest extends TestCase
         $selected = $this->ask('Find farmer '.$this->farmer->agri_gov_id)->assertOk();
         $pending = $this->ask('Show assistance for 2025', ['context' => $selected->json('context')])->assertOk();
         $this->farmer->forceFill(['municipality_id' => $this->other->id])->save();
-        $this->ask('Selected farmer', ['context' => $pending->json('context')])->assertNotFound()->assertDontSee('15.000 kg');
+        $this->ask('Selected farmer', ['context' => $pending->json('context')])->assertNotFound()->assertDontSee('15 kg');
         $this->staff->forceFill(['municipality_id' => $this->other->id])->save();
         $this->ask('Whole office', ['context' => $pending->json('context')])->assertOk()
-            ->assertJsonPath('source', 'clarification')->assertJsonPath('context', null)->assertDontSee('15.000 kg');
+            ->assertJsonPath('source', 'clarification')->assertJsonPath('context', null)->assertDontSee('15 kg');
         $this->staff->forceFill(['municipality_id' => $this->own->id])->save();
         $this->travel(16)->minutes();
         $this->withSession(['auth.last_activity_at' => now()->timestamp]);
         $this->ask('Selected farmer', ['context' => $pending->json('context')])->assertOk()
-            ->assertJsonPath('source', 'clarification')->assertJsonPath('context', null)->assertDontSee('15.000 kg');
+            ->assertJsonPath('source', 'clarification')->assertJsonPath('context', null)->assertDontSee('15 kg');
         OfficeHelpAgent::assertNeverPrompted();
     }
 
@@ -779,13 +798,13 @@ class AssistantConversationTest extends TestCase
         $rejected = $this->ask('Show fertilizer assistance', ['context' => $pending->json('context')])->assertOk()
             ->assertJsonPath('source', 'clarification')->assertJsonPath('context', null);
         $this->ask('Selected farmer', ['context' => $rejected->json('context')])->assertOk()
-            ->assertJsonPath('source', 'clarification')->assertDontSee('15.000 kg');
+            ->assertJsonPath('source', 'clarification')->assertDontSee('15 kg');
         $this->travel(61)->seconds();
         $help = $this->ask('How do I draw a crop area?', ['context' => $pending->json('context')])->assertOk()->assertJsonPath('source', 'help');
         $references = app(AssistantConversationContext::class)->read($this->staff, session()->getId(), $help->json('context'));
         $this->assertArrayNotHasKey('pending_scope', $references);
         $this->ask('Whole office', ['context' => $help->json('context')])->assertOk()
-            ->assertJsonPath('source', 'clarification')->assertDontSee('15.000 kg');
+            ->assertJsonPath('source', 'clarification')->assertDontSee('15 kg');
         OfficeHelpAgent::assertPromptedTimes(1);
     }
 
@@ -793,7 +812,7 @@ class AssistantConversationTest extends TestCase
     {
         DB::enableQueryLog();
         foreach (['Selected farmer', 'Whole office', 'Napiling magsasaka', 'Buong opisina'] as $message) {
-            $this->ask($message)->assertOk()->assertJsonPath('source', 'clarification')->assertDontSee('Release records');
+            $this->ask($message)->assertOk()->assertJsonPath('source', 'clarification')->assertDontSee('assistance release');
         }
         $this->assertSame(0, $this->operationalQueries());
         OfficeHelpAgent::assertNeverPrompted();
@@ -819,7 +838,7 @@ class AssistantConversationTest extends TestCase
                 $this->assertNotSame('clarification', $resolved['task'], $suggestion['message']);
             }
             $text = json_encode($suggestions);
-            foreach (['Juan', 'Fixture', 'private-contact-fixture', '15.000', '27.000', '400.000', $this->farmer->agri_gov_id] as $private) {
+            foreach (['Juan', 'Fixture', 'private-contact-fixture', '15 kg', '27 kg', '400 kg', $this->farmer->agri_gov_id] as $private) {
                 $this->assertStringNotContainsString($private, $text);
             }
         }
@@ -891,7 +910,7 @@ class AssistantConversationTest extends TestCase
         $clarification = $this->ask('Show assistance for 2024 and 2025')->assertOk()->assertJsonPath('source', 'clarification');
         $this->assertIsString($clarification->json('context'));
         $this->ask('2025', ['context' => $clarification->json('context')])
-            ->assertOk()->assertJsonPath('source', 'records')->assertJsonPath('report', 'assistance')->assertJsonPath('year', 2025)->assertSee('15.000 kg');
+            ->assertOk()->assertJsonPath('source', 'records')->assertJsonPath('report', 'assistance')->assertJsonPath('year', 2025)->assertSee('15 kg');
         OfficeHelpAgent::assertNeverPrompted();
     }
 
@@ -901,9 +920,9 @@ class AssistantConversationTest extends TestCase
         $clarification = $this->ask('Show his harvests for 2024 and 2025', ['context' => $selected->json('context')])
             ->assertOk()->assertJsonPath('source', 'clarification');
         $this->ask('2025', ['context' => $clarification->json('context')])
-            ->assertOk()->assertJsonPath('source', 'records')->assertJsonPath('year', 2025)->assertSee('200.000')->assertDontSee('400.000');
+            ->assertOk()->assertJsonPath('source', 'records')->assertJsonPath('year', 2025)->assertSee('200 kg')->assertDontSee('400 kg');
         $this->staff->forceFill(['municipality_id' => $this->other->id])->save();
-        $this->ask('2025', ['context' => $clarification->json('context')])->assertOk()->assertJsonPath('source', 'clarification')->assertDontSee('200.000');
+        $this->ask('2025', ['context' => $clarification->json('context')])->assertOk()->assertJsonPath('source', 'clarification')->assertDontSee('200 kg');
         OfficeHelpAgent::assertNeverPrompted();
     }
 
@@ -928,7 +947,7 @@ class AssistantConversationTest extends TestCase
     public function test_narrower_area_requests_are_not_silently_answered_as_the_whole_scope(): void
     {
         DB::enableQueryLog();
-        $this->ask('Summarize farmers in Foreign municipality')->assertOk()->assertJsonPath('source', 'clarification')->assertDontSee('Registered farmers: 1');
+        $this->ask('Summarize farmers in Foreign municipality')->assertOk()->assertJsonPath('source', 'clarification')->assertDontSee('1 registered farmer');
         $this->assertEmpty(array_filter(array_column(DB::getQueryLog(), 'query'), fn ($sql) => str_contains($sql, 'from "farmers"')));
         OfficeHelpAgent::assertNeverPrompted();
     }
@@ -940,7 +959,7 @@ class AssistantConversationTest extends TestCase
         $this->assertIsString($token);
         $this->assertLessThanOrEqual(4096, strlen($token));
         $contents = Crypt::decryptString($token);
-        foreach (['Juan', 'Fixture', '400.000', 'private-contact-fixture', 'Secret plot name', 'Find farmer'] as $private) {
+        foreach (['Juan', 'Fixture', '400 kg', 'private-contact-fixture', 'Secret plot name', 'Find farmer'] as $private) {
             $this->assertStringNotContainsString($private, $contents);
         }
         $this->assertNull(session('assistant.history'));
@@ -957,11 +976,11 @@ class AssistantConversationTest extends TestCase
         $response = $this->ask('Show assistance for 2025')->assertOk();
         $token = $response->json('context');
         $this->ask('What about harvests for the same year?', ['context' => substr($token, 0, -2).'xx'])
-            ->assertOk()->assertJsonPath('source', 'clarification')->assertDontSee('200.000');
+            ->assertOk()->assertJsonPath('source', 'clarification')->assertDontSee('200 kg');
         $this->travel(16)->minutes();
         $this->withSession(['auth.last_activity_at' => now()->timestamp]);
         $this->ask('What about harvests for the same year?', ['context' => $token])
-            ->assertOk()->assertJsonPath('source', 'clarification')->assertDontSee('200.000');
+            ->assertOk()->assertJsonPath('source', 'clarification')->assertDontSee('200 kg');
         OfficeHelpAgent::assertNeverPrompted();
     }
 
@@ -984,7 +1003,7 @@ class AssistantConversationTest extends TestCase
         DB::flushQueryLog();
         DB::enableQueryLog();
         $this->ask('Show his seeds received', ['context' => $first->json('context')])
-            ->assertOk()->assertJsonPath('source', 'clarification')->assertDontSee('Juan')->assertDontSee('15.000');
+            ->assertOk()->assertJsonPath('source', 'clarification')->assertDontSee('Juan')->assertDontSee('15 kg');
         $this->assertEmpty(array_filter(array_column(DB::getQueryLog(), 'query'), fn ($sql) => preg_match('/from "(?:farmers|farm_plots|rice_seed_distributions)"/i', $sql)));
         OfficeHelpAgent::assertNeverPrompted();
     }
@@ -1091,7 +1110,7 @@ class AssistantConversationTest extends TestCase
             DB::table('farmers')->insert($chunk);
         }
         DB::flushQueryLog();
-        $response = $this->ask('Summarize my farmers')->assertOk()->assertSee('Registered farmers: 801');
+        $response = $this->ask('Summarize my farmers')->assertOk()->assertSee('801 registered farmers');
         $this->assertSame($smallQueries, $this->operationalQueries());
         $this->assertLessThanOrEqual(32 * 1024, strlen($response->getContent()));
         OfficeHelpAgent::assertNeverPrompted();

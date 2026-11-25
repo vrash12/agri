@@ -7,9 +7,9 @@ use App\Modules\Farmers\Application\AssistantDataQuality;
 /** Bounded task routing. Unknown text is never submitted to an external model. */
 final class AssistantIntentResolver
 {
-    public function __construct(private AssistantReportRequest $reports = new AssistantReportRequest, private AssistantAgriculture $agriculture = new AssistantAgriculture, private AssistantRecordTopics $recordTopics = new AssistantRecordTopics) {}
+    public function __construct(private AssistantReportRequest $reports = new AssistantReportRequest, private AssistantAgriculture $agriculture = new AssistantAgriculture, private AssistantRecordTopics $recordTopics = new AssistantRecordTopics, private AssistantRecordFocus $focus = new AssistantRecordFocus) {}
 
-    /** @return array{task:string,year:int,farmer_id?:int|null,search?:string,topic?:string,style?:string,kind?:string,language?:string,clarification?:string,clarification_kind?:string,help_topics?:list<string>,reset_context?:bool,references?:array{task:string,year:int,farmer_id:int|null,pending_scope?:string}} */
+    /** @return array{task:string,year:int,farmer_id?:int|null,focus?:string|null,search?:string,topic?:string,style?:string,kind?:string,language?:string,clarification?:string,clarification_kind?:string,help_topics?:list<string>,reset_context?:bool,references?:array{task:string,year:int,farmer_id:int|null,pending_scope?:string}} */
     public function resolve(string $message, array $context, string $module, int $currentYear): array
     {
         $text = AssistantUtterance::normalize($message);
@@ -36,7 +36,13 @@ final class AssistantIntentResolver
         if (($lookup = AssistantUtterance::farmerLookup($text)) !== null) {
             return isset($lookup['search'])
                 ? ['task' => 'farmer-search', 'search' => $lookup['search'], 'year' => $lookup['year'] ?? $year]
-                : $this->clarify('Ask for one farmer by name or AgriLGU ID first. I cannot combine a person lookup with other requests, private fields or location filters. After choosing the matching record, ask for their permitted summary, parcels, crops, assistance or harvests.', $year) + ['reset_context' => true];
+                : $this->clarify('Ask for one farmer at a time by name or AgriLGU ID, for example “Find farmer Juan Dela Cruz”. I can’t combine a person lookup with other requests, private fields or location filters. After you choose the matching record, ask for their summary, parcels, crops, assistance or harvests.', $year) + ['reset_context' => true];
+        }
+        // One supported subject (an input, a commodity, recipients or a registry
+        // gap) is answered directly. The remainder still passes every existing
+        // subset, location and period guard, so extra qualifiers clarify.
+        if (! $this->personalReference($text) && ($focus = $this->focus->resolve($text)) !== null) {
+            return $this->focused($focus, $text, $context, $year, $currentYear);
         }
         if ($agriculture = $this->agriculture->resolve($text, $year, $language)) {
             return $agriculture;
@@ -63,9 +69,7 @@ final class AssistantIntentResolver
         if (AssistantUtterance::indexComparison($text)) {
             return ['task' => 'help', 'topic' => 'satellite-indices', 'year' => $year, 'language' => $language, 'style' => $this->requestedStyle($text)];
         }
-        if (preg_match('/\b(compare|compared|comparison|versus|vs|trend|trends|ihambing|kumpara|year[\s-]+(?:over|on)[\s-]+year)\b/iu', $text)
-            || preg_match('/\b(?:this\s+year|ngayong\s+taon)\b.+\b(?:last\s+year|previous\s+year|nakaraang\s+taon)\b|\b(?:last\s+year|previous\s+year|nakaraang\s+taon)\b.+\b(?:this\s+year|ngayong\s+taon)\b/iu', $text)
-            || preg_match('/\b\d{4}\b\s+(?:and|with|at)\s+(?:last\s+year|previous\s+year|nakaraang\s+taon)\b/iu', $text)) {
+        if ($this->hasComparison($text)) {
             if ($clarification = $this->reportClarification($text, $year)) {
                 return $clarification;
             }
@@ -103,7 +107,7 @@ final class AssistantIntentResolver
         }
         if (AssistantDataQuality::matches($text)) {
             if (preg_match('/\b(?:19|20|21)\d{2}\b|\b(?:last|previous|prior|this|current)\s+year\b|\b(?:nakaraang|ngayong)\s+taon\b/iu', $text)) {
-                return $this->clarify('Data-quality review uses current registry records, not a historical reporting year. Ask what needs attention without adding a year, or open the farmer registry review filters.', $year) + ['reset_context' => true];
+                return $this->dataQualityYearClarification($year);
             }
 
             return ['task' => 'data-quality', 'year' => $year, 'farmer_id' => null];
@@ -115,29 +119,16 @@ final class AssistantIntentResolver
             return $clarification;
         }
         if ($recordTopic === null && $this->requestsDifferentScope($text)) {
-            return $this->clarify('I can summarize your account’s permitted area. A separate province or municipality filter is not available in this chat yet. Use the register’s location filters for that subset, or ask about your current area.', $year) + ['reset_context' => true];
+            return $this->clarify($this->barangayScopeMessage($text)
+                ?? 'I can summarize your account’s permitted area. A separate province or municipality filter is not available in this chat yet. Use the register’s location filters for that subset, or ask about your current area.', $year) + ['reset_context' => true];
         }
-        preg_match_all('/(?<![\p{L}\d-])\d{4}(?![\p{L}\d-])/u', $text, $matches);
-        $years = array_values(array_unique($matches[0]));
-        if (count($years) > 1 || ($years && ((int) $years[0] < 1900 || (int) $years[0] > 2100))) {
-            return $this->yearClarification($text, $context, $year);
+        $period = $this->period($text, $context, $year, $currentYear);
+        if (is_array($period)) {
+            return $period;
         }
-        if ($years) {
-            $year = (int) $years[0];
-        } elseif (preg_match('/\b(last\s+year|nakaraang\s+taon|noong\s+nakaraang\s+taon)\b/iu', $text)) {
-            $year = $currentYear - 1;
-        } elseif (preg_match('/\b(previous\s+year|prior\s+year|taon\s+bago\s+iyon)\b/iu', $text)) {
-            $year = (int) ($context['year'] ?? $currentYear) - 1;
-        } elseif (preg_match('/\b(this\s+year|current\s+year|ngayong\s+taon)\b/iu', $text)) {
-            $year = $currentYear;
-        } elseif (preg_match('/\b(same\s+year|that\s+year|parehong\s+taon|taong\s+iyon)\b/iu', $text) && ! isset($context['year'])) {
-            return $this->yearClarification($text, $context, $year);
-        }
-        if ($year < 1900 || $year > 2100) {
-            return $this->clarify('Choose one reporting year between 1900 and 2100.', $currentYear);
-        }
+        $year = $period;
         if ($recordTopic !== null) {
-            $explicitPeriod = $years !== [] || preg_match('/\b(?:(?:same|that|last|previous|prior|this|current) year|(?:parehong|nakaraang|ngayong) taon|taong iyon)\b/iu', $text);
+            $explicitPeriod = preg_match('/(?<![\p{L}\d-])\d{4}(?![\p{L}\d-])/u', $text) || preg_match('/\b(?:(?:same|that|last|previous|prior|this|current) year|(?:parehong|nakaraang|ngayong) taon|taong iyon)\b/iu', $text);
             if ($explicitPeriod && ($clarification = $this->currentSnapshotClarification($recordTopic, $year))) {
                 return $clarification;
             }
@@ -145,7 +136,7 @@ final class AssistantIntentResolver
             return ['task' => $recordTopic, 'year' => $year, 'farmer_id' => null];
         }
         if ($this->recordTopics->mentionsExtendedRecords($text)) {
-            return $this->clarify('I can read your permitted LGU records for registry sections, cooperatives, machinery, crops and office profiles. Ask for one summary, or “Summarize our LGU records”. For names, status filters, another location or private fields, open the linked register; I will not substitute broader totals.', $year) + ['reset_context' => true];
+            return $this->clarify('I can summarize registry sections, cooperatives, machinery, crops, farm-location (barangay) breakdowns and LGU office profiles for your area — for example “How many cooperatives do we have?” or “Summarize our LGU records”. For names, status filters, another location or private fields, open the linked register; I will not substitute broader totals.', $year) + ['reset_context' => true];
         }
         $scopeChoice = $this->scopeChoice($text);
         if (in_array($context['pending_scope'] ?? null, ['assistance', 'harvests'], true) && ! empty($context['farmer_id'])) {
@@ -180,11 +171,11 @@ final class AssistantIntentResolver
             $tasks[] = 'farmers';
         }
         if (! $personal && ! $tasks && preg_match('/\b(crop|crops|pananim)\b/iu', $text)) {
-            return $this->clarify('I can show seasonal crop records for a selected farmer. Find the farmer first, then ask for their crops and reporting year.', $year);
+            return $this->clarify('For crops, ask “Show seasonal crops for '.$year.'” for your whole area, or find one farmer first (“Find farmer” and a name) and then ask for their crops.', $year);
         }
         if ($personal) {
             if (empty($context['farmer_id'])) {
-                return $this->clarify('Which farmer do you mean? Type “Find farmer” followed by their name or AgriLGU ID, then choose the matching record.', $year);
+                return $this->clarify('Which farmer do you mean? Type “Find farmer” followed by their name or AgriLGU ID, for example “Find farmer Juan Dela Cruz”, then choose the matching record.', $year);
             }
             if (in_array('animal-health', $tasks, true) || (! $tasks && ! preg_match('/\b(summary|profile|record|records|info|information|details|buod)\b/iu', $text))) {
                 return $this->clarify('For the selected farmer, I can show their recorded summary, saved parcels and crops, assistance or harvests. Which would you like?', $year);
@@ -198,7 +189,7 @@ final class AssistantIntentResolver
             return ['task' => $task, 'year' => $year, 'farmer_id' => (int) $context['farmer_id']];
         }
         if (count($tasks) > 1) {
-            return $this->clarify('I can show one report at a time, or a workspace summary covering farmers, assistance and harvests. Which would you like?', $year);
+            return $this->clarify('I can answer one report at a time — for example “How many farmers do we have?” or “Show assistance for '.$year.'” — or give an overview with “Summarize our LGU records”. Which would you like?', $year);
         }
         if ($tasks) {
             if (! $collective && ! empty($context['farmer_id']) && in_array($tasks[0], ['assistance', 'harvests'], true)) {
@@ -218,10 +209,94 @@ final class AssistantIntentResolver
                 return $this->clarify('Choose a farmer from the search matches first, then ask for that year.', $year);
             }
 
-            return ['task' => $context['task'], 'year' => $year, 'farmer_id' => $context['farmer_id'] ?? null];
+            return ['task' => $context['task'], 'year' => $year, 'farmer_id' => $context['farmer_id'] ?? null]
+                + (isset($context['focus']) ? ['focus' => $context['focus']] : []);
+        }
+        if ($this->periodFollowUp($text) && ($context['task'] ?? null) === 'data-quality') {
+            return $this->dataQualityYearClarification($year);
         }
 
-        return $this->clarify('I help with agriculture, AgriLGU features and permitted office records. I cannot answer unrelated questions or inspect server files. Ask about crops, soil, irrigation, pests, livestock or fish farming, or name the system feature you need.', $year);
+        return $this->clarify('I’m not sure what to look up for that. I can count your office records — farmers, assistance, harvests, Animal Health, cooperatives, machinery and crops — explain AgriLGU features, and cover farming topics. Try “How many farmers do we have?” or “Show assistance for '.$currentYear.'”. I cannot answer unrelated questions or inspect server files.', $year);
+    }
+
+    /** @param array{task?:string,focus?:string|null,remainder?:string,ambiguous?:bool} $focus */
+    private function focused(array $focus, string $text, array $context, int $year, int $currentYear): array
+    {
+        if ($focus['ambiguous'] ?? false) {
+            return $this->clarify('I can total one assistance input or one harvest crop at a time, for example “How much fertilizer did we give out in '.$currentYear.'?” or “Corn harvest '.$currentYear.'”. Ask about one of them, or ask for the full assistance or harvest report.', $year) + ['reset_context' => true];
+        }
+        $remainder = $focus['remainder'];
+        if ($clarification = $this->reportClarification($remainder, $year)) {
+            return $clarification;
+        }
+        if ($this->requestsDifferentScope($remainder)) {
+            return $this->clarify($this->barangayScopeMessage($remainder)
+                ?? 'I can answer for your account’s whole area, not for another province, municipality or place. Use the register’s location filters for that subset, or ask again without the location.', $year) + ['reset_context' => true];
+        }
+        if ($focus['task'] === 'data-quality') {
+            if (preg_match('/\b(?:19|20|21)\d{2}\b|\b(?:last|previous|prior|this|current)\s+year\b|\b(?:nakaraang|ngayong)\s+taon\b/iu', $text)) {
+                return $this->dataQualityYearClarification($year);
+            }
+
+            return ['task' => 'data-quality', 'focus' => $focus['focus'], 'year' => $year, 'farmer_id' => null];
+        }
+        // With a farmer selected, an unqualified subject could mean that person.
+        // Focused totals are office-wide only, so ask instead of guessing.
+        if (! empty($context['farmer_id']) && ! $this->collectiveReference($text) && ! preg_match('/\b(?:we|us|namin|kami|tayo)\b/iu', $text)) {
+            return $this->clarify('Do you mean the selected farmer or your whole office area? For the selected farmer, ask “Show their '.($focus['task'] === 'harvests' ? 'harvests' : 'assistance').'” to see all their records. For one input or crop across your office, say “our”, for example “Show our '
+                .($focus['task'] === 'harvests' ? 'corn harvests' : 'fertilizer releases').' for '.$year.'”.', $year) + ['reset_context' => true];
+        }
+        $comparison = $this->hasComparison($text);
+        $period = $this->period($text, $context, $year, $currentYear);
+        if ($comparison || is_array($period)) {
+            $base = is_int($period) ? $period : $year;
+            if (! $comparison && ($period['clarification_kind'] ?? null) !== 'year') {
+                return $period;
+            }
+
+            return $this->clarify(($comparison ? 'Year comparisons aren’t available in this chat yet. ' : '').'Which single year should I use?', $base)
+                + ['clarification_kind' => 'year', 'references' => ['task' => $focus['task'], 'year' => $base, 'farmer_id' => null, 'focus' => $focus['focus']]];
+        }
+
+        return ['task' => $focus['task'], 'focus' => $focus['focus'], 'year' => $period, 'farmer_id' => null];
+    }
+
+    private function hasComparison(string $text): bool
+    {
+        return (bool) preg_match('/\b(compare|compared|comparison|versus|vs|trend|trends|ihambing|kumpara|year[\s-]+(?:over|on)[\s-]+year)\b/iu', $text)
+            || (bool) preg_match('/\b(?:this\s+year|ngayong\s+taon)\b.+\b(?:last\s+year|previous\s+year|nakaraang\s+taon)\b|\b(?:last\s+year|previous\s+year|nakaraang\s+taon)\b.+\b(?:this\s+year|ngayong\s+taon)\b/iu', $text)
+            || (bool) preg_match('/\b\d{4}\b\s+(?:and|with|at)\s+(?:last\s+year|previous\s+year|nakaraang\s+taon)\b/iu', $text);
+    }
+
+    private function dataQualityYearClarification(int $year): array
+    {
+        return $this->clarify('The registry check uses today’s registry records, not a historical reporting year. Ask again without the year, for example “What needs attention in our registry?”, or open the farmer registry review filters.', $year) + ['reset_context' => true];
+    }
+
+    /** Explicit year, relative year, prior reference year, then the current year. */
+    private function period(string $text, array $context, int $year, int $currentYear): int|array
+    {
+        preg_match_all('/(?<![\p{L}\d-])\d{4}(?![\p{L}\d-])/u', $text, $matches);
+        $years = array_values(array_unique($matches[0]));
+        if (count($years) > 1 || ($years && ((int) $years[0] < 1900 || (int) $years[0] > 2100))) {
+            return $this->yearClarification($text, $context, $year);
+        }
+        if ($years) {
+            $year = (int) $years[0];
+        } elseif (preg_match('/\b(last\s+year|nakaraang\s+taon|noong\s+nakaraang\s+taon)\b/iu', $text)) {
+            $year = $currentYear - 1;
+        } elseif (preg_match('/\b(previous\s+year|prior\s+year|taon\s+bago\s+iyon)\b/iu', $text)) {
+            $year = (int) ($context['year'] ?? $currentYear) - 1;
+        } elseif (preg_match('/\b(this\s+year|current\s+year|ngayong\s+taon)\b/iu', $text)) {
+            $year = $currentYear;
+        } elseif (preg_match('/\b(same\s+year|that\s+year|parehong\s+taon|taong\s+iyon)\b/iu', $text) && ! isset($context['year'])) {
+            return $this->yearClarification($text, $context, $year);
+        }
+        if ($year < 1900 || $year > 2100) {
+            return $this->clarify('Choose one reporting year between 1900 and 2100.', $currentYear);
+        }
+
+        return $year;
     }
 
     private function currentSnapshotClarification(string $task, int $year): ?array
@@ -230,7 +305,7 @@ final class AssistantIntentResolver
             return null;
         }
 
-        return $this->clarify('This report reads current saved records; historical snapshots are not available. Ask for the current summary without a year. For annual records, ask about crops, assistance, harvests or Animal Health.', $year) + ['reset_context' => true];
+        return $this->clarify('This report reads current saved records; historical snapshots are not available. Ask again without the year for today’s figures. For a specific year, ask about crops, assistance, harvests or Animal Health, for example “Show harvests for '.$year.'”.', $year) + ['reset_context' => true];
     }
 
     private function requestedStyle(string $text): string
@@ -403,6 +478,14 @@ final class AssistantIntentResolver
         return (bool) preg_match('/\b(?:province|provinces|municipality|municipalities|region|regions|barangay|barangays)\b|\b(?:in|within|from|sa|at|for)\s+[\p{L}]/iu', $text);
     }
 
+    /** Points unsupported barangay subsets to the supported whole-area breakdown. */
+    private function barangayScopeMessage(string $text): ?string
+    {
+        return preg_match('/\b(?:barangays?|brgys?)\b/iu', $text)
+            ? 'I can show a farm-location (barangay) breakdown of your account’s permitted area for at most one reporting year, for example “Show farmers per barangay” or “Assistance by barangay for 2026”. One named barangay, another municipality, comparisons, rankings or other filters are not available in this chat; use the farmer registry search or the register’s filters for that subset.'
+            : null;
+    }
+
     private function clarify(string $message, int $year): array
     {
         return ['task' => 'clarification', 'year' => $year, 'clarification' => $message];
@@ -410,13 +493,15 @@ final class AssistantIntentResolver
 
     private function yearClarification(string $text, array $context, int $year, bool $comparison = false): array
     {
-        if ($this->requestsDifferentScope($text)) {
-            return $this->clarify('A separate province or municipality filter is not available in this chat yet. Use the register’s location filters for that subset, or ask about your account’s current area and one reporting year.', $year) + ['reset_context' => true];
+        // A recognized whole-area breakdown names a grouping, not another area.
+        if ($this->requestsDifferentScope($text) && $this->recordTopics->resolve($text) === null) {
+            return $this->clarify($this->barangayScopeMessage($text)
+                ?? 'A separate province or municipality filter is not available in this chat yet. Use the register’s location filters for that subset, or ask about your account’s current area and one reporting year.', $year) + ['reset_context' => true];
         }
         $references = $this->pendingReport($text, $context, $year);
         $prefix = $comparison ? 'Year comparisons are not available in this chat yet. ' : '';
         if ($references === null) {
-            return $this->clarify($prefix.'Restate one report and one valid reporting year, for example “Show assistance for 2025”.', $year) + ['reset_context' => true];
+            return $this->clarify($prefix.'Ask for one report and one year, for example “Show assistance for 2025”.', $year) + ['reset_context' => true];
         }
 
         return $this->clarify($prefix.'Choose one reporting year between 1900 and 2100. Which year should I use?', $year)
@@ -485,7 +570,8 @@ final class AssistantIntentResolver
             return ['task' => 'farmer', 'year' => $year, 'farmer_id' => (int) $context['farmer_id'], 'pending_scope' => $context['pending_scope']];
         }
         if ($this->periodFollowUp($text) && in_array($task, ['assistance', 'harvests', 'animal-health', 'summary', 'farmer', 'farmer-parcels', 'farmer-assistance', 'farmer-harvests'], true)) {
-            return ['task' => $task, 'year' => $year, 'farmer_id' => $context['farmer_id'] ?? null];
+            return ['task' => $task, 'year' => $year, 'farmer_id' => $context['farmer_id'] ?? null]
+                + (isset($context['focus']) ? ['focus' => $context['focus']] : []);
         }
 
         return null;

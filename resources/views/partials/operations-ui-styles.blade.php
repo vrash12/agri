@@ -206,5 +206,36 @@
     .module-kpis-compact .module-kpi-label { letter-spacing:normal; }
     .module-kpis-compact .module-kpi strong { font-size:26px; margin-top:8px; }
   }
+  /* Opt-in phone/tablet reflow for wide record tables (the cooperative directory pattern, shared).
+     Add module-table-cards to a module-table, explicit ARIA table roles (a changed display can drop
+     native table semantics in some browsers), and an aria-hidden module-cell-label in each value cell.
+     Cells span the card by default; module-cell-half pairs short values; module-cell-actions holds row
+     actions. Everything is scoped to module-table-cards, so tables without it are unchanged. */
+  .module-cell-label { display:none; }
+  @media(max-width:900px) {
+    .module-table.module-table-cards { display:block; min-width:0; }
+    .module-table.module-table-cards > thead { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; border:0; }
+    .module-table.module-table-cards > tbody { display:block; }
+    .module-table.module-table-cards > tbody > tr { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px 16px; padding:16px; border-bottom:1px solid var(--ui-border); }
+    .module-table.module-table-cards > tbody > tr:last-child { border-bottom:0; }
+    .module-table.module-table-cards > tbody > tr > td { display:block; grid-column:1/-1; min-width:0; max-width:none; padding:0; border:0; overflow-wrap:anywhere; }
+    .module-table.module-table-cards > tbody > tr > td.module-cell-half { grid-column:auto; }
+    .module-table.module-table-cards > tbody > tr > td.module-numeric { text-align:left; }
+    .module-table.module-table-cards tbody tr:not(.module-detail-row):hover td { background:transparent; }
+    .module-table-cards .module-cell-label { display:block; margin-bottom:4px; color:var(--ui-text-muted); font-size:12px; font-weight:500; line-height:1.4; }
+    .module-table-cards .module-person { min-width:0; align-items:flex-start; }
+    .module-table-cards .module-person-copy strong,.module-table-cards .module-person-copy small { white-space:normal; overflow-wrap:anywhere; }
+    .module-table-cards .module-badge { max-width:100%; white-space:normal; overflow-wrap:anywhere; }
+    .module-table-cards .module-button { min-height:44px; }
+    .module-table-cards .module-cell-actions { position:relative; padding-top:12px; border-top:1px solid var(--ui-border); }
+    .module-table-cards .module-cell-actions > .module-button { width:100%; }
+    .module-table-cards .module-cell-actions .module-row-actions { justify-content:flex-start; flex-wrap:wrap; gap:8px; white-space:normal; }
+    .module-table-cards .module-cell-actions .module-row-actions > .module-button,.module-table-cards .module-cell-actions .module-row-actions > form { flex:1 1 0; min-width:0; }
+    .module-table-cards .module-cell-actions .module-row-actions > form { display:flex; margin:0; }
+    .module-table-cards .module-cell-actions .module-row-actions > form > .module-button { width:100%; }
+    /* A row menu opens upward across the card so it never runs past the last card into the panel edge. */
+    .module-table-cards .module-cell-actions .module-action-menu { position:static; }
+    .module-table-cards .module-cell-actions .module-action-menu-list { top:auto; right:0; bottom:100%; left:0; width:auto; margin:0 0 8px; }
+  }
   @media(prefers-reduced-motion:reduce) { .module-page * { transition:none!important; } }
 </style>
